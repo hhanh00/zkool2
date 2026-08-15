@@ -13,6 +13,2416 @@ part of 'voting.dart';
 T _$identity<T>(T value) => value;
 
 /// @nodoc
+mixin _$VotingBallotIntent {
+  int get proposalId;
+  bool get skipped;
+  int? get choice;
+
+  /// Create a copy of VotingBallotIntent
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingBallotIntentCopyWith<VotingBallotIntent> get copyWith =>
+      _$VotingBallotIntentCopyWithImpl<VotingBallotIntent>(
+          this as VotingBallotIntent, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingBallotIntent &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.skipped, skipped) || other.skipped == skipped) &&
+            (identical(other.choice, choice) || other.choice == choice));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, proposalId, skipped, choice);
+
+  @override
+  String toString() {
+    return 'VotingBallotIntent(proposalId: $proposalId, skipped: $skipped, choice: $choice)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingBallotIntentCopyWith<$Res> {
+  factory $VotingBallotIntentCopyWith(
+          VotingBallotIntent value, $Res Function(VotingBallotIntent) _then) =
+      _$VotingBallotIntentCopyWithImpl;
+  @useResult
+  $Res call({int proposalId, bool skipped, int? choice});
+}
+
+/// @nodoc
+class _$VotingBallotIntentCopyWithImpl<$Res>
+    implements $VotingBallotIntentCopyWith<$Res> {
+  _$VotingBallotIntentCopyWithImpl(this._self, this._then);
+
+  final VotingBallotIntent _self;
+  final $Res Function(VotingBallotIntent) _then;
+
+  /// Create a copy of VotingBallotIntent
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? proposalId = null,
+    Object? skipped = null,
+    Object? choice = freezed,
+  }) {
+    return _then(_self.copyWith(
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      skipped: null == skipped
+          ? _self.skipped
+          : skipped // ignore: cast_nullable_to_non_nullable
+              as bool,
+      choice: freezed == choice
+          ? _self.choice
+          : choice // ignore: cast_nullable_to_non_nullable
+              as int?,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingBallotIntent].
+extension VotingBallotIntentPatterns on VotingBallotIntent {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingBallotIntent value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingBallotIntent() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingBallotIntent value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingBallotIntent():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingBallotIntent value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingBallotIntent() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(int proposalId, bool skipped, int? choice)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingBallotIntent() when $default != null:
+        return $default(_that.proposalId, _that.skipped, _that.choice);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(int proposalId, bool skipped, int? choice) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingBallotIntent():
+        return $default(_that.proposalId, _that.skipped, _that.choice);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(int proposalId, bool skipped, int? choice)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingBallotIntent() when $default != null:
+        return $default(_that.proposalId, _that.skipped, _that.choice);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingBallotIntent implements VotingBallotIntent {
+  const _VotingBallotIntent(
+      {required this.proposalId, required this.skipped, this.choice});
+
+  @override
+  final int proposalId;
+  @override
+  final bool skipped;
+  @override
+  final int? choice;
+
+  /// Create a copy of VotingBallotIntent
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingBallotIntentCopyWith<_VotingBallotIntent> get copyWith =>
+      __$VotingBallotIntentCopyWithImpl<_VotingBallotIntent>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingBallotIntent &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.skipped, skipped) || other.skipped == skipped) &&
+            (identical(other.choice, choice) || other.choice == choice));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, proposalId, skipped, choice);
+
+  @override
+  String toString() {
+    return 'VotingBallotIntent(proposalId: $proposalId, skipped: $skipped, choice: $choice)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingBallotIntentCopyWith<$Res>
+    implements $VotingBallotIntentCopyWith<$Res> {
+  factory _$VotingBallotIntentCopyWith(
+          _VotingBallotIntent value, $Res Function(_VotingBallotIntent) _then) =
+      __$VotingBallotIntentCopyWithImpl;
+  @override
+  @useResult
+  $Res call({int proposalId, bool skipped, int? choice});
+}
+
+/// @nodoc
+class __$VotingBallotIntentCopyWithImpl<$Res>
+    implements _$VotingBallotIntentCopyWith<$Res> {
+  __$VotingBallotIntentCopyWithImpl(this._self, this._then);
+
+  final _VotingBallotIntent _self;
+  final $Res Function(_VotingBallotIntent) _then;
+
+  /// Create a copy of VotingBallotIntent
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? proposalId = null,
+    Object? skipped = null,
+    Object? choice = freezed,
+  }) {
+    return _then(_VotingBallotIntent(
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      skipped: null == skipped
+          ? _self.skipped
+          : skipped // ignore: cast_nullable_to_non_nullable
+              as bool,
+      choice: freezed == choice
+          ? _self.choice
+          : choice // ignore: cast_nullable_to_non_nullable
+              as int?,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$VotingChainResponse {
+  int get statusCode;
+  String get body;
+
+  /// Create a copy of VotingChainResponse
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingChainResponseCopyWith<VotingChainResponse> get copyWith =>
+      _$VotingChainResponseCopyWithImpl<VotingChainResponse>(
+          this as VotingChainResponse, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingChainResponse &&
+            (identical(other.statusCode, statusCode) ||
+                other.statusCode == statusCode) &&
+            (identical(other.body, body) || other.body == body));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, statusCode, body);
+
+  @override
+  String toString() {
+    return 'VotingChainResponse(statusCode: $statusCode, body: $body)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingChainResponseCopyWith<$Res> {
+  factory $VotingChainResponseCopyWith(
+          VotingChainResponse value, $Res Function(VotingChainResponse) _then) =
+      _$VotingChainResponseCopyWithImpl;
+  @useResult
+  $Res call({int statusCode, String body});
+}
+
+/// @nodoc
+class _$VotingChainResponseCopyWithImpl<$Res>
+    implements $VotingChainResponseCopyWith<$Res> {
+  _$VotingChainResponseCopyWithImpl(this._self, this._then);
+
+  final VotingChainResponse _self;
+  final $Res Function(VotingChainResponse) _then;
+
+  /// Create a copy of VotingChainResponse
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? statusCode = null,
+    Object? body = null,
+  }) {
+    return _then(_self.copyWith(
+      statusCode: null == statusCode
+          ? _self.statusCode
+          : statusCode // ignore: cast_nullable_to_non_nullable
+              as int,
+      body: null == body
+          ? _self.body
+          : body // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingChainResponse].
+extension VotingChainResponsePatterns on VotingChainResponse {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingChainResponse value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingChainResponse() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingChainResponse value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingChainResponse():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingChainResponse value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingChainResponse() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(int statusCode, String body)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingChainResponse() when $default != null:
+        return $default(_that.statusCode, _that.body);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(int statusCode, String body) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingChainResponse():
+        return $default(_that.statusCode, _that.body);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(int statusCode, String body)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingChainResponse() when $default != null:
+        return $default(_that.statusCode, _that.body);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingChainResponse implements VotingChainResponse {
+  const _VotingChainResponse({required this.statusCode, required this.body});
+
+  @override
+  final int statusCode;
+  @override
+  final String body;
+
+  /// Create a copy of VotingChainResponse
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingChainResponseCopyWith<_VotingChainResponse> get copyWith =>
+      __$VotingChainResponseCopyWithImpl<_VotingChainResponse>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingChainResponse &&
+            (identical(other.statusCode, statusCode) ||
+                other.statusCode == statusCode) &&
+            (identical(other.body, body) || other.body == body));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, statusCode, body);
+
+  @override
+  String toString() {
+    return 'VotingChainResponse(statusCode: $statusCode, body: $body)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingChainResponseCopyWith<$Res>
+    implements $VotingChainResponseCopyWith<$Res> {
+  factory _$VotingChainResponseCopyWith(_VotingChainResponse value,
+          $Res Function(_VotingChainResponse) _then) =
+      __$VotingChainResponseCopyWithImpl;
+  @override
+  @useResult
+  $Res call({int statusCode, String body});
+}
+
+/// @nodoc
+class __$VotingChainResponseCopyWithImpl<$Res>
+    implements _$VotingChainResponseCopyWith<$Res> {
+  __$VotingChainResponseCopyWithImpl(this._self, this._then);
+
+  final _VotingChainResponse _self;
+  final $Res Function(_VotingChainResponse) _then;
+
+  /// Create a copy of VotingChainResponse
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? statusCode = null,
+    Object? body = null,
+  }) {
+    return _then(_VotingChainResponse(
+      statusCode: null == statusCode
+          ? _self.statusCode
+          : statusCode // ignore: cast_nullable_to_non_nullable
+              as int,
+      body: null == body
+          ? _self.body
+          : body // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$VotingCompletedVoteChoice {
+  int get proposalId;
+  int? get choice;
+
+  /// Create a copy of VotingCompletedVoteChoice
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingCompletedVoteChoiceCopyWith<VotingCompletedVoteChoice> get copyWith =>
+      _$VotingCompletedVoteChoiceCopyWithImpl<VotingCompletedVoteChoice>(
+          this as VotingCompletedVoteChoice, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingCompletedVoteChoice &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.choice, choice) || other.choice == choice));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, proposalId, choice);
+
+  @override
+  String toString() {
+    return 'VotingCompletedVoteChoice(proposalId: $proposalId, choice: $choice)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingCompletedVoteChoiceCopyWith<$Res> {
+  factory $VotingCompletedVoteChoiceCopyWith(VotingCompletedVoteChoice value,
+          $Res Function(VotingCompletedVoteChoice) _then) =
+      _$VotingCompletedVoteChoiceCopyWithImpl;
+  @useResult
+  $Res call({int proposalId, int? choice});
+}
+
+/// @nodoc
+class _$VotingCompletedVoteChoiceCopyWithImpl<$Res>
+    implements $VotingCompletedVoteChoiceCopyWith<$Res> {
+  _$VotingCompletedVoteChoiceCopyWithImpl(this._self, this._then);
+
+  final VotingCompletedVoteChoice _self;
+  final $Res Function(VotingCompletedVoteChoice) _then;
+
+  /// Create a copy of VotingCompletedVoteChoice
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? proposalId = null,
+    Object? choice = freezed,
+  }) {
+    return _then(_self.copyWith(
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      choice: freezed == choice
+          ? _self.choice
+          : choice // ignore: cast_nullable_to_non_nullable
+              as int?,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingCompletedVoteChoice].
+extension VotingCompletedVoteChoicePatterns on VotingCompletedVoteChoice {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingCompletedVoteChoice value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingCompletedVoteChoice() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingCompletedVoteChoice value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingCompletedVoteChoice():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingCompletedVoteChoice value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingCompletedVoteChoice() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(int proposalId, int? choice)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingCompletedVoteChoice() when $default != null:
+        return $default(_that.proposalId, _that.choice);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(int proposalId, int? choice) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingCompletedVoteChoice():
+        return $default(_that.proposalId, _that.choice);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(int proposalId, int? choice)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingCompletedVoteChoice() when $default != null:
+        return $default(_that.proposalId, _that.choice);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingCompletedVoteChoice implements VotingCompletedVoteChoice {
+  const _VotingCompletedVoteChoice({required this.proposalId, this.choice});
+
+  @override
+  final int proposalId;
+  @override
+  final int? choice;
+
+  /// Create a copy of VotingCompletedVoteChoice
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingCompletedVoteChoiceCopyWith<_VotingCompletedVoteChoice>
+      get copyWith =>
+          __$VotingCompletedVoteChoiceCopyWithImpl<_VotingCompletedVoteChoice>(
+              this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingCompletedVoteChoice &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.choice, choice) || other.choice == choice));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, proposalId, choice);
+
+  @override
+  String toString() {
+    return 'VotingCompletedVoteChoice(proposalId: $proposalId, choice: $choice)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingCompletedVoteChoiceCopyWith<$Res>
+    implements $VotingCompletedVoteChoiceCopyWith<$Res> {
+  factory _$VotingCompletedVoteChoiceCopyWith(_VotingCompletedVoteChoice value,
+          $Res Function(_VotingCompletedVoteChoice) _then) =
+      __$VotingCompletedVoteChoiceCopyWithImpl;
+  @override
+  @useResult
+  $Res call({int proposalId, int? choice});
+}
+
+/// @nodoc
+class __$VotingCompletedVoteChoiceCopyWithImpl<$Res>
+    implements _$VotingCompletedVoteChoiceCopyWith<$Res> {
+  __$VotingCompletedVoteChoiceCopyWithImpl(this._self, this._then);
+
+  final _VotingCompletedVoteChoice _self;
+  final $Res Function(_VotingCompletedVoteChoice) _then;
+
+  /// Create a copy of VotingCompletedVoteChoice
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? proposalId = null,
+    Object? choice = freezed,
+  }) {
+    return _then(_VotingCompletedVoteChoice(
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      choice: freezed == choice
+          ? _self.choice
+          : choice // ignore: cast_nullable_to_non_nullable
+              as int?,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$VotingCompletedVoteDisplay {
+  List<VotingCompletedVoteChoice> get choices;
+  BigInt? get votedAt;
+
+  /// Create a copy of VotingCompletedVoteDisplay
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingCompletedVoteDisplayCopyWith<VotingCompletedVoteDisplay>
+      get copyWith =>
+          _$VotingCompletedVoteDisplayCopyWithImpl<VotingCompletedVoteDisplay>(
+              this as VotingCompletedVoteDisplay, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingCompletedVoteDisplay &&
+            const DeepCollectionEquality().equals(other.choices, choices) &&
+            (identical(other.votedAt, votedAt) || other.votedAt == votedAt));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType, const DeepCollectionEquality().hash(choices), votedAt);
+
+  @override
+  String toString() {
+    return 'VotingCompletedVoteDisplay(choices: $choices, votedAt: $votedAt)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingCompletedVoteDisplayCopyWith<$Res> {
+  factory $VotingCompletedVoteDisplayCopyWith(VotingCompletedVoteDisplay value,
+          $Res Function(VotingCompletedVoteDisplay) _then) =
+      _$VotingCompletedVoteDisplayCopyWithImpl;
+  @useResult
+  $Res call({List<VotingCompletedVoteChoice> choices, BigInt? votedAt});
+}
+
+/// @nodoc
+class _$VotingCompletedVoteDisplayCopyWithImpl<$Res>
+    implements $VotingCompletedVoteDisplayCopyWith<$Res> {
+  _$VotingCompletedVoteDisplayCopyWithImpl(this._self, this._then);
+
+  final VotingCompletedVoteDisplay _self;
+  final $Res Function(VotingCompletedVoteDisplay) _then;
+
+  /// Create a copy of VotingCompletedVoteDisplay
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? choices = null,
+    Object? votedAt = freezed,
+  }) {
+    return _then(_self.copyWith(
+      choices: null == choices
+          ? _self.choices
+          : choices // ignore: cast_nullable_to_non_nullable
+              as List<VotingCompletedVoteChoice>,
+      votedAt: freezed == votedAt
+          ? _self.votedAt
+          : votedAt // ignore: cast_nullable_to_non_nullable
+              as BigInt?,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingCompletedVoteDisplay].
+extension VotingCompletedVoteDisplayPatterns on VotingCompletedVoteDisplay {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingCompletedVoteDisplay value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingCompletedVoteDisplay() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingCompletedVoteDisplay value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingCompletedVoteDisplay():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingCompletedVoteDisplay value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingCompletedVoteDisplay() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(List<VotingCompletedVoteChoice> choices, BigInt? votedAt)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingCompletedVoteDisplay() when $default != null:
+        return $default(_that.choices, _that.votedAt);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(List<VotingCompletedVoteChoice> choices, BigInt? votedAt)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingCompletedVoteDisplay():
+        return $default(_that.choices, _that.votedAt);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(List<VotingCompletedVoteChoice> choices, BigInt? votedAt)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingCompletedVoteDisplay() when $default != null:
+        return $default(_that.choices, _that.votedAt);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingCompletedVoteDisplay implements VotingCompletedVoteDisplay {
+  const _VotingCompletedVoteDisplay(
+      {required final List<VotingCompletedVoteChoice> choices, this.votedAt})
+      : _choices = choices;
+
+  final List<VotingCompletedVoteChoice> _choices;
+  @override
+  List<VotingCompletedVoteChoice> get choices {
+    if (_choices is EqualUnmodifiableListView) return _choices;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_choices);
+  }
+
+  @override
+  final BigInt? votedAt;
+
+  /// Create a copy of VotingCompletedVoteDisplay
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingCompletedVoteDisplayCopyWith<_VotingCompletedVoteDisplay>
+      get copyWith => __$VotingCompletedVoteDisplayCopyWithImpl<
+          _VotingCompletedVoteDisplay>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingCompletedVoteDisplay &&
+            const DeepCollectionEquality().equals(other._choices, _choices) &&
+            (identical(other.votedAt, votedAt) || other.votedAt == votedAt));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType, const DeepCollectionEquality().hash(_choices), votedAt);
+
+  @override
+  String toString() {
+    return 'VotingCompletedVoteDisplay(choices: $choices, votedAt: $votedAt)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingCompletedVoteDisplayCopyWith<$Res>
+    implements $VotingCompletedVoteDisplayCopyWith<$Res> {
+  factory _$VotingCompletedVoteDisplayCopyWith(
+          _VotingCompletedVoteDisplay value,
+          $Res Function(_VotingCompletedVoteDisplay) _then) =
+      __$VotingCompletedVoteDisplayCopyWithImpl;
+  @override
+  @useResult
+  $Res call({List<VotingCompletedVoteChoice> choices, BigInt? votedAt});
+}
+
+/// @nodoc
+class __$VotingCompletedVoteDisplayCopyWithImpl<$Res>
+    implements _$VotingCompletedVoteDisplayCopyWith<$Res> {
+  __$VotingCompletedVoteDisplayCopyWithImpl(this._self, this._then);
+
+  final _VotingCompletedVoteDisplay _self;
+  final $Res Function(_VotingCompletedVoteDisplay) _then;
+
+  /// Create a copy of VotingCompletedVoteDisplay
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? choices = null,
+    Object? votedAt = freezed,
+  }) {
+    return _then(_VotingCompletedVoteDisplay(
+      choices: null == choices
+          ? _self._choices
+          : choices // ignore: cast_nullable_to_non_nullable
+              as List<VotingCompletedVoteChoice>,
+      votedAt: freezed == votedAt
+          ? _self.votedAt
+          : votedAt // ignore: cast_nullable_to_non_nullable
+              as BigInt?,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$VotingConfig {
+  String get source;
+  String get sourceFingerprint;
+  String get trustedKeyFingerprint;
+  String get switchKind;
+  List<VotingServiceEndpoint> get voteServers;
+  List<VotingServiceEndpoint> get pirServers;
+  VotingPirLayout? get pirLayout;
+  List<VotingConfigRound> get rounds;
+
+  /// Create a copy of VotingConfig
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingConfigCopyWith<VotingConfig> get copyWith =>
+      _$VotingConfigCopyWithImpl<VotingConfig>(
+          this as VotingConfig, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingConfig &&
+            (identical(other.source, source) || other.source == source) &&
+            (identical(other.sourceFingerprint, sourceFingerprint) ||
+                other.sourceFingerprint == sourceFingerprint) &&
+            (identical(other.trustedKeyFingerprint, trustedKeyFingerprint) ||
+                other.trustedKeyFingerprint == trustedKeyFingerprint) &&
+            (identical(other.switchKind, switchKind) ||
+                other.switchKind == switchKind) &&
+            const DeepCollectionEquality()
+                .equals(other.voteServers, voteServers) &&
+            const DeepCollectionEquality()
+                .equals(other.pirServers, pirServers) &&
+            (identical(other.pirLayout, pirLayout) ||
+                other.pirLayout == pirLayout) &&
+            const DeepCollectionEquality().equals(other.rounds, rounds));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      source,
+      sourceFingerprint,
+      trustedKeyFingerprint,
+      switchKind,
+      const DeepCollectionEquality().hash(voteServers),
+      const DeepCollectionEquality().hash(pirServers),
+      pirLayout,
+      const DeepCollectionEquality().hash(rounds));
+
+  @override
+  String toString() {
+    return 'VotingConfig(source: $source, sourceFingerprint: $sourceFingerprint, trustedKeyFingerprint: $trustedKeyFingerprint, switchKind: $switchKind, voteServers: $voteServers, pirServers: $pirServers, pirLayout: $pirLayout, rounds: $rounds)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingConfigCopyWith<$Res> {
+  factory $VotingConfigCopyWith(
+          VotingConfig value, $Res Function(VotingConfig) _then) =
+      _$VotingConfigCopyWithImpl;
+  @useResult
+  $Res call(
+      {String source,
+      String sourceFingerprint,
+      String trustedKeyFingerprint,
+      String switchKind,
+      List<VotingServiceEndpoint> voteServers,
+      List<VotingServiceEndpoint> pirServers,
+      VotingPirLayout? pirLayout,
+      List<VotingConfigRound> rounds});
+
+  $VotingPirLayoutCopyWith<$Res>? get pirLayout;
+}
+
+/// @nodoc
+class _$VotingConfigCopyWithImpl<$Res> implements $VotingConfigCopyWith<$Res> {
+  _$VotingConfigCopyWithImpl(this._self, this._then);
+
+  final VotingConfig _self;
+  final $Res Function(VotingConfig) _then;
+
+  /// Create a copy of VotingConfig
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? source = null,
+    Object? sourceFingerprint = null,
+    Object? trustedKeyFingerprint = null,
+    Object? switchKind = null,
+    Object? voteServers = null,
+    Object? pirServers = null,
+    Object? pirLayout = freezed,
+    Object? rounds = null,
+  }) {
+    return _then(_self.copyWith(
+      source: null == source
+          ? _self.source
+          : source // ignore: cast_nullable_to_non_nullable
+              as String,
+      sourceFingerprint: null == sourceFingerprint
+          ? _self.sourceFingerprint
+          : sourceFingerprint // ignore: cast_nullable_to_non_nullable
+              as String,
+      trustedKeyFingerprint: null == trustedKeyFingerprint
+          ? _self.trustedKeyFingerprint
+          : trustedKeyFingerprint // ignore: cast_nullable_to_non_nullable
+              as String,
+      switchKind: null == switchKind
+          ? _self.switchKind
+          : switchKind // ignore: cast_nullable_to_non_nullable
+              as String,
+      voteServers: null == voteServers
+          ? _self.voteServers
+          : voteServers // ignore: cast_nullable_to_non_nullable
+              as List<VotingServiceEndpoint>,
+      pirServers: null == pirServers
+          ? _self.pirServers
+          : pirServers // ignore: cast_nullable_to_non_nullable
+              as List<VotingServiceEndpoint>,
+      pirLayout: freezed == pirLayout
+          ? _self.pirLayout
+          : pirLayout // ignore: cast_nullable_to_non_nullable
+              as VotingPirLayout?,
+      rounds: null == rounds
+          ? _self.rounds
+          : rounds // ignore: cast_nullable_to_non_nullable
+              as List<VotingConfigRound>,
+    ));
+  }
+
+  /// Create a copy of VotingConfig
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingPirLayoutCopyWith<$Res>? get pirLayout {
+    if (_self.pirLayout == null) {
+      return null;
+    }
+
+    return $VotingPirLayoutCopyWith<$Res>(_self.pirLayout!, (value) {
+      return _then(_self.copyWith(pirLayout: value));
+    });
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingConfig].
+extension VotingConfigPatterns on VotingConfig {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingConfig value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingConfig() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingConfig value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingConfig():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingConfig value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingConfig() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(
+            String source,
+            String sourceFingerprint,
+            String trustedKeyFingerprint,
+            String switchKind,
+            List<VotingServiceEndpoint> voteServers,
+            List<VotingServiceEndpoint> pirServers,
+            VotingPirLayout? pirLayout,
+            List<VotingConfigRound> rounds)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingConfig() when $default != null:
+        return $default(
+            _that.source,
+            _that.sourceFingerprint,
+            _that.trustedKeyFingerprint,
+            _that.switchKind,
+            _that.voteServers,
+            _that.pirServers,
+            _that.pirLayout,
+            _that.rounds);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(
+            String source,
+            String sourceFingerprint,
+            String trustedKeyFingerprint,
+            String switchKind,
+            List<VotingServiceEndpoint> voteServers,
+            List<VotingServiceEndpoint> pirServers,
+            VotingPirLayout? pirLayout,
+            List<VotingConfigRound> rounds)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingConfig():
+        return $default(
+            _that.source,
+            _that.sourceFingerprint,
+            _that.trustedKeyFingerprint,
+            _that.switchKind,
+            _that.voteServers,
+            _that.pirServers,
+            _that.pirLayout,
+            _that.rounds);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(
+            String source,
+            String sourceFingerprint,
+            String trustedKeyFingerprint,
+            String switchKind,
+            List<VotingServiceEndpoint> voteServers,
+            List<VotingServiceEndpoint> pirServers,
+            VotingPirLayout? pirLayout,
+            List<VotingConfigRound> rounds)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingConfig() when $default != null:
+        return $default(
+            _that.source,
+            _that.sourceFingerprint,
+            _that.trustedKeyFingerprint,
+            _that.switchKind,
+            _that.voteServers,
+            _that.pirServers,
+            _that.pirLayout,
+            _that.rounds);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingConfig implements VotingConfig {
+  const _VotingConfig(
+      {required this.source,
+      required this.sourceFingerprint,
+      required this.trustedKeyFingerprint,
+      required this.switchKind,
+      required final List<VotingServiceEndpoint> voteServers,
+      required final List<VotingServiceEndpoint> pirServers,
+      this.pirLayout,
+      required final List<VotingConfigRound> rounds})
+      : _voteServers = voteServers,
+        _pirServers = pirServers,
+        _rounds = rounds;
+
+  @override
+  final String source;
+  @override
+  final String sourceFingerprint;
+  @override
+  final String trustedKeyFingerprint;
+  @override
+  final String switchKind;
+  final List<VotingServiceEndpoint> _voteServers;
+  @override
+  List<VotingServiceEndpoint> get voteServers {
+    if (_voteServers is EqualUnmodifiableListView) return _voteServers;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_voteServers);
+  }
+
+  final List<VotingServiceEndpoint> _pirServers;
+  @override
+  List<VotingServiceEndpoint> get pirServers {
+    if (_pirServers is EqualUnmodifiableListView) return _pirServers;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_pirServers);
+  }
+
+  @override
+  final VotingPirLayout? pirLayout;
+  final List<VotingConfigRound> _rounds;
+  @override
+  List<VotingConfigRound> get rounds {
+    if (_rounds is EqualUnmodifiableListView) return _rounds;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_rounds);
+  }
+
+  /// Create a copy of VotingConfig
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingConfigCopyWith<_VotingConfig> get copyWith =>
+      __$VotingConfigCopyWithImpl<_VotingConfig>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingConfig &&
+            (identical(other.source, source) || other.source == source) &&
+            (identical(other.sourceFingerprint, sourceFingerprint) ||
+                other.sourceFingerprint == sourceFingerprint) &&
+            (identical(other.trustedKeyFingerprint, trustedKeyFingerprint) ||
+                other.trustedKeyFingerprint == trustedKeyFingerprint) &&
+            (identical(other.switchKind, switchKind) ||
+                other.switchKind == switchKind) &&
+            const DeepCollectionEquality()
+                .equals(other._voteServers, _voteServers) &&
+            const DeepCollectionEquality()
+                .equals(other._pirServers, _pirServers) &&
+            (identical(other.pirLayout, pirLayout) ||
+                other.pirLayout == pirLayout) &&
+            const DeepCollectionEquality().equals(other._rounds, _rounds));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      source,
+      sourceFingerprint,
+      trustedKeyFingerprint,
+      switchKind,
+      const DeepCollectionEquality().hash(_voteServers),
+      const DeepCollectionEquality().hash(_pirServers),
+      pirLayout,
+      const DeepCollectionEquality().hash(_rounds));
+
+  @override
+  String toString() {
+    return 'VotingConfig(source: $source, sourceFingerprint: $sourceFingerprint, trustedKeyFingerprint: $trustedKeyFingerprint, switchKind: $switchKind, voteServers: $voteServers, pirServers: $pirServers, pirLayout: $pirLayout, rounds: $rounds)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingConfigCopyWith<$Res>
+    implements $VotingConfigCopyWith<$Res> {
+  factory _$VotingConfigCopyWith(
+          _VotingConfig value, $Res Function(_VotingConfig) _then) =
+      __$VotingConfigCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {String source,
+      String sourceFingerprint,
+      String trustedKeyFingerprint,
+      String switchKind,
+      List<VotingServiceEndpoint> voteServers,
+      List<VotingServiceEndpoint> pirServers,
+      VotingPirLayout? pirLayout,
+      List<VotingConfigRound> rounds});
+
+  @override
+  $VotingPirLayoutCopyWith<$Res>? get pirLayout;
+}
+
+/// @nodoc
+class __$VotingConfigCopyWithImpl<$Res>
+    implements _$VotingConfigCopyWith<$Res> {
+  __$VotingConfigCopyWithImpl(this._self, this._then);
+
+  final _VotingConfig _self;
+  final $Res Function(_VotingConfig) _then;
+
+  /// Create a copy of VotingConfig
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? source = null,
+    Object? sourceFingerprint = null,
+    Object? trustedKeyFingerprint = null,
+    Object? switchKind = null,
+    Object? voteServers = null,
+    Object? pirServers = null,
+    Object? pirLayout = freezed,
+    Object? rounds = null,
+  }) {
+    return _then(_VotingConfig(
+      source: null == source
+          ? _self.source
+          : source // ignore: cast_nullable_to_non_nullable
+              as String,
+      sourceFingerprint: null == sourceFingerprint
+          ? _self.sourceFingerprint
+          : sourceFingerprint // ignore: cast_nullable_to_non_nullable
+              as String,
+      trustedKeyFingerprint: null == trustedKeyFingerprint
+          ? _self.trustedKeyFingerprint
+          : trustedKeyFingerprint // ignore: cast_nullable_to_non_nullable
+              as String,
+      switchKind: null == switchKind
+          ? _self.switchKind
+          : switchKind // ignore: cast_nullable_to_non_nullable
+              as String,
+      voteServers: null == voteServers
+          ? _self._voteServers
+          : voteServers // ignore: cast_nullable_to_non_nullable
+              as List<VotingServiceEndpoint>,
+      pirServers: null == pirServers
+          ? _self._pirServers
+          : pirServers // ignore: cast_nullable_to_non_nullable
+              as List<VotingServiceEndpoint>,
+      pirLayout: freezed == pirLayout
+          ? _self.pirLayout
+          : pirLayout // ignore: cast_nullable_to_non_nullable
+              as VotingPirLayout?,
+      rounds: null == rounds
+          ? _self._rounds
+          : rounds // ignore: cast_nullable_to_non_nullable
+              as List<VotingConfigRound>,
+    ));
+  }
+
+  /// Create a copy of VotingConfig
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingPirLayoutCopyWith<$Res>? get pirLayout {
+    if (_self.pirLayout == null) {
+      return null;
+    }
+
+    return $VotingPirLayoutCopyWith<$Res>(_self.pirLayout!, (value) {
+      return _then(_self.copyWith(pirLayout: value));
+    });
+  }
+}
+
+/// @nodoc
+mixin _$VotingConfigRound {
+  String get roundId;
+  Uint8List get eaPk;
+
+  /// Create a copy of VotingConfigRound
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingConfigRoundCopyWith<VotingConfigRound> get copyWith =>
+      _$VotingConfigRoundCopyWithImpl<VotingConfigRound>(
+          this as VotingConfigRound, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingConfigRound &&
+            (identical(other.roundId, roundId) || other.roundId == roundId) &&
+            const DeepCollectionEquality().equals(other.eaPk, eaPk));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType, roundId, const DeepCollectionEquality().hash(eaPk));
+
+  @override
+  String toString() {
+    return 'VotingConfigRound(roundId: $roundId, eaPk: $eaPk)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingConfigRoundCopyWith<$Res> {
+  factory $VotingConfigRoundCopyWith(
+          VotingConfigRound value, $Res Function(VotingConfigRound) _then) =
+      _$VotingConfigRoundCopyWithImpl;
+  @useResult
+  $Res call({String roundId, Uint8List eaPk});
+}
+
+/// @nodoc
+class _$VotingConfigRoundCopyWithImpl<$Res>
+    implements $VotingConfigRoundCopyWith<$Res> {
+  _$VotingConfigRoundCopyWithImpl(this._self, this._then);
+
+  final VotingConfigRound _self;
+  final $Res Function(VotingConfigRound) _then;
+
+  /// Create a copy of VotingConfigRound
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? roundId = null,
+    Object? eaPk = null,
+  }) {
+    return _then(_self.copyWith(
+      roundId: null == roundId
+          ? _self.roundId
+          : roundId // ignore: cast_nullable_to_non_nullable
+              as String,
+      eaPk: null == eaPk
+          ? _self.eaPk
+          : eaPk // ignore: cast_nullable_to_non_nullable
+              as Uint8List,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingConfigRound].
+extension VotingConfigRoundPatterns on VotingConfigRound {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingConfigRound value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingConfigRound() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingConfigRound value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingConfigRound():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingConfigRound value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingConfigRound() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(String roundId, Uint8List eaPk)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingConfigRound() when $default != null:
+        return $default(_that.roundId, _that.eaPk);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(String roundId, Uint8List eaPk) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingConfigRound():
+        return $default(_that.roundId, _that.eaPk);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(String roundId, Uint8List eaPk)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingConfigRound() when $default != null:
+        return $default(_that.roundId, _that.eaPk);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingConfigRound implements VotingConfigRound {
+  const _VotingConfigRound({required this.roundId, required this.eaPk});
+
+  @override
+  final String roundId;
+  @override
+  final Uint8List eaPk;
+
+  /// Create a copy of VotingConfigRound
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingConfigRoundCopyWith<_VotingConfigRound> get copyWith =>
+      __$VotingConfigRoundCopyWithImpl<_VotingConfigRound>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingConfigRound &&
+            (identical(other.roundId, roundId) || other.roundId == roundId) &&
+            const DeepCollectionEquality().equals(other.eaPk, eaPk));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType, roundId, const DeepCollectionEquality().hash(eaPk));
+
+  @override
+  String toString() {
+    return 'VotingConfigRound(roundId: $roundId, eaPk: $eaPk)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingConfigRoundCopyWith<$Res>
+    implements $VotingConfigRoundCopyWith<$Res> {
+  factory _$VotingConfigRoundCopyWith(
+          _VotingConfigRound value, $Res Function(_VotingConfigRound) _then) =
+      __$VotingConfigRoundCopyWithImpl;
+  @override
+  @useResult
+  $Res call({String roundId, Uint8List eaPk});
+}
+
+/// @nodoc
+class __$VotingConfigRoundCopyWithImpl<$Res>
+    implements _$VotingConfigRoundCopyWith<$Res> {
+  __$VotingConfigRoundCopyWithImpl(this._self, this._then);
+
+  final _VotingConfigRound _self;
+  final $Res Function(_VotingConfigRound) _then;
+
+  /// Create a copy of VotingConfigRound
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? roundId = null,
+    Object? eaPk = null,
+  }) {
+    return _then(_VotingConfigRound(
+      roundId: null == roundId
+          ? _self.roundId
+          : roundId // ignore: cast_nullable_to_non_nullable
+              as String,
+      eaPk: null == eaPk
+          ? _self.eaPk
+          : eaPk // ignore: cast_nullable_to_non_nullable
+              as Uint8List,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$VotingDelegationBuild {
+  VotingDelegationSubmission get submission;
+  String get wireJson;
+
+  /// Create a copy of VotingDelegationBuild
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingDelegationBuildCopyWith<VotingDelegationBuild> get copyWith =>
+      _$VotingDelegationBuildCopyWithImpl<VotingDelegationBuild>(
+          this as VotingDelegationBuild, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingDelegationBuild &&
+            (identical(other.submission, submission) ||
+                other.submission == submission) &&
+            (identical(other.wireJson, wireJson) ||
+                other.wireJson == wireJson));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, submission, wireJson);
+
+  @override
+  String toString() {
+    return 'VotingDelegationBuild(submission: $submission, wireJson: $wireJson)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingDelegationBuildCopyWith<$Res> {
+  factory $VotingDelegationBuildCopyWith(VotingDelegationBuild value,
+          $Res Function(VotingDelegationBuild) _then) =
+      _$VotingDelegationBuildCopyWithImpl;
+  @useResult
+  $Res call({VotingDelegationSubmission submission, String wireJson});
+
+  $VotingDelegationSubmissionCopyWith<$Res> get submission;
+}
+
+/// @nodoc
+class _$VotingDelegationBuildCopyWithImpl<$Res>
+    implements $VotingDelegationBuildCopyWith<$Res> {
+  _$VotingDelegationBuildCopyWithImpl(this._self, this._then);
+
+  final VotingDelegationBuild _self;
+  final $Res Function(VotingDelegationBuild) _then;
+
+  /// Create a copy of VotingDelegationBuild
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? submission = null,
+    Object? wireJson = null,
+  }) {
+    return _then(_self.copyWith(
+      submission: null == submission
+          ? _self.submission
+          : submission // ignore: cast_nullable_to_non_nullable
+              as VotingDelegationSubmission,
+      wireJson: null == wireJson
+          ? _self.wireJson
+          : wireJson // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+
+  /// Create a copy of VotingDelegationBuild
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingDelegationSubmissionCopyWith<$Res> get submission {
+    return $VotingDelegationSubmissionCopyWith<$Res>(_self.submission, (value) {
+      return _then(_self.copyWith(submission: value));
+    });
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingDelegationBuild].
+extension VotingDelegationBuildPatterns on VotingDelegationBuild {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingDelegationBuild value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationBuild() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingDelegationBuild value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationBuild():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingDelegationBuild value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationBuild() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(VotingDelegationSubmission submission, String wireJson)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationBuild() when $default != null:
+        return $default(_that.submission, _that.wireJson);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(VotingDelegationSubmission submission, String wireJson)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationBuild():
+        return $default(_that.submission, _that.wireJson);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(VotingDelegationSubmission submission, String wireJson)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationBuild() when $default != null:
+        return $default(_that.submission, _that.wireJson);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingDelegationBuild implements VotingDelegationBuild {
+  const _VotingDelegationBuild(
+      {required this.submission, required this.wireJson});
+
+  @override
+  final VotingDelegationSubmission submission;
+  @override
+  final String wireJson;
+
+  /// Create a copy of VotingDelegationBuild
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingDelegationBuildCopyWith<_VotingDelegationBuild> get copyWith =>
+      __$VotingDelegationBuildCopyWithImpl<_VotingDelegationBuild>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingDelegationBuild &&
+            (identical(other.submission, submission) ||
+                other.submission == submission) &&
+            (identical(other.wireJson, wireJson) ||
+                other.wireJson == wireJson));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, submission, wireJson);
+
+  @override
+  String toString() {
+    return 'VotingDelegationBuild(submission: $submission, wireJson: $wireJson)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingDelegationBuildCopyWith<$Res>
+    implements $VotingDelegationBuildCopyWith<$Res> {
+  factory _$VotingDelegationBuildCopyWith(_VotingDelegationBuild value,
+          $Res Function(_VotingDelegationBuild) _then) =
+      __$VotingDelegationBuildCopyWithImpl;
+  @override
+  @useResult
+  $Res call({VotingDelegationSubmission submission, String wireJson});
+
+  @override
+  $VotingDelegationSubmissionCopyWith<$Res> get submission;
+}
+
+/// @nodoc
+class __$VotingDelegationBuildCopyWithImpl<$Res>
+    implements _$VotingDelegationBuildCopyWith<$Res> {
+  __$VotingDelegationBuildCopyWithImpl(this._self, this._then);
+
+  final _VotingDelegationBuild _self;
+  final $Res Function(_VotingDelegationBuild) _then;
+
+  /// Create a copy of VotingDelegationBuild
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? submission = null,
+    Object? wireJson = null,
+  }) {
+    return _then(_VotingDelegationBuild(
+      submission: null == submission
+          ? _self.submission
+          : submission // ignore: cast_nullable_to_non_nullable
+              as VotingDelegationSubmission,
+      wireJson: null == wireJson
+          ? _self.wireJson
+          : wireJson // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+
+  /// Create a copy of VotingDelegationBuild
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingDelegationSubmissionCopyWith<$Res> get submission {
+    return $VotingDelegationSubmissionCopyWith<$Res>(_self.submission, (value) {
+      return _then(_self.copyWith(submission: value));
+    });
+  }
+}
+
+/// @nodoc
 mixin _$VotingDelegationConfirmation {
   String get txHash;
   int get vanLeafPosition;
@@ -313,6 +2723,928 @@ class __$VotingDelegationConfirmationCopyWithImpl<$Res>
           ? _self.vanLeafPosition
           : vanLeafPosition // ignore: cast_nullable_to_non_nullable
               as int,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$VotingDelegationProgress {
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType && other is VotingDelegationProgress);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'VotingDelegationProgress()';
+  }
+}
+
+/// @nodoc
+class $VotingDelegationProgressCopyWith<$Res> {
+  $VotingDelegationProgressCopyWith(
+      VotingDelegationProgress _, $Res Function(VotingDelegationProgress) __);
+}
+
+/// Adds pattern-matching-related methods to [VotingDelegationProgress].
+extension VotingDelegationProgressPatterns on VotingDelegationProgress {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(VotingDelegationProgress_SelectingNotes value)?
+        selectingNotes,
+    TResult Function(VotingDelegationProgress_PcztBuilding value)? pcztBuilding,
+    TResult Function(VotingDelegationProgress_PcztBuilt value)? pcztBuilt,
+    TResult Function(VotingDelegationProgress_ProofStarting value)?
+        proofStarting,
+    TResult Function(VotingDelegationProgress_ProofProgress value)?
+        proofProgress,
+    TResult Function(VotingDelegationProgress_ProofComplete value)?
+        proofComplete,
+    TResult Function(VotingDelegationProgress_SigningPayload value)?
+        signingPayload,
+    TResult Function(VotingDelegationProgress_PayloadReady value)? payloadReady,
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case VotingDelegationProgress_SelectingNotes()
+          when selectingNotes != null:
+        return selectingNotes(_that);
+      case VotingDelegationProgress_PcztBuilding() when pcztBuilding != null:
+        return pcztBuilding(_that);
+      case VotingDelegationProgress_PcztBuilt() when pcztBuilt != null:
+        return pcztBuilt(_that);
+      case VotingDelegationProgress_ProofStarting() when proofStarting != null:
+        return proofStarting(_that);
+      case VotingDelegationProgress_ProofProgress() when proofProgress != null:
+        return proofProgress(_that);
+      case VotingDelegationProgress_ProofComplete() when proofComplete != null:
+        return proofComplete(_that);
+      case VotingDelegationProgress_SigningPayload()
+          when signingPayload != null:
+        return signingPayload(_that);
+      case VotingDelegationProgress_PayloadReady() when payloadReady != null:
+        return payloadReady(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(VotingDelegationProgress_SelectingNotes value)
+        selectingNotes,
+    required TResult Function(VotingDelegationProgress_PcztBuilding value)
+        pcztBuilding,
+    required TResult Function(VotingDelegationProgress_PcztBuilt value)
+        pcztBuilt,
+    required TResult Function(VotingDelegationProgress_ProofStarting value)
+        proofStarting,
+    required TResult Function(VotingDelegationProgress_ProofProgress value)
+        proofProgress,
+    required TResult Function(VotingDelegationProgress_ProofComplete value)
+        proofComplete,
+    required TResult Function(VotingDelegationProgress_SigningPayload value)
+        signingPayload,
+    required TResult Function(VotingDelegationProgress_PayloadReady value)
+        payloadReady,
+  }) {
+    final _that = this;
+    switch (_that) {
+      case VotingDelegationProgress_SelectingNotes():
+        return selectingNotes(_that);
+      case VotingDelegationProgress_PcztBuilding():
+        return pcztBuilding(_that);
+      case VotingDelegationProgress_PcztBuilt():
+        return pcztBuilt(_that);
+      case VotingDelegationProgress_ProofStarting():
+        return proofStarting(_that);
+      case VotingDelegationProgress_ProofProgress():
+        return proofProgress(_that);
+      case VotingDelegationProgress_ProofComplete():
+        return proofComplete(_that);
+      case VotingDelegationProgress_SigningPayload():
+        return signingPayload(_that);
+      case VotingDelegationProgress_PayloadReady():
+        return payloadReady(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(VotingDelegationProgress_SelectingNotes value)?
+        selectingNotes,
+    TResult? Function(VotingDelegationProgress_PcztBuilding value)?
+        pcztBuilding,
+    TResult? Function(VotingDelegationProgress_PcztBuilt value)? pcztBuilt,
+    TResult? Function(VotingDelegationProgress_ProofStarting value)?
+        proofStarting,
+    TResult? Function(VotingDelegationProgress_ProofProgress value)?
+        proofProgress,
+    TResult? Function(VotingDelegationProgress_ProofComplete value)?
+        proofComplete,
+    TResult? Function(VotingDelegationProgress_SigningPayload value)?
+        signingPayload,
+    TResult? Function(VotingDelegationProgress_PayloadReady value)?
+        payloadReady,
+  }) {
+    final _that = this;
+    switch (_that) {
+      case VotingDelegationProgress_SelectingNotes()
+          when selectingNotes != null:
+        return selectingNotes(_that);
+      case VotingDelegationProgress_PcztBuilding() when pcztBuilding != null:
+        return pcztBuilding(_that);
+      case VotingDelegationProgress_PcztBuilt() when pcztBuilt != null:
+        return pcztBuilt(_that);
+      case VotingDelegationProgress_ProofStarting() when proofStarting != null:
+        return proofStarting(_that);
+      case VotingDelegationProgress_ProofProgress() when proofProgress != null:
+        return proofProgress(_that);
+      case VotingDelegationProgress_ProofComplete() when proofComplete != null:
+        return proofComplete(_that);
+      case VotingDelegationProgress_SigningPayload()
+          when signingPayload != null:
+        return signingPayload(_that);
+      case VotingDelegationProgress_PayloadReady() when payloadReady != null:
+        return payloadReady(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? selectingNotes,
+    TResult Function()? pcztBuilding,
+    TResult Function()? pcztBuilt,
+    TResult Function()? proofStarting,
+    TResult Function(double progress)? proofProgress,
+    TResult Function()? proofComplete,
+    TResult Function()? signingPayload,
+    TResult Function()? payloadReady,
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case VotingDelegationProgress_SelectingNotes()
+          when selectingNotes != null:
+        return selectingNotes();
+      case VotingDelegationProgress_PcztBuilding() when pcztBuilding != null:
+        return pcztBuilding();
+      case VotingDelegationProgress_PcztBuilt() when pcztBuilt != null:
+        return pcztBuilt();
+      case VotingDelegationProgress_ProofStarting() when proofStarting != null:
+        return proofStarting();
+      case VotingDelegationProgress_ProofProgress() when proofProgress != null:
+        return proofProgress(_that.progress);
+      case VotingDelegationProgress_ProofComplete() when proofComplete != null:
+        return proofComplete();
+      case VotingDelegationProgress_SigningPayload()
+          when signingPayload != null:
+        return signingPayload();
+      case VotingDelegationProgress_PayloadReady() when payloadReady != null:
+        return payloadReady();
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function() selectingNotes,
+    required TResult Function() pcztBuilding,
+    required TResult Function() pcztBuilt,
+    required TResult Function() proofStarting,
+    required TResult Function(double progress) proofProgress,
+    required TResult Function() proofComplete,
+    required TResult Function() signingPayload,
+    required TResult Function() payloadReady,
+  }) {
+    final _that = this;
+    switch (_that) {
+      case VotingDelegationProgress_SelectingNotes():
+        return selectingNotes();
+      case VotingDelegationProgress_PcztBuilding():
+        return pcztBuilding();
+      case VotingDelegationProgress_PcztBuilt():
+        return pcztBuilt();
+      case VotingDelegationProgress_ProofStarting():
+        return proofStarting();
+      case VotingDelegationProgress_ProofProgress():
+        return proofProgress(_that.progress);
+      case VotingDelegationProgress_ProofComplete():
+        return proofComplete();
+      case VotingDelegationProgress_SigningPayload():
+        return signingPayload();
+      case VotingDelegationProgress_PayloadReady():
+        return payloadReady();
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? selectingNotes,
+    TResult? Function()? pcztBuilding,
+    TResult? Function()? pcztBuilt,
+    TResult? Function()? proofStarting,
+    TResult? Function(double progress)? proofProgress,
+    TResult? Function()? proofComplete,
+    TResult? Function()? signingPayload,
+    TResult? Function()? payloadReady,
+  }) {
+    final _that = this;
+    switch (_that) {
+      case VotingDelegationProgress_SelectingNotes()
+          when selectingNotes != null:
+        return selectingNotes();
+      case VotingDelegationProgress_PcztBuilding() when pcztBuilding != null:
+        return pcztBuilding();
+      case VotingDelegationProgress_PcztBuilt() when pcztBuilt != null:
+        return pcztBuilt();
+      case VotingDelegationProgress_ProofStarting() when proofStarting != null:
+        return proofStarting();
+      case VotingDelegationProgress_ProofProgress() when proofProgress != null:
+        return proofProgress(_that.progress);
+      case VotingDelegationProgress_ProofComplete() when proofComplete != null:
+        return proofComplete();
+      case VotingDelegationProgress_SigningPayload()
+          when signingPayload != null:
+        return signingPayload();
+      case VotingDelegationProgress_PayloadReady() when payloadReady != null:
+        return payloadReady();
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class VotingDelegationProgress_SelectingNotes extends VotingDelegationProgress {
+  const VotingDelegationProgress_SelectingNotes() : super._();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingDelegationProgress_SelectingNotes);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'VotingDelegationProgress.selectingNotes()';
+  }
+}
+
+/// @nodoc
+
+class VotingDelegationProgress_PcztBuilding extends VotingDelegationProgress {
+  const VotingDelegationProgress_PcztBuilding() : super._();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingDelegationProgress_PcztBuilding);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'VotingDelegationProgress.pcztBuilding()';
+  }
+}
+
+/// @nodoc
+
+class VotingDelegationProgress_PcztBuilt extends VotingDelegationProgress {
+  const VotingDelegationProgress_PcztBuilt() : super._();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingDelegationProgress_PcztBuilt);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'VotingDelegationProgress.pcztBuilt()';
+  }
+}
+
+/// @nodoc
+
+class VotingDelegationProgress_ProofStarting extends VotingDelegationProgress {
+  const VotingDelegationProgress_ProofStarting() : super._();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingDelegationProgress_ProofStarting);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'VotingDelegationProgress.proofStarting()';
+  }
+}
+
+/// @nodoc
+
+class VotingDelegationProgress_ProofProgress extends VotingDelegationProgress {
+  const VotingDelegationProgress_ProofProgress({required this.progress})
+      : super._();
+
+  final double progress;
+
+  /// Create a copy of VotingDelegationProgress
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingDelegationProgress_ProofProgressCopyWith<
+          VotingDelegationProgress_ProofProgress>
+      get copyWith => _$VotingDelegationProgress_ProofProgressCopyWithImpl<
+          VotingDelegationProgress_ProofProgress>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingDelegationProgress_ProofProgress &&
+            (identical(other.progress, progress) ||
+                other.progress == progress));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, progress);
+
+  @override
+  String toString() {
+    return 'VotingDelegationProgress.proofProgress(progress: $progress)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingDelegationProgress_ProofProgressCopyWith<$Res>
+    implements $VotingDelegationProgressCopyWith<$Res> {
+  factory $VotingDelegationProgress_ProofProgressCopyWith(
+          VotingDelegationProgress_ProofProgress value,
+          $Res Function(VotingDelegationProgress_ProofProgress) _then) =
+      _$VotingDelegationProgress_ProofProgressCopyWithImpl;
+  @useResult
+  $Res call({double progress});
+}
+
+/// @nodoc
+class _$VotingDelegationProgress_ProofProgressCopyWithImpl<$Res>
+    implements $VotingDelegationProgress_ProofProgressCopyWith<$Res> {
+  _$VotingDelegationProgress_ProofProgressCopyWithImpl(this._self, this._then);
+
+  final VotingDelegationProgress_ProofProgress _self;
+  final $Res Function(VotingDelegationProgress_ProofProgress) _then;
+
+  /// Create a copy of VotingDelegationProgress
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? progress = null,
+  }) {
+    return _then(VotingDelegationProgress_ProofProgress(
+      progress: null == progress
+          ? _self.progress
+          : progress // ignore: cast_nullable_to_non_nullable
+              as double,
+    ));
+  }
+}
+
+/// @nodoc
+
+class VotingDelegationProgress_ProofComplete extends VotingDelegationProgress {
+  const VotingDelegationProgress_ProofComplete() : super._();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingDelegationProgress_ProofComplete);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'VotingDelegationProgress.proofComplete()';
+  }
+}
+
+/// @nodoc
+
+class VotingDelegationProgress_SigningPayload extends VotingDelegationProgress {
+  const VotingDelegationProgress_SigningPayload() : super._();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingDelegationProgress_SigningPayload);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'VotingDelegationProgress.signingPayload()';
+  }
+}
+
+/// @nodoc
+
+class VotingDelegationProgress_PayloadReady extends VotingDelegationProgress {
+  const VotingDelegationProgress_PayloadReady() : super._();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingDelegationProgress_PayloadReady);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'VotingDelegationProgress.payloadReady()';
+  }
+}
+
+/// @nodoc
+mixin _$VotingDelegationRecovery {
+  int get bundleIndex;
+  String get phase;
+  String get workflowPhase;
+  String? get txHash;
+  int? get vanLeafPosition;
+
+  /// Create a copy of VotingDelegationRecovery
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingDelegationRecoveryCopyWith<VotingDelegationRecovery> get copyWith =>
+      _$VotingDelegationRecoveryCopyWithImpl<VotingDelegationRecovery>(
+          this as VotingDelegationRecovery, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingDelegationRecovery &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex) &&
+            (identical(other.phase, phase) || other.phase == phase) &&
+            (identical(other.workflowPhase, workflowPhase) ||
+                other.workflowPhase == workflowPhase) &&
+            (identical(other.txHash, txHash) || other.txHash == txHash) &&
+            (identical(other.vanLeafPosition, vanLeafPosition) ||
+                other.vanLeafPosition == vanLeafPosition));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType, bundleIndex, phase, workflowPhase, txHash, vanLeafPosition);
+
+  @override
+  String toString() {
+    return 'VotingDelegationRecovery(bundleIndex: $bundleIndex, phase: $phase, workflowPhase: $workflowPhase, txHash: $txHash, vanLeafPosition: $vanLeafPosition)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingDelegationRecoveryCopyWith<$Res> {
+  factory $VotingDelegationRecoveryCopyWith(VotingDelegationRecovery value,
+          $Res Function(VotingDelegationRecovery) _then) =
+      _$VotingDelegationRecoveryCopyWithImpl;
+  @useResult
+  $Res call(
+      {int bundleIndex,
+      String phase,
+      String workflowPhase,
+      String? txHash,
+      int? vanLeafPosition});
+}
+
+/// @nodoc
+class _$VotingDelegationRecoveryCopyWithImpl<$Res>
+    implements $VotingDelegationRecoveryCopyWith<$Res> {
+  _$VotingDelegationRecoveryCopyWithImpl(this._self, this._then);
+
+  final VotingDelegationRecovery _self;
+  final $Res Function(VotingDelegationRecovery) _then;
+
+  /// Create a copy of VotingDelegationRecovery
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? bundleIndex = null,
+    Object? phase = null,
+    Object? workflowPhase = null,
+    Object? txHash = freezed,
+    Object? vanLeafPosition = freezed,
+  }) {
+    return _then(_self.copyWith(
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      phase: null == phase
+          ? _self.phase
+          : phase // ignore: cast_nullable_to_non_nullable
+              as String,
+      workflowPhase: null == workflowPhase
+          ? _self.workflowPhase
+          : workflowPhase // ignore: cast_nullable_to_non_nullable
+              as String,
+      txHash: freezed == txHash
+          ? _self.txHash
+          : txHash // ignore: cast_nullable_to_non_nullable
+              as String?,
+      vanLeafPosition: freezed == vanLeafPosition
+          ? _self.vanLeafPosition
+          : vanLeafPosition // ignore: cast_nullable_to_non_nullable
+              as int?,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingDelegationRecovery].
+extension VotingDelegationRecoveryPatterns on VotingDelegationRecovery {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingDelegationRecovery value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationRecovery() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingDelegationRecovery value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationRecovery():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingDelegationRecovery value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationRecovery() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(int bundleIndex, String phase, String workflowPhase,
+            String? txHash, int? vanLeafPosition)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationRecovery() when $default != null:
+        return $default(_that.bundleIndex, _that.phase, _that.workflowPhase,
+            _that.txHash, _that.vanLeafPosition);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(int bundleIndex, String phase, String workflowPhase,
+            String? txHash, int? vanLeafPosition)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationRecovery():
+        return $default(_that.bundleIndex, _that.phase, _that.workflowPhase,
+            _that.txHash, _that.vanLeafPosition);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(int bundleIndex, String phase, String workflowPhase,
+            String? txHash, int? vanLeafPosition)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationRecovery() when $default != null:
+        return $default(_that.bundleIndex, _that.phase, _that.workflowPhase,
+            _that.txHash, _that.vanLeafPosition);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingDelegationRecovery implements VotingDelegationRecovery {
+  const _VotingDelegationRecovery(
+      {required this.bundleIndex,
+      required this.phase,
+      required this.workflowPhase,
+      this.txHash,
+      this.vanLeafPosition});
+
+  @override
+  final int bundleIndex;
+  @override
+  final String phase;
+  @override
+  final String workflowPhase;
+  @override
+  final String? txHash;
+  @override
+  final int? vanLeafPosition;
+
+  /// Create a copy of VotingDelegationRecovery
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingDelegationRecoveryCopyWith<_VotingDelegationRecovery> get copyWith =>
+      __$VotingDelegationRecoveryCopyWithImpl<_VotingDelegationRecovery>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingDelegationRecovery &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex) &&
+            (identical(other.phase, phase) || other.phase == phase) &&
+            (identical(other.workflowPhase, workflowPhase) ||
+                other.workflowPhase == workflowPhase) &&
+            (identical(other.txHash, txHash) || other.txHash == txHash) &&
+            (identical(other.vanLeafPosition, vanLeafPosition) ||
+                other.vanLeafPosition == vanLeafPosition));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType, bundleIndex, phase, workflowPhase, txHash, vanLeafPosition);
+
+  @override
+  String toString() {
+    return 'VotingDelegationRecovery(bundleIndex: $bundleIndex, phase: $phase, workflowPhase: $workflowPhase, txHash: $txHash, vanLeafPosition: $vanLeafPosition)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingDelegationRecoveryCopyWith<$Res>
+    implements $VotingDelegationRecoveryCopyWith<$Res> {
+  factory _$VotingDelegationRecoveryCopyWith(_VotingDelegationRecovery value,
+          $Res Function(_VotingDelegationRecovery) _then) =
+      __$VotingDelegationRecoveryCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {int bundleIndex,
+      String phase,
+      String workflowPhase,
+      String? txHash,
+      int? vanLeafPosition});
+}
+
+/// @nodoc
+class __$VotingDelegationRecoveryCopyWithImpl<$Res>
+    implements _$VotingDelegationRecoveryCopyWith<$Res> {
+  __$VotingDelegationRecoveryCopyWithImpl(this._self, this._then);
+
+  final _VotingDelegationRecovery _self;
+  final $Res Function(_VotingDelegationRecovery) _then;
+
+  /// Create a copy of VotingDelegationRecovery
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? bundleIndex = null,
+    Object? phase = null,
+    Object? workflowPhase = null,
+    Object? txHash = freezed,
+    Object? vanLeafPosition = freezed,
+  }) {
+    return _then(_VotingDelegationRecovery(
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      phase: null == phase
+          ? _self.phase
+          : phase // ignore: cast_nullable_to_non_nullable
+              as String,
+      workflowPhase: null == workflowPhase
+          ? _self.workflowPhase
+          : workflowPhase // ignore: cast_nullable_to_non_nullable
+              as String,
+      txHash: freezed == txHash
+          ? _self.txHash
+          : txHash // ignore: cast_nullable_to_non_nullable
+              as String?,
+      vanLeafPosition: freezed == vanLeafPosition
+          ? _self.vanLeafPosition
+          : vanLeafPosition // ignore: cast_nullable_to_non_nullable
+              as int?,
     ));
   }
 }
@@ -721,6 +4053,323 @@ class __$VotingDelegationSetupCopyWithImpl<$Res>
           ? _self.tx1Effects
           : tx1Effects // ignore: cast_nullable_to_non_nullable
               as Uint8List,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$VotingDelegationStatus {
+  int get bundleIndex;
+  String get phase;
+  String? get txHash;
+
+  /// Create a copy of VotingDelegationStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingDelegationStatusCopyWith<VotingDelegationStatus> get copyWith =>
+      _$VotingDelegationStatusCopyWithImpl<VotingDelegationStatus>(
+          this as VotingDelegationStatus, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingDelegationStatus &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex) &&
+            (identical(other.phase, phase) || other.phase == phase) &&
+            (identical(other.txHash, txHash) || other.txHash == txHash));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, bundleIndex, phase, txHash);
+
+  @override
+  String toString() {
+    return 'VotingDelegationStatus(bundleIndex: $bundleIndex, phase: $phase, txHash: $txHash)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingDelegationStatusCopyWith<$Res> {
+  factory $VotingDelegationStatusCopyWith(VotingDelegationStatus value,
+          $Res Function(VotingDelegationStatus) _then) =
+      _$VotingDelegationStatusCopyWithImpl;
+  @useResult
+  $Res call({int bundleIndex, String phase, String? txHash});
+}
+
+/// @nodoc
+class _$VotingDelegationStatusCopyWithImpl<$Res>
+    implements $VotingDelegationStatusCopyWith<$Res> {
+  _$VotingDelegationStatusCopyWithImpl(this._self, this._then);
+
+  final VotingDelegationStatus _self;
+  final $Res Function(VotingDelegationStatus) _then;
+
+  /// Create a copy of VotingDelegationStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? bundleIndex = null,
+    Object? phase = null,
+    Object? txHash = freezed,
+  }) {
+    return _then(_self.copyWith(
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      phase: null == phase
+          ? _self.phase
+          : phase // ignore: cast_nullable_to_non_nullable
+              as String,
+      txHash: freezed == txHash
+          ? _self.txHash
+          : txHash // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingDelegationStatus].
+extension VotingDelegationStatusPatterns on VotingDelegationStatus {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingDelegationStatus value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationStatus() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingDelegationStatus value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationStatus():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingDelegationStatus value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationStatus() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(int bundleIndex, String phase, String? txHash)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationStatus() when $default != null:
+        return $default(_that.bundleIndex, _that.phase, _that.txHash);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(int bundleIndex, String phase, String? txHash) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationStatus():
+        return $default(_that.bundleIndex, _that.phase, _that.txHash);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(int bundleIndex, String phase, String? txHash)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDelegationStatus() when $default != null:
+        return $default(_that.bundleIndex, _that.phase, _that.txHash);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingDelegationStatus implements VotingDelegationStatus {
+  const _VotingDelegationStatus(
+      {required this.bundleIndex, required this.phase, this.txHash});
+
+  @override
+  final int bundleIndex;
+  @override
+  final String phase;
+  @override
+  final String? txHash;
+
+  /// Create a copy of VotingDelegationStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingDelegationStatusCopyWith<_VotingDelegationStatus> get copyWith =>
+      __$VotingDelegationStatusCopyWithImpl<_VotingDelegationStatus>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingDelegationStatus &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex) &&
+            (identical(other.phase, phase) || other.phase == phase) &&
+            (identical(other.txHash, txHash) || other.txHash == txHash));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, bundleIndex, phase, txHash);
+
+  @override
+  String toString() {
+    return 'VotingDelegationStatus(bundleIndex: $bundleIndex, phase: $phase, txHash: $txHash)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingDelegationStatusCopyWith<$Res>
+    implements $VotingDelegationStatusCopyWith<$Res> {
+  factory _$VotingDelegationStatusCopyWith(_VotingDelegationStatus value,
+          $Res Function(_VotingDelegationStatus) _then) =
+      __$VotingDelegationStatusCopyWithImpl;
+  @override
+  @useResult
+  $Res call({int bundleIndex, String phase, String? txHash});
+}
+
+/// @nodoc
+class __$VotingDelegationStatusCopyWithImpl<$Res>
+    implements _$VotingDelegationStatusCopyWith<$Res> {
+  __$VotingDelegationStatusCopyWithImpl(this._self, this._then);
+
+  final _VotingDelegationStatus _self;
+  final $Res Function(_VotingDelegationStatus) _then;
+
+  /// Create a copy of VotingDelegationStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? bundleIndex = null,
+    Object? phase = null,
+    Object? txHash = freezed,
+  }) {
+    return _then(_VotingDelegationStatus(
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      phase: null == phase
+          ? _self.phase
+          : phase // ignore: cast_nullable_to_non_nullable
+              as String,
+      txHash: freezed == txHash
+          ? _self.txHash
+          : txHash // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -1628,6 +5277,381 @@ class __$VotingEncryptedShareCopyWithImpl<$Res>
 }
 
 /// @nodoc
+mixin _$VotingNextStep {
+  String get kind;
+  int get bundleIndex;
+  int get proposalId;
+  int get choice;
+  int get shareIndex;
+
+  /// Create a copy of VotingNextStep
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingNextStepCopyWith<VotingNextStep> get copyWith =>
+      _$VotingNextStepCopyWithImpl<VotingNextStep>(
+          this as VotingNextStep, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingNextStep &&
+            (identical(other.kind, kind) || other.kind == kind) &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex) &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.choice, choice) || other.choice == choice) &&
+            (identical(other.shareIndex, shareIndex) ||
+                other.shareIndex == shareIndex));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType, kind, bundleIndex, proposalId, choice, shareIndex);
+
+  @override
+  String toString() {
+    return 'VotingNextStep(kind: $kind, bundleIndex: $bundleIndex, proposalId: $proposalId, choice: $choice, shareIndex: $shareIndex)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingNextStepCopyWith<$Res> {
+  factory $VotingNextStepCopyWith(
+          VotingNextStep value, $Res Function(VotingNextStep) _then) =
+      _$VotingNextStepCopyWithImpl;
+  @useResult
+  $Res call(
+      {String kind,
+      int bundleIndex,
+      int proposalId,
+      int choice,
+      int shareIndex});
+}
+
+/// @nodoc
+class _$VotingNextStepCopyWithImpl<$Res>
+    implements $VotingNextStepCopyWith<$Res> {
+  _$VotingNextStepCopyWithImpl(this._self, this._then);
+
+  final VotingNextStep _self;
+  final $Res Function(VotingNextStep) _then;
+
+  /// Create a copy of VotingNextStep
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? kind = null,
+    Object? bundleIndex = null,
+    Object? proposalId = null,
+    Object? choice = null,
+    Object? shareIndex = null,
+  }) {
+    return _then(_self.copyWith(
+      kind: null == kind
+          ? _self.kind
+          : kind // ignore: cast_nullable_to_non_nullable
+              as String,
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      choice: null == choice
+          ? _self.choice
+          : choice // ignore: cast_nullable_to_non_nullable
+              as int,
+      shareIndex: null == shareIndex
+          ? _self.shareIndex
+          : shareIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingNextStep].
+extension VotingNextStepPatterns on VotingNextStep {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingNextStep value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingNextStep() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingNextStep value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingNextStep():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingNextStep value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingNextStep() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(String kind, int bundleIndex, int proposalId, int choice,
+            int shareIndex)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingNextStep() when $default != null:
+        return $default(_that.kind, _that.bundleIndex, _that.proposalId,
+            _that.choice, _that.shareIndex);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(String kind, int bundleIndex, int proposalId, int choice,
+            int shareIndex)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingNextStep():
+        return $default(_that.kind, _that.bundleIndex, _that.proposalId,
+            _that.choice, _that.shareIndex);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(String kind, int bundleIndex, int proposalId, int choice,
+            int shareIndex)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingNextStep() when $default != null:
+        return $default(_that.kind, _that.bundleIndex, _that.proposalId,
+            _that.choice, _that.shareIndex);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingNextStep implements VotingNextStep {
+  const _VotingNextStep(
+      {required this.kind,
+      required this.bundleIndex,
+      required this.proposalId,
+      required this.choice,
+      required this.shareIndex});
+
+  @override
+  final String kind;
+  @override
+  final int bundleIndex;
+  @override
+  final int proposalId;
+  @override
+  final int choice;
+  @override
+  final int shareIndex;
+
+  /// Create a copy of VotingNextStep
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingNextStepCopyWith<_VotingNextStep> get copyWith =>
+      __$VotingNextStepCopyWithImpl<_VotingNextStep>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingNextStep &&
+            (identical(other.kind, kind) || other.kind == kind) &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex) &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.choice, choice) || other.choice == choice) &&
+            (identical(other.shareIndex, shareIndex) ||
+                other.shareIndex == shareIndex));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType, kind, bundleIndex, proposalId, choice, shareIndex);
+
+  @override
+  String toString() {
+    return 'VotingNextStep(kind: $kind, bundleIndex: $bundleIndex, proposalId: $proposalId, choice: $choice, shareIndex: $shareIndex)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingNextStepCopyWith<$Res>
+    implements $VotingNextStepCopyWith<$Res> {
+  factory _$VotingNextStepCopyWith(
+          _VotingNextStep value, $Res Function(_VotingNextStep) _then) =
+      __$VotingNextStepCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {String kind,
+      int bundleIndex,
+      int proposalId,
+      int choice,
+      int shareIndex});
+}
+
+/// @nodoc
+class __$VotingNextStepCopyWithImpl<$Res>
+    implements _$VotingNextStepCopyWith<$Res> {
+  __$VotingNextStepCopyWithImpl(this._self, this._then);
+
+  final _VotingNextStep _self;
+  final $Res Function(_VotingNextStep) _then;
+
+  /// Create a copy of VotingNextStep
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? kind = null,
+    Object? bundleIndex = null,
+    Object? proposalId = null,
+    Object? choice = null,
+    Object? shareIndex = null,
+  }) {
+    return _then(_VotingNextStep(
+      kind: null == kind
+          ? _self.kind
+          : kind // ignore: cast_nullable_to_non_nullable
+              as String,
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      choice: null == choice
+          ? _self.choice
+          : choice // ignore: cast_nullable_to_non_nullable
+              as int,
+      shareIndex: null == shareIndex
+          ? _self.shareIndex
+          : shareIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// @nodoc
 mixin _$VotingPirLayout {
   int get pirDepth;
   int get tier0Layers;
@@ -2378,6 +6402,2503 @@ class __$VotingPreparedInfoCopyWithImpl<$Res>
 }
 
 /// @nodoc
+mixin _$VotingRoundInfo {
+  String get roundId;
+  String get network;
+  BigInt get snapshotHeight;
+  String? get hotkeyAddress;
+  BigInt? get eligibleWeightZatoshi;
+  int get bundleCount;
+  BigInt get createdAt;
+
+  /// Create a copy of VotingRoundInfo
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingRoundInfoCopyWith<VotingRoundInfo> get copyWith =>
+      _$VotingRoundInfoCopyWithImpl<VotingRoundInfo>(
+          this as VotingRoundInfo, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingRoundInfo &&
+            (identical(other.roundId, roundId) || other.roundId == roundId) &&
+            (identical(other.network, network) || other.network == network) &&
+            (identical(other.snapshotHeight, snapshotHeight) ||
+                other.snapshotHeight == snapshotHeight) &&
+            (identical(other.hotkeyAddress, hotkeyAddress) ||
+                other.hotkeyAddress == hotkeyAddress) &&
+            (identical(other.eligibleWeightZatoshi, eligibleWeightZatoshi) ||
+                other.eligibleWeightZatoshi == eligibleWeightZatoshi) &&
+            (identical(other.bundleCount, bundleCount) ||
+                other.bundleCount == bundleCount) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, roundId, network, snapshotHeight,
+      hotkeyAddress, eligibleWeightZatoshi, bundleCount, createdAt);
+
+  @override
+  String toString() {
+    return 'VotingRoundInfo(roundId: $roundId, network: $network, snapshotHeight: $snapshotHeight, hotkeyAddress: $hotkeyAddress, eligibleWeightZatoshi: $eligibleWeightZatoshi, bundleCount: $bundleCount, createdAt: $createdAt)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingRoundInfoCopyWith<$Res> {
+  factory $VotingRoundInfoCopyWith(
+          VotingRoundInfo value, $Res Function(VotingRoundInfo) _then) =
+      _$VotingRoundInfoCopyWithImpl;
+  @useResult
+  $Res call(
+      {String roundId,
+      String network,
+      BigInt snapshotHeight,
+      String? hotkeyAddress,
+      BigInt? eligibleWeightZatoshi,
+      int bundleCount,
+      BigInt createdAt});
+}
+
+/// @nodoc
+class _$VotingRoundInfoCopyWithImpl<$Res>
+    implements $VotingRoundInfoCopyWith<$Res> {
+  _$VotingRoundInfoCopyWithImpl(this._self, this._then);
+
+  final VotingRoundInfo _self;
+  final $Res Function(VotingRoundInfo) _then;
+
+  /// Create a copy of VotingRoundInfo
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? roundId = null,
+    Object? network = null,
+    Object? snapshotHeight = null,
+    Object? hotkeyAddress = freezed,
+    Object? eligibleWeightZatoshi = freezed,
+    Object? bundleCount = null,
+    Object? createdAt = null,
+  }) {
+    return _then(_self.copyWith(
+      roundId: null == roundId
+          ? _self.roundId
+          : roundId // ignore: cast_nullable_to_non_nullable
+              as String,
+      network: null == network
+          ? _self.network
+          : network // ignore: cast_nullable_to_non_nullable
+              as String,
+      snapshotHeight: null == snapshotHeight
+          ? _self.snapshotHeight
+          : snapshotHeight // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      hotkeyAddress: freezed == hotkeyAddress
+          ? _self.hotkeyAddress
+          : hotkeyAddress // ignore: cast_nullable_to_non_nullable
+              as String?,
+      eligibleWeightZatoshi: freezed == eligibleWeightZatoshi
+          ? _self.eligibleWeightZatoshi
+          : eligibleWeightZatoshi // ignore: cast_nullable_to_non_nullable
+              as BigInt?,
+      bundleCount: null == bundleCount
+          ? _self.bundleCount
+          : bundleCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      createdAt: null == createdAt
+          ? _self.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingRoundInfo].
+extension VotingRoundInfoPatterns on VotingRoundInfo {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingRoundInfo value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundInfo() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingRoundInfo value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundInfo():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingRoundInfo value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundInfo() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(
+            String roundId,
+            String network,
+            BigInt snapshotHeight,
+            String? hotkeyAddress,
+            BigInt? eligibleWeightZatoshi,
+            int bundleCount,
+            BigInt createdAt)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundInfo() when $default != null:
+        return $default(
+            _that.roundId,
+            _that.network,
+            _that.snapshotHeight,
+            _that.hotkeyAddress,
+            _that.eligibleWeightZatoshi,
+            _that.bundleCount,
+            _that.createdAt);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(
+            String roundId,
+            String network,
+            BigInt snapshotHeight,
+            String? hotkeyAddress,
+            BigInt? eligibleWeightZatoshi,
+            int bundleCount,
+            BigInt createdAt)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundInfo():
+        return $default(
+            _that.roundId,
+            _that.network,
+            _that.snapshotHeight,
+            _that.hotkeyAddress,
+            _that.eligibleWeightZatoshi,
+            _that.bundleCount,
+            _that.createdAt);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(
+            String roundId,
+            String network,
+            BigInt snapshotHeight,
+            String? hotkeyAddress,
+            BigInt? eligibleWeightZatoshi,
+            int bundleCount,
+            BigInt createdAt)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundInfo() when $default != null:
+        return $default(
+            _that.roundId,
+            _that.network,
+            _that.snapshotHeight,
+            _that.hotkeyAddress,
+            _that.eligibleWeightZatoshi,
+            _that.bundleCount,
+            _that.createdAt);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingRoundInfo implements VotingRoundInfo {
+  const _VotingRoundInfo(
+      {required this.roundId,
+      required this.network,
+      required this.snapshotHeight,
+      this.hotkeyAddress,
+      this.eligibleWeightZatoshi,
+      required this.bundleCount,
+      required this.createdAt});
+
+  @override
+  final String roundId;
+  @override
+  final String network;
+  @override
+  final BigInt snapshotHeight;
+  @override
+  final String? hotkeyAddress;
+  @override
+  final BigInt? eligibleWeightZatoshi;
+  @override
+  final int bundleCount;
+  @override
+  final BigInt createdAt;
+
+  /// Create a copy of VotingRoundInfo
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingRoundInfoCopyWith<_VotingRoundInfo> get copyWith =>
+      __$VotingRoundInfoCopyWithImpl<_VotingRoundInfo>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingRoundInfo &&
+            (identical(other.roundId, roundId) || other.roundId == roundId) &&
+            (identical(other.network, network) || other.network == network) &&
+            (identical(other.snapshotHeight, snapshotHeight) ||
+                other.snapshotHeight == snapshotHeight) &&
+            (identical(other.hotkeyAddress, hotkeyAddress) ||
+                other.hotkeyAddress == hotkeyAddress) &&
+            (identical(other.eligibleWeightZatoshi, eligibleWeightZatoshi) ||
+                other.eligibleWeightZatoshi == eligibleWeightZatoshi) &&
+            (identical(other.bundleCount, bundleCount) ||
+                other.bundleCount == bundleCount) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, roundId, network, snapshotHeight,
+      hotkeyAddress, eligibleWeightZatoshi, bundleCount, createdAt);
+
+  @override
+  String toString() {
+    return 'VotingRoundInfo(roundId: $roundId, network: $network, snapshotHeight: $snapshotHeight, hotkeyAddress: $hotkeyAddress, eligibleWeightZatoshi: $eligibleWeightZatoshi, bundleCount: $bundleCount, createdAt: $createdAt)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingRoundInfoCopyWith<$Res>
+    implements $VotingRoundInfoCopyWith<$Res> {
+  factory _$VotingRoundInfoCopyWith(
+          _VotingRoundInfo value, $Res Function(_VotingRoundInfo) _then) =
+      __$VotingRoundInfoCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {String roundId,
+      String network,
+      BigInt snapshotHeight,
+      String? hotkeyAddress,
+      BigInt? eligibleWeightZatoshi,
+      int bundleCount,
+      BigInt createdAt});
+}
+
+/// @nodoc
+class __$VotingRoundInfoCopyWithImpl<$Res>
+    implements _$VotingRoundInfoCopyWith<$Res> {
+  __$VotingRoundInfoCopyWithImpl(this._self, this._then);
+
+  final _VotingRoundInfo _self;
+  final $Res Function(_VotingRoundInfo) _then;
+
+  /// Create a copy of VotingRoundInfo
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? roundId = null,
+    Object? network = null,
+    Object? snapshotHeight = null,
+    Object? hotkeyAddress = freezed,
+    Object? eligibleWeightZatoshi = freezed,
+    Object? bundleCount = null,
+    Object? createdAt = null,
+  }) {
+    return _then(_VotingRoundInfo(
+      roundId: null == roundId
+          ? _self.roundId
+          : roundId // ignore: cast_nullable_to_non_nullable
+              as String,
+      network: null == network
+          ? _self.network
+          : network // ignore: cast_nullable_to_non_nullable
+              as String,
+      snapshotHeight: null == snapshotHeight
+          ? _self.snapshotHeight
+          : snapshotHeight // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      hotkeyAddress: freezed == hotkeyAddress
+          ? _self.hotkeyAddress
+          : hotkeyAddress // ignore: cast_nullable_to_non_nullable
+              as String?,
+      eligibleWeightZatoshi: freezed == eligibleWeightZatoshi
+          ? _self.eligibleWeightZatoshi
+          : eligibleWeightZatoshi // ignore: cast_nullable_to_non_nullable
+              as BigInt?,
+      bundleCount: null == bundleCount
+          ? _self.bundleCount
+          : bundleCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      createdAt: null == createdAt
+          ? _self.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$VotingRoundPlan {
+  String get roundId;
+  bool get pendingRecovery;
+  List<VotingNextStep> get nextSteps;
+  Uint32List get openProposals;
+  bool get allDecided;
+  List<VotingDelegationStatus> get delegationStatuses;
+  bool get blockingRecovery;
+  bool get blockingShareWork;
+  bool get hotkeyBound;
+  bool get completedVoteArtifact;
+  bool get completedForDisplay;
+  VotingCompletedVoteDisplay? get completedVoteDisplay;
+  bool get needsDraftSetup;
+  String get primaryAction;
+
+  /// Create a copy of VotingRoundPlan
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingRoundPlanCopyWith<VotingRoundPlan> get copyWith =>
+      _$VotingRoundPlanCopyWithImpl<VotingRoundPlan>(
+          this as VotingRoundPlan, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingRoundPlan &&
+            (identical(other.roundId, roundId) || other.roundId == roundId) &&
+            (identical(other.pendingRecovery, pendingRecovery) ||
+                other.pendingRecovery == pendingRecovery) &&
+            const DeepCollectionEquality().equals(other.nextSteps, nextSteps) &&
+            const DeepCollectionEquality()
+                .equals(other.openProposals, openProposals) &&
+            (identical(other.allDecided, allDecided) ||
+                other.allDecided == allDecided) &&
+            const DeepCollectionEquality()
+                .equals(other.delegationStatuses, delegationStatuses) &&
+            (identical(other.blockingRecovery, blockingRecovery) ||
+                other.blockingRecovery == blockingRecovery) &&
+            (identical(other.blockingShareWork, blockingShareWork) ||
+                other.blockingShareWork == blockingShareWork) &&
+            (identical(other.hotkeyBound, hotkeyBound) ||
+                other.hotkeyBound == hotkeyBound) &&
+            (identical(other.completedVoteArtifact, completedVoteArtifact) ||
+                other.completedVoteArtifact == completedVoteArtifact) &&
+            (identical(other.completedForDisplay, completedForDisplay) ||
+                other.completedForDisplay == completedForDisplay) &&
+            (identical(other.completedVoteDisplay, completedVoteDisplay) ||
+                other.completedVoteDisplay == completedVoteDisplay) &&
+            (identical(other.needsDraftSetup, needsDraftSetup) ||
+                other.needsDraftSetup == needsDraftSetup) &&
+            (identical(other.primaryAction, primaryAction) ||
+                other.primaryAction == primaryAction));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      roundId,
+      pendingRecovery,
+      const DeepCollectionEquality().hash(nextSteps),
+      const DeepCollectionEquality().hash(openProposals),
+      allDecided,
+      const DeepCollectionEquality().hash(delegationStatuses),
+      blockingRecovery,
+      blockingShareWork,
+      hotkeyBound,
+      completedVoteArtifact,
+      completedForDisplay,
+      completedVoteDisplay,
+      needsDraftSetup,
+      primaryAction);
+
+  @override
+  String toString() {
+    return 'VotingRoundPlan(roundId: $roundId, pendingRecovery: $pendingRecovery, nextSteps: $nextSteps, openProposals: $openProposals, allDecided: $allDecided, delegationStatuses: $delegationStatuses, blockingRecovery: $blockingRecovery, blockingShareWork: $blockingShareWork, hotkeyBound: $hotkeyBound, completedVoteArtifact: $completedVoteArtifact, completedForDisplay: $completedForDisplay, completedVoteDisplay: $completedVoteDisplay, needsDraftSetup: $needsDraftSetup, primaryAction: $primaryAction)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingRoundPlanCopyWith<$Res> {
+  factory $VotingRoundPlanCopyWith(
+          VotingRoundPlan value, $Res Function(VotingRoundPlan) _then) =
+      _$VotingRoundPlanCopyWithImpl;
+  @useResult
+  $Res call(
+      {String roundId,
+      bool pendingRecovery,
+      List<VotingNextStep> nextSteps,
+      Uint32List openProposals,
+      bool allDecided,
+      List<VotingDelegationStatus> delegationStatuses,
+      bool blockingRecovery,
+      bool blockingShareWork,
+      bool hotkeyBound,
+      bool completedVoteArtifact,
+      bool completedForDisplay,
+      VotingCompletedVoteDisplay? completedVoteDisplay,
+      bool needsDraftSetup,
+      String primaryAction});
+
+  $VotingCompletedVoteDisplayCopyWith<$Res>? get completedVoteDisplay;
+}
+
+/// @nodoc
+class _$VotingRoundPlanCopyWithImpl<$Res>
+    implements $VotingRoundPlanCopyWith<$Res> {
+  _$VotingRoundPlanCopyWithImpl(this._self, this._then);
+
+  final VotingRoundPlan _self;
+  final $Res Function(VotingRoundPlan) _then;
+
+  /// Create a copy of VotingRoundPlan
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? roundId = null,
+    Object? pendingRecovery = null,
+    Object? nextSteps = null,
+    Object? openProposals = null,
+    Object? allDecided = null,
+    Object? delegationStatuses = null,
+    Object? blockingRecovery = null,
+    Object? blockingShareWork = null,
+    Object? hotkeyBound = null,
+    Object? completedVoteArtifact = null,
+    Object? completedForDisplay = null,
+    Object? completedVoteDisplay = freezed,
+    Object? needsDraftSetup = null,
+    Object? primaryAction = null,
+  }) {
+    return _then(_self.copyWith(
+      roundId: null == roundId
+          ? _self.roundId
+          : roundId // ignore: cast_nullable_to_non_nullable
+              as String,
+      pendingRecovery: null == pendingRecovery
+          ? _self.pendingRecovery
+          : pendingRecovery // ignore: cast_nullable_to_non_nullable
+              as bool,
+      nextSteps: null == nextSteps
+          ? _self.nextSteps
+          : nextSteps // ignore: cast_nullable_to_non_nullable
+              as List<VotingNextStep>,
+      openProposals: null == openProposals
+          ? _self.openProposals
+          : openProposals // ignore: cast_nullable_to_non_nullable
+              as Uint32List,
+      allDecided: null == allDecided
+          ? _self.allDecided
+          : allDecided // ignore: cast_nullable_to_non_nullable
+              as bool,
+      delegationStatuses: null == delegationStatuses
+          ? _self.delegationStatuses
+          : delegationStatuses // ignore: cast_nullable_to_non_nullable
+              as List<VotingDelegationStatus>,
+      blockingRecovery: null == blockingRecovery
+          ? _self.blockingRecovery
+          : blockingRecovery // ignore: cast_nullable_to_non_nullable
+              as bool,
+      blockingShareWork: null == blockingShareWork
+          ? _self.blockingShareWork
+          : blockingShareWork // ignore: cast_nullable_to_non_nullable
+              as bool,
+      hotkeyBound: null == hotkeyBound
+          ? _self.hotkeyBound
+          : hotkeyBound // ignore: cast_nullable_to_non_nullable
+              as bool,
+      completedVoteArtifact: null == completedVoteArtifact
+          ? _self.completedVoteArtifact
+          : completedVoteArtifact // ignore: cast_nullable_to_non_nullable
+              as bool,
+      completedForDisplay: null == completedForDisplay
+          ? _self.completedForDisplay
+          : completedForDisplay // ignore: cast_nullable_to_non_nullable
+              as bool,
+      completedVoteDisplay: freezed == completedVoteDisplay
+          ? _self.completedVoteDisplay
+          : completedVoteDisplay // ignore: cast_nullable_to_non_nullable
+              as VotingCompletedVoteDisplay?,
+      needsDraftSetup: null == needsDraftSetup
+          ? _self.needsDraftSetup
+          : needsDraftSetup // ignore: cast_nullable_to_non_nullable
+              as bool,
+      primaryAction: null == primaryAction
+          ? _self.primaryAction
+          : primaryAction // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+
+  /// Create a copy of VotingRoundPlan
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingCompletedVoteDisplayCopyWith<$Res>? get completedVoteDisplay {
+    if (_self.completedVoteDisplay == null) {
+      return null;
+    }
+
+    return $VotingCompletedVoteDisplayCopyWith<$Res>(
+        _self.completedVoteDisplay!, (value) {
+      return _then(_self.copyWith(completedVoteDisplay: value));
+    });
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingRoundPlan].
+extension VotingRoundPlanPatterns on VotingRoundPlan {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingRoundPlan value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundPlan() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingRoundPlan value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundPlan():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingRoundPlan value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundPlan() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(
+            String roundId,
+            bool pendingRecovery,
+            List<VotingNextStep> nextSteps,
+            Uint32List openProposals,
+            bool allDecided,
+            List<VotingDelegationStatus> delegationStatuses,
+            bool blockingRecovery,
+            bool blockingShareWork,
+            bool hotkeyBound,
+            bool completedVoteArtifact,
+            bool completedForDisplay,
+            VotingCompletedVoteDisplay? completedVoteDisplay,
+            bool needsDraftSetup,
+            String primaryAction)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundPlan() when $default != null:
+        return $default(
+            _that.roundId,
+            _that.pendingRecovery,
+            _that.nextSteps,
+            _that.openProposals,
+            _that.allDecided,
+            _that.delegationStatuses,
+            _that.blockingRecovery,
+            _that.blockingShareWork,
+            _that.hotkeyBound,
+            _that.completedVoteArtifact,
+            _that.completedForDisplay,
+            _that.completedVoteDisplay,
+            _that.needsDraftSetup,
+            _that.primaryAction);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(
+            String roundId,
+            bool pendingRecovery,
+            List<VotingNextStep> nextSteps,
+            Uint32List openProposals,
+            bool allDecided,
+            List<VotingDelegationStatus> delegationStatuses,
+            bool blockingRecovery,
+            bool blockingShareWork,
+            bool hotkeyBound,
+            bool completedVoteArtifact,
+            bool completedForDisplay,
+            VotingCompletedVoteDisplay? completedVoteDisplay,
+            bool needsDraftSetup,
+            String primaryAction)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundPlan():
+        return $default(
+            _that.roundId,
+            _that.pendingRecovery,
+            _that.nextSteps,
+            _that.openProposals,
+            _that.allDecided,
+            _that.delegationStatuses,
+            _that.blockingRecovery,
+            _that.blockingShareWork,
+            _that.hotkeyBound,
+            _that.completedVoteArtifact,
+            _that.completedForDisplay,
+            _that.completedVoteDisplay,
+            _that.needsDraftSetup,
+            _that.primaryAction);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(
+            String roundId,
+            bool pendingRecovery,
+            List<VotingNextStep> nextSteps,
+            Uint32List openProposals,
+            bool allDecided,
+            List<VotingDelegationStatus> delegationStatuses,
+            bool blockingRecovery,
+            bool blockingShareWork,
+            bool hotkeyBound,
+            bool completedVoteArtifact,
+            bool completedForDisplay,
+            VotingCompletedVoteDisplay? completedVoteDisplay,
+            bool needsDraftSetup,
+            String primaryAction)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundPlan() when $default != null:
+        return $default(
+            _that.roundId,
+            _that.pendingRecovery,
+            _that.nextSteps,
+            _that.openProposals,
+            _that.allDecided,
+            _that.delegationStatuses,
+            _that.blockingRecovery,
+            _that.blockingShareWork,
+            _that.hotkeyBound,
+            _that.completedVoteArtifact,
+            _that.completedForDisplay,
+            _that.completedVoteDisplay,
+            _that.needsDraftSetup,
+            _that.primaryAction);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingRoundPlan implements VotingRoundPlan {
+  const _VotingRoundPlan(
+      {required this.roundId,
+      required this.pendingRecovery,
+      required final List<VotingNextStep> nextSteps,
+      required this.openProposals,
+      required this.allDecided,
+      required final List<VotingDelegationStatus> delegationStatuses,
+      required this.blockingRecovery,
+      required this.blockingShareWork,
+      required this.hotkeyBound,
+      required this.completedVoteArtifact,
+      required this.completedForDisplay,
+      this.completedVoteDisplay,
+      required this.needsDraftSetup,
+      required this.primaryAction})
+      : _nextSteps = nextSteps,
+        _delegationStatuses = delegationStatuses;
+
+  @override
+  final String roundId;
+  @override
+  final bool pendingRecovery;
+  final List<VotingNextStep> _nextSteps;
+  @override
+  List<VotingNextStep> get nextSteps {
+    if (_nextSteps is EqualUnmodifiableListView) return _nextSteps;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_nextSteps);
+  }
+
+  @override
+  final Uint32List openProposals;
+  @override
+  final bool allDecided;
+  final List<VotingDelegationStatus> _delegationStatuses;
+  @override
+  List<VotingDelegationStatus> get delegationStatuses {
+    if (_delegationStatuses is EqualUnmodifiableListView)
+      return _delegationStatuses;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_delegationStatuses);
+  }
+
+  @override
+  final bool blockingRecovery;
+  @override
+  final bool blockingShareWork;
+  @override
+  final bool hotkeyBound;
+  @override
+  final bool completedVoteArtifact;
+  @override
+  final bool completedForDisplay;
+  @override
+  final VotingCompletedVoteDisplay? completedVoteDisplay;
+  @override
+  final bool needsDraftSetup;
+  @override
+  final String primaryAction;
+
+  /// Create a copy of VotingRoundPlan
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingRoundPlanCopyWith<_VotingRoundPlan> get copyWith =>
+      __$VotingRoundPlanCopyWithImpl<_VotingRoundPlan>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingRoundPlan &&
+            (identical(other.roundId, roundId) || other.roundId == roundId) &&
+            (identical(other.pendingRecovery, pendingRecovery) ||
+                other.pendingRecovery == pendingRecovery) &&
+            const DeepCollectionEquality()
+                .equals(other._nextSteps, _nextSteps) &&
+            const DeepCollectionEquality()
+                .equals(other.openProposals, openProposals) &&
+            (identical(other.allDecided, allDecided) ||
+                other.allDecided == allDecided) &&
+            const DeepCollectionEquality()
+                .equals(other._delegationStatuses, _delegationStatuses) &&
+            (identical(other.blockingRecovery, blockingRecovery) ||
+                other.blockingRecovery == blockingRecovery) &&
+            (identical(other.blockingShareWork, blockingShareWork) ||
+                other.blockingShareWork == blockingShareWork) &&
+            (identical(other.hotkeyBound, hotkeyBound) ||
+                other.hotkeyBound == hotkeyBound) &&
+            (identical(other.completedVoteArtifact, completedVoteArtifact) ||
+                other.completedVoteArtifact == completedVoteArtifact) &&
+            (identical(other.completedForDisplay, completedForDisplay) ||
+                other.completedForDisplay == completedForDisplay) &&
+            (identical(other.completedVoteDisplay, completedVoteDisplay) ||
+                other.completedVoteDisplay == completedVoteDisplay) &&
+            (identical(other.needsDraftSetup, needsDraftSetup) ||
+                other.needsDraftSetup == needsDraftSetup) &&
+            (identical(other.primaryAction, primaryAction) ||
+                other.primaryAction == primaryAction));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      roundId,
+      pendingRecovery,
+      const DeepCollectionEquality().hash(_nextSteps),
+      const DeepCollectionEquality().hash(openProposals),
+      allDecided,
+      const DeepCollectionEquality().hash(_delegationStatuses),
+      blockingRecovery,
+      blockingShareWork,
+      hotkeyBound,
+      completedVoteArtifact,
+      completedForDisplay,
+      completedVoteDisplay,
+      needsDraftSetup,
+      primaryAction);
+
+  @override
+  String toString() {
+    return 'VotingRoundPlan(roundId: $roundId, pendingRecovery: $pendingRecovery, nextSteps: $nextSteps, openProposals: $openProposals, allDecided: $allDecided, delegationStatuses: $delegationStatuses, blockingRecovery: $blockingRecovery, blockingShareWork: $blockingShareWork, hotkeyBound: $hotkeyBound, completedVoteArtifact: $completedVoteArtifact, completedForDisplay: $completedForDisplay, completedVoteDisplay: $completedVoteDisplay, needsDraftSetup: $needsDraftSetup, primaryAction: $primaryAction)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingRoundPlanCopyWith<$Res>
+    implements $VotingRoundPlanCopyWith<$Res> {
+  factory _$VotingRoundPlanCopyWith(
+          _VotingRoundPlan value, $Res Function(_VotingRoundPlan) _then) =
+      __$VotingRoundPlanCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {String roundId,
+      bool pendingRecovery,
+      List<VotingNextStep> nextSteps,
+      Uint32List openProposals,
+      bool allDecided,
+      List<VotingDelegationStatus> delegationStatuses,
+      bool blockingRecovery,
+      bool blockingShareWork,
+      bool hotkeyBound,
+      bool completedVoteArtifact,
+      bool completedForDisplay,
+      VotingCompletedVoteDisplay? completedVoteDisplay,
+      bool needsDraftSetup,
+      String primaryAction});
+
+  @override
+  $VotingCompletedVoteDisplayCopyWith<$Res>? get completedVoteDisplay;
+}
+
+/// @nodoc
+class __$VotingRoundPlanCopyWithImpl<$Res>
+    implements _$VotingRoundPlanCopyWith<$Res> {
+  __$VotingRoundPlanCopyWithImpl(this._self, this._then);
+
+  final _VotingRoundPlan _self;
+  final $Res Function(_VotingRoundPlan) _then;
+
+  /// Create a copy of VotingRoundPlan
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? roundId = null,
+    Object? pendingRecovery = null,
+    Object? nextSteps = null,
+    Object? openProposals = null,
+    Object? allDecided = null,
+    Object? delegationStatuses = null,
+    Object? blockingRecovery = null,
+    Object? blockingShareWork = null,
+    Object? hotkeyBound = null,
+    Object? completedVoteArtifact = null,
+    Object? completedForDisplay = null,
+    Object? completedVoteDisplay = freezed,
+    Object? needsDraftSetup = null,
+    Object? primaryAction = null,
+  }) {
+    return _then(_VotingRoundPlan(
+      roundId: null == roundId
+          ? _self.roundId
+          : roundId // ignore: cast_nullable_to_non_nullable
+              as String,
+      pendingRecovery: null == pendingRecovery
+          ? _self.pendingRecovery
+          : pendingRecovery // ignore: cast_nullable_to_non_nullable
+              as bool,
+      nextSteps: null == nextSteps
+          ? _self._nextSteps
+          : nextSteps // ignore: cast_nullable_to_non_nullable
+              as List<VotingNextStep>,
+      openProposals: null == openProposals
+          ? _self.openProposals
+          : openProposals // ignore: cast_nullable_to_non_nullable
+              as Uint32List,
+      allDecided: null == allDecided
+          ? _self.allDecided
+          : allDecided // ignore: cast_nullable_to_non_nullable
+              as bool,
+      delegationStatuses: null == delegationStatuses
+          ? _self._delegationStatuses
+          : delegationStatuses // ignore: cast_nullable_to_non_nullable
+              as List<VotingDelegationStatus>,
+      blockingRecovery: null == blockingRecovery
+          ? _self.blockingRecovery
+          : blockingRecovery // ignore: cast_nullable_to_non_nullable
+              as bool,
+      blockingShareWork: null == blockingShareWork
+          ? _self.blockingShareWork
+          : blockingShareWork // ignore: cast_nullable_to_non_nullable
+              as bool,
+      hotkeyBound: null == hotkeyBound
+          ? _self.hotkeyBound
+          : hotkeyBound // ignore: cast_nullable_to_non_nullable
+              as bool,
+      completedVoteArtifact: null == completedVoteArtifact
+          ? _self.completedVoteArtifact
+          : completedVoteArtifact // ignore: cast_nullable_to_non_nullable
+              as bool,
+      completedForDisplay: null == completedForDisplay
+          ? _self.completedForDisplay
+          : completedForDisplay // ignore: cast_nullable_to_non_nullable
+              as bool,
+      completedVoteDisplay: freezed == completedVoteDisplay
+          ? _self.completedVoteDisplay
+          : completedVoteDisplay // ignore: cast_nullable_to_non_nullable
+              as VotingCompletedVoteDisplay?,
+      needsDraftSetup: null == needsDraftSetup
+          ? _self.needsDraftSetup
+          : needsDraftSetup // ignore: cast_nullable_to_non_nullable
+              as bool,
+      primaryAction: null == primaryAction
+          ? _self.primaryAction
+          : primaryAction // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+
+  /// Create a copy of VotingRoundPlan
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingCompletedVoteDisplayCopyWith<$Res>? get completedVoteDisplay {
+    if (_self.completedVoteDisplay == null) {
+      return null;
+    }
+
+    return $VotingCompletedVoteDisplayCopyWith<$Res>(
+        _self.completedVoteDisplay!, (value) {
+      return _then(_self.copyWith(completedVoteDisplay: value));
+    });
+  }
+}
+
+/// @nodoc
+mixin _$VotingRoundRecovery {
+  String get roundId;
+  int get bundleCount;
+  List<VotingDelegationRecovery> get delegation;
+  List<VotingVoteRecovery> get votes;
+  List<VotingShareWorkflow> get shares;
+  List<VotingShareDelegationRecord> get shareDelegations;
+  List<VotingShareDelegationRecord> get unconfirmedShareDelegations;
+
+  /// Create a copy of VotingRoundRecovery
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingRoundRecoveryCopyWith<VotingRoundRecovery> get copyWith =>
+      _$VotingRoundRecoveryCopyWithImpl<VotingRoundRecovery>(
+          this as VotingRoundRecovery, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingRoundRecovery &&
+            (identical(other.roundId, roundId) || other.roundId == roundId) &&
+            (identical(other.bundleCount, bundleCount) ||
+                other.bundleCount == bundleCount) &&
+            const DeepCollectionEquality()
+                .equals(other.delegation, delegation) &&
+            const DeepCollectionEquality().equals(other.votes, votes) &&
+            const DeepCollectionEquality().equals(other.shares, shares) &&
+            const DeepCollectionEquality()
+                .equals(other.shareDelegations, shareDelegations) &&
+            const DeepCollectionEquality().equals(
+                other.unconfirmedShareDelegations,
+                unconfirmedShareDelegations));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      roundId,
+      bundleCount,
+      const DeepCollectionEquality().hash(delegation),
+      const DeepCollectionEquality().hash(votes),
+      const DeepCollectionEquality().hash(shares),
+      const DeepCollectionEquality().hash(shareDelegations),
+      const DeepCollectionEquality().hash(unconfirmedShareDelegations));
+
+  @override
+  String toString() {
+    return 'VotingRoundRecovery(roundId: $roundId, bundleCount: $bundleCount, delegation: $delegation, votes: $votes, shares: $shares, shareDelegations: $shareDelegations, unconfirmedShareDelegations: $unconfirmedShareDelegations)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingRoundRecoveryCopyWith<$Res> {
+  factory $VotingRoundRecoveryCopyWith(
+          VotingRoundRecovery value, $Res Function(VotingRoundRecovery) _then) =
+      _$VotingRoundRecoveryCopyWithImpl;
+  @useResult
+  $Res call(
+      {String roundId,
+      int bundleCount,
+      List<VotingDelegationRecovery> delegation,
+      List<VotingVoteRecovery> votes,
+      List<VotingShareWorkflow> shares,
+      List<VotingShareDelegationRecord> shareDelegations,
+      List<VotingShareDelegationRecord> unconfirmedShareDelegations});
+}
+
+/// @nodoc
+class _$VotingRoundRecoveryCopyWithImpl<$Res>
+    implements $VotingRoundRecoveryCopyWith<$Res> {
+  _$VotingRoundRecoveryCopyWithImpl(this._self, this._then);
+
+  final VotingRoundRecovery _self;
+  final $Res Function(VotingRoundRecovery) _then;
+
+  /// Create a copy of VotingRoundRecovery
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? roundId = null,
+    Object? bundleCount = null,
+    Object? delegation = null,
+    Object? votes = null,
+    Object? shares = null,
+    Object? shareDelegations = null,
+    Object? unconfirmedShareDelegations = null,
+  }) {
+    return _then(_self.copyWith(
+      roundId: null == roundId
+          ? _self.roundId
+          : roundId // ignore: cast_nullable_to_non_nullable
+              as String,
+      bundleCount: null == bundleCount
+          ? _self.bundleCount
+          : bundleCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      delegation: null == delegation
+          ? _self.delegation
+          : delegation // ignore: cast_nullable_to_non_nullable
+              as List<VotingDelegationRecovery>,
+      votes: null == votes
+          ? _self.votes
+          : votes // ignore: cast_nullable_to_non_nullable
+              as List<VotingVoteRecovery>,
+      shares: null == shares
+          ? _self.shares
+          : shares // ignore: cast_nullable_to_non_nullable
+              as List<VotingShareWorkflow>,
+      shareDelegations: null == shareDelegations
+          ? _self.shareDelegations
+          : shareDelegations // ignore: cast_nullable_to_non_nullable
+              as List<VotingShareDelegationRecord>,
+      unconfirmedShareDelegations: null == unconfirmedShareDelegations
+          ? _self.unconfirmedShareDelegations
+          : unconfirmedShareDelegations // ignore: cast_nullable_to_non_nullable
+              as List<VotingShareDelegationRecord>,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingRoundRecovery].
+extension VotingRoundRecoveryPatterns on VotingRoundRecovery {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingRoundRecovery value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundRecovery() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingRoundRecovery value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundRecovery():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingRoundRecovery value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundRecovery() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(
+            String roundId,
+            int bundleCount,
+            List<VotingDelegationRecovery> delegation,
+            List<VotingVoteRecovery> votes,
+            List<VotingShareWorkflow> shares,
+            List<VotingShareDelegationRecord> shareDelegations,
+            List<VotingShareDelegationRecord> unconfirmedShareDelegations)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundRecovery() when $default != null:
+        return $default(
+            _that.roundId,
+            _that.bundleCount,
+            _that.delegation,
+            _that.votes,
+            _that.shares,
+            _that.shareDelegations,
+            _that.unconfirmedShareDelegations);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(
+            String roundId,
+            int bundleCount,
+            List<VotingDelegationRecovery> delegation,
+            List<VotingVoteRecovery> votes,
+            List<VotingShareWorkflow> shares,
+            List<VotingShareDelegationRecord> shareDelegations,
+            List<VotingShareDelegationRecord> unconfirmedShareDelegations)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundRecovery():
+        return $default(
+            _that.roundId,
+            _that.bundleCount,
+            _that.delegation,
+            _that.votes,
+            _that.shares,
+            _that.shareDelegations,
+            _that.unconfirmedShareDelegations);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(
+            String roundId,
+            int bundleCount,
+            List<VotingDelegationRecovery> delegation,
+            List<VotingVoteRecovery> votes,
+            List<VotingShareWorkflow> shares,
+            List<VotingShareDelegationRecord> shareDelegations,
+            List<VotingShareDelegationRecord> unconfirmedShareDelegations)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundRecovery() when $default != null:
+        return $default(
+            _that.roundId,
+            _that.bundleCount,
+            _that.delegation,
+            _that.votes,
+            _that.shares,
+            _that.shareDelegations,
+            _that.unconfirmedShareDelegations);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingRoundRecovery implements VotingRoundRecovery {
+  const _VotingRoundRecovery(
+      {required this.roundId,
+      required this.bundleCount,
+      required final List<VotingDelegationRecovery> delegation,
+      required final List<VotingVoteRecovery> votes,
+      required final List<VotingShareWorkflow> shares,
+      required final List<VotingShareDelegationRecord> shareDelegations,
+      required final List<VotingShareDelegationRecord>
+          unconfirmedShareDelegations})
+      : _delegation = delegation,
+        _votes = votes,
+        _shares = shares,
+        _shareDelegations = shareDelegations,
+        _unconfirmedShareDelegations = unconfirmedShareDelegations;
+
+  @override
+  final String roundId;
+  @override
+  final int bundleCount;
+  final List<VotingDelegationRecovery> _delegation;
+  @override
+  List<VotingDelegationRecovery> get delegation {
+    if (_delegation is EqualUnmodifiableListView) return _delegation;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_delegation);
+  }
+
+  final List<VotingVoteRecovery> _votes;
+  @override
+  List<VotingVoteRecovery> get votes {
+    if (_votes is EqualUnmodifiableListView) return _votes;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_votes);
+  }
+
+  final List<VotingShareWorkflow> _shares;
+  @override
+  List<VotingShareWorkflow> get shares {
+    if (_shares is EqualUnmodifiableListView) return _shares;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_shares);
+  }
+
+  final List<VotingShareDelegationRecord> _shareDelegations;
+  @override
+  List<VotingShareDelegationRecord> get shareDelegations {
+    if (_shareDelegations is EqualUnmodifiableListView)
+      return _shareDelegations;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_shareDelegations);
+  }
+
+  final List<VotingShareDelegationRecord> _unconfirmedShareDelegations;
+  @override
+  List<VotingShareDelegationRecord> get unconfirmedShareDelegations {
+    if (_unconfirmedShareDelegations is EqualUnmodifiableListView)
+      return _unconfirmedShareDelegations;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_unconfirmedShareDelegations);
+  }
+
+  /// Create a copy of VotingRoundRecovery
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingRoundRecoveryCopyWith<_VotingRoundRecovery> get copyWith =>
+      __$VotingRoundRecoveryCopyWithImpl<_VotingRoundRecovery>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingRoundRecovery &&
+            (identical(other.roundId, roundId) || other.roundId == roundId) &&
+            (identical(other.bundleCount, bundleCount) ||
+                other.bundleCount == bundleCount) &&
+            const DeepCollectionEquality()
+                .equals(other._delegation, _delegation) &&
+            const DeepCollectionEquality().equals(other._votes, _votes) &&
+            const DeepCollectionEquality().equals(other._shares, _shares) &&
+            const DeepCollectionEquality()
+                .equals(other._shareDelegations, _shareDelegations) &&
+            const DeepCollectionEquality().equals(
+                other._unconfirmedShareDelegations,
+                _unconfirmedShareDelegations));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      roundId,
+      bundleCount,
+      const DeepCollectionEquality().hash(_delegation),
+      const DeepCollectionEquality().hash(_votes),
+      const DeepCollectionEquality().hash(_shares),
+      const DeepCollectionEquality().hash(_shareDelegations),
+      const DeepCollectionEquality().hash(_unconfirmedShareDelegations));
+
+  @override
+  String toString() {
+    return 'VotingRoundRecovery(roundId: $roundId, bundleCount: $bundleCount, delegation: $delegation, votes: $votes, shares: $shares, shareDelegations: $shareDelegations, unconfirmedShareDelegations: $unconfirmedShareDelegations)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingRoundRecoveryCopyWith<$Res>
+    implements $VotingRoundRecoveryCopyWith<$Res> {
+  factory _$VotingRoundRecoveryCopyWith(_VotingRoundRecovery value,
+          $Res Function(_VotingRoundRecovery) _then) =
+      __$VotingRoundRecoveryCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {String roundId,
+      int bundleCount,
+      List<VotingDelegationRecovery> delegation,
+      List<VotingVoteRecovery> votes,
+      List<VotingShareWorkflow> shares,
+      List<VotingShareDelegationRecord> shareDelegations,
+      List<VotingShareDelegationRecord> unconfirmedShareDelegations});
+}
+
+/// @nodoc
+class __$VotingRoundRecoveryCopyWithImpl<$Res>
+    implements _$VotingRoundRecoveryCopyWith<$Res> {
+  __$VotingRoundRecoveryCopyWithImpl(this._self, this._then);
+
+  final _VotingRoundRecovery _self;
+  final $Res Function(_VotingRoundRecovery) _then;
+
+  /// Create a copy of VotingRoundRecovery
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? roundId = null,
+    Object? bundleCount = null,
+    Object? delegation = null,
+    Object? votes = null,
+    Object? shares = null,
+    Object? shareDelegations = null,
+    Object? unconfirmedShareDelegations = null,
+  }) {
+    return _then(_VotingRoundRecovery(
+      roundId: null == roundId
+          ? _self.roundId
+          : roundId // ignore: cast_nullable_to_non_nullable
+              as String,
+      bundleCount: null == bundleCount
+          ? _self.bundleCount
+          : bundleCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      delegation: null == delegation
+          ? _self._delegation
+          : delegation // ignore: cast_nullable_to_non_nullable
+              as List<VotingDelegationRecovery>,
+      votes: null == votes
+          ? _self._votes
+          : votes // ignore: cast_nullable_to_non_nullable
+              as List<VotingVoteRecovery>,
+      shares: null == shares
+          ? _self._shares
+          : shares // ignore: cast_nullable_to_non_nullable
+              as List<VotingShareWorkflow>,
+      shareDelegations: null == shareDelegations
+          ? _self._shareDelegations
+          : shareDelegations // ignore: cast_nullable_to_non_nullable
+              as List<VotingShareDelegationRecord>,
+      unconfirmedShareDelegations: null == unconfirmedShareDelegations
+          ? _self._unconfirmedShareDelegations
+          : unconfirmedShareDelegations // ignore: cast_nullable_to_non_nullable
+              as List<VotingShareDelegationRecord>,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$VotingServiceEndpoint {
+  String get url;
+  String get label;
+
+  /// Create a copy of VotingServiceEndpoint
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingServiceEndpointCopyWith<VotingServiceEndpoint> get copyWith =>
+      _$VotingServiceEndpointCopyWithImpl<VotingServiceEndpoint>(
+          this as VotingServiceEndpoint, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingServiceEndpoint &&
+            (identical(other.url, url) || other.url == url) &&
+            (identical(other.label, label) || other.label == label));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, url, label);
+
+  @override
+  String toString() {
+    return 'VotingServiceEndpoint(url: $url, label: $label)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingServiceEndpointCopyWith<$Res> {
+  factory $VotingServiceEndpointCopyWith(VotingServiceEndpoint value,
+          $Res Function(VotingServiceEndpoint) _then) =
+      _$VotingServiceEndpointCopyWithImpl;
+  @useResult
+  $Res call({String url, String label});
+}
+
+/// @nodoc
+class _$VotingServiceEndpointCopyWithImpl<$Res>
+    implements $VotingServiceEndpointCopyWith<$Res> {
+  _$VotingServiceEndpointCopyWithImpl(this._self, this._then);
+
+  final VotingServiceEndpoint _self;
+  final $Res Function(VotingServiceEndpoint) _then;
+
+  /// Create a copy of VotingServiceEndpoint
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? url = null,
+    Object? label = null,
+  }) {
+    return _then(_self.copyWith(
+      url: null == url
+          ? _self.url
+          : url // ignore: cast_nullable_to_non_nullable
+              as String,
+      label: null == label
+          ? _self.label
+          : label // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingServiceEndpoint].
+extension VotingServiceEndpointPatterns on VotingServiceEndpoint {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingServiceEndpoint value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingServiceEndpoint() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingServiceEndpoint value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingServiceEndpoint():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingServiceEndpoint value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingServiceEndpoint() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(String url, String label)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingServiceEndpoint() when $default != null:
+        return $default(_that.url, _that.label);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(String url, String label) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingServiceEndpoint():
+        return $default(_that.url, _that.label);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(String url, String label)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingServiceEndpoint() when $default != null:
+        return $default(_that.url, _that.label);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingServiceEndpoint implements VotingServiceEndpoint {
+  const _VotingServiceEndpoint({required this.url, required this.label});
+
+  @override
+  final String url;
+  @override
+  final String label;
+
+  /// Create a copy of VotingServiceEndpoint
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingServiceEndpointCopyWith<_VotingServiceEndpoint> get copyWith =>
+      __$VotingServiceEndpointCopyWithImpl<_VotingServiceEndpoint>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingServiceEndpoint &&
+            (identical(other.url, url) || other.url == url) &&
+            (identical(other.label, label) || other.label == label));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, url, label);
+
+  @override
+  String toString() {
+    return 'VotingServiceEndpoint(url: $url, label: $label)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingServiceEndpointCopyWith<$Res>
+    implements $VotingServiceEndpointCopyWith<$Res> {
+  factory _$VotingServiceEndpointCopyWith(_VotingServiceEndpoint value,
+          $Res Function(_VotingServiceEndpoint) _then) =
+      __$VotingServiceEndpointCopyWithImpl;
+  @override
+  @useResult
+  $Res call({String url, String label});
+}
+
+/// @nodoc
+class __$VotingServiceEndpointCopyWithImpl<$Res>
+    implements _$VotingServiceEndpointCopyWith<$Res> {
+  __$VotingServiceEndpointCopyWithImpl(this._self, this._then);
+
+  final _VotingServiceEndpoint _self;
+  final $Res Function(_VotingServiceEndpoint) _then;
+
+  /// Create a copy of VotingServiceEndpoint
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? url = null,
+    Object? label = null,
+  }) {
+    return _then(_VotingServiceEndpoint(
+      url: null == url
+          ? _self.url
+          : url // ignore: cast_nullable_to_non_nullable
+              as String,
+      label: null == label
+          ? _self.label
+          : label // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$VotingShareDelegationRecord {
+  String get roundId;
+  int get bundleIndex;
+  int get proposalId;
+  int get shareIndex;
+  List<String> get sentToUrls;
+  Uint8List get nullifier;
+  bool get confirmed;
+  BigInt get submitAt;
+  BigInt get createdAt;
+
+  /// Create a copy of VotingShareDelegationRecord
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingShareDelegationRecordCopyWith<VotingShareDelegationRecord>
+      get copyWith => _$VotingShareDelegationRecordCopyWithImpl<
+              VotingShareDelegationRecord>(
+          this as VotingShareDelegationRecord, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingShareDelegationRecord &&
+            (identical(other.roundId, roundId) || other.roundId == roundId) &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex) &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.shareIndex, shareIndex) ||
+                other.shareIndex == shareIndex) &&
+            const DeepCollectionEquality()
+                .equals(other.sentToUrls, sentToUrls) &&
+            const DeepCollectionEquality().equals(other.nullifier, nullifier) &&
+            (identical(other.confirmed, confirmed) ||
+                other.confirmed == confirmed) &&
+            (identical(other.submitAt, submitAt) ||
+                other.submitAt == submitAt) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      roundId,
+      bundleIndex,
+      proposalId,
+      shareIndex,
+      const DeepCollectionEquality().hash(sentToUrls),
+      const DeepCollectionEquality().hash(nullifier),
+      confirmed,
+      submitAt,
+      createdAt);
+
+  @override
+  String toString() {
+    return 'VotingShareDelegationRecord(roundId: $roundId, bundleIndex: $bundleIndex, proposalId: $proposalId, shareIndex: $shareIndex, sentToUrls: $sentToUrls, nullifier: $nullifier, confirmed: $confirmed, submitAt: $submitAt, createdAt: $createdAt)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingShareDelegationRecordCopyWith<$Res> {
+  factory $VotingShareDelegationRecordCopyWith(
+          VotingShareDelegationRecord value,
+          $Res Function(VotingShareDelegationRecord) _then) =
+      _$VotingShareDelegationRecordCopyWithImpl;
+  @useResult
+  $Res call(
+      {String roundId,
+      int bundleIndex,
+      int proposalId,
+      int shareIndex,
+      List<String> sentToUrls,
+      Uint8List nullifier,
+      bool confirmed,
+      BigInt submitAt,
+      BigInt createdAt});
+}
+
+/// @nodoc
+class _$VotingShareDelegationRecordCopyWithImpl<$Res>
+    implements $VotingShareDelegationRecordCopyWith<$Res> {
+  _$VotingShareDelegationRecordCopyWithImpl(this._self, this._then);
+
+  final VotingShareDelegationRecord _self;
+  final $Res Function(VotingShareDelegationRecord) _then;
+
+  /// Create a copy of VotingShareDelegationRecord
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? roundId = null,
+    Object? bundleIndex = null,
+    Object? proposalId = null,
+    Object? shareIndex = null,
+    Object? sentToUrls = null,
+    Object? nullifier = null,
+    Object? confirmed = null,
+    Object? submitAt = null,
+    Object? createdAt = null,
+  }) {
+    return _then(_self.copyWith(
+      roundId: null == roundId
+          ? _self.roundId
+          : roundId // ignore: cast_nullable_to_non_nullable
+              as String,
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      shareIndex: null == shareIndex
+          ? _self.shareIndex
+          : shareIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      sentToUrls: null == sentToUrls
+          ? _self.sentToUrls
+          : sentToUrls // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      nullifier: null == nullifier
+          ? _self.nullifier
+          : nullifier // ignore: cast_nullable_to_non_nullable
+              as Uint8List,
+      confirmed: null == confirmed
+          ? _self.confirmed
+          : confirmed // ignore: cast_nullable_to_non_nullable
+              as bool,
+      submitAt: null == submitAt
+          ? _self.submitAt
+          : submitAt // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      createdAt: null == createdAt
+          ? _self.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingShareDelegationRecord].
+extension VotingShareDelegationRecordPatterns on VotingShareDelegationRecord {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingShareDelegationRecord value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareDelegationRecord() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingShareDelegationRecord value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareDelegationRecord():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingShareDelegationRecord value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareDelegationRecord() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(
+            String roundId,
+            int bundleIndex,
+            int proposalId,
+            int shareIndex,
+            List<String> sentToUrls,
+            Uint8List nullifier,
+            bool confirmed,
+            BigInt submitAt,
+            BigInt createdAt)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareDelegationRecord() when $default != null:
+        return $default(
+            _that.roundId,
+            _that.bundleIndex,
+            _that.proposalId,
+            _that.shareIndex,
+            _that.sentToUrls,
+            _that.nullifier,
+            _that.confirmed,
+            _that.submitAt,
+            _that.createdAt);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(
+            String roundId,
+            int bundleIndex,
+            int proposalId,
+            int shareIndex,
+            List<String> sentToUrls,
+            Uint8List nullifier,
+            bool confirmed,
+            BigInt submitAt,
+            BigInt createdAt)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareDelegationRecord():
+        return $default(
+            _that.roundId,
+            _that.bundleIndex,
+            _that.proposalId,
+            _that.shareIndex,
+            _that.sentToUrls,
+            _that.nullifier,
+            _that.confirmed,
+            _that.submitAt,
+            _that.createdAt);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(
+            String roundId,
+            int bundleIndex,
+            int proposalId,
+            int shareIndex,
+            List<String> sentToUrls,
+            Uint8List nullifier,
+            bool confirmed,
+            BigInt submitAt,
+            BigInt createdAt)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareDelegationRecord() when $default != null:
+        return $default(
+            _that.roundId,
+            _that.bundleIndex,
+            _that.proposalId,
+            _that.shareIndex,
+            _that.sentToUrls,
+            _that.nullifier,
+            _that.confirmed,
+            _that.submitAt,
+            _that.createdAt);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingShareDelegationRecord implements VotingShareDelegationRecord {
+  const _VotingShareDelegationRecord(
+      {required this.roundId,
+      required this.bundleIndex,
+      required this.proposalId,
+      required this.shareIndex,
+      required final List<String> sentToUrls,
+      required this.nullifier,
+      required this.confirmed,
+      required this.submitAt,
+      required this.createdAt})
+      : _sentToUrls = sentToUrls;
+
+  @override
+  final String roundId;
+  @override
+  final int bundleIndex;
+  @override
+  final int proposalId;
+  @override
+  final int shareIndex;
+  final List<String> _sentToUrls;
+  @override
+  List<String> get sentToUrls {
+    if (_sentToUrls is EqualUnmodifiableListView) return _sentToUrls;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_sentToUrls);
+  }
+
+  @override
+  final Uint8List nullifier;
+  @override
+  final bool confirmed;
+  @override
+  final BigInt submitAt;
+  @override
+  final BigInt createdAt;
+
+  /// Create a copy of VotingShareDelegationRecord
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingShareDelegationRecordCopyWith<_VotingShareDelegationRecord>
+      get copyWith => __$VotingShareDelegationRecordCopyWithImpl<
+          _VotingShareDelegationRecord>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingShareDelegationRecord &&
+            (identical(other.roundId, roundId) || other.roundId == roundId) &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex) &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.shareIndex, shareIndex) ||
+                other.shareIndex == shareIndex) &&
+            const DeepCollectionEquality()
+                .equals(other._sentToUrls, _sentToUrls) &&
+            const DeepCollectionEquality().equals(other.nullifier, nullifier) &&
+            (identical(other.confirmed, confirmed) ||
+                other.confirmed == confirmed) &&
+            (identical(other.submitAt, submitAt) ||
+                other.submitAt == submitAt) &&
+            (identical(other.createdAt, createdAt) ||
+                other.createdAt == createdAt));
+  }
+
+  @override
+  int get hashCode => Object.hash(
+      runtimeType,
+      roundId,
+      bundleIndex,
+      proposalId,
+      shareIndex,
+      const DeepCollectionEquality().hash(_sentToUrls),
+      const DeepCollectionEquality().hash(nullifier),
+      confirmed,
+      submitAt,
+      createdAt);
+
+  @override
+  String toString() {
+    return 'VotingShareDelegationRecord(roundId: $roundId, bundleIndex: $bundleIndex, proposalId: $proposalId, shareIndex: $shareIndex, sentToUrls: $sentToUrls, nullifier: $nullifier, confirmed: $confirmed, submitAt: $submitAt, createdAt: $createdAt)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingShareDelegationRecordCopyWith<$Res>
+    implements $VotingShareDelegationRecordCopyWith<$Res> {
+  factory _$VotingShareDelegationRecordCopyWith(
+          _VotingShareDelegationRecord value,
+          $Res Function(_VotingShareDelegationRecord) _then) =
+      __$VotingShareDelegationRecordCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {String roundId,
+      int bundleIndex,
+      int proposalId,
+      int shareIndex,
+      List<String> sentToUrls,
+      Uint8List nullifier,
+      bool confirmed,
+      BigInt submitAt,
+      BigInt createdAt});
+}
+
+/// @nodoc
+class __$VotingShareDelegationRecordCopyWithImpl<$Res>
+    implements _$VotingShareDelegationRecordCopyWith<$Res> {
+  __$VotingShareDelegationRecordCopyWithImpl(this._self, this._then);
+
+  final _VotingShareDelegationRecord _self;
+  final $Res Function(_VotingShareDelegationRecord) _then;
+
+  /// Create a copy of VotingShareDelegationRecord
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? roundId = null,
+    Object? bundleIndex = null,
+    Object? proposalId = null,
+    Object? shareIndex = null,
+    Object? sentToUrls = null,
+    Object? nullifier = null,
+    Object? confirmed = null,
+    Object? submitAt = null,
+    Object? createdAt = null,
+  }) {
+    return _then(_VotingShareDelegationRecord(
+      roundId: null == roundId
+          ? _self.roundId
+          : roundId // ignore: cast_nullable_to_non_nullable
+              as String,
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      shareIndex: null == shareIndex
+          ? _self.shareIndex
+          : shareIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      sentToUrls: null == sentToUrls
+          ? _self._sentToUrls
+          : sentToUrls // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      nullifier: null == nullifier
+          ? _self.nullifier
+          : nullifier // ignore: cast_nullable_to_non_nullable
+              as Uint8List,
+      confirmed: null == confirmed
+          ? _self.confirmed
+          : confirmed // ignore: cast_nullable_to_non_nullable
+              as bool,
+      submitAt: null == submitAt
+          ? _self.submitAt
+          : submitAt // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      createdAt: null == createdAt
+          ? _self.createdAt
+          : createdAt // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+    ));
+  }
+}
+
+/// @nodoc
 mixin _$VotingSharePayload {
   Uint8List get sharesHash;
   int get proposalId;
@@ -2910,6 +9431,1464 @@ class __$VotingSharePayloadCopyWithImpl<$Res>
     return $VotingEncryptedShareCopyWith<$Res>(_self.encShare, (value) {
       return _then(_self.copyWith(encShare: value));
     });
+  }
+}
+
+/// @nodoc
+mixin _$VotingSharePlan {
+  VotingShareTrackingSummary get summary;
+  BigInt? get nextTrackingDelaySecs;
+  bool get lastMoment;
+  List<VotingSharePlanItem> get submissions;
+
+  /// Create a copy of VotingSharePlan
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingSharePlanCopyWith<VotingSharePlan> get copyWith =>
+      _$VotingSharePlanCopyWithImpl<VotingSharePlan>(
+          this as VotingSharePlan, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingSharePlan &&
+            (identical(other.summary, summary) || other.summary == summary) &&
+            (identical(other.nextTrackingDelaySecs, nextTrackingDelaySecs) ||
+                other.nextTrackingDelaySecs == nextTrackingDelaySecs) &&
+            (identical(other.lastMoment, lastMoment) ||
+                other.lastMoment == lastMoment) &&
+            const DeepCollectionEquality()
+                .equals(other.submissions, submissions));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, summary, nextTrackingDelaySecs,
+      lastMoment, const DeepCollectionEquality().hash(submissions));
+
+  @override
+  String toString() {
+    return 'VotingSharePlan(summary: $summary, nextTrackingDelaySecs: $nextTrackingDelaySecs, lastMoment: $lastMoment, submissions: $submissions)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingSharePlanCopyWith<$Res> {
+  factory $VotingSharePlanCopyWith(
+          VotingSharePlan value, $Res Function(VotingSharePlan) _then) =
+      _$VotingSharePlanCopyWithImpl;
+  @useResult
+  $Res call(
+      {VotingShareTrackingSummary summary,
+      BigInt? nextTrackingDelaySecs,
+      bool lastMoment,
+      List<VotingSharePlanItem> submissions});
+
+  $VotingShareTrackingSummaryCopyWith<$Res> get summary;
+}
+
+/// @nodoc
+class _$VotingSharePlanCopyWithImpl<$Res>
+    implements $VotingSharePlanCopyWith<$Res> {
+  _$VotingSharePlanCopyWithImpl(this._self, this._then);
+
+  final VotingSharePlan _self;
+  final $Res Function(VotingSharePlan) _then;
+
+  /// Create a copy of VotingSharePlan
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? summary = null,
+    Object? nextTrackingDelaySecs = freezed,
+    Object? lastMoment = null,
+    Object? submissions = null,
+  }) {
+    return _then(_self.copyWith(
+      summary: null == summary
+          ? _self.summary
+          : summary // ignore: cast_nullable_to_non_nullable
+              as VotingShareTrackingSummary,
+      nextTrackingDelaySecs: freezed == nextTrackingDelaySecs
+          ? _self.nextTrackingDelaySecs
+          : nextTrackingDelaySecs // ignore: cast_nullable_to_non_nullable
+              as BigInt?,
+      lastMoment: null == lastMoment
+          ? _self.lastMoment
+          : lastMoment // ignore: cast_nullable_to_non_nullable
+              as bool,
+      submissions: null == submissions
+          ? _self.submissions
+          : submissions // ignore: cast_nullable_to_non_nullable
+              as List<VotingSharePlanItem>,
+    ));
+  }
+
+  /// Create a copy of VotingSharePlan
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingShareTrackingSummaryCopyWith<$Res> get summary {
+    return $VotingShareTrackingSummaryCopyWith<$Res>(_self.summary, (value) {
+      return _then(_self.copyWith(summary: value));
+    });
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingSharePlan].
+extension VotingSharePlanPatterns on VotingSharePlan {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingSharePlan value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSharePlan() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingSharePlan value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSharePlan():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingSharePlan value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSharePlan() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(
+            VotingShareTrackingSummary summary,
+            BigInt? nextTrackingDelaySecs,
+            bool lastMoment,
+            List<VotingSharePlanItem> submissions)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSharePlan() when $default != null:
+        return $default(_that.summary, _that.nextTrackingDelaySecs,
+            _that.lastMoment, _that.submissions);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(
+            VotingShareTrackingSummary summary,
+            BigInt? nextTrackingDelaySecs,
+            bool lastMoment,
+            List<VotingSharePlanItem> submissions)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSharePlan():
+        return $default(_that.summary, _that.nextTrackingDelaySecs,
+            _that.lastMoment, _that.submissions);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(
+            VotingShareTrackingSummary summary,
+            BigInt? nextTrackingDelaySecs,
+            bool lastMoment,
+            List<VotingSharePlanItem> submissions)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSharePlan() when $default != null:
+        return $default(_that.summary, _that.nextTrackingDelaySecs,
+            _that.lastMoment, _that.submissions);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingSharePlan implements VotingSharePlan {
+  const _VotingSharePlan(
+      {required this.summary,
+      this.nextTrackingDelaySecs,
+      required this.lastMoment,
+      required final List<VotingSharePlanItem> submissions})
+      : _submissions = submissions;
+
+  @override
+  final VotingShareTrackingSummary summary;
+  @override
+  final BigInt? nextTrackingDelaySecs;
+  @override
+  final bool lastMoment;
+  final List<VotingSharePlanItem> _submissions;
+  @override
+  List<VotingSharePlanItem> get submissions {
+    if (_submissions is EqualUnmodifiableListView) return _submissions;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_submissions);
+  }
+
+  /// Create a copy of VotingSharePlan
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingSharePlanCopyWith<_VotingSharePlan> get copyWith =>
+      __$VotingSharePlanCopyWithImpl<_VotingSharePlan>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingSharePlan &&
+            (identical(other.summary, summary) || other.summary == summary) &&
+            (identical(other.nextTrackingDelaySecs, nextTrackingDelaySecs) ||
+                other.nextTrackingDelaySecs == nextTrackingDelaySecs) &&
+            (identical(other.lastMoment, lastMoment) ||
+                other.lastMoment == lastMoment) &&
+            const DeepCollectionEquality()
+                .equals(other._submissions, _submissions));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, summary, nextTrackingDelaySecs,
+      lastMoment, const DeepCollectionEquality().hash(_submissions));
+
+  @override
+  String toString() {
+    return 'VotingSharePlan(summary: $summary, nextTrackingDelaySecs: $nextTrackingDelaySecs, lastMoment: $lastMoment, submissions: $submissions)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingSharePlanCopyWith<$Res>
+    implements $VotingSharePlanCopyWith<$Res> {
+  factory _$VotingSharePlanCopyWith(
+          _VotingSharePlan value, $Res Function(_VotingSharePlan) _then) =
+      __$VotingSharePlanCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {VotingShareTrackingSummary summary,
+      BigInt? nextTrackingDelaySecs,
+      bool lastMoment,
+      List<VotingSharePlanItem> submissions});
+
+  @override
+  $VotingShareTrackingSummaryCopyWith<$Res> get summary;
+}
+
+/// @nodoc
+class __$VotingSharePlanCopyWithImpl<$Res>
+    implements _$VotingSharePlanCopyWith<$Res> {
+  __$VotingSharePlanCopyWithImpl(this._self, this._then);
+
+  final _VotingSharePlan _self;
+  final $Res Function(_VotingSharePlan) _then;
+
+  /// Create a copy of VotingSharePlan
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? summary = null,
+    Object? nextTrackingDelaySecs = freezed,
+    Object? lastMoment = null,
+    Object? submissions = null,
+  }) {
+    return _then(_VotingSharePlan(
+      summary: null == summary
+          ? _self.summary
+          : summary // ignore: cast_nullable_to_non_nullable
+              as VotingShareTrackingSummary,
+      nextTrackingDelaySecs: freezed == nextTrackingDelaySecs
+          ? _self.nextTrackingDelaySecs
+          : nextTrackingDelaySecs // ignore: cast_nullable_to_non_nullable
+              as BigInt?,
+      lastMoment: null == lastMoment
+          ? _self.lastMoment
+          : lastMoment // ignore: cast_nullable_to_non_nullable
+              as bool,
+      submissions: null == submissions
+          ? _self._submissions
+          : submissions // ignore: cast_nullable_to_non_nullable
+              as List<VotingSharePlanItem>,
+    ));
+  }
+
+  /// Create a copy of VotingSharePlan
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingShareTrackingSummaryCopyWith<$Res> get summary {
+    return $VotingShareTrackingSummaryCopyWith<$Res>(_self.summary, (value) {
+      return _then(_self.copyWith(summary: value));
+    });
+  }
+}
+
+/// @nodoc
+mixin _$VotingSharePlanItem {
+  BigInt get submitAt;
+  int get targetCount;
+  List<String> get targetServers;
+
+  /// Create a copy of VotingSharePlanItem
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingSharePlanItemCopyWith<VotingSharePlanItem> get copyWith =>
+      _$VotingSharePlanItemCopyWithImpl<VotingSharePlanItem>(
+          this as VotingSharePlanItem, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingSharePlanItem &&
+            (identical(other.submitAt, submitAt) ||
+                other.submitAt == submitAt) &&
+            (identical(other.targetCount, targetCount) ||
+                other.targetCount == targetCount) &&
+            const DeepCollectionEquality()
+                .equals(other.targetServers, targetServers));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, submitAt, targetCount,
+      const DeepCollectionEquality().hash(targetServers));
+
+  @override
+  String toString() {
+    return 'VotingSharePlanItem(submitAt: $submitAt, targetCount: $targetCount, targetServers: $targetServers)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingSharePlanItemCopyWith<$Res> {
+  factory $VotingSharePlanItemCopyWith(
+          VotingSharePlanItem value, $Res Function(VotingSharePlanItem) _then) =
+      _$VotingSharePlanItemCopyWithImpl;
+  @useResult
+  $Res call({BigInt submitAt, int targetCount, List<String> targetServers});
+}
+
+/// @nodoc
+class _$VotingSharePlanItemCopyWithImpl<$Res>
+    implements $VotingSharePlanItemCopyWith<$Res> {
+  _$VotingSharePlanItemCopyWithImpl(this._self, this._then);
+
+  final VotingSharePlanItem _self;
+  final $Res Function(VotingSharePlanItem) _then;
+
+  /// Create a copy of VotingSharePlanItem
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? submitAt = null,
+    Object? targetCount = null,
+    Object? targetServers = null,
+  }) {
+    return _then(_self.copyWith(
+      submitAt: null == submitAt
+          ? _self.submitAt
+          : submitAt // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      targetCount: null == targetCount
+          ? _self.targetCount
+          : targetCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      targetServers: null == targetServers
+          ? _self.targetServers
+          : targetServers // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingSharePlanItem].
+extension VotingSharePlanItemPatterns on VotingSharePlanItem {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingSharePlanItem value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSharePlanItem() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingSharePlanItem value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSharePlanItem():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingSharePlanItem value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSharePlanItem() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(
+            BigInt submitAt, int targetCount, List<String> targetServers)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSharePlanItem() when $default != null:
+        return $default(_that.submitAt, _that.targetCount, _that.targetServers);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(
+            BigInt submitAt, int targetCount, List<String> targetServers)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSharePlanItem():
+        return $default(_that.submitAt, _that.targetCount, _that.targetServers);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(
+            BigInt submitAt, int targetCount, List<String> targetServers)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSharePlanItem() when $default != null:
+        return $default(_that.submitAt, _that.targetCount, _that.targetServers);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingSharePlanItem implements VotingSharePlanItem {
+  const _VotingSharePlanItem(
+      {required this.submitAt,
+      required this.targetCount,
+      required final List<String> targetServers})
+      : _targetServers = targetServers;
+
+  @override
+  final BigInt submitAt;
+  @override
+  final int targetCount;
+  final List<String> _targetServers;
+  @override
+  List<String> get targetServers {
+    if (_targetServers is EqualUnmodifiableListView) return _targetServers;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_targetServers);
+  }
+
+  /// Create a copy of VotingSharePlanItem
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingSharePlanItemCopyWith<_VotingSharePlanItem> get copyWith =>
+      __$VotingSharePlanItemCopyWithImpl<_VotingSharePlanItem>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingSharePlanItem &&
+            (identical(other.submitAt, submitAt) ||
+                other.submitAt == submitAt) &&
+            (identical(other.targetCount, targetCount) ||
+                other.targetCount == targetCount) &&
+            const DeepCollectionEquality()
+                .equals(other._targetServers, _targetServers));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, submitAt, targetCount,
+      const DeepCollectionEquality().hash(_targetServers));
+
+  @override
+  String toString() {
+    return 'VotingSharePlanItem(submitAt: $submitAt, targetCount: $targetCount, targetServers: $targetServers)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingSharePlanItemCopyWith<$Res>
+    implements $VotingSharePlanItemCopyWith<$Res> {
+  factory _$VotingSharePlanItemCopyWith(_VotingSharePlanItem value,
+          $Res Function(_VotingSharePlanItem) _then) =
+      __$VotingSharePlanItemCopyWithImpl;
+  @override
+  @useResult
+  $Res call({BigInt submitAt, int targetCount, List<String> targetServers});
+}
+
+/// @nodoc
+class __$VotingSharePlanItemCopyWithImpl<$Res>
+    implements _$VotingSharePlanItemCopyWith<$Res> {
+  __$VotingSharePlanItemCopyWithImpl(this._self, this._then);
+
+  final _VotingSharePlanItem _self;
+  final $Res Function(_VotingSharePlanItem) _then;
+
+  /// Create a copy of VotingSharePlanItem
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? submitAt = null,
+    Object? targetCount = null,
+    Object? targetServers = null,
+  }) {
+    return _then(_VotingSharePlanItem(
+      submitAt: null == submitAt
+          ? _self.submitAt
+          : submitAt // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      targetCount: null == targetCount
+          ? _self.targetCount
+          : targetCount // ignore: cast_nullable_to_non_nullable
+              as int,
+      targetServers: null == targetServers
+          ? _self._targetServers
+          : targetServers // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$VotingShareTrackingSummary {
+  BigInt get total;
+  BigInt get confirmed;
+  BigInt get waiting;
+  BigInt get ready;
+  BigInt get overdue;
+
+  /// Create a copy of VotingShareTrackingSummary
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingShareTrackingSummaryCopyWith<VotingShareTrackingSummary>
+      get copyWith =>
+          _$VotingShareTrackingSummaryCopyWithImpl<VotingShareTrackingSummary>(
+              this as VotingShareTrackingSummary, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingShareTrackingSummary &&
+            (identical(other.total, total) || other.total == total) &&
+            (identical(other.confirmed, confirmed) ||
+                other.confirmed == confirmed) &&
+            (identical(other.waiting, waiting) || other.waiting == waiting) &&
+            (identical(other.ready, ready) || other.ready == ready) &&
+            (identical(other.overdue, overdue) || other.overdue == overdue));
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(runtimeType, total, confirmed, waiting, ready, overdue);
+
+  @override
+  String toString() {
+    return 'VotingShareTrackingSummary(total: $total, confirmed: $confirmed, waiting: $waiting, ready: $ready, overdue: $overdue)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingShareTrackingSummaryCopyWith<$Res> {
+  factory $VotingShareTrackingSummaryCopyWith(VotingShareTrackingSummary value,
+          $Res Function(VotingShareTrackingSummary) _then) =
+      _$VotingShareTrackingSummaryCopyWithImpl;
+  @useResult
+  $Res call(
+      {BigInt total,
+      BigInt confirmed,
+      BigInt waiting,
+      BigInt ready,
+      BigInt overdue});
+}
+
+/// @nodoc
+class _$VotingShareTrackingSummaryCopyWithImpl<$Res>
+    implements $VotingShareTrackingSummaryCopyWith<$Res> {
+  _$VotingShareTrackingSummaryCopyWithImpl(this._self, this._then);
+
+  final VotingShareTrackingSummary _self;
+  final $Res Function(VotingShareTrackingSummary) _then;
+
+  /// Create a copy of VotingShareTrackingSummary
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? total = null,
+    Object? confirmed = null,
+    Object? waiting = null,
+    Object? ready = null,
+    Object? overdue = null,
+  }) {
+    return _then(_self.copyWith(
+      total: null == total
+          ? _self.total
+          : total // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      confirmed: null == confirmed
+          ? _self.confirmed
+          : confirmed // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      waiting: null == waiting
+          ? _self.waiting
+          : waiting // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      ready: null == ready
+          ? _self.ready
+          : ready // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      overdue: null == overdue
+          ? _self.overdue
+          : overdue // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingShareTrackingSummary].
+extension VotingShareTrackingSummaryPatterns on VotingShareTrackingSummary {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingShareTrackingSummary value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareTrackingSummary() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingShareTrackingSummary value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareTrackingSummary():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingShareTrackingSummary value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareTrackingSummary() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(BigInt total, BigInt confirmed, BigInt waiting,
+            BigInt ready, BigInt overdue)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareTrackingSummary() when $default != null:
+        return $default(_that.total, _that.confirmed, _that.waiting,
+            _that.ready, _that.overdue);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(BigInt total, BigInt confirmed, BigInt waiting,
+            BigInt ready, BigInt overdue)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareTrackingSummary():
+        return $default(_that.total, _that.confirmed, _that.waiting,
+            _that.ready, _that.overdue);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(BigInt total, BigInt confirmed, BigInt waiting,
+            BigInt ready, BigInt overdue)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareTrackingSummary() when $default != null:
+        return $default(_that.total, _that.confirmed, _that.waiting,
+            _that.ready, _that.overdue);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingShareTrackingSummary implements VotingShareTrackingSummary {
+  const _VotingShareTrackingSummary(
+      {required this.total,
+      required this.confirmed,
+      required this.waiting,
+      required this.ready,
+      required this.overdue});
+
+  @override
+  final BigInt total;
+  @override
+  final BigInt confirmed;
+  @override
+  final BigInt waiting;
+  @override
+  final BigInt ready;
+  @override
+  final BigInt overdue;
+
+  /// Create a copy of VotingShareTrackingSummary
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingShareTrackingSummaryCopyWith<_VotingShareTrackingSummary>
+      get copyWith => __$VotingShareTrackingSummaryCopyWithImpl<
+          _VotingShareTrackingSummary>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingShareTrackingSummary &&
+            (identical(other.total, total) || other.total == total) &&
+            (identical(other.confirmed, confirmed) ||
+                other.confirmed == confirmed) &&
+            (identical(other.waiting, waiting) || other.waiting == waiting) &&
+            (identical(other.ready, ready) || other.ready == ready) &&
+            (identical(other.overdue, overdue) || other.overdue == overdue));
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(runtimeType, total, confirmed, waiting, ready, overdue);
+
+  @override
+  String toString() {
+    return 'VotingShareTrackingSummary(total: $total, confirmed: $confirmed, waiting: $waiting, ready: $ready, overdue: $overdue)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingShareTrackingSummaryCopyWith<$Res>
+    implements $VotingShareTrackingSummaryCopyWith<$Res> {
+  factory _$VotingShareTrackingSummaryCopyWith(
+          _VotingShareTrackingSummary value,
+          $Res Function(_VotingShareTrackingSummary) _then) =
+      __$VotingShareTrackingSummaryCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {BigInt total,
+      BigInt confirmed,
+      BigInt waiting,
+      BigInt ready,
+      BigInt overdue});
+}
+
+/// @nodoc
+class __$VotingShareTrackingSummaryCopyWithImpl<$Res>
+    implements _$VotingShareTrackingSummaryCopyWith<$Res> {
+  __$VotingShareTrackingSummaryCopyWithImpl(this._self, this._then);
+
+  final _VotingShareTrackingSummary _self;
+  final $Res Function(_VotingShareTrackingSummary) _then;
+
+  /// Create a copy of VotingShareTrackingSummary
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? total = null,
+    Object? confirmed = null,
+    Object? waiting = null,
+    Object? ready = null,
+    Object? overdue = null,
+  }) {
+    return _then(_VotingShareTrackingSummary(
+      total: null == total
+          ? _self.total
+          : total // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      confirmed: null == confirmed
+          ? _self.confirmed
+          : confirmed // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      waiting: null == waiting
+          ? _self.waiting
+          : waiting // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      ready: null == ready
+          ? _self.ready
+          : ready // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      overdue: null == overdue
+          ? _self.overdue
+          : overdue // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$VotingShareWorkflow {
+  int get bundleIndex;
+  int get proposalId;
+  int get shareIndex;
+  String get phase;
+
+  /// Create a copy of VotingShareWorkflow
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingShareWorkflowCopyWith<VotingShareWorkflow> get copyWith =>
+      _$VotingShareWorkflowCopyWithImpl<VotingShareWorkflow>(
+          this as VotingShareWorkflow, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingShareWorkflow &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex) &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.shareIndex, shareIndex) ||
+                other.shareIndex == shareIndex) &&
+            (identical(other.phase, phase) || other.phase == phase));
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(runtimeType, bundleIndex, proposalId, shareIndex, phase);
+
+  @override
+  String toString() {
+    return 'VotingShareWorkflow(bundleIndex: $bundleIndex, proposalId: $proposalId, shareIndex: $shareIndex, phase: $phase)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingShareWorkflowCopyWith<$Res> {
+  factory $VotingShareWorkflowCopyWith(
+          VotingShareWorkflow value, $Res Function(VotingShareWorkflow) _then) =
+      _$VotingShareWorkflowCopyWithImpl;
+  @useResult
+  $Res call({int bundleIndex, int proposalId, int shareIndex, String phase});
+}
+
+/// @nodoc
+class _$VotingShareWorkflowCopyWithImpl<$Res>
+    implements $VotingShareWorkflowCopyWith<$Res> {
+  _$VotingShareWorkflowCopyWithImpl(this._self, this._then);
+
+  final VotingShareWorkflow _self;
+  final $Res Function(VotingShareWorkflow) _then;
+
+  /// Create a copy of VotingShareWorkflow
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? bundleIndex = null,
+    Object? proposalId = null,
+    Object? shareIndex = null,
+    Object? phase = null,
+  }) {
+    return _then(_self.copyWith(
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      shareIndex: null == shareIndex
+          ? _self.shareIndex
+          : shareIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      phase: null == phase
+          ? _self.phase
+          : phase // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingShareWorkflow].
+extension VotingShareWorkflowPatterns on VotingShareWorkflow {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingShareWorkflow value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareWorkflow() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingShareWorkflow value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareWorkflow():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingShareWorkflow value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareWorkflow() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(
+            int bundleIndex, int proposalId, int shareIndex, String phase)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareWorkflow() when $default != null:
+        return $default(
+            _that.bundleIndex, _that.proposalId, _that.shareIndex, _that.phase);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(
+            int bundleIndex, int proposalId, int shareIndex, String phase)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareWorkflow():
+        return $default(
+            _that.bundleIndex, _that.proposalId, _that.shareIndex, _that.phase);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(
+            int bundleIndex, int proposalId, int shareIndex, String phase)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingShareWorkflow() when $default != null:
+        return $default(
+            _that.bundleIndex, _that.proposalId, _that.shareIndex, _that.phase);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingShareWorkflow implements VotingShareWorkflow {
+  const _VotingShareWorkflow(
+      {required this.bundleIndex,
+      required this.proposalId,
+      required this.shareIndex,
+      required this.phase});
+
+  @override
+  final int bundleIndex;
+  @override
+  final int proposalId;
+  @override
+  final int shareIndex;
+  @override
+  final String phase;
+
+  /// Create a copy of VotingShareWorkflow
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingShareWorkflowCopyWith<_VotingShareWorkflow> get copyWith =>
+      __$VotingShareWorkflowCopyWithImpl<_VotingShareWorkflow>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingShareWorkflow &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex) &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.shareIndex, shareIndex) ||
+                other.shareIndex == shareIndex) &&
+            (identical(other.phase, phase) || other.phase == phase));
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(runtimeType, bundleIndex, proposalId, shareIndex, phase);
+
+  @override
+  String toString() {
+    return 'VotingShareWorkflow(bundleIndex: $bundleIndex, proposalId: $proposalId, shareIndex: $shareIndex, phase: $phase)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingShareWorkflowCopyWith<$Res>
+    implements $VotingShareWorkflowCopyWith<$Res> {
+  factory _$VotingShareWorkflowCopyWith(_VotingShareWorkflow value,
+          $Res Function(_VotingShareWorkflow) _then) =
+      __$VotingShareWorkflowCopyWithImpl;
+  @override
+  @useResult
+  $Res call({int bundleIndex, int proposalId, int shareIndex, String phase});
+}
+
+/// @nodoc
+class __$VotingShareWorkflowCopyWithImpl<$Res>
+    implements _$VotingShareWorkflowCopyWith<$Res> {
+  __$VotingShareWorkflowCopyWithImpl(this._self, this._then);
+
+  final _VotingShareWorkflow _self;
+  final $Res Function(_VotingShareWorkflow) _then;
+
+  /// Create a copy of VotingShareWorkflow
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? bundleIndex = null,
+    Object? proposalId = null,
+    Object? shareIndex = null,
+    Object? phase = null,
+  }) {
+    return _then(_VotingShareWorkflow(
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      shareIndex: null == shareIndex
+          ? _self.shareIndex
+          : shareIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      phase: null == phase
+          ? _self.phase
+          : phase // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
   }
 }
 
@@ -3818,6 +11797,644 @@ class __$VotingVanWitnessCopyWithImpl<$Res>
       anchorHeight: null == anchorHeight
           ? _self.anchorHeight
           : anchorHeight // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$VotingVoteCommitStage {
+  int get proposalId;
+  int get bundleIndex;
+
+  /// Create a copy of VotingVoteCommitStage
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingVoteCommitStageCopyWith<VotingVoteCommitStage> get copyWith =>
+      _$VotingVoteCommitStageCopyWithImpl<VotingVoteCommitStage>(
+          this as VotingVoteCommitStage, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingVoteCommitStage &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, proposalId, bundleIndex);
+
+  @override
+  String toString() {
+    return 'VotingVoteCommitStage(proposalId: $proposalId, bundleIndex: $bundleIndex)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingVoteCommitStageCopyWith<$Res> {
+  factory $VotingVoteCommitStageCopyWith(VotingVoteCommitStage value,
+          $Res Function(VotingVoteCommitStage) _then) =
+      _$VotingVoteCommitStageCopyWithImpl;
+  @useResult
+  $Res call({int proposalId, int bundleIndex});
+}
+
+/// @nodoc
+class _$VotingVoteCommitStageCopyWithImpl<$Res>
+    implements $VotingVoteCommitStageCopyWith<$Res> {
+  _$VotingVoteCommitStageCopyWithImpl(this._self, this._then);
+
+  final VotingVoteCommitStage _self;
+  final $Res Function(VotingVoteCommitStage) _then;
+
+  /// Create a copy of VotingVoteCommitStage
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? proposalId = null,
+    Object? bundleIndex = null,
+  }) {
+    return _then(_self.copyWith(
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingVoteCommitStage].
+extension VotingVoteCommitStagePatterns on VotingVoteCommitStage {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(VotingVoteCommitStage_ProofStarting value)? proofStarting,
+    TResult Function(VotingVoteCommitStage_ProofProgress value)? proofProgress,
+    TResult Function(VotingVoteCommitStage_SharePayloadsBuilding value)?
+        sharePayloadsBuilding,
+    TResult Function(VotingVoteCommitStage_Signing value)? signing,
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case VotingVoteCommitStage_ProofStarting() when proofStarting != null:
+        return proofStarting(_that);
+      case VotingVoteCommitStage_ProofProgress() when proofProgress != null:
+        return proofProgress(_that);
+      case VotingVoteCommitStage_SharePayloadsBuilding()
+          when sharePayloadsBuilding != null:
+        return sharePayloadsBuilding(_that);
+      case VotingVoteCommitStage_Signing() when signing != null:
+        return signing(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(VotingVoteCommitStage_ProofStarting value)
+        proofStarting,
+    required TResult Function(VotingVoteCommitStage_ProofProgress value)
+        proofProgress,
+    required TResult Function(VotingVoteCommitStage_SharePayloadsBuilding value)
+        sharePayloadsBuilding,
+    required TResult Function(VotingVoteCommitStage_Signing value) signing,
+  }) {
+    final _that = this;
+    switch (_that) {
+      case VotingVoteCommitStage_ProofStarting():
+        return proofStarting(_that);
+      case VotingVoteCommitStage_ProofProgress():
+        return proofProgress(_that);
+      case VotingVoteCommitStage_SharePayloadsBuilding():
+        return sharePayloadsBuilding(_that);
+      case VotingVoteCommitStage_Signing():
+        return signing(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(VotingVoteCommitStage_ProofStarting value)? proofStarting,
+    TResult? Function(VotingVoteCommitStage_ProofProgress value)? proofProgress,
+    TResult? Function(VotingVoteCommitStage_SharePayloadsBuilding value)?
+        sharePayloadsBuilding,
+    TResult? Function(VotingVoteCommitStage_Signing value)? signing,
+  }) {
+    final _that = this;
+    switch (_that) {
+      case VotingVoteCommitStage_ProofStarting() when proofStarting != null:
+        return proofStarting(_that);
+      case VotingVoteCommitStage_ProofProgress() when proofProgress != null:
+        return proofProgress(_that);
+      case VotingVoteCommitStage_SharePayloadsBuilding()
+          when sharePayloadsBuilding != null:
+        return sharePayloadsBuilding(_that);
+      case VotingVoteCommitStage_Signing() when signing != null:
+        return signing(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(int proposalId, int bundleIndex)? proofStarting,
+    TResult Function(int proposalId, int bundleIndex, double progress)?
+        proofProgress,
+    TResult Function(int proposalId, int bundleIndex)? sharePayloadsBuilding,
+    TResult Function(int proposalId, int bundleIndex)? signing,
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case VotingVoteCommitStage_ProofStarting() when proofStarting != null:
+        return proofStarting(_that.proposalId, _that.bundleIndex);
+      case VotingVoteCommitStage_ProofProgress() when proofProgress != null:
+        return proofProgress(
+            _that.proposalId, _that.bundleIndex, _that.progress);
+      case VotingVoteCommitStage_SharePayloadsBuilding()
+          when sharePayloadsBuilding != null:
+        return sharePayloadsBuilding(_that.proposalId, _that.bundleIndex);
+      case VotingVoteCommitStage_Signing() when signing != null:
+        return signing(_that.proposalId, _that.bundleIndex);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(int proposalId, int bundleIndex) proofStarting,
+    required TResult Function(int proposalId, int bundleIndex, double progress)
+        proofProgress,
+    required TResult Function(int proposalId, int bundleIndex)
+        sharePayloadsBuilding,
+    required TResult Function(int proposalId, int bundleIndex) signing,
+  }) {
+    final _that = this;
+    switch (_that) {
+      case VotingVoteCommitStage_ProofStarting():
+        return proofStarting(_that.proposalId, _that.bundleIndex);
+      case VotingVoteCommitStage_ProofProgress():
+        return proofProgress(
+            _that.proposalId, _that.bundleIndex, _that.progress);
+      case VotingVoteCommitStage_SharePayloadsBuilding():
+        return sharePayloadsBuilding(_that.proposalId, _that.bundleIndex);
+      case VotingVoteCommitStage_Signing():
+        return signing(_that.proposalId, _that.bundleIndex);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(int proposalId, int bundleIndex)? proofStarting,
+    TResult? Function(int proposalId, int bundleIndex, double progress)?
+        proofProgress,
+    TResult? Function(int proposalId, int bundleIndex)? sharePayloadsBuilding,
+    TResult? Function(int proposalId, int bundleIndex)? signing,
+  }) {
+    final _that = this;
+    switch (_that) {
+      case VotingVoteCommitStage_ProofStarting() when proofStarting != null:
+        return proofStarting(_that.proposalId, _that.bundleIndex);
+      case VotingVoteCommitStage_ProofProgress() when proofProgress != null:
+        return proofProgress(
+            _that.proposalId, _that.bundleIndex, _that.progress);
+      case VotingVoteCommitStage_SharePayloadsBuilding()
+          when sharePayloadsBuilding != null:
+        return sharePayloadsBuilding(_that.proposalId, _that.bundleIndex);
+      case VotingVoteCommitStage_Signing() when signing != null:
+        return signing(_that.proposalId, _that.bundleIndex);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class VotingVoteCommitStage_ProofStarting extends VotingVoteCommitStage {
+  const VotingVoteCommitStage_ProofStarting(
+      {required this.proposalId, required this.bundleIndex})
+      : super._();
+
+  @override
+  final int proposalId;
+  @override
+  final int bundleIndex;
+
+  /// Create a copy of VotingVoteCommitStage
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingVoteCommitStage_ProofStartingCopyWith<
+          VotingVoteCommitStage_ProofStarting>
+      get copyWith => _$VotingVoteCommitStage_ProofStartingCopyWithImpl<
+          VotingVoteCommitStage_ProofStarting>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingVoteCommitStage_ProofStarting &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, proposalId, bundleIndex);
+
+  @override
+  String toString() {
+    return 'VotingVoteCommitStage.proofStarting(proposalId: $proposalId, bundleIndex: $bundleIndex)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingVoteCommitStage_ProofStartingCopyWith<$Res>
+    implements $VotingVoteCommitStageCopyWith<$Res> {
+  factory $VotingVoteCommitStage_ProofStartingCopyWith(
+          VotingVoteCommitStage_ProofStarting value,
+          $Res Function(VotingVoteCommitStage_ProofStarting) _then) =
+      _$VotingVoteCommitStage_ProofStartingCopyWithImpl;
+  @override
+  @useResult
+  $Res call({int proposalId, int bundleIndex});
+}
+
+/// @nodoc
+class _$VotingVoteCommitStage_ProofStartingCopyWithImpl<$Res>
+    implements $VotingVoteCommitStage_ProofStartingCopyWith<$Res> {
+  _$VotingVoteCommitStage_ProofStartingCopyWithImpl(this._self, this._then);
+
+  final VotingVoteCommitStage_ProofStarting _self;
+  final $Res Function(VotingVoteCommitStage_ProofStarting) _then;
+
+  /// Create a copy of VotingVoteCommitStage
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? proposalId = null,
+    Object? bundleIndex = null,
+  }) {
+    return _then(VotingVoteCommitStage_ProofStarting(
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// @nodoc
+
+class VotingVoteCommitStage_ProofProgress extends VotingVoteCommitStage {
+  const VotingVoteCommitStage_ProofProgress(
+      {required this.proposalId,
+      required this.bundleIndex,
+      required this.progress})
+      : super._();
+
+  @override
+  final int proposalId;
+  @override
+  final int bundleIndex;
+  final double progress;
+
+  /// Create a copy of VotingVoteCommitStage
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingVoteCommitStage_ProofProgressCopyWith<
+          VotingVoteCommitStage_ProofProgress>
+      get copyWith => _$VotingVoteCommitStage_ProofProgressCopyWithImpl<
+          VotingVoteCommitStage_ProofProgress>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingVoteCommitStage_ProofProgress &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex) &&
+            (identical(other.progress, progress) ||
+                other.progress == progress));
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(runtimeType, proposalId, bundleIndex, progress);
+
+  @override
+  String toString() {
+    return 'VotingVoteCommitStage.proofProgress(proposalId: $proposalId, bundleIndex: $bundleIndex, progress: $progress)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingVoteCommitStage_ProofProgressCopyWith<$Res>
+    implements $VotingVoteCommitStageCopyWith<$Res> {
+  factory $VotingVoteCommitStage_ProofProgressCopyWith(
+          VotingVoteCommitStage_ProofProgress value,
+          $Res Function(VotingVoteCommitStage_ProofProgress) _then) =
+      _$VotingVoteCommitStage_ProofProgressCopyWithImpl;
+  @override
+  @useResult
+  $Res call({int proposalId, int bundleIndex, double progress});
+}
+
+/// @nodoc
+class _$VotingVoteCommitStage_ProofProgressCopyWithImpl<$Res>
+    implements $VotingVoteCommitStage_ProofProgressCopyWith<$Res> {
+  _$VotingVoteCommitStage_ProofProgressCopyWithImpl(this._self, this._then);
+
+  final VotingVoteCommitStage_ProofProgress _self;
+  final $Res Function(VotingVoteCommitStage_ProofProgress) _then;
+
+  /// Create a copy of VotingVoteCommitStage
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? proposalId = null,
+    Object? bundleIndex = null,
+    Object? progress = null,
+  }) {
+    return _then(VotingVoteCommitStage_ProofProgress(
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      progress: null == progress
+          ? _self.progress
+          : progress // ignore: cast_nullable_to_non_nullable
+              as double,
+    ));
+  }
+}
+
+/// @nodoc
+
+class VotingVoteCommitStage_SharePayloadsBuilding
+    extends VotingVoteCommitStage {
+  const VotingVoteCommitStage_SharePayloadsBuilding(
+      {required this.proposalId, required this.bundleIndex})
+      : super._();
+
+  @override
+  final int proposalId;
+  @override
+  final int bundleIndex;
+
+  /// Create a copy of VotingVoteCommitStage
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingVoteCommitStage_SharePayloadsBuildingCopyWith<
+          VotingVoteCommitStage_SharePayloadsBuilding>
+      get copyWith => _$VotingVoteCommitStage_SharePayloadsBuildingCopyWithImpl<
+          VotingVoteCommitStage_SharePayloadsBuilding>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingVoteCommitStage_SharePayloadsBuilding &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, proposalId, bundleIndex);
+
+  @override
+  String toString() {
+    return 'VotingVoteCommitStage.sharePayloadsBuilding(proposalId: $proposalId, bundleIndex: $bundleIndex)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingVoteCommitStage_SharePayloadsBuildingCopyWith<$Res>
+    implements $VotingVoteCommitStageCopyWith<$Res> {
+  factory $VotingVoteCommitStage_SharePayloadsBuildingCopyWith(
+          VotingVoteCommitStage_SharePayloadsBuilding value,
+          $Res Function(VotingVoteCommitStage_SharePayloadsBuilding) _then) =
+      _$VotingVoteCommitStage_SharePayloadsBuildingCopyWithImpl;
+  @override
+  @useResult
+  $Res call({int proposalId, int bundleIndex});
+}
+
+/// @nodoc
+class _$VotingVoteCommitStage_SharePayloadsBuildingCopyWithImpl<$Res>
+    implements $VotingVoteCommitStage_SharePayloadsBuildingCopyWith<$Res> {
+  _$VotingVoteCommitStage_SharePayloadsBuildingCopyWithImpl(
+      this._self, this._then);
+
+  final VotingVoteCommitStage_SharePayloadsBuilding _self;
+  final $Res Function(VotingVoteCommitStage_SharePayloadsBuilding) _then;
+
+  /// Create a copy of VotingVoteCommitStage
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? proposalId = null,
+    Object? bundleIndex = null,
+  }) {
+    return _then(VotingVoteCommitStage_SharePayloadsBuilding(
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// @nodoc
+
+class VotingVoteCommitStage_Signing extends VotingVoteCommitStage {
+  const VotingVoteCommitStage_Signing(
+      {required this.proposalId, required this.bundleIndex})
+      : super._();
+
+  @override
+  final int proposalId;
+  @override
+  final int bundleIndex;
+
+  /// Create a copy of VotingVoteCommitStage
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingVoteCommitStage_SigningCopyWith<VotingVoteCommitStage_Signing>
+      get copyWith => _$VotingVoteCommitStage_SigningCopyWithImpl<
+          VotingVoteCommitStage_Signing>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingVoteCommitStage_Signing &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, proposalId, bundleIndex);
+
+  @override
+  String toString() {
+    return 'VotingVoteCommitStage.signing(proposalId: $proposalId, bundleIndex: $bundleIndex)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingVoteCommitStage_SigningCopyWith<$Res>
+    implements $VotingVoteCommitStageCopyWith<$Res> {
+  factory $VotingVoteCommitStage_SigningCopyWith(
+          VotingVoteCommitStage_Signing value,
+          $Res Function(VotingVoteCommitStage_Signing) _then) =
+      _$VotingVoteCommitStage_SigningCopyWithImpl;
+  @override
+  @useResult
+  $Res call({int proposalId, int bundleIndex});
+}
+
+/// @nodoc
+class _$VotingVoteCommitStage_SigningCopyWithImpl<$Res>
+    implements $VotingVoteCommitStage_SigningCopyWith<$Res> {
+  _$VotingVoteCommitStage_SigningCopyWithImpl(this._self, this._then);
+
+  final VotingVoteCommitStage_Signing _self;
+  final $Res Function(VotingVoteCommitStage_Signing) _then;
+
+  /// Create a copy of VotingVoteCommitStage
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? proposalId = null,
+    Object? bundleIndex = null,
+  }) {
+    return _then(VotingVoteCommitStage_Signing(
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
               as int,
     ));
   }
@@ -4816,6 +13433,481 @@ class __$VotingVotePayloadsCopyWithImpl<$Res>
     return $VotingVoteSubmissionCopyWith<$Res>(_self.submission, (value) {
       return _then(_self.copyWith(submission: value));
     });
+  }
+}
+
+/// @nodoc
+mixin _$VotingVoteRecovery {
+  int get bundleIndex;
+  int get proposalId;
+  int get choice;
+  String get phase;
+  String get workflowPhase;
+  String? get txHash;
+  BigInt? get vcTreePosition;
+  bool get hasCommitmentBundle;
+
+  /// Create a copy of VotingVoteRecovery
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingVoteRecoveryCopyWith<VotingVoteRecovery> get copyWith =>
+      _$VotingVoteRecoveryCopyWithImpl<VotingVoteRecovery>(
+          this as VotingVoteRecovery, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingVoteRecovery &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex) &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.choice, choice) || other.choice == choice) &&
+            (identical(other.phase, phase) || other.phase == phase) &&
+            (identical(other.workflowPhase, workflowPhase) ||
+                other.workflowPhase == workflowPhase) &&
+            (identical(other.txHash, txHash) || other.txHash == txHash) &&
+            (identical(other.vcTreePosition, vcTreePosition) ||
+                other.vcTreePosition == vcTreePosition) &&
+            (identical(other.hasCommitmentBundle, hasCommitmentBundle) ||
+                other.hasCommitmentBundle == hasCommitmentBundle));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, bundleIndex, proposalId, choice,
+      phase, workflowPhase, txHash, vcTreePosition, hasCommitmentBundle);
+
+  @override
+  String toString() {
+    return 'VotingVoteRecovery(bundleIndex: $bundleIndex, proposalId: $proposalId, choice: $choice, phase: $phase, workflowPhase: $workflowPhase, txHash: $txHash, vcTreePosition: $vcTreePosition, hasCommitmentBundle: $hasCommitmentBundle)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingVoteRecoveryCopyWith<$Res> {
+  factory $VotingVoteRecoveryCopyWith(
+          VotingVoteRecovery value, $Res Function(VotingVoteRecovery) _then) =
+      _$VotingVoteRecoveryCopyWithImpl;
+  @useResult
+  $Res call(
+      {int bundleIndex,
+      int proposalId,
+      int choice,
+      String phase,
+      String workflowPhase,
+      String? txHash,
+      BigInt? vcTreePosition,
+      bool hasCommitmentBundle});
+}
+
+/// @nodoc
+class _$VotingVoteRecoveryCopyWithImpl<$Res>
+    implements $VotingVoteRecoveryCopyWith<$Res> {
+  _$VotingVoteRecoveryCopyWithImpl(this._self, this._then);
+
+  final VotingVoteRecovery _self;
+  final $Res Function(VotingVoteRecovery) _then;
+
+  /// Create a copy of VotingVoteRecovery
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? bundleIndex = null,
+    Object? proposalId = null,
+    Object? choice = null,
+    Object? phase = null,
+    Object? workflowPhase = null,
+    Object? txHash = freezed,
+    Object? vcTreePosition = freezed,
+    Object? hasCommitmentBundle = null,
+  }) {
+    return _then(_self.copyWith(
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      choice: null == choice
+          ? _self.choice
+          : choice // ignore: cast_nullable_to_non_nullable
+              as int,
+      phase: null == phase
+          ? _self.phase
+          : phase // ignore: cast_nullable_to_non_nullable
+              as String,
+      workflowPhase: null == workflowPhase
+          ? _self.workflowPhase
+          : workflowPhase // ignore: cast_nullable_to_non_nullable
+              as String,
+      txHash: freezed == txHash
+          ? _self.txHash
+          : txHash // ignore: cast_nullable_to_non_nullable
+              as String?,
+      vcTreePosition: freezed == vcTreePosition
+          ? _self.vcTreePosition
+          : vcTreePosition // ignore: cast_nullable_to_non_nullable
+              as BigInt?,
+      hasCommitmentBundle: null == hasCommitmentBundle
+          ? _self.hasCommitmentBundle
+          : hasCommitmentBundle // ignore: cast_nullable_to_non_nullable
+              as bool,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingVoteRecovery].
+extension VotingVoteRecoveryPatterns on VotingVoteRecovery {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingVoteRecovery value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingVoteRecovery() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingVoteRecovery value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingVoteRecovery():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingVoteRecovery value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingVoteRecovery() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(
+            int bundleIndex,
+            int proposalId,
+            int choice,
+            String phase,
+            String workflowPhase,
+            String? txHash,
+            BigInt? vcTreePosition,
+            bool hasCommitmentBundle)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingVoteRecovery() when $default != null:
+        return $default(
+            _that.bundleIndex,
+            _that.proposalId,
+            _that.choice,
+            _that.phase,
+            _that.workflowPhase,
+            _that.txHash,
+            _that.vcTreePosition,
+            _that.hasCommitmentBundle);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(
+            int bundleIndex,
+            int proposalId,
+            int choice,
+            String phase,
+            String workflowPhase,
+            String? txHash,
+            BigInt? vcTreePosition,
+            bool hasCommitmentBundle)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingVoteRecovery():
+        return $default(
+            _that.bundleIndex,
+            _that.proposalId,
+            _that.choice,
+            _that.phase,
+            _that.workflowPhase,
+            _that.txHash,
+            _that.vcTreePosition,
+            _that.hasCommitmentBundle);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(
+            int bundleIndex,
+            int proposalId,
+            int choice,
+            String phase,
+            String workflowPhase,
+            String? txHash,
+            BigInt? vcTreePosition,
+            bool hasCommitmentBundle)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingVoteRecovery() when $default != null:
+        return $default(
+            _that.bundleIndex,
+            _that.proposalId,
+            _that.choice,
+            _that.phase,
+            _that.workflowPhase,
+            _that.txHash,
+            _that.vcTreePosition,
+            _that.hasCommitmentBundle);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingVoteRecovery implements VotingVoteRecovery {
+  const _VotingVoteRecovery(
+      {required this.bundleIndex,
+      required this.proposalId,
+      required this.choice,
+      required this.phase,
+      required this.workflowPhase,
+      this.txHash,
+      this.vcTreePosition,
+      required this.hasCommitmentBundle});
+
+  @override
+  final int bundleIndex;
+  @override
+  final int proposalId;
+  @override
+  final int choice;
+  @override
+  final String phase;
+  @override
+  final String workflowPhase;
+  @override
+  final String? txHash;
+  @override
+  final BigInt? vcTreePosition;
+  @override
+  final bool hasCommitmentBundle;
+
+  /// Create a copy of VotingVoteRecovery
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingVoteRecoveryCopyWith<_VotingVoteRecovery> get copyWith =>
+      __$VotingVoteRecoveryCopyWithImpl<_VotingVoteRecovery>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingVoteRecovery &&
+            (identical(other.bundleIndex, bundleIndex) ||
+                other.bundleIndex == bundleIndex) &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.choice, choice) || other.choice == choice) &&
+            (identical(other.phase, phase) || other.phase == phase) &&
+            (identical(other.workflowPhase, workflowPhase) ||
+                other.workflowPhase == workflowPhase) &&
+            (identical(other.txHash, txHash) || other.txHash == txHash) &&
+            (identical(other.vcTreePosition, vcTreePosition) ||
+                other.vcTreePosition == vcTreePosition) &&
+            (identical(other.hasCommitmentBundle, hasCommitmentBundle) ||
+                other.hasCommitmentBundle == hasCommitmentBundle));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, bundleIndex, proposalId, choice,
+      phase, workflowPhase, txHash, vcTreePosition, hasCommitmentBundle);
+
+  @override
+  String toString() {
+    return 'VotingVoteRecovery(bundleIndex: $bundleIndex, proposalId: $proposalId, choice: $choice, phase: $phase, workflowPhase: $workflowPhase, txHash: $txHash, vcTreePosition: $vcTreePosition, hasCommitmentBundle: $hasCommitmentBundle)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingVoteRecoveryCopyWith<$Res>
+    implements $VotingVoteRecoveryCopyWith<$Res> {
+  factory _$VotingVoteRecoveryCopyWith(
+          _VotingVoteRecovery value, $Res Function(_VotingVoteRecovery) _then) =
+      __$VotingVoteRecoveryCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {int bundleIndex,
+      int proposalId,
+      int choice,
+      String phase,
+      String workflowPhase,
+      String? txHash,
+      BigInt? vcTreePosition,
+      bool hasCommitmentBundle});
+}
+
+/// @nodoc
+class __$VotingVoteRecoveryCopyWithImpl<$Res>
+    implements _$VotingVoteRecoveryCopyWith<$Res> {
+  __$VotingVoteRecoveryCopyWithImpl(this._self, this._then);
+
+  final _VotingVoteRecovery _self;
+  final $Res Function(_VotingVoteRecovery) _then;
+
+  /// Create a copy of VotingVoteRecovery
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? bundleIndex = null,
+    Object? proposalId = null,
+    Object? choice = null,
+    Object? phase = null,
+    Object? workflowPhase = null,
+    Object? txHash = freezed,
+    Object? vcTreePosition = freezed,
+    Object? hasCommitmentBundle = null,
+  }) {
+    return _then(_VotingVoteRecovery(
+      bundleIndex: null == bundleIndex
+          ? _self.bundleIndex
+          : bundleIndex // ignore: cast_nullable_to_non_nullable
+              as int,
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      choice: null == choice
+          ? _self.choice
+          : choice // ignore: cast_nullable_to_non_nullable
+              as int,
+      phase: null == phase
+          ? _self.phase
+          : phase // ignore: cast_nullable_to_non_nullable
+              as String,
+      workflowPhase: null == workflowPhase
+          ? _self.workflowPhase
+          : workflowPhase // ignore: cast_nullable_to_non_nullable
+              as String,
+      txHash: freezed == txHash
+          ? _self.txHash
+          : txHash // ignore: cast_nullable_to_non_nullable
+              as String?,
+      vcTreePosition: freezed == vcTreePosition
+          ? _self.vcTreePosition
+          : vcTreePosition // ignore: cast_nullable_to_non_nullable
+              as BigInt?,
+      hasCommitmentBundle: null == hasCommitmentBundle
+          ? _self.hasCommitmentBundle
+          : hasCommitmentBundle // ignore: cast_nullable_to_non_nullable
+              as bool,
+    ));
   }
 }
 

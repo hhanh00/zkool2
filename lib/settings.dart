@@ -241,6 +241,43 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   ),
                 ),
                 Tooltip(
+                  message: "URL of the voting config source. The wallet fetches "
+                      "and authenticates the static config, then the dynamic "
+                      "config it points to, and caches the resolved result.",
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: FormBuilderTextField(
+                          name: "voting_config_url",
+                          decoration: const InputDecoration(
+                            labelText: "Voting Config URL",
+                            hintText: "https://…/voting-config.json",
+                          ),
+                          initialValue: settings.votingConfigUrl,
+                          onChanged: onChangedVotingConfigUrl,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.refresh),
+                        onPressed: () => _fetchVotingConfig(context),
+                      ),
+                    ],
+                  ),
+                ),
+                Tooltip(
+                  message: "URL of the vote commitment tree node used for "
+                      "VAN witness sync before casting votes.",
+                  child: FormBuilderTextField(
+                    name: "vote_node_url",
+                    decoration: const InputDecoration(
+                      labelText: "Vote Node URL",
+                      hintText: "https://…/vote-node",
+                    ),
+                    initialValue: settings.voteNodeUrl,
+                    onChanged: onChangedVoteNodeUrl,
+                  ),
+                ),
+                Tooltip(
                   message: "Number actions per synchronization chunk",
                   child: FormBuilderTextField(
                     name: "actions_per_sync",
@@ -506,6 +543,43 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       settings = settings.copyWith(proxy: value);
       widget.onChanged(settings);
     });
+  }
+
+  void onChangedVotingConfigUrl(String? value) async {
+    if (value == null) return;
+    setState(() {
+      settings = settings.copyWith(votingConfigUrl: value);
+      widget.onChanged(settings);
+    });
+  }
+
+  void onChangedVoteNodeUrl(String? value) async {
+    if (value == null) return;
+    setState(() {
+      settings = settings.copyWith(voteNodeUrl: value);
+      widget.onChanged(settings);
+    });
+  }
+
+  Future<void> _fetchVotingConfig(BuildContext context) async {
+    try {
+      final config =
+          await ref.read(votingConfigProvider.notifier).resolve();
+      if (!context.mounted) return;
+      if (config == null) {
+        await showMessage(
+          context,
+          "No voting config source configured. Enter a URL first.",
+        );
+        return;
+      }
+      showSnackbar(
+        "Voting config resolved: ${config.rounds.length} round(s), "
+        "switch ${config.switchKind}",
+      );
+    } on AnyhowException catch (e) {
+      if (context.mounted) await showException(context, e.message);
+    }
   }
 
   void onChangedTransport(Set<int> selection) {

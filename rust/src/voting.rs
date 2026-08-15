@@ -23,11 +23,12 @@ use zip32::AccountId;
 use zcash_keys::keys::{UnifiedFullViewingKey, UnifiedSpendingKey};
 use zcash_voting::prelude::{
     confirm_delegation_submission, confirm_vote_submission, generate_random_voting_hotkey,
-    BundlePolicy, CommittedVote, DelegationConfirmation, DelegationKeys, DelegationSigningRequest,
-    DelegationSubmission, DraftVote, NoopProgressReporter, NoteInfo,
-    PrepareDelegationBundleWithInputsParams, PreparedDelegationBundle, PreparedSigner, SharePayload,
-    SignedVoteCommitments, TxEvent, VanWitness, VoteConfirmation, VoteSigner, VoteSubmission,
-    VotingDb, VotingHotkey, WitnessData,
+    BundlePolicy, CommittedVote, DelegationConfirmation, DelegationKeys, DelegationProgress,
+    DelegationProgressReporter, DelegationSigningRequest, DelegationSubmission, DraftVote,
+    NoopProgressReporter, NoteInfo, PrepareDelegationBundleWithInputsParams,
+    PreparedDelegationBundle, PreparedSigner, SharePayload, SignedVoteCommitments, TxEvent,
+    VanWitness, VoteCommitStageReporter, VoteConfirmation, VoteSigner, VoteSubmission, VotingDb,
+    VotingHotkey, WitnessData,
 };
 use zcash_voting::{Network as VotingNetwork, VotingRoundParams};
 
@@ -113,6 +114,94 @@ pub async fn voting_hotkey_load(
         .ok_or_else(|| anyhow!("no voting hotkey; create one first"))?;
     let secret = hex::decode(secret)?;
     Ok(VotingHotkey::from_stored_secret(&secret, network)?)
+}
+
+/// Persists the round inputs needed to re-run [`prepare_delegation_bundle`]
+/// after a restart (the prepared-bundle cache is process-local only).
+pub async fn save_round_config(
+    connection: &mut SqliteConnection,
+    round_id: &str,
+    round_params_json: &str,
+    round_name: &str,
+    max_real_notes_per_bundle: Option<u32>,
+    lightwalletd_url: &str,
+) -> Result<()> {
+    crate::db::put_prop(
+        connection,
+        &format!("voting_round_params:{round_id}"),
+        round_params_json,
+    )
+    .await?;
+    crate::db::put_prop(
+        connection,
+        &format!("voting_round_name:{round_id}"),
+        round_name,
+    )
+    .await?;
+    crate::db::put_prop(
+        connection,
+        &format!("voting_round_lwd:{round_id}"),
+        lightwalletd_url,
+    )
+    .await?;
+    if let Some(n) = max_real_notes_per_bundle {
+        crate::db::put_prop(
+            connection,
+            &format!("voting_round_bundle_policy:{round_id}"),
+            &n.to_string(),
+        )
+        .await?;
+    }
+    Ok(())
+}
+
+/// Loads the round config persisted by [`save_round_config`].
+pub async fn load_round_config(
+    connection: &mut SqliteConnection,
+    round_id: &str,
+) -> Result<(String, String, Option<u32>, String)> {
+    let params = crate::db::get_prop(connection, &format!("voting_round_params:{round_id}"))
+        .await?
+        .ok_or_else(|| {
+            anyhow!("no saved voting config for round {round_id}; run delegation_prepare first")
+        })?;
+    let name = crate::db::get_prop(connection, &format!("voting_round_name:{round_id}"))
+        .await?
+        .ok_or_else(|| anyhow!("no saved voting round name for round {round_id}"))?;
+    let lwd = crate::db::get_prop(connection, &format!("voting_round_lwd:{round_id}"))
+        .await?
+        .ok_or_else(|| anyhow!("no saved lightwalletd URL for round {round_id}"))?;
+    let policy = crate::db::get_prop(
+        connection,
+        &format!("voting_round_bundle_policy:{round_id}"),
+    )
+    .await?
+    .and_then(|s| s.parse::<u32>().ok());
+    Ok((params, name, policy, lwd))
+}
+
+/// Persists the PIR layout used to build a round's delegation payload, so the
+/// proving step can resume after a restart without re-reading the chain config.
+pub async fn save_pir_layout(
+    connection: &mut SqliteConnection,
+    round_id: &str,
+    pir_layout: &zcash_voting::config::PirLayout,
+) -> Result<()> {
+    let json = serde_json::to_string(pir_layout)?;
+    crate::db::put_prop(connection, &format!("voting_round_pir:{round_id}"), &json).await
+}
+
+/// Loads the PIR layout persisted by [`save_pir_layout`].
+pub async fn load_pir_layout(
+    connection: &mut SqliteConnection,
+    round_id: &str,
+) -> Result<Option<zcash_voting::config::PirLayout>> {
+    let Some(json) =
+        crate::db::get_prop(connection, &format!("voting_round_pir:{round_id}")).await?
+    else {
+        return Ok(None);
+    };
+    Ok(Some(serde_json::from_str(&json)?))
 }
 
 /// Resolves lightwalletd-derived delegation inputs for a voting round.
@@ -378,12 +467,40 @@ pub async fn prove_and_submit_delegation(
     pczt_bytes: Vec<u8>,
     pir_layout: zcash_voting::config::PirLayout,
     pir_server_url: &str,
-) -> Result<DelegationSubmission> {
-    let db = open_voting_db(pool, wallet_id).await?;
-    let progress = NoopProgressReporter;
+) -> Result<(DelegationSubmission, String)> {
+    prove_and_submit_delegation_with_progress(
+        pool,
+        wallet_id,
+        prepared,
+        seed,
+        pczt_bytes,
+        pir_layout,
+        pir_server_url,
+        &NoopProgressReporter,
+    )
+    .await
+}
 
-    let _setup = prepared.setup(&db, &progress).await?;
+/// [`prove_and_submit_delegation`] with a live progress reporter. The library
+/// emits the PCZT/proof stages; the host emits `SigningPayload` and
+/// `PayloadReady` bookends around signing and assembly. Returns the
+/// submission together with its vote-chain wire JSON body.
+#[allow(clippy::too_many_arguments)]
+pub async fn prove_and_submit_delegation_with_progress(
+    pool: SqlitePool,
+    wallet_id: &str,
+    prepared: &PreparedDelegationBundle,
+    seed: &[u8],
+    pczt_bytes: Vec<u8>,
+    pir_layout: zcash_voting::config::PirLayout,
+    pir_server_url: &str,
+    progress: &dyn DelegationProgressReporter,
+) -> Result<(DelegationSubmission, String)> {
+    let db = open_voting_db(pool, wallet_id).await?;
+
+    let _setup = prepared.setup(&db, progress).await?;
     let request = prepared.signing_request(&db).await?;
+    progress.on_progress(DelegationProgress::SigningPayload);
     let (sig, sighash) = sign_delegation_request(seed, request)?;
 
     let pir_client = zcash_voting::connect_pir_blocking(
@@ -391,12 +508,16 @@ pub async fn prove_and_submit_delegation(
         pir_server_url,
         Arc::new(zcash_voting::HyperTransport::new()),
     )?;
-    prepared.prove(&db, &pir_client, &progress).await?;
+    prepared.prove(&db, &pir_client, progress).await?;
 
     let bundle = prepared
         .signed_bundle(&db, pczt_bytes, PreparedSigner::signature(sig, sighash))
         .await?;
-    Ok(bundle.submission)
+    progress.on_progress(DelegationProgress::PayloadReady);
+
+    let wire = zcash_voting::wire::DelegationSubmissionWire::try_from(&bundle.submission)?;
+    let wire_json = wire.to_json()?;
+    Ok((bundle.submission, wire_json))
 }
 
 /// Records a confirmed delegation transaction (persists the bundle's public
@@ -452,6 +573,32 @@ pub async fn commit_votes(
     witness: &VanWitness,
     hotkey: &VotingHotkey,
 ) -> Result<SignedVoteCommitments> {
+    commit_votes_with_progress(
+        pool,
+        wallet_id,
+        round_id,
+        bundle_index,
+        drafts,
+        witness,
+        hotkey,
+        &NoopProgressReporter,
+    )
+    .await
+}
+
+/// [`commit_votes`] with a live stage reporter (proof / share-payload /
+/// signing stages per proposal).
+#[allow(clippy::too_many_arguments)]
+pub async fn commit_votes_with_progress(
+    pool: SqlitePool,
+    wallet_id: &str,
+    round_id: &str,
+    bundle_index: u32,
+    drafts: &[DraftVote],
+    witness: &VanWitness,
+    hotkey: &VotingHotkey,
+    stages: &dyn VoteCommitStageReporter,
+) -> Result<SignedVoteCommitments> {
     let db = open_voting_db(pool, wallet_id).await?;
     Ok(zcash_voting::prelude::commit_batch(
         &db,
@@ -460,7 +607,7 @@ pub async fn commit_votes(
         drafts,
         witness,
         VoteSigner::hotkey(hotkey),
-        &NoopProgressReporter,
+        stages,
     )
     .await?)
 }
@@ -480,6 +627,55 @@ pub async fn vote_payloads(
         committed.submission(&db).await?,
         committed.share_payloads().to_vec(),
     ))
+}
+
+/// Reconstructs the chain-ready wire JSON for a committed vote.
+pub async fn vote_wire_json(
+    pool: SqlitePool,
+    wallet_id: &str,
+    round_id: &str,
+    bundle_index: u32,
+    proposal_id: u32,
+) -> Result<String> {
+    let db = open_voting_db(pool, wallet_id).await?;
+    let committed = CommittedVote::recover(&db, round_id, bundle_index, proposal_id).await?;
+    let signed = committed.signed_commitment(&db).await?;
+    Ok(zcash_voting::wire::VoteCommitmentWire::try_from(&signed)?.to_json()?)
+}
+
+/// Reconstructs one helper-share payload as helper wire JSON from the
+/// persisted commitment bundle.
+pub async fn share_wire_json(
+    pool: SqlitePool,
+    wallet_id: &str,
+    round_id: &str,
+    bundle_index: u32,
+    proposal_id: u32,
+    share_index: u32,
+    vc_tree_position: Option<u64>,
+    submit_at: u64,
+) -> Result<String> {
+    let db = open_voting_db(pool, wallet_id).await?;
+    let bundle = zcash_voting::recovery::recoverable_commitment_bundle(
+        &db,
+        round_id,
+        bundle_index,
+        proposal_id,
+    )
+    .await?
+    .ok_or_else(|| {
+        anyhow!(
+            "commitment bundle not found for round {round_id} bundle {bundle_index} proposal {proposal_id}"
+        )
+    })?;
+    let position = vc_tree_position.unwrap_or(bundle.vc_tree_position);
+    Ok(zcash_voting::share::recover_wire_json(
+        &bundle.commitment_bundle_json,
+        proposal_id,
+        share_index,
+        position,
+        submit_at,
+    )?)
 }
 
 /// Records successful vote-chain and helper-share submissions for one vote.

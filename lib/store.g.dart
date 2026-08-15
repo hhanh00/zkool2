@@ -619,7 +619,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'c8611b3252b3a7ff4c27392a1b5345019eb405aa';
+    r'7772fb1c14262ec8f76f7d44c600d06358ec5ebb';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -1262,7 +1262,7 @@ final class VaultNotifierProvider
   VaultNotifier create() => VaultNotifier();
 }
 
-String _$vaultNotifierHash() => r'422ba342430a4319552b41d8dbe378de7dba470a';
+String _$vaultNotifierHash() => r'f1317577395220210fdffc5a59cd90bb6ad683da';
 
 abstract class _$VaultNotifier extends $AsyncNotifier<Vault> {
   FutureOr<Vault> build();
@@ -1414,4 +1414,395 @@ final class PluginMemoSectionsFamily extends $Family
 
   @override
   String toString() => r'pluginMemoSectionsProvider';
+}
+
+/// Per-round voting session. `build()` is the recovery-first triple load;
+/// `refresh()` re-runs it after an action mutates the voting DB.
+
+@ProviderFor(VotingSession)
+const votingSessionProvider = VotingSessionFamily._();
+
+/// Per-round voting session. `build()` is the recovery-first triple load;
+/// `refresh()` re-runs it after an action mutates the voting DB.
+final class VotingSessionProvider
+    extends $AsyncNotifierProvider<VotingSession, VotingSessionState> {
+  /// Per-round voting session. `build()` is the recovery-first triple load;
+  /// `refresh()` re-runs it after an action mutates the voting DB.
+  const VotingSessionProvider._(
+      {required VotingSessionFamily super.from, required String super.argument})
+      : super(
+          retry: null,
+          name: r'votingSessionProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$votingSessionHash();
+
+  @override
+  String toString() {
+    return r'votingSessionProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  VotingSession create() => VotingSession();
+
+  @override
+  bool operator ==(Object other) {
+    return other is VotingSessionProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$votingSessionHash() => r'74d90be6f0517caae693468712cabce9319f0584';
+
+/// Per-round voting session. `build()` is the recovery-first triple load;
+/// `refresh()` re-runs it after an action mutates the voting DB.
+
+final class VotingSessionFamily extends $Family
+    with
+        $ClassFamilyOverride<VotingSession, AsyncValue<VotingSessionState>,
+            VotingSessionState, FutureOr<VotingSessionState>, String> {
+  const VotingSessionFamily._()
+      : super(
+          retry: null,
+          name: r'votingSessionProvider',
+          dependencies: null,
+          $allTransitiveDependencies: null,
+          isAutoDispose: false,
+        );
+
+  /// Per-round voting session. `build()` is the recovery-first triple load;
+  /// `refresh()` re-runs it after an action mutates the voting DB.
+
+  VotingSessionProvider call(
+    String roundId,
+  ) =>
+      VotingSessionProvider._(argument: roundId, from: this);
+
+  @override
+  String toString() => r'votingSessionProvider';
+}
+
+/// Per-round voting session. `build()` is the recovery-first triple load;
+/// `refresh()` re-runs it after an action mutates the voting DB.
+
+abstract class _$VotingSession extends $AsyncNotifier<VotingSessionState> {
+  late final _$args = ref.$arg as String;
+  String get roundId => _$args;
+
+  FutureOr<VotingSessionState> build(
+    String roundId,
+  );
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build(
+      _$args,
+    );
+    final ref =
+        this.ref as $Ref<AsyncValue<VotingSessionState>, VotingSessionState>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<AsyncValue<VotingSessionState>, VotingSessionState>,
+        AsyncValue<VotingSessionState>,
+        Object?,
+        Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+/// Rounds persisted in the voting DB for the current wallet.
+
+@ProviderFor(votingRoundList)
+const votingRoundListProvider = VotingRoundListProvider._();
+
+/// Rounds persisted in the voting DB for the current wallet.
+
+final class VotingRoundListProvider extends $FunctionalProvider<
+        AsyncValue<List<VotingRoundInfo>>,
+        List<VotingRoundInfo>,
+        FutureOr<List<VotingRoundInfo>>>
+    with
+        $FutureModifier<List<VotingRoundInfo>>,
+        $FutureProvider<List<VotingRoundInfo>> {
+  /// Rounds persisted in the voting DB for the current wallet.
+  const VotingRoundListProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'votingRoundListProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$votingRoundListHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<List<VotingRoundInfo>> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<VotingRoundInfo>> create(Ref ref) {
+    return votingRoundList(ref);
+  }
+}
+
+String _$votingRoundListHash() => r'12d2cfda4753a04d9343e21a6637789106c3ffb5';
+
+/// Resolved and authenticated voting config for the configured source URL.
+/// Resolves fresh on build; on failure falls back to the last cached config.
+
+@ProviderFor(VotingConfigNotifier)
+const votingConfigProvider = VotingConfigNotifierProvider._();
+
+/// Resolved and authenticated voting config for the configured source URL.
+/// Resolves fresh on build; on failure falls back to the last cached config.
+final class VotingConfigNotifierProvider
+    extends $AsyncNotifierProvider<VotingConfigNotifier, VotingConfig?> {
+  /// Resolved and authenticated voting config for the configured source URL.
+  /// Resolves fresh on build; on failure falls back to the last cached config.
+  const VotingConfigNotifierProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'votingConfigProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$votingConfigNotifierHash();
+
+  @$internal
+  @override
+  VotingConfigNotifier create() => VotingConfigNotifier();
+}
+
+String _$votingConfigNotifierHash() =>
+    r'ed064685d2a96f9c26b4e3e40636d03d32287caf';
+
+/// Resolved and authenticated voting config for the configured source URL.
+/// Resolves fresh on build; on failure falls back to the last cached config.
+
+abstract class _$VotingConfigNotifier extends $AsyncNotifier<VotingConfig?> {
+  FutureOr<VotingConfig?> build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<AsyncValue<VotingConfig?>, VotingConfig?>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<AsyncValue<VotingConfig?>, VotingConfig?>,
+        AsyncValue<VotingConfig?>,
+        Object?,
+        Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+/// Blocks destructive wallet actions (account deletion, vault sign-out,
+/// wallet removal) while a voting submission job is in flight.
+
+@ProviderFor(VotingSubmissionGuard)
+const votingSubmissionGuardProvider = VotingSubmissionGuardProvider._();
+
+/// Blocks destructive wallet actions (account deletion, vault sign-out,
+/// wallet removal) while a voting submission job is in flight.
+final class VotingSubmissionGuardProvider
+    extends $NotifierProvider<VotingSubmissionGuard, bool> {
+  /// Blocks destructive wallet actions (account deletion, vault sign-out,
+  /// wallet removal) while a voting submission job is in flight.
+  const VotingSubmissionGuardProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'votingSubmissionGuardProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$votingSubmissionGuardHash();
+
+  @$internal
+  @override
+  VotingSubmissionGuard create() => VotingSubmissionGuard();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$votingSubmissionGuardHash() =>
+    r'7fbcb88ac8361aa94083e9d98321f96c521a2777';
+
+/// Blocks destructive wallet actions (account deletion, vault sign-out,
+/// wallet removal) while a voting submission job is in flight.
+
+abstract class _$VotingSubmissionGuard extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<bool, bool>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<bool, bool>, bool, Object?, Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+/// Delegation execution job for one round. Runs the serialized chain:
+/// prepare (or resume) → setup → build submission (progress stream) →
+/// broadcast → mark submitted → poll confirmation → confirm. Vote casting
+/// lands in a later phase. Restart-safe: the resume plan decides which steps
+/// run (`delegate` vs `poll_delegation`), never re-broadcasting a recorded tx.
+
+@ProviderFor(VotingSubmissionJob)
+const votingSubmissionJobProvider = VotingSubmissionJobFamily._();
+
+/// Delegation execution job for one round. Runs the serialized chain:
+/// prepare (or resume) → setup → build submission (progress stream) →
+/// broadcast → mark submitted → poll confirmation → confirm. Vote casting
+/// lands in a later phase. Restart-safe: the resume plan decides which steps
+/// run (`delegate` vs `poll_delegation`), never re-broadcasting a recorded tx.
+final class VotingSubmissionJobProvider
+    extends $NotifierProvider<VotingSubmissionJob, VotingSubmissionJobState> {
+  /// Delegation execution job for one round. Runs the serialized chain:
+  /// prepare (or resume) → setup → build submission (progress stream) →
+  /// broadcast → mark submitted → poll confirmation → confirm. Vote casting
+  /// lands in a later phase. Restart-safe: the resume plan decides which steps
+  /// run (`delegate` vs `poll_delegation`), never re-broadcasting a recorded tx.
+  const VotingSubmissionJobProvider._(
+      {required VotingSubmissionJobFamily super.from,
+      required String super.argument})
+      : super(
+          retry: null,
+          name: r'votingSubmissionJobProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$votingSubmissionJobHash();
+
+  @override
+  String toString() {
+    return r'votingSubmissionJobProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  VotingSubmissionJob create() => VotingSubmissionJob();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(VotingSubmissionJobState value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<VotingSubmissionJobState>(value),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is VotingSubmissionJobProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$votingSubmissionJobHash() =>
+    r'5dfea23a8350a2f2194fe16b725caffd2a1f33a6';
+
+/// Delegation execution job for one round. Runs the serialized chain:
+/// prepare (or resume) → setup → build submission (progress stream) →
+/// broadcast → mark submitted → poll confirmation → confirm. Vote casting
+/// lands in a later phase. Restart-safe: the resume plan decides which steps
+/// run (`delegate` vs `poll_delegation`), never re-broadcasting a recorded tx.
+
+final class VotingSubmissionJobFamily extends $Family
+    with
+        $ClassFamilyOverride<VotingSubmissionJob, VotingSubmissionJobState,
+            VotingSubmissionJobState, VotingSubmissionJobState, String> {
+  const VotingSubmissionJobFamily._()
+      : super(
+          retry: null,
+          name: r'votingSubmissionJobProvider',
+          dependencies: null,
+          $allTransitiveDependencies: null,
+          isAutoDispose: false,
+        );
+
+  /// Delegation execution job for one round. Runs the serialized chain:
+  /// prepare (or resume) → setup → build submission (progress stream) →
+  /// broadcast → mark submitted → poll confirmation → confirm. Vote casting
+  /// lands in a later phase. Restart-safe: the resume plan decides which steps
+  /// run (`delegate` vs `poll_delegation`), never re-broadcasting a recorded tx.
+
+  VotingSubmissionJobProvider call(
+    String roundId,
+  ) =>
+      VotingSubmissionJobProvider._(argument: roundId, from: this);
+
+  @override
+  String toString() => r'votingSubmissionJobProvider';
+}
+
+/// Delegation execution job for one round. Runs the serialized chain:
+/// prepare (or resume) → setup → build submission (progress stream) →
+/// broadcast → mark submitted → poll confirmation → confirm. Vote casting
+/// lands in a later phase. Restart-safe: the resume plan decides which steps
+/// run (`delegate` vs `poll_delegation`), never re-broadcasting a recorded tx.
+
+abstract class _$VotingSubmissionJob
+    extends $Notifier<VotingSubmissionJobState> {
+  late final _$args = ref.$arg as String;
+  String get roundId => _$args;
+
+  VotingSubmissionJobState build(
+    String roundId,
+  );
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build(
+      _$args,
+    );
+    final ref =
+        this.ref as $Ref<VotingSubmissionJobState, VotingSubmissionJobState>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<VotingSubmissionJobState, VotingSubmissionJobState>,
+        VotingSubmissionJobState,
+        Object?,
+        Object?>;
+    element.handleValue(ref, created);
+  }
 }

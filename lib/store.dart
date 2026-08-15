@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'package:collection/collection.dart';
 import 'package:convert/convert.dart';
@@ -23,6 +24,7 @@ import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/plugin.dart' as plugin_api;
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
+import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/src/rust/api/zsa.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
@@ -368,6 +370,10 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final isLightNode = (hasDb ? await getProp(key: "is_light_node", c: c) : null) ?? "true";
     final lwd = (hasDb ? await getProp(key: "lwd", c: c) : null) ?? "https://zec.rocks";
     final syncInterval = (hasDb ? await getProp(key: "sync_interval", c: c) : null) ?? "30";
+    final votingConfigUrl =
+        (hasDb ? await getProp(key: "voting_config_url", c: c) : null) ?? "";
+    final voteNodeUrl =
+        (hasDb ? await getProp(key: "vote_node_url", c: c) : null) ?? "";
     final actionsPerSync = (hasDb ? await getProp(key: "actions_per_sync", c: c) : null) ?? "10000";
     final blockExplorer = (hasDb ? await getProp(key: "block_explorer", c: c) : null) ?? "https://cipherscan.app/tx/{txid}";
     final qrEnabled = (hasDb ? await getProp(key: "qr_enabled", c: c) : null) ?? "false";
@@ -413,6 +419,8 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       expertMode: expertMode,
       paletteName: paletteName,
       darkMode: darkMode,
+      votingConfigUrl: votingConfigUrl,
+      voteNodeUrl: voteNodeUrl,
       transactionTableMode: txTableMode,
       currency: currency,
     );
@@ -439,6 +447,20 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     await prefs.setBool("tx_table_mode", tableMode);
     state = state.whenData((s) => s.copyWith(
           transactionTableMode: tableMode,
+        ));
+  }
+
+  Future<void> setVotingConfigUrl(String url) async {
+    await putProp(key: "voting_config_url", value: url, c: coinContext.coin);
+    state = state.whenData((s) => s.copyWith(
+          votingConfigUrl: url,
+        ));
+  }
+
+  Future<void> setVoteNodeUrl(String url) async {
+    await putProp(key: "vote_node_url", value: url, c: coinContext.coin);
+    state = state.whenData((s) => s.copyWith(
+          voteNodeUrl: url,
         ));
   }
 }
@@ -515,6 +537,8 @@ sealed class AppSettings with _$AppSettings {
     required bool darkMode,
     required bool transactionTableMode,
     required String currency,
+    required String votingConfigUrl,
+    required String voteNodeUrl,
   }) = _AppSettings;
 }
 
@@ -1194,6 +1218,11 @@ class VaultNotifier extends _$VaultNotifier {
 
   Future<void> signOut() async {
     logger.i("VaultNotifier.signOut");
+    if (ref.read(votingSubmissionGuardProvider)) {
+      throw Exception(
+        "A voting submission is in progress. Wait for it to finish before signing out.",
+      );
+    }
     final vault = await future;
     await vault.signOut();
   }
@@ -1227,3 +1256,665 @@ Future<List<plugin_api.MemoSection>> pluginMemoSections(
 final ironwoodActiveProvider = FutureProvider<bool>((ref) async {
   return await isIronwoodActive(c: coinContext.coin);
 });
+
+// ── Voting providers ───────────────────────────────────────────────────────
+
+/// Aggregated recovery-first view of one voting round: the fork-derived
+/// resume plan, the full recovery snapshot, and the persisted ballot intents.
+/// Every voting screen loads this before acting; nothing about a voting
+/// session lives in Dart state.
+@freezed
+sealed class VotingSessionState with _$VotingSessionState {
+  factory VotingSessionState({
+    required VotingRoundPlan? plan,
+    required VotingRoundRecovery? recovery,
+    required List<VotingBallotIntent> intents,
+  }) = _VotingSessionState;
+}
+
+/// Per-round voting session. `build()` is the recovery-first triple load;
+/// `refresh()` re-runs it after an action mutates the voting DB.
+@Riverpod(keepAlive: true)
+class VotingSession extends _$VotingSession {
+  String _roundId = "";
+
+  @override
+  Future<VotingSessionState> build(String roundId) {
+    _roundId = roundId;
+    return _load();
+  }
+
+  Future<VotingSessionState> _load() async {
+    final c = coinContext.coin;
+    final plan = await votingPlan(
+      roundId: _roundId,
+      proposalIds: const [],
+      c: c,
+    );
+    final recovery = await votingRecovery(roundId: _roundId, c: c);
+    final intents = await votingBallotIntents(roundId: _roundId, c: c);
+    return VotingSessionState(plan: plan, recovery: recovery, intents: intents);
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(_load);
+  }
+}
+
+/// Rounds persisted in the voting DB for the current wallet.
+@riverpod
+Future<List<VotingRoundInfo>> votingRoundList(Ref ref) async {
+  final c = coinContext.coin;
+  return await votingRounds(c: c);
+}
+
+/// Resolved and authenticated voting config for the configured source URL.
+/// Resolves fresh on build; on failure falls back to the last cached config.
+@Riverpod(keepAlive: true)
+class VotingConfigNotifier extends _$VotingConfigNotifier {
+  @override
+  Future<VotingConfig?> build() async {
+    final settings = await ref.watch(appSettingsProvider.future);
+    final source = settings.votingConfigUrl;
+    if (source.isEmpty) return null;
+    return _resolve(source);
+  }
+
+  Future<VotingConfig?> _resolve(String source) async {
+    final c = coinContext.coin;
+    try {
+      return await votingConfigResolve(source: source, c: c);
+    } on Exception {
+      return await votingConfigCached(source: source, c: c);
+    }
+  }
+
+  Future<VotingConfig?> resolve() async {
+    final settings = await ref.read(appSettingsProvider.future);
+    final source = settings.votingConfigUrl;
+    state = const AsyncValue.loading();
+    final result = source.isEmpty ? null : await _resolve(source);
+    state = AsyncValue.data(result);
+    return result;
+  }
+}
+
+/// Blocks destructive wallet actions (account deletion, vault sign-out,
+/// wallet removal) while a voting submission job is in flight.
+@Riverpod(keepAlive: true)
+class VotingSubmissionGuard extends _$VotingSubmissionGuard {
+  @override
+  bool build() => false;
+
+  void setActive(bool active) {
+    state = active;
+  }
+}
+
+/// State of the voting submission job for one round.
+@freezed
+sealed class VotingSubmissionJobState with _$VotingSubmissionJobState {
+  factory VotingSubmissionJobState({
+    required String stage, // idle|preparing|proving|submitting|confirming|done|error
+    required double progress,
+    String? error,
+  }) = _VotingSubmissionJobState;
+}
+
+/// Delegation execution job for one round. Runs the serialized chain:
+/// prepare (or resume) → setup → build submission (progress stream) →
+/// broadcast → mark submitted → poll confirmation → confirm. Vote casting
+/// lands in a later phase. Restart-safe: the resume plan decides which steps
+/// run (`delegate` vs `poll_delegation`), never re-broadcasting a recorded tx.
+@Riverpod(keepAlive: true)
+class VotingSubmissionJob extends _$VotingSubmissionJob {
+  Timer? _shareTimer;
+
+  @override
+  VotingSubmissionJobState build(String roundId) {
+    ref.onDispose(() => _shareTimer?.cancel());
+    return VotingSubmissionJobState(stage: "idle", progress: 0);
+  }
+
+  Future<void> start({
+    required String chainUrl,
+    required String pirServerUrl,
+    VotingPirLayout? pirLayout,
+    String? roundParamsJson,
+    String? roundName,
+    int? maxRealNotesPerBundle,
+    String? lightwalletdUrl,
+    String voteNodeUrl = "",
+    int ceremonyStart = 0,
+    int? voteEnd,
+    List<String> shareServerUrls = const [],
+    bool singleShare = false,
+  }) async {
+    if (state.stage != "idle" &&
+        state.stage != "error" &&
+        state.stage != "done") {
+      return; // already running
+    }
+    state = state.copyWith(stage: "running", progress: 0, error: null);
+    ref.read(votingSubmissionGuardProvider.notifier).setActive(true);
+    try {
+      await _runDelegation(
+        chainUrl: chainUrl,
+        pirServerUrl: pirServerUrl,
+        pirLayout: pirLayout,
+        roundParamsJson: roundParamsJson,
+        roundName: roundName,
+        maxRealNotesPerBundle: maxRealNotesPerBundle,
+        lightwalletdUrl: lightwalletdUrl,
+      );
+      final session = await ref.read(votingSessionProvider(roundId).future);
+      await _runVotes(
+        chainUrl: chainUrl,
+        voteNodeUrl: voteNodeUrl,
+        plan: session.plan,
+        recovery: session.recovery,
+      );
+      await _submitShares(
+        ceremonyStart: ceremonyStart,
+        voteEnd: voteEnd,
+        shareServerUrls: shareServerUrls,
+        singleShare: singleShare,
+      );
+      state = state.copyWith(stage: "done", progress: 1);
+      ref.read(votingSubmissionGuardProvider.notifier).setActive(false);
+    } on Exception catch (e) {
+      state = state.copyWith(stage: "error", error: e.toString());
+      ref.read(votingSubmissionGuardProvider.notifier).setActive(false);
+    }
+  }
+
+  void reset() {
+    state = VotingSubmissionJobState(stage: "idle", progress: 0);
+  }
+
+  Future<void> _runDelegation({
+    required String chainUrl,
+    required String pirServerUrl,
+    VotingPirLayout? pirLayout,
+    String? roundParamsJson,
+    String? roundName,
+    int? maxRealNotesPerBundle,
+    String? lightwalletdUrl,
+  }) async {
+    final c = coinContext.coin;
+    final session = await ref.read(votingSessionProvider(roundId).future);
+    final plan = session.plan;
+    final steps = plan?.nextSteps ?? const <VotingNextStep>[];
+    final delegateStep = steps.where((s) => s.kind == "delegate").firstOrNull;
+    final pollStep =
+        steps.where((s) => s.kind == "poll_delegation").firstOrNull;
+    if (delegateStep == null && pollStep == null) {
+      return; // no delegation work for this round
+    }
+    final bundleIndex = (delegateStep ?? pollStep!).bundleIndex;
+
+    String? txHash;
+    if (delegateStep != null) {
+      state = state.copyWith(stage: "preparing");
+      if (roundParamsJson != null && roundName != null) {
+        await delegationPrepare(
+          roundParamsJson: roundParamsJson,
+          roundName: roundName,
+          sessionJson: null,
+          bundleIndex: bundleIndex,
+          maxRealNotesPerBundle: maxRealNotesPerBundle,
+          lightwalletdUrl: lightwalletdUrl ?? "",
+          c: c,
+        );
+      } else {
+        await delegationPrepareResume(
+          roundId: roundId,
+          bundleIndex: bundleIndex,
+          maxRealNotesPerBundle: maxRealNotesPerBundle,
+          lightwalletdUrl: lightwalletdUrl,
+          c: c,
+        );
+      }
+
+      final setup = await delegationSetup(
+        roundId: roundId,
+        bundleIndex: bundleIndex,
+        c: c,
+      );
+
+      state = state.copyWith(stage: "proving");
+      final stream = delegationBuildSubmission(
+        roundId: roundId,
+        bundleIndex: bundleIndex,
+        pcztBytes: setup.pcztBytes,
+        pirLayout: pirLayout,
+        pirServerUrl: pirServerUrl,
+        c: c,
+      );
+      await for (final event in stream) {
+        switch (event) {
+          case VotingDelegationProgress_ProofProgress(:final progress):
+            state = state.copyWith(progress: progress);
+          default:
+            break;
+        }
+      }
+
+      // The FRB boundary drops the build result when a StreamSink is present,
+      // so the wire body comes from the prop persisted by the build.
+      final wireJson = await delegationWireJson(
+        roundId: roundId,
+        bundleIndex: bundleIndex,
+        c: c,
+      );
+      if (wireJson == null || wireJson.isEmpty) {
+        throw AnyhowException(
+          "No wire JSON produced for round $roundId bundle $bundleIndex",
+        );
+      }
+
+      state = state.copyWith(stage: "submitting");
+      final res = await votechainSubmitDelegation(
+        baseUrl: chainUrl,
+        submissionJson: wireJson,
+        c: c,
+      );
+      if (res.statusCode == 422) {
+        throw AnyhowException(
+          "Delegation rejected by the vote chain: ${res.body}",
+        );
+      }
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        throw AnyhowException(
+          "Vote chain submit failed (HTTP ${res.statusCode}): ${res.body}",
+        );
+      }
+      final result = jsonDecode(res.body) as Map<String, dynamic>;
+      txHash = result['tx_hash'] as String? ?? "";
+      final code = result['code'] as int? ?? -1;
+      if (code != 0 || txHash.isEmpty) {
+        throw AnyhowException(
+          "Vote chain rejected the delegation: ${result['log'] ?? res.body}",
+        );
+      }
+
+      await delegationMarkSubmitted(
+        roundId: roundId,
+        bundleIndex: bundleIndex,
+        txHash: txHash,
+        c: c,
+      );
+    } else {
+      // poll-only path: the tx hash is already recorded
+      final status = plan!
+          .delegationStatuses
+          .where((s) => s.bundleIndex == bundleIndex)
+          .firstOrNull;
+      txHash = status?.txHash;
+      if (txHash == null || txHash.isEmpty) {
+        throw AnyhowException(
+          "Round $roundId bundle $bundleIndex is pending but has no recorded tx hash",
+        );
+      }
+    }
+
+    state = state.copyWith(stage: "confirming");
+    final eventsJson =
+        await _pollTxConfirmation(chainUrl: chainUrl, txHash: txHash!);
+    await delegationConfirm(
+      roundId: roundId,
+      bundleIndex: bundleIndex,
+      txHash: txHash,
+      eventsJson: eventsJson,
+      c: c,
+    );
+    await ref.read(votingSessionProvider(roundId).notifier).refresh();
+  }
+
+  Future<String> _pollTxConfirmation({
+    required String chainUrl,
+    required String txHash,
+  }) async {
+    final c = coinContext.coin;
+    for (var attempt = 0; attempt < 45; attempt++) {
+      final res = await votechainTxConfirmation(
+        baseUrl: chainUrl,
+        txHash: txHash,
+        c: c,
+      );
+      if (res.statusCode == 200) {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        final events = body['events'];
+        return jsonEncode(events ?? const []);
+      }
+      await Future<void>.delayed(const Duration(seconds: 2));
+    }
+    throw AnyhowException(
+      "Timed out waiting for tx $txHash to confirm",
+    );
+  }
+
+  /// Casts and confirms the remaining votes for a round, recovery-first:
+  /// `cast_vote` steps commit (streamed), `submit_vote` steps broadcast and
+  /// confirm, `poll_vote` steps only poll a previously recorded tx.
+  Future<void> _runVotes({
+    required String chainUrl,
+    required String voteNodeUrl,
+    required VotingRoundPlan? plan,
+    required VotingRoundRecovery? recovery,
+  }) async {
+    if (plan == null) return;
+    final c = coinContext.coin;
+    final voteSteps = plan.nextSteps
+        .where((s) =>
+            s.kind == "cast_vote" ||
+            s.kind == "submit_vote" ||
+            s.kind == "poll_vote")
+        .toList();
+    if (voteSteps.isEmpty) return;
+
+    final draftsJson = await votingDraftsLoad(roundId: roundId, c: c);
+    final byBundle = groupBy(voteSteps, (s) => s.bundleIndex);
+
+    for (final entry in byBundle.entries) {
+      final bundleIndex = entry.key;
+      final steps = entry.value;
+
+      final castSteps =
+          steps.where((s) => s.kind == "cast_vote").toList();
+      if (castSteps.isNotEmpty) {
+        if (draftsJson == null || draftsJson.isEmpty) {
+          throw AnyhowException(
+            "No draft ballot saved for round $roundId; "
+            "open the ballot and review first",
+          );
+        }
+        state = state.copyWith(stage: "voting");
+        final stream = votingCommitWithProgress(
+          roundId: roundId,
+          bundleIndex: bundleIndex,
+          draftsJson: draftsJson,
+          voteNodeUrl: voteNodeUrl,
+          c: c,
+        );
+        await for (final event in stream) {
+          switch (event) {
+            case VotingVoteCommitStage_ProofProgress(:final progress):
+              state = state.copyWith(progress: progress);
+            default:
+              break;
+          }
+        }
+      }
+
+      for (final step in steps.where((s) => s.kind == "submit_vote")) {
+        state = state.copyWith(stage: "voting");
+        final wireJson = await votingVoteWireJson(
+          roundId: roundId,
+          bundleIndex: bundleIndex,
+          proposalId: step.proposalId,
+          c: c,
+        );
+        final res = await votechainSubmitVote(
+          baseUrl: chainUrl,
+          submissionJson: wireJson,
+          c: c,
+        );
+        if (res.statusCode == 422) {
+          throw AnyhowException(
+            "Vote rejected by the vote chain: ${res.body}",
+          );
+        }
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          throw AnyhowException(
+            "Vote chain submit failed (HTTP ${res.statusCode}): ${res.body}",
+          );
+        }
+        final result = jsonDecode(res.body) as Map<String, dynamic>;
+        final txHash = result['tx_hash'] as String? ?? "";
+        final code = result['code'] as int? ?? -1;
+        if (code != 0 || txHash.isEmpty) {
+          throw AnyhowException(
+            "Vote chain rejected the vote: ${result['log'] ?? res.body}",
+          );
+        }
+
+        await votingMarkVoteSubmitted(
+          roundId: roundId,
+          bundleIndex: bundleIndex,
+          proposalId: step.proposalId,
+          txHash: txHash,
+          c: c,
+        );
+        state = state.copyWith(stage: "confirming");
+        final eventsJson =
+            await _pollTxConfirmation(chainUrl: chainUrl, txHash: txHash);
+        await votingConfirm(
+          roundId: roundId,
+          bundleIndex: bundleIndex,
+          proposalId: step.proposalId,
+          txHash: txHash,
+          eventsJson: eventsJson,
+          c: c,
+        );
+      }
+
+      for (final step in steps.where((s) => s.kind == "poll_vote")) {
+        final vote = recovery?.votes
+            .where((v) =>
+                v.bundleIndex == step.bundleIndex &&
+                v.proposalId == step.proposalId)
+            .firstOrNull;
+        final txHash = vote?.txHash;
+        if (txHash == null || txHash.isEmpty) {
+          throw AnyhowException(
+            "Vote for proposal ${step.proposalId} is pending but has no "
+            "recorded tx hash",
+          );
+        }
+        state = state.copyWith(stage: "confirming");
+        final eventsJson =
+            await _pollTxConfirmation(chainUrl: chainUrl, txHash: txHash);
+        await votingConfirm(
+          roundId: roundId,
+          bundleIndex: bundleIndex,
+          proposalId: step.proposalId,
+          txHash: txHash,
+          eventsJson: eventsJson,
+          c: c,
+        );
+      }
+    }
+  }
+
+  /// Plans and submits helper shares for unconfirmed share rows. With no
+  /// active vote window or no helper servers configured this is a no-op
+  /// (the real inputs arrive with the dynamic config in a later phase).
+  Future<void> _submitShares({
+    required int ceremonyStart,
+    required int? voteEnd,
+    required List<String> shareServerUrls,
+    required bool singleShare,
+  }) async {
+    final c = coinContext.coin;
+    state = state.copyWith(stage: "shares");
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final sharePlan = await votingSharePlan(
+      roundId: roundId,
+      now: BigInt.from(now),
+      ceremonyStart: BigInt.from(ceremonyStart),
+      voteEnd: voteEnd == null ? null : BigInt.from(voteEnd),
+      serverUrls: shareServerUrls,
+      singleShare: singleShare,
+      c: c,
+    );
+    final unconfirmed = await votingShareUnconfirmed(roundId: roundId, c: c);
+    final count = min(sharePlan.submissions.length, unconfirmed.length);
+    for (var i = 0; i < count; i++) {
+      final item = sharePlan.submissions[i];
+      final share = unconfirmed[i];
+      final wireJson = await votingShareWireJson(
+        roundId: roundId,
+        bundleIndex: share.bundleIndex,
+        proposalId: share.proposalId,
+        shareIndex: share.shareIndex,
+        vcTreePosition: null,
+        submitAt: item.submitAt,
+        c: c,
+      );
+      final body =
+          jsonEncode({...jsonDecode(wireJson), "vote_round_id": roundId});
+      for (final server in item.targetServers) {
+        final res = await votechainSubmitShare(
+          serverUrl: server,
+          payloadJson: body,
+          c: c,
+        );
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          throw AnyhowException(
+            "Share submit to $server failed "
+            "(HTTP ${res.statusCode}): ${res.body}",
+          );
+        }
+      }
+      await votingShareRecord(
+        roundId: roundId,
+        bundleIndex: share.bundleIndex,
+        proposalId: share.proposalId,
+        shareIndex: share.shareIndex,
+        sentToUrls: item.targetServers,
+        submitAt: item.submitAt,
+        c: c,
+      );
+    }
+
+    // Background tracking until every share confirms (or the vote window ends).
+    if (voteEnd != null && sharePlan.nextTrackingDelaySecs != null) {
+      _scheduleShareTracking(
+        delaySeconds: sharePlan.nextTrackingDelaySecs!.toInt(),
+        ceremonyStart: ceremonyStart,
+        voteEnd: voteEnd,
+        shareServerUrls: shareServerUrls,
+        singleShare: singleShare,
+      );
+    }
+  }
+
+  void _scheduleShareTracking({
+    required int delaySeconds,
+    required int ceremonyStart,
+    required int? voteEnd,
+    required List<String> shareServerUrls,
+    required bool singleShare,
+  }) {
+    _shareTimer?.cancel();
+    _shareTimer = Timer(Duration(seconds: delaySeconds), () async {
+      if (state.stage == "done" || state.stage == "error") {
+        try {
+          await _trackShares(
+            ceremonyStart: ceremonyStart,
+            voteEnd: voteEnd,
+            shareServerUrls: shareServerUrls,
+            singleShare: singleShare,
+          );
+        } on Exception catch (_) {
+          // The next tick retries; share tracking is best-effort.
+        }
+      }
+    });
+  }
+
+  /// One share-tracking tick: poll helper status for sent shares, resubmit
+  /// when the plan reports overdue shares, then re-arm if work remains.
+  Future<void> _trackShares({
+    required int ceremonyStart,
+    required int? voteEnd,
+    required List<String> shareServerUrls,
+    required bool singleShare,
+  }) async {
+    final c = coinContext.coin;
+    final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    final plan = await votingSharePlan(
+      roundId: roundId,
+      now: BigInt.from(now),
+      ceremonyStart: BigInt.from(ceremonyStart),
+      voteEnd: voteEnd == null ? null : BigInt.from(voteEnd),
+      serverUrls: shareServerUrls,
+      singleShare: singleShare,
+      c: c,
+    );
+    final unconfirmed = await votingShareUnconfirmed(roundId: roundId, c: c);
+    if (unconfirmed.isEmpty) return;
+
+    for (final share in unconfirmed) {
+      if (share.sentToUrls.isEmpty) continue;
+      final shareId = hex.encode(share.nullifier);
+      final res = await votechainShareStatus(
+        serverUrl: share.sentToUrls.first,
+        roundId: roundId,
+        shareId: shareId,
+        c: c,
+      );
+      if (res.statusCode == 200) {
+        await votingShareConfirm(
+          roundId: roundId,
+          bundleIndex: share.bundleIndex,
+          proposalId: share.proposalId,
+          shareIndex: share.shareIndex,
+          c: c,
+        );
+      }
+    }
+
+    if (plan.summary.overdue > BigInt.zero) {
+      final count = min(plan.submissions.length, unconfirmed.length);
+      for (var i = 0; i < count; i++) {
+        final item = plan.submissions[i];
+        final share = unconfirmed[i];
+        final wireJson = await votingShareWireJson(
+          roundId: roundId,
+          bundleIndex: share.bundleIndex,
+          proposalId: share.proposalId,
+          shareIndex: share.shareIndex,
+          vcTreePosition: null,
+          submitAt: item.submitAt,
+          c: c,
+        );
+        final body =
+            jsonEncode({...jsonDecode(wireJson), "vote_round_id": roundId});
+        for (final server in item.targetServers) {
+          final res = await votechainResubmitShare(
+            serverUrl: server,
+            payloadJson: body,
+            c: c,
+          );
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            throw AnyhowException(
+              "Share resubmit to $server failed "
+              "(HTTP ${res.statusCode}): ${res.body}",
+            );
+          }
+        }
+        await votingShareAddServers(
+          roundId: roundId,
+          bundleIndex: share.bundleIndex,
+          proposalId: share.proposalId,
+          shareIndex: share.shareIndex,
+          newUrls: item.targetServers,
+          c: c,
+        );
+      }
+    }
+
+    if (voteEnd != null && plan.nextTrackingDelaySecs != null) {
+      _scheduleShareTracking(
+        delaySeconds: plan.nextTrackingDelaySecs!.toInt(),
+        ceremonyStart: ceremonyStart,
+        voteEnd: voteEnd,
+        shareServerUrls: shareServerUrls,
+        singleShare: singleShare,
+      );
+    }
+  }
+}

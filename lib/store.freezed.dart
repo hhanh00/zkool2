@@ -1347,6 +1347,8 @@ mixin _$AppSettings {
   bool get darkMode;
   bool get transactionTableMode;
   String get currency;
+  String get votingConfigUrl;
+  String get voteNodeUrl;
 
   /// Create a copy of AppSettings
   /// with the given fields replaced by the non-null parameter values.
@@ -1395,7 +1397,11 @@ mixin _$AppSettings {
             (identical(other.transactionTableMode, transactionTableMode) ||
                 other.transactionTableMode == transactionTableMode) &&
             (identical(other.currency, currency) ||
-                other.currency == currency));
+                other.currency == currency) &&
+            (identical(other.votingConfigUrl, votingConfigUrl) ||
+                other.votingConfigUrl == votingConfigUrl) &&
+            (identical(other.voteNodeUrl, voteNodeUrl) ||
+                other.voteNodeUrl == voteNodeUrl));
   }
 
   @override
@@ -1422,12 +1428,14 @@ mixin _$AppSettings {
         paletteName,
         darkMode,
         transactionTableMode,
-        currency
+        currency,
+        votingConfigUrl,
+        voteNodeUrl
       ]);
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, transport: $transport, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, transactionTableMode: $transactionTableMode, currency: $currency)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, transport: $transport, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, transactionTableMode: $transactionTableMode, currency: $currency, votingConfigUrl: $votingConfigUrl, voteNodeUrl: $voteNodeUrl)';
   }
 }
 
@@ -1459,7 +1467,9 @@ abstract mixin class $AppSettingsCopyWith<$Res> {
       String paletteName,
       bool darkMode,
       bool transactionTableMode,
-      String currency});
+      String currency,
+      String votingConfigUrl,
+      String voteNodeUrl});
 
   $QRSettingsCopyWith<$Res> get qrSettings;
 }
@@ -1498,6 +1508,8 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
     Object? darkMode = null,
     Object? transactionTableMode = null,
     Object? currency = null,
+    Object? votingConfigUrl = null,
+    Object? voteNodeUrl = null,
   }) {
     return _then(_self.copyWith(
       dbName: null == dbName
@@ -1587,6 +1599,14 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
       currency: null == currency
           ? _self.currency
           : currency // ignore: cast_nullable_to_non_nullable
+              as String,
+      votingConfigUrl: null == votingConfigUrl
+          ? _self.votingConfigUrl
+          : votingConfigUrl // ignore: cast_nullable_to_non_nullable
+              as String,
+      voteNodeUrl: null == voteNodeUrl
+          ? _self.voteNodeUrl
+          : voteNodeUrl // ignore: cast_nullable_to_non_nullable
               as String,
     ));
   }
@@ -1715,7 +1735,9 @@ extension AppSettingsPatterns on AppSettings {
             String paletteName,
             bool darkMode,
             bool transactionTableMode,
-            String currency)?
+            String currency,
+            String votingConfigUrl,
+            String voteNodeUrl)?
         $default, {
     required TResult orElse(),
   }) {
@@ -1744,7 +1766,9 @@ extension AppSettingsPatterns on AppSettings {
             _that.paletteName,
             _that.darkMode,
             _that.transactionTableMode,
-            _that.currency);
+            _that.currency,
+            _that.votingConfigUrl,
+            _that.voteNodeUrl);
       case _:
         return orElse();
     }
@@ -1787,7 +1811,9 @@ extension AppSettingsPatterns on AppSettings {
             String paletteName,
             bool darkMode,
             bool transactionTableMode,
-            String currency)
+            String currency,
+            String votingConfigUrl,
+            String voteNodeUrl)
         $default,
   ) {
     final _that = this;
@@ -1815,7 +1841,9 @@ extension AppSettingsPatterns on AppSettings {
             _that.paletteName,
             _that.darkMode,
             _that.transactionTableMode,
-            _that.currency);
+            _that.currency,
+            _that.votingConfigUrl,
+            _that.voteNodeUrl);
     }
   }
 
@@ -1855,7 +1883,9 @@ extension AppSettingsPatterns on AppSettings {
             String paletteName,
             bool darkMode,
             bool transactionTableMode,
-            String currency)?
+            String currency,
+            String votingConfigUrl,
+            String voteNodeUrl)?
         $default,
   ) {
     final _that = this;
@@ -1883,7 +1913,9 @@ extension AppSettingsPatterns on AppSettings {
             _that.paletteName,
             _that.darkMode,
             _that.transactionTableMode,
-            _that.currency);
+            _that.currency,
+            _that.votingConfigUrl,
+            _that.voteNodeUrl);
       case _:
         return null;
     }
@@ -1915,7 +1947,9 @@ class _AppSettings implements AppSettings {
       required this.paletteName,
       required this.darkMode,
       required this.transactionTableMode,
-      required this.currency});
+      required this.currency,
+      required this.votingConfigUrl,
+      required this.voteNodeUrl});
 
   @override
   final String dbName;
@@ -1962,6 +1996,10 @@ class _AppSettings implements AppSettings {
   final bool transactionTableMode;
   @override
   final String currency;
+  @override
+  final String votingConfigUrl;
+  @override
+  final String voteNodeUrl;
 
   /// Create a copy of AppSettings
   /// with the given fields replaced by the non-null parameter values.
@@ -2011,7 +2049,11 @@ class _AppSettings implements AppSettings {
             (identical(other.transactionTableMode, transactionTableMode) ||
                 other.transactionTableMode == transactionTableMode) &&
             (identical(other.currency, currency) ||
-                other.currency == currency));
+                other.currency == currency) &&
+            (identical(other.votingConfigUrl, votingConfigUrl) ||
+                other.votingConfigUrl == votingConfigUrl) &&
+            (identical(other.voteNodeUrl, voteNodeUrl) ||
+                other.voteNodeUrl == voteNodeUrl));
   }
 
   @override
@@ -2038,12 +2080,14 @@ class _AppSettings implements AppSettings {
         paletteName,
         darkMode,
         transactionTableMode,
-        currency
+        currency,
+        votingConfigUrl,
+        voteNodeUrl
       ]);
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, transport: $transport, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, transactionTableMode: $transactionTableMode, currency: $currency)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, transport: $transport, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, transactionTableMode: $transactionTableMode, currency: $currency, votingConfigUrl: $votingConfigUrl, voteNodeUrl: $voteNodeUrl)';
   }
 }
 
@@ -2077,7 +2121,9 @@ abstract mixin class _$AppSettingsCopyWith<$Res>
       String paletteName,
       bool darkMode,
       bool transactionTableMode,
-      String currency});
+      String currency,
+      String votingConfigUrl,
+      String voteNodeUrl});
 
   @override
   $QRSettingsCopyWith<$Res> get qrSettings;
@@ -2117,6 +2163,8 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
     Object? darkMode = null,
     Object? transactionTableMode = null,
     Object? currency = null,
+    Object? votingConfigUrl = null,
+    Object? voteNodeUrl = null,
   }) {
     return _then(_AppSettings(
       dbName: null == dbName
@@ -2206,6 +2254,14 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
       currency: null == currency
           ? _self.currency
           : currency // ignore: cast_nullable_to_non_nullable
+              as String,
+      votingConfigUrl: null == votingConfigUrl
+          ? _self.votingConfigUrl
+          : votingConfigUrl // ignore: cast_nullable_to_non_nullable
+              as String,
+      voteNodeUrl: null == voteNodeUrl
+          ? _self.voteNodeUrl
+          : voteNodeUrl // ignore: cast_nullable_to_non_nullable
               as String,
     ));
   }
@@ -4585,6 +4641,726 @@ class __$QRSettingsCopyWithImpl<$Res> implements _$QRSettingsCopyWith<$Res> {
           ? _self.repair
           : repair // ignore: cast_nullable_to_non_nullable
               as int,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$VotingSessionState {
+  VotingRoundPlan? get plan;
+  VotingRoundRecovery? get recovery;
+  List<VotingBallotIntent> get intents;
+
+  /// Create a copy of VotingSessionState
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingSessionStateCopyWith<VotingSessionState> get copyWith =>
+      _$VotingSessionStateCopyWithImpl<VotingSessionState>(
+          this as VotingSessionState, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingSessionState &&
+            (identical(other.plan, plan) || other.plan == plan) &&
+            (identical(other.recovery, recovery) ||
+                other.recovery == recovery) &&
+            const DeepCollectionEquality().equals(other.intents, intents));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, plan, recovery,
+      const DeepCollectionEquality().hash(intents));
+
+  @override
+  String toString() {
+    return 'VotingSessionState(plan: $plan, recovery: $recovery, intents: $intents)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingSessionStateCopyWith<$Res> {
+  factory $VotingSessionStateCopyWith(
+          VotingSessionState value, $Res Function(VotingSessionState) _then) =
+      _$VotingSessionStateCopyWithImpl;
+  @useResult
+  $Res call(
+      {VotingRoundPlan? plan,
+      VotingRoundRecovery? recovery,
+      List<VotingBallotIntent> intents});
+
+  $VotingRoundPlanCopyWith<$Res>? get plan;
+  $VotingRoundRecoveryCopyWith<$Res>? get recovery;
+}
+
+/// @nodoc
+class _$VotingSessionStateCopyWithImpl<$Res>
+    implements $VotingSessionStateCopyWith<$Res> {
+  _$VotingSessionStateCopyWithImpl(this._self, this._then);
+
+  final VotingSessionState _self;
+  final $Res Function(VotingSessionState) _then;
+
+  /// Create a copy of VotingSessionState
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? plan = freezed,
+    Object? recovery = freezed,
+    Object? intents = null,
+  }) {
+    return _then(_self.copyWith(
+      plan: freezed == plan
+          ? _self.plan
+          : plan // ignore: cast_nullable_to_non_nullable
+              as VotingRoundPlan?,
+      recovery: freezed == recovery
+          ? _self.recovery
+          : recovery // ignore: cast_nullable_to_non_nullable
+              as VotingRoundRecovery?,
+      intents: null == intents
+          ? _self.intents
+          : intents // ignore: cast_nullable_to_non_nullable
+              as List<VotingBallotIntent>,
+    ));
+  }
+
+  /// Create a copy of VotingSessionState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingRoundPlanCopyWith<$Res>? get plan {
+    if (_self.plan == null) {
+      return null;
+    }
+
+    return $VotingRoundPlanCopyWith<$Res>(_self.plan!, (value) {
+      return _then(_self.copyWith(plan: value));
+    });
+  }
+
+  /// Create a copy of VotingSessionState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingRoundRecoveryCopyWith<$Res>? get recovery {
+    if (_self.recovery == null) {
+      return null;
+    }
+
+    return $VotingRoundRecoveryCopyWith<$Res>(_self.recovery!, (value) {
+      return _then(_self.copyWith(recovery: value));
+    });
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingSessionState].
+extension VotingSessionStatePatterns on VotingSessionState {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingSessionState value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSessionState() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingSessionState value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSessionState():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingSessionState value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSessionState() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(VotingRoundPlan? plan, VotingRoundRecovery? recovery,
+            List<VotingBallotIntent> intents)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSessionState() when $default != null:
+        return $default(_that.plan, _that.recovery, _that.intents);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(VotingRoundPlan? plan, VotingRoundRecovery? recovery,
+            List<VotingBallotIntent> intents)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSessionState():
+        return $default(_that.plan, _that.recovery, _that.intents);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(VotingRoundPlan? plan, VotingRoundRecovery? recovery,
+            List<VotingBallotIntent> intents)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSessionState() when $default != null:
+        return $default(_that.plan, _that.recovery, _that.intents);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingSessionState implements VotingSessionState {
+  _VotingSessionState(
+      {required this.plan,
+      required this.recovery,
+      required final List<VotingBallotIntent> intents})
+      : _intents = intents;
+
+  @override
+  final VotingRoundPlan? plan;
+  @override
+  final VotingRoundRecovery? recovery;
+  final List<VotingBallotIntent> _intents;
+  @override
+  List<VotingBallotIntent> get intents {
+    if (_intents is EqualUnmodifiableListView) return _intents;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_intents);
+  }
+
+  /// Create a copy of VotingSessionState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingSessionStateCopyWith<_VotingSessionState> get copyWith =>
+      __$VotingSessionStateCopyWithImpl<_VotingSessionState>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingSessionState &&
+            (identical(other.plan, plan) || other.plan == plan) &&
+            (identical(other.recovery, recovery) ||
+                other.recovery == recovery) &&
+            const DeepCollectionEquality().equals(other._intents, _intents));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, plan, recovery,
+      const DeepCollectionEquality().hash(_intents));
+
+  @override
+  String toString() {
+    return 'VotingSessionState(plan: $plan, recovery: $recovery, intents: $intents)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingSessionStateCopyWith<$Res>
+    implements $VotingSessionStateCopyWith<$Res> {
+  factory _$VotingSessionStateCopyWith(
+          _VotingSessionState value, $Res Function(_VotingSessionState) _then) =
+      __$VotingSessionStateCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {VotingRoundPlan? plan,
+      VotingRoundRecovery? recovery,
+      List<VotingBallotIntent> intents});
+
+  @override
+  $VotingRoundPlanCopyWith<$Res>? get plan;
+  @override
+  $VotingRoundRecoveryCopyWith<$Res>? get recovery;
+}
+
+/// @nodoc
+class __$VotingSessionStateCopyWithImpl<$Res>
+    implements _$VotingSessionStateCopyWith<$Res> {
+  __$VotingSessionStateCopyWithImpl(this._self, this._then);
+
+  final _VotingSessionState _self;
+  final $Res Function(_VotingSessionState) _then;
+
+  /// Create a copy of VotingSessionState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? plan = freezed,
+    Object? recovery = freezed,
+    Object? intents = null,
+  }) {
+    return _then(_VotingSessionState(
+      plan: freezed == plan
+          ? _self.plan
+          : plan // ignore: cast_nullable_to_non_nullable
+              as VotingRoundPlan?,
+      recovery: freezed == recovery
+          ? _self.recovery
+          : recovery // ignore: cast_nullable_to_non_nullable
+              as VotingRoundRecovery?,
+      intents: null == intents
+          ? _self._intents
+          : intents // ignore: cast_nullable_to_non_nullable
+              as List<VotingBallotIntent>,
+    ));
+  }
+
+  /// Create a copy of VotingSessionState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingRoundPlanCopyWith<$Res>? get plan {
+    if (_self.plan == null) {
+      return null;
+    }
+
+    return $VotingRoundPlanCopyWith<$Res>(_self.plan!, (value) {
+      return _then(_self.copyWith(plan: value));
+    });
+  }
+
+  /// Create a copy of VotingSessionState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingRoundRecoveryCopyWith<$Res>? get recovery {
+    if (_self.recovery == null) {
+      return null;
+    }
+
+    return $VotingRoundRecoveryCopyWith<$Res>(_self.recovery!, (value) {
+      return _then(_self.copyWith(recovery: value));
+    });
+  }
+}
+
+/// @nodoc
+mixin _$VotingSubmissionJobState {
+  String get stage; // idle|preparing|proving|submitting|confirming|done|error
+  double get progress;
+  String? get error;
+
+  /// Create a copy of VotingSubmissionJobState
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingSubmissionJobStateCopyWith<VotingSubmissionJobState> get copyWith =>
+      _$VotingSubmissionJobStateCopyWithImpl<VotingSubmissionJobState>(
+          this as VotingSubmissionJobState, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingSubmissionJobState &&
+            (identical(other.stage, stage) || other.stage == stage) &&
+            (identical(other.progress, progress) ||
+                other.progress == progress) &&
+            (identical(other.error, error) || other.error == error));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, stage, progress, error);
+
+  @override
+  String toString() {
+    return 'VotingSubmissionJobState(stage: $stage, progress: $progress, error: $error)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingSubmissionJobStateCopyWith<$Res> {
+  factory $VotingSubmissionJobStateCopyWith(VotingSubmissionJobState value,
+          $Res Function(VotingSubmissionJobState) _then) =
+      _$VotingSubmissionJobStateCopyWithImpl;
+  @useResult
+  $Res call({String stage, double progress, String? error});
+}
+
+/// @nodoc
+class _$VotingSubmissionJobStateCopyWithImpl<$Res>
+    implements $VotingSubmissionJobStateCopyWith<$Res> {
+  _$VotingSubmissionJobStateCopyWithImpl(this._self, this._then);
+
+  final VotingSubmissionJobState _self;
+  final $Res Function(VotingSubmissionJobState) _then;
+
+  /// Create a copy of VotingSubmissionJobState
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? stage = null,
+    Object? progress = null,
+    Object? error = freezed,
+  }) {
+    return _then(_self.copyWith(
+      stage: null == stage
+          ? _self.stage
+          : stage // ignore: cast_nullable_to_non_nullable
+              as String,
+      progress: null == progress
+          ? _self.progress
+          : progress // ignore: cast_nullable_to_non_nullable
+              as double,
+      error: freezed == error
+          ? _self.error
+          : error // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingSubmissionJobState].
+extension VotingSubmissionJobStatePatterns on VotingSubmissionJobState {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingSubmissionJobState value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSubmissionJobState() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingSubmissionJobState value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSubmissionJobState():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingSubmissionJobState value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSubmissionJobState() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(String stage, double progress, String? error)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSubmissionJobState() when $default != null:
+        return $default(_that.stage, _that.progress, _that.error);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(String stage, double progress, String? error) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSubmissionJobState():
+        return $default(_that.stage, _that.progress, _that.error);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(String stage, double progress, String? error)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingSubmissionJobState() when $default != null:
+        return $default(_that.stage, _that.progress, _that.error);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingSubmissionJobState implements VotingSubmissionJobState {
+  _VotingSubmissionJobState(
+      {required this.stage, required this.progress, this.error});
+
+  @override
+  final String stage;
+// idle|preparing|proving|submitting|confirming|done|error
+  @override
+  final double progress;
+  @override
+  final String? error;
+
+  /// Create a copy of VotingSubmissionJobState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingSubmissionJobStateCopyWith<_VotingSubmissionJobState> get copyWith =>
+      __$VotingSubmissionJobStateCopyWithImpl<_VotingSubmissionJobState>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingSubmissionJobState &&
+            (identical(other.stage, stage) || other.stage == stage) &&
+            (identical(other.progress, progress) ||
+                other.progress == progress) &&
+            (identical(other.error, error) || other.error == error));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, stage, progress, error);
+
+  @override
+  String toString() {
+    return 'VotingSubmissionJobState(stage: $stage, progress: $progress, error: $error)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingSubmissionJobStateCopyWith<$Res>
+    implements $VotingSubmissionJobStateCopyWith<$Res> {
+  factory _$VotingSubmissionJobStateCopyWith(_VotingSubmissionJobState value,
+          $Res Function(_VotingSubmissionJobState) _then) =
+      __$VotingSubmissionJobStateCopyWithImpl;
+  @override
+  @useResult
+  $Res call({String stage, double progress, String? error});
+}
+
+/// @nodoc
+class __$VotingSubmissionJobStateCopyWithImpl<$Res>
+    implements _$VotingSubmissionJobStateCopyWith<$Res> {
+  __$VotingSubmissionJobStateCopyWithImpl(this._self, this._then);
+
+  final _VotingSubmissionJobState _self;
+  final $Res Function(_VotingSubmissionJobState) _then;
+
+  /// Create a copy of VotingSubmissionJobState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? stage = null,
+    Object? progress = null,
+    Object? error = freezed,
+  }) {
+    return _then(_VotingSubmissionJobState(
+      stage: null == stage
+          ? _self.stage
+          : stage // ignore: cast_nullable_to_non_nullable
+              as String,
+      progress: null == progress
+          ? _self.progress
+          : progress // ignore: cast_nullable_to_non_nullable
+              as double,
+      error: freezed == error
+          ? _self.error
+          : error // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
