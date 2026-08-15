@@ -1675,6 +1675,29 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     final draftsJson = await votingDraftsLoad(roundId: roundId, c: c);
     final byBundle = groupBy(voteSteps, (s) => s.bundleIndex);
 
+    // Write durable ballot intents before the cast loop (mirrors vizor's
+    // writeBallotIntents): recovery can resume from the right choice if the
+    // app dies mid-vote. The round row exists by now (delegation prepared),
+    // so the FK is satisfied.
+    if (draftsJson != null && draftsJson.isNotEmpty) {
+      final drafts = jsonDecode(draftsJson) as List<dynamic>;
+      for (final d in drafts) {
+        final map = d as Map<String, dynamic>;
+        final proposalId = map['proposal_id'] as int? ?? 0;
+        final choice = map['choice'] as int? ?? 0;
+        final numOptions = map['num_options'] as int? ?? 2;
+        final skipped = choice == numOptions;
+        await votingSetBallotIntent(
+          roundId: roundId,
+          proposalId: proposalId,
+          skipped: skipped,
+          choice: skipped ? 0 : choice,
+          numOptions: numOptions,
+          c: c,
+        );
+      }
+    }
+
     for (final entry in byBundle.entries) {
       final bundleIndex = entry.key;
       final steps = entry.value;

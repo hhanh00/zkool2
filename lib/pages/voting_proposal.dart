@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/widgets/error_display.dart';
 
 /// One parsed proposal option.
 class _Option {
@@ -158,11 +159,17 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
     if (id is! int || id < 1 || id > 15) return null;
     final title = (value['title'] ?? "Proposal $id").toString();
     var options = (value['options'] as List<dynamic>? ?? [])
-        .map((o) {
+        .asMap()
+        .entries
+        .map((entry) {
+          final o = entry.value;
           if (o is! Map) return null;
           return _Option(
-            id: (o['id'] is int) ? o['id'] as int : 0,
-            label: (o['label'] ?? o['title'] ?? "Option").toString(),
+            // vote-sdk option ids come from `index` (omitted = 0 for the
+            // first option); fall back to the list position.
+            id: (o['index'] is int) ? o['index'] as int : entry.key,
+            label: (o['label'] ?? o['short_title'] ?? o['title'] ?? "Option")
+                .toString(),
           );
         })
         .whereType<_Option>()
@@ -177,29 +184,19 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
     return _Proposal(id: id, title: title, options: options);
   }
 
+  Future<void> _persistSafe() async {
+    try {
+      await _persist();
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
+    }
+  }
+
+  /// Persists the draft ballot only; durable ballot intents are written by
+  /// the submission job from these drafts before the cast loop (mirrors
+  /// vizor), when the round row already exists in the voting DB.
   Future<void> _persist() async {
     final c = coinContext.coin;
-    for (final p in _proposals) {
-      if (_skipped.contains(p.id)) {
-        await votingSetBallotIntent(
-          roundId: widget.roundId,
-          proposalId: p.id,
-          skipped: true,
-          choice: 0,
-          numOptions: p.options.length,
-          c: c,
-        );
-      } else if (_choices.containsKey(p.id)) {
-        await votingSetBallotIntent(
-          roundId: widget.roundId,
-          proposalId: p.id,
-          skipped: false,
-          choice: _choices[p.id]!,
-          numOptions: p.options.length,
-          c: c,
-        );
-      }
-    }
     // Draft votes mirror the fork's DraftVote JSON: skipped = choice == num_options.
     final drafts = _proposals
         .where((p) => _skipped.contains(p.id) || _choices.containsKey(p.id))
@@ -259,7 +256,7 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
                                       _skipped.remove(p.id);
                                       _choices[p.id] = v!;
                                     });
-                                    await _persist();
+                                    await _persistSafe();
                                   },
                                 )),
                             RadioListTile<int>(
@@ -271,7 +268,7 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
                                   _choices.remove(p.id);
                                   _skipped.add(p.id);
                                 });
-                                await _persist();
+                                await _persistSafe();
                               },
                             ),
                           ],
