@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.27.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.26.1...zkool-v6.27.0-rc) (2026-08-15)
+
+
+### Features
+
+* add nym mixnet as transport ([#1195](https://github.com/hhanh00/zkool2/issues/1195)) ([59a5ed8](https://github.com/hhanh00/zkool2/commit/59a5ed8bd187e1ff2645e15448424f07d5a1ca55))
+* Zcash voting (ZIP 262) delegation and vote casting ([#1198](https://github.com/hhanh00/zkool2/issues/1198)) ([b59f958](https://github.com/hhanh00/zkool2/commit/b59f958915696bf3d50af590ac6ca0e765ab23cd))
+
+
+### Bug Fixes
+
+* fix ios build ([8a5fbde](https://github.com/hhanh00/zkool2/commit/8a5fbdebd1a456a268985d830b9d625c674dfcbe))
+* honour RUST_LOG in zkool_graphql ([#1190](https://github.com/hhanh00/zkool2/issues/1190)) ([ca49412](https://github.com/hhanh00/zkool2/commit/ca4941250d2dfac13832d40066062cf6915ba579))
+* send to TEX (ZIP 320) addresses ([aba4f30](https://github.com/hhanh00/zkool2/commit/aba4f3012e6d5c761388fcbd4d452c080d7dc14a))
+
 ## [6.26.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.26.0...zkool-v6.26.1) (2026-08-02)
 
 
