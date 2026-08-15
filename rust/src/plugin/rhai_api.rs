@@ -1,111 +1,101 @@
 //! Rhai sandbox API exposed to plugin scripts.
 //!
-//! Scripts call `memo::read_u8(offset)`, `cell_string("value")`, `section(...)`, etc.
-//! The memo bytes are stored in a global `Mutex` before calling `process_memo` so the
-//! `memo::*` functions can read from them implicitly.
+//! Scripts call `process_memo(memo)` where `memo` is a [`Memo`] value passed
+//! explicitly by the host, and read it via methods like `memo.read_u8(offset)`,
+//! `memo.read_string(offset, len)`, etc. The memo bytes are per-call state —
+//! no globals.
 
-use rhai::{Dynamic, Engine, EvalAltResult, Module};
-use std::sync::{LazyLock, Mutex};
+use rhai::{Blob, Dynamic, Engine, Scope};
 
-/// Global memo payload for the currently-executing script.
-static CURRENT_MEMO: LazyLock<Mutex<Vec<u8>>> = LazyLock::new(|| Mutex::new(Vec::new()));
+/// Memo payload exposed to plugin scripts.
+///
+/// Passed to `process_memo(memo)` as an argument. Provides the read methods
+/// scripts use to decode the memo.
+#[derive(Debug, Clone)]
+pub struct Memo {
+    data: Blob,
+}
 
-/// Set the memo bytes, execute a closure, then clear the bytes.
-pub fn with_memo_bytes<F, R>(bytes: &[u8], f: F) -> R
-where
-    F: FnOnce() -> R,
-{
-    {
-        let mut guard = CURRENT_MEMO.lock().unwrap();
-        *guard = bytes.to_vec();
+impl Memo {
+    pub fn new(data: Vec<u8>) -> Self {
+        Self { data: data.into() }
     }
-    let result = f();
-    {
-        let mut guard = CURRENT_MEMO.lock().unwrap();
-        guard.clear();
+
+    fn len(&mut self) -> i64 {
+        self.data.len() as i64
     }
-    result
-}
 
-// ── memo module functions (fallible for Module::set_native_fn) ─────────
+    fn read_u8(&mut self, offset: i64) -> i64 {
+        let idx = offset as usize;
+        if idx < self.data.len() {
+            self.data[idx] as i64
+        } else {
+            0
+        }
+    }
 
-type RhaiResult<T> = Result<T, Box<EvalAltResult>>;
+    fn read_u16_le(&mut self, offset: i64) -> i64 {
+        let idx = offset as usize;
+        if idx + 1 < self.data.len() {
+            u16::from_le_bytes([self.data[idx], self.data[idx + 1]]) as i64
+        } else {
+            0
+        }
+    }
 
-fn memo_len() -> RhaiResult<i64> {
-    Ok(CURRENT_MEMO.lock().unwrap().len() as i64)
-}
+    fn read_u32_le(&mut self, offset: i64) -> i64 {
+        let idx = offset as usize;
+        if idx + 3 < self.data.len() {
+            u32::from_le_bytes([
+                self.data[idx],
+                self.data[idx + 1],
+                self.data[idx + 2],
+                self.data[idx + 3],
+            ]) as i64
+        } else {
+            0
+        }
+    }
 
-fn memo_read_u8(offset: i64) -> RhaiResult<i64> {
-    let idx = offset as usize;
-    let guard = CURRENT_MEMO.lock().unwrap();
-    Ok(if idx < guard.len() {
-        guard[idx] as i64
-    } else {
-        0
-    })
-}
+    fn read_u64_le(&mut self, offset: i64) -> i64 {
+        let idx = offset as usize;
+        if idx + 7 < self.data.len() {
+            u64::from_le_bytes([
+                self.data[idx],
+                self.data[idx + 1],
+                self.data[idx + 2],
+                self.data[idx + 3],
+                self.data[idx + 4],
+                self.data[idx + 5],
+                self.data[idx + 6],
+                self.data[idx + 7],
+            ]) as i64
+        } else {
+            0
+        }
+    }
 
-fn memo_read_u16_le(offset: i64) -> RhaiResult<i64> {
-    let idx = offset as usize;
-    let guard = CURRENT_MEMO.lock().unwrap();
-    Ok(if idx + 1 < guard.len() {
-        u16::from_le_bytes([guard[idx], guard[idx + 1]]) as i64
-    } else {
-        0
-    })
-}
+    fn read_bytes(&mut self, offset: i64, len: i64) -> Blob {
+        let idx = offset.max(0) as usize;
+        let n = len.max(0) as usize;
+        let end = (idx + n).min(self.data.len());
+        self.data[idx..end].to_vec()
+    }
 
-fn memo_read_u32_le(offset: i64) -> RhaiResult<i64> {
-    let idx = offset as usize;
-    let guard = CURRENT_MEMO.lock().unwrap();
-    Ok(if idx + 3 < guard.len() {
-        u32::from_le_bytes([guard[idx], guard[idx + 1], guard[idx + 2], guard[idx + 3]]) as i64
-    } else {
-        0
-    })
-}
-
-fn memo_read_u64_le(offset: i64) -> RhaiResult<i64> {
-    let idx = offset as usize;
-    let guard = CURRENT_MEMO.lock().unwrap();
-    Ok(if idx + 7 < guard.len() {
-        u64::from_le_bytes([
-            guard[idx],
-            guard[idx + 1],
-            guard[idx + 2],
-            guard[idx + 3],
-            guard[idx + 4],
-            guard[idx + 5],
-            guard[idx + 6],
-            guard[idx + 7],
-        ]) as i64
-    } else {
-        0
-    })
-}
-
-fn memo_read_bytes(offset: i64, len: i64) -> RhaiResult<rhai::Blob> {
-    let idx = offset.max(0) as usize;
-    let n = len.max(0) as usize;
-    let guard = CURRENT_MEMO.lock().unwrap();
-    let end = (idx + n).min(guard.len());
-    Ok(guard[idx..end].to_vec())
-}
-
-fn memo_read_string(offset: i64, len: i64) -> RhaiResult<String> {
-    let idx = offset.max(0) as usize;
-    let n = len.max(0) as usize;
-    let guard = CURRENT_MEMO.lock().unwrap();
-    let end = (idx + n).min(guard.len());
-    let slice = &guard[idx..end];
-    // Trim trailing zeros
-    let slice = match slice.iter().position(|&b| b == 0) {
-        Some(zero_pos) => &slice[..zero_pos],
-        None => slice,
-    };
-    Ok(String::from_utf8_lossy(slice)
-        .trim_end_matches('\0')
-        .to_string())
+    fn read_string(&mut self, offset: i64, len: i64) -> String {
+        let idx = offset.max(0) as usize;
+        let n = len.max(0) as usize;
+        let end = (idx + n).min(self.data.len());
+        let slice = &self.data[idx..end];
+        // Trim trailing zeros
+        let slice = match slice.iter().position(|&b| b == 0) {
+            Some(zero_pos) => &slice[..zero_pos],
+            None => slice,
+        };
+        String::from_utf8_lossy(slice)
+            .trim_end_matches('\0')
+            .to_string()
+    }
 }
 
 // ── Constructor functions (global, non-fallible) ───────────────────────
@@ -161,16 +151,16 @@ pub fn create_sandboxed_engine() -> Engine {
     engine.disable_symbol("call");
     engine.disable_symbol("import");
 
-    // Register memo namespace module (memo::read_u8, etc.)
-    let mut memo_module = Module::new();
-    memo_module.set_native_fn("len", memo_len);
-    memo_module.set_native_fn("read_u8", memo_read_u8);
-    memo_module.set_native_fn("read_u16_le", memo_read_u16_le);
-    memo_module.set_native_fn("read_u32_le", memo_read_u32_le);
-    memo_module.set_native_fn("read_u64_le", memo_read_u64_le);
-    memo_module.set_native_fn("read_bytes", memo_read_bytes);
-    memo_module.set_native_fn("read_string", memo_read_string);
-    engine.register_static_module("memo", memo_module.into());
+    // Register the Memo type: scripts receive it as `process_memo(memo)`
+    // and call methods like `memo.read_u8(4)` on it.
+    engine.register_type::<Memo>();
+    engine.register_fn("len", Memo::len);
+    engine.register_fn("read_u8", Memo::read_u8);
+    engine.register_fn("read_u16_le", Memo::read_u16_le);
+    engine.register_fn("read_u32_le", Memo::read_u32_le);
+    engine.register_fn("read_u64_le", Memo::read_u64_le);
+    engine.register_fn("read_bytes", Memo::read_bytes);
+    engine.register_fn("read_string", Memo::read_string);
 
     // Register section/cell constructors (global)
     engine.register_fn("section", section as fn(&str, Dynamic, Dynamic) -> Dynamic);
@@ -235,13 +225,11 @@ mod tests {
     #[test]
     fn test_memo_functions_out_of_bounds() {
         let engine = create_sandboxed_engine();
-        let ast = engine
-            .compile("fn t() { memo::read_u8(1000) } t()")
+        let ast = engine.compile("fn t(memo) { memo.read_u8(1000) }").unwrap();
+        let result: i64 = engine
+            .call_fn(&mut Scope::new(), &ast, "t", (Memo::new(vec![0x01, 0x02]),))
             .unwrap();
-        with_memo_bytes(&[0x01, 0x02], || {
-            let result: i64 = engine.eval_ast(&ast).unwrap();
-            assert_eq!(result, 0, "OOB read should return 0");
-        });
+        assert_eq!(result, 0, "OOB read should return 0");
     }
 
     #[test]
@@ -249,15 +237,15 @@ mod tests {
         let engine = create_sandboxed_engine();
         let data = vec![0xAA, 0xBB, 0x01, 0x00, 0x00, 0x00];
         let ast = engine
-            .compile("fn t() { [memo::read_u8(0), memo::read_u32_le(2)] } t()")
+            .compile("fn t(memo) { [memo.read_u8(0), memo.read_u32_le(2)] }")
             .unwrap();
-        with_memo_bytes(&data, || {
-            let result: Dynamic = engine.eval_ast(&ast).unwrap();
-            let json = serde_json::to_value(&result).unwrap();
-            let arr = json.as_array().unwrap();
-            assert_eq!(arr[0].as_i64().unwrap(), 0xAA);
-            assert_eq!(arr[1].as_i64().unwrap(), 1);
-        });
+        let result: Dynamic = engine
+            .call_fn(&mut Scope::new(), &ast, "t", (Memo::new(data),))
+            .unwrap();
+        let json = serde_json::to_value(&result).unwrap();
+        let arr = json.as_array().unwrap();
+        assert_eq!(arr[0].as_i64().unwrap(), 0xAA);
+        assert_eq!(arr[1].as_i64().unwrap(), 1);
     }
 
     #[test]
@@ -304,21 +292,20 @@ mod tests {
         let data = vec![0xde, 0xad, 0xbe, 0xef, 0x01];
         let script = r#"
             fn get_prefixes() { return ["deadbeef"]; }
-            fn process_memo() {
-                let version = memo::read_u8(4);
+            fn process_memo(memo) {
+                let version = memo.read_u8(4);
                 let headers = ["Version"];
                 let rows = [[cell_number(version)]];
                 return [section("Test", headers, rows)];
             }
-            process_memo()
         "#;
         let ast = engine.compile(script).unwrap();
-        with_memo_bytes(&data, || {
-            let result: Dynamic = engine.eval_ast(&ast).unwrap();
-            let sections = extract_sections(result);
-            assert_eq!(sections.len(), 1);
-            assert_eq!(sections[0].rows[0][0].value, "1");
-        });
+        let result: Dynamic = engine
+            .call_fn(&mut Scope::new(), &ast, "process_memo", (Memo::new(data),))
+            .unwrap();
+        let sections = extract_sections(result);
+        assert_eq!(sections.len(), 1);
+        assert_eq!(sections[0].rows[0][0].value, "1");
     }
 
     #[test]
@@ -328,12 +315,12 @@ mod tests {
         data[0..5].copy_from_slice(b"hello");
         data[5] = 0;
         let ast = engine
-            .compile("fn t() { memo::read_string(0, 32) } t()")
+            .compile("fn t(memo) { memo.read_string(0, 32) }")
             .unwrap();
-        with_memo_bytes(&data, || {
-            let result: String = engine.eval_ast(&ast).unwrap();
-            assert_eq!(result, "hello");
-        });
+        let result: String = engine
+            .call_fn(&mut Scope::new(), &ast, "t", (Memo::new(data),))
+            .unwrap();
+        assert_eq!(result, "hello");
     }
 
     #[test]
@@ -348,9 +335,9 @@ mod tests {
 
         let script = r#"
             fn get_prefixes() { return ["444b3030"]; }
-            fn process_memo() {
-                let from_id = memo::read_u8(4);
-                let data_len = memo::read_u64_le(5);
+            fn process_memo(memo) {
+                let from_id = memo.read_u8(4);
+                let data_len = memo.read_u64_le(5);
                 let headers = ["Field", "Value"];
                 let rows = [
                     [cell_string("Round"), cell_string("DKG Round 0")],
@@ -359,17 +346,48 @@ mod tests {
                 ];
                 return [section("DKG Message", headers, rows)];
             }
-            process_memo()
         "#;
         let ast = engine.compile(script).unwrap();
-        with_memo_bytes(&data, || {
-            let result: Dynamic = engine.eval_ast(&ast).unwrap();
-            let sections = extract_sections(result);
-            assert_eq!(sections.len(), 1);
-            assert_eq!(sections[0].title, "DKG Message");
-            assert_eq!(sections[0].rows[0][1].value, "DKG Round 0");
-            assert_eq!(sections[0].rows[1][1].value, "1"); // from_id
-            assert_eq!(sections[0].rows[2][1].value, "32"); // data_len
-        });
+        let result: Dynamic = engine
+            .call_fn(&mut Scope::new(), &ast, "process_memo", (Memo::new(data),))
+            .unwrap();
+        let sections = extract_sections(result);
+        assert_eq!(sections.len(), 1);
+        assert_eq!(sections[0].title, "DKG Message");
+        assert_eq!(sections[0].rows[0][1].value, "DKG Round 0");
+        assert_eq!(sections[0].rows[1][1].value, "1"); // from_id
+        assert_eq!(sections[0].rows[2][1].value, "32"); // data_len
+    }
+
+    #[test]
+    fn test_process_memo_isolated_between_threads() {
+        // Each thread gets its own memo; values must not bleed across threads.
+        let engine = create_sandboxed_engine();
+        let ast = engine
+            .compile("fn process_memo(memo) { memo.read_u8(0) }")
+            .unwrap();
+
+        let handles: Vec<_> = (0..8u8)
+            .map(|i| {
+                let ast = ast.clone();
+                std::thread::spawn(move || {
+                    let engine = create_sandboxed_engine();
+                    for _ in 0..100 {
+                        let result: i64 = engine
+                            .call_fn(
+                                &mut Scope::new(),
+                                &ast,
+                                "process_memo",
+                                (Memo::new(vec![i; 4]),),
+                            )
+                            .unwrap();
+                        assert_eq!(result, i as i64);
+                    }
+                })
+            })
+            .collect();
+        for handle in handles {
+            handle.join().unwrap();
+        }
     }
 }
