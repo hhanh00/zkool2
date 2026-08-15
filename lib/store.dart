@@ -1370,19 +1370,31 @@ class VotingConfigNotifier extends _$VotingConfigNotifier {
     final c = coinContext.coin;
     try {
       return await votingConfigResolve(source: source, c: c);
-    } on Exception {
-      return await votingConfigCached(source: source, c: c);
+    } on AnyhowException catch (e) {
+      logger.e("Voting config resolve failed for $source: ${e.message}");
+      final cached = await votingConfigCached(source: source, c: c);
+      if (cached != null) {
+        logger.w("Serving cached voting config for $source");
+        return cached;
+      }
+      rethrow;
     }
   }
 
   /// Resolve the voting config, using [source] when provided or the
   /// configured URL from app settings otherwise.
+  /// Throws when resolution fails and no cached config exists.
   Future<VotingConfig?> resolve({String? source}) async {
     source ??= (await ref.read(appSettingsProvider.future)).votingConfigUrl;
     state = const AsyncValue.loading();
-    final result = source.isEmpty ? null : await _resolve(source);
-    state = AsyncValue.data(result);
-    return result;
+    try {
+      final result = source.isEmpty ? null : await _resolve(source);
+      state = AsyncValue.data(result);
+      return result;
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+      rethrow;
+    }
   }
 }
 

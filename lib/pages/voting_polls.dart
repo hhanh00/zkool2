@@ -29,9 +29,13 @@ class VotingPollsPageState extends ConsumerState<VotingPollsPage> {
     super.initState();
     Future(_guardHardwareAccount);
     Future(() async {
-      final settings = await ref.read(appSettingsProvider.future);
-      if (settings.votingConfigUrl.isNotEmpty) {
-        await ref.read(votingConfigProvider.notifier).resolve();
+      try {
+        final settings = await ref.read(appSettingsProvider.future);
+        if (settings.votingConfigUrl.isNotEmpty) {
+          await ref.read(votingConfigProvider.notifier).resolve();
+        }
+      } on AnyhowException catch (e) {
+        if (mounted) await showException(context, e.message);
       }
     });
   }
@@ -70,9 +74,13 @@ class VotingPollsPageState extends ConsumerState<VotingPollsPage> {
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),
-            onPressed: () {
+            onPressed: () async {
               ref.invalidate(votingRoundListProvider);
-              ref.read(votingConfigProvider.notifier).resolve();
+              try {
+                await ref.read(votingConfigProvider.notifier).resolve();
+              } on AnyhowException catch (e) {
+                if (context.mounted) await showException(context, e.message);
+              }
             },
           ),
         ],
