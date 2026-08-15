@@ -57,7 +57,9 @@ fn split_oa1_pairs(body: &str) -> Vec<&str> {
         match b {
             b'"' => in_quotes = !in_quotes,
             b';' if !in_quotes => {
-                let pair = body[start..i].trim();
+                // Trim leading only: a trailing space before `;` may be the
+                // second char of a `\ ` escape and belongs to the value.
+                let pair = body[start..i].trim_start();
                 if !pair.is_empty() {
                     pairs.push(pair);
                 }
@@ -66,7 +68,7 @@ fn split_oa1_pairs(body: &str) -> Vec<&str> {
             _ => {}
         }
     }
-    let last = body[start..].trim();
+    let last = body[start..].trim_start();
     if !last.is_empty() {
         pairs.push(last);
     }
@@ -81,14 +83,32 @@ fn parse_oa1_pair(pair: &str) -> Option<(String, String)> {
     let (key, val) = pair.split_once('=')?;
     let key = key.trim().to_string();
 
-    let val = val.trim();
-    let val = if val.starts_with('"') && val.ends_with('"') && val.len() >= 2 {
-        val[1..val.len() - 1].to_string()
+    let trimmed = val.trim();
+    let val = if trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() >= 2 {
+        // Quoted value: strip quotes, decode escaped spaces inside.
+        trimmed[1..trimmed.len() - 1].replace("\\ ", " ")
     } else {
-        val.replace("\\ ", " ")
+        // Unquoted value: decode `\ ` escapes on the raw value.
+        unescape_oa1_value(val)
     };
 
     Some((key, val))
+}
+
+/// Decode `\ ` escapes in an unquoted OA1 value.
+///
+/// Mirrors the openalias-rs grammar (`"\\ "* ... "\\ "*`): unescaped
+/// leading/trailing spaces are dropped, but spaces encoded by a trailing
+/// `\ ` run survive (e.g. `foo\ ` → `foo `).
+fn unescape_oa1_value(raw: &str) -> String {
+    let raw = raw.trim_start();
+    let mut tail = String::new();
+    let mut end = raw.len();
+    while raw[..end].ends_with("\\ ") {
+        end -= 2;
+        tail.push(' ');
+    }
+    format!("{}{}", raw[..end].trim_end().replace("\\ ", " "), tail)
 }
 
 /// Parse an OA1 TXT record string into an [`Oa1Record`].
