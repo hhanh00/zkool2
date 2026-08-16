@@ -5,7 +5,9 @@
 //! `memo.read_string(offset, len)`, etc. The memo bytes are per-call state —
 //! no globals.
 
-use rhai::{Blob, Dynamic, Engine, Scope};
+use rhai::{Blob, Dynamic, Engine};
+#[cfg(test)]
+use rhai::Scope;
 
 /// Memo payload exposed to plugin scripts.
 ///
