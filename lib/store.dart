@@ -1566,6 +1566,14 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     String? txHash;
     if (delegateStep != null || freshDelegate) {
       state = state.copyWith(stage: "preparing");
+      // The delegation keys embed an app-owned voting hotkey; auto-create
+      // one when missing and the round isn't already hotkey-bound (mirrors
+      // vizor's _ensureHotkey). A bound round without the stored hotkey
+      // keeps failing with the load error instead of silently generating a
+      // mismatched key.
+      if (!(plan?.hotkeyBound ?? false)) {
+        await _ensureVotingHotkey();
+      }
       // The voting pages never pass a lightwalletd URL — use the app's
       // configured one for the fresh prepare (the fork needs it to fetch
       // the snapshot anchor tree state).
@@ -1725,6 +1733,18 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       return (await ref.read(appSettingsProvider.future)).lwd;
     } on Exception {
       return "";
+    }
+  }
+
+  /// Ensures a voting hotkey exists for this wallet. The caller must only
+  /// invoke this when the round is not yet hotkey-bound: creating a new key
+  /// for a bound round would mismatch the on-chain delegation.
+  Future<void> _ensureVotingHotkey() async {
+    final c = coinContext.coin;
+    try {
+      await votingHotkeyGet(c: c);
+    } on AnyhowException {
+      await votingHotkeyCreate(c: c);
     }
   }
 
