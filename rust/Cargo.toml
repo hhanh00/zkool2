@@ -154,6 +154,7 @@ rand = "0.6"
 [features]
 default = ["flutter"]
 flutter = ["flutter_rust_bridge"]
+bundled-sapling-params = ["zcash_proofs/bundled-prover"]
 graphql = ["juniper", "juniper_warp", "juniper_graphql_ws", "dataloader", "warp", "jsonwebtoken", "bigdecimal", "chrono", "figment", "clap"]
 ledger = ["hidapi", "ledger-transport"]
 zemu = ["ledger", "ledger-transport-zemu"]

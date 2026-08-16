@@ -1557,17 +1557,26 @@ pub async fn get_sapling_prover() -> Result<&'static LocalTxProver> {
     static PROVER: tokio::sync::OnceCell<LocalTxProver> = tokio::sync::OnceCell::const_new();
     PROVER
         .get_or_try_init(|| async {
-            let params_dir = crate::api::sapling::resolve_params_dir()
-                .ok_or_else(|| anyhow::anyhow!("Failed to resolve Sapling parameters directory"))?;
-            let spend_path = params_dir.join(zcash_proofs::SAPLING_SPEND_NAME);
-            let output_path = params_dir.join(zcash_proofs::SAPLING_OUTPUT_NAME);
-
-            if spend_path.exists() && output_path.exists() {
-                return Ok(LocalTxProver::new(&spend_path, &output_path));
+            #[cfg(feature = "bundled-sapling-params")]
+            {
+                // Parameters compiled into the binary — never touch disk or network.
+                return Ok(LocalTxProver::bundled());
             }
-            // Parameters not found on disk — download them.
-            crate::api::sapling::download_sapling_params().await?;
-            Ok(LocalTxProver::new(&spend_path, &output_path))
+            #[cfg(not(feature = "bundled-sapling-params"))]
+            {
+                let params_dir = crate::api::sapling::resolve_params_dir().ok_or_else(|| {
+                    anyhow::anyhow!("Failed to resolve Sapling parameters directory")
+                })?;
+                let spend_path = params_dir.join(zcash_proofs::SAPLING_SPEND_NAME);
+                let output_path = params_dir.join(zcash_proofs::SAPLING_OUTPUT_NAME);
+
+                if spend_path.exists() && output_path.exists() {
+                    return Ok(LocalTxProver::new(&spend_path, &output_path));
+                }
+                // Parameters not found on disk — download them.
+                crate::api::sapling::download_sapling_params().await?;
+                Ok(LocalTxProver::new(&spend_path, &output_path))
+            }
         })
         .await
 }
