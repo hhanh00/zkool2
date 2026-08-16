@@ -25,7 +25,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y pkg-config libudev-dev
           cd rust
-          cargo build --release --bin zkool_graphql --features=graphql
+          cargo build --release --bin zkool_graphql --features=graphql,bundled-sapling-params
       - name: Create Release
         if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v3
