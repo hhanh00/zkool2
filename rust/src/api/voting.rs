@@ -732,6 +732,16 @@ pub async fn voting_set_ballot_intent(
     Ok(())
 }
 
+/// Returns the quantized voting weight (zatoshi) for the account's eligible
+/// shielded notes at `snapshot_height`, computed with the same canonical
+/// bundle planning as the delegation prepare step — but from the local DB
+/// only (no witnesses, no tree state). Shown pre-submission as an estimate.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_eligible_weight(snapshot_height: u32, c: &Coin) -> Result<u64> {
+    let mut connection = c.get_connection().await?;
+    voting::eligible_voting_weight(&mut connection, c.account, snapshot_height).await
+}
+
 /// Persists the draft ballot for a round (props table, wallet-scoped).
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn voting_drafts_save(round_id: &str, drafts_json: &str, c: &Coin) -> Result<()> {
@@ -2113,4 +2123,1229 @@ pub async fn votechain_share_status(
     let (status_code, body) =
         crate::net::votechain::share_status(&server_url, &round_id, &share_id, &proxy).await?;
     Ok(VotingChainResponse { status_code, body })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use zcash_voting::config::{
+        AuthenticatedRound, ConfigCondition, ConfigConditionKind, ConfigSwitchKind, PirLayout,
+        ResolvedVotingConfig, ServiceEndpoint, SupportedVersions,
+    };
+    use zcash_voting::phases::{DelegationPhase, SharePhase, VotePhase};
+    use zcash_voting::prelude::{
+        DelegationConfirmation, DelegationSetup, DelegationSubmission, SharePayload,
+        SignedVoteCommitments, VanWitness, VoteConfirmation, VoteSubmission,
+    };
+    use zcash_voting::session::{
+        CompletedVoteChoice, CompletedVoteDisplay, DelegationRecoveryWork,
+        DelegationRecoveryWorkKind, DelegationStatus, RoundPlanAction,
+    };
+    use zcash_voting::share_policy::ShareTrackingSummary;
+    use zcash_voting::vote::{SignedVoteCommitment, VoteCommitStage};
+    use zcash_voting::WireEncryptedShare;
+
+    fn assert_round_trips<T>(v: T)
+    where
+        T: Serialize + for<'de> Deserialize<'de> + PartialEq + std::fmt::Debug,
+    {
+        let json = serde_json::to_string(&v).unwrap();
+        let back: T = serde_json::from_str(&json).unwrap();
+        assert_eq!(back, v);
+    }
+
+    fn coin(transport: u8, proxy: &str) -> Coin {
+        Coin {
+            coin: 0,
+            account: 0,
+            db_filepath: String::new(),
+            url: String::new(),
+            server_type: 0,
+            transport,
+            proxy: proxy.to_string(),
+        }
+    }
+
+    #[test]
+    fn voting_pir_layout_from_and_to_fork_round_trip() {
+        let fork = PirLayout {
+            pir_depth: 5,
+            tier0_layers: 2,
+            tier1_layers: 3,
+            poly_len: 2048,
+        };
+        let mirror = VotingPirLayout::from(fork);
+        assert_eq!(
+            mirror,
+            VotingPirLayout {
+                pir_depth: 5,
+                tier0_layers: 2,
+                tier1_layers: 3,
+                poly_len: 2048,
+            }
+        );
+        assert_eq!(mirror.to_fork(), fork);
+    }
+
+    #[test]
+    fn voting_delegation_setup_from_maps_all_fields() {
+        let fork = DelegationSetup {
+            pczt_bytes: vec![1, 2],
+            pczt_sighash: [3u8; 32],
+            rk: [4u8; 32],
+            action_index: 65536,
+            action_bytes: vec![5],
+            tx1_effects: vec![6],
+        };
+        assert_eq!(
+            VotingDelegationSetup::from(fork),
+            VotingDelegationSetup {
+                pczt_bytes: vec![1, 2],
+                pczt_sighash: vec![3u8; 32],
+                rk: vec![4u8; 32],
+                action_index: 65536,
+                action_bytes: vec![5],
+                tx1_effects: vec![6],
+            }
+        );
+    }
+
+    #[test]
+    fn voting_delegation_submission_from_maps_all_fields() {
+        let fork = DelegationSubmission {
+            proof: vec![1],
+            rk: [2u8; 32],
+            nf_signed: [3u8; 32],
+            cmx_new: [4u8; 32],
+            gov_comm: [5u8; 32],
+            gov_nullifiers: [[6u8; 32], [7u8; 32], [8u8; 32], [9u8; 32], [10u8; 32]],
+            alpha: [11u8; 32],
+            vote_round_id: "round-1".to_string(),
+            spend_auth_sig: [12u8; 64],
+            sighash: [13u8; 32],
+            tx1_effects: vec![14],
+        };
+        assert_eq!(
+            VotingDelegationSubmission::from(fork),
+            VotingDelegationSubmission {
+                proof: vec![1],
+                rk: vec![2u8; 32],
+                nf_signed: vec![3u8; 32],
+                cmx_new: vec![4u8; 32],
+                gov_comm: vec![5u8; 32],
+                gov_nullifiers: vec![
+                    vec![6u8; 32],
+                    vec![7u8; 32],
+                    vec![8u8; 32],
+                    vec![9u8; 32],
+                    vec![10u8; 32],
+                ],
+                alpha: vec![11u8; 32],
+                vote_round_id: "round-1".to_string(),
+                spend_auth_sig: vec![12u8; 64],
+                sighash: vec![13u8; 32],
+                tx1_effects: vec![14],
+            }
+        );
+    }
+
+    #[test]
+    fn voting_delegation_confirmation_from_maps_all_fields() {
+        let fork = DelegationConfirmation {
+            tx_hash: "0xabc".to_string(),
+            van_leaf_position: 9,
+        };
+        assert_eq!(
+            VotingDelegationConfirmation::from(fork),
+            VotingDelegationConfirmation {
+                tx_hash: "0xabc".to_string(),
+                van_leaf_position: 9,
+            }
+        );
+    }
+
+    #[test]
+    fn voting_vote_confirmation_from_maps_all_fields() {
+        let fork = VoteConfirmation {
+            tx_hash: "0xdef".to_string(),
+            van_leaf_position: 9,
+            vc_tree_position: 7,
+        };
+        assert_eq!(
+            VotingVoteConfirmation::from(fork),
+            VotingVoteConfirmation {
+                tx_hash: "0xdef".to_string(),
+                van_leaf_position: 9,
+                vc_tree_position: 7,
+            }
+        );
+    }
+
+    #[test]
+    fn voting_van_witness_from_maps_all_fields() {
+        let fork = VanWitness {
+            auth_path: vec![vec![1], vec![2, 3]],
+            position: 4,
+            anchor_height: 5,
+        };
+        assert_eq!(
+            VotingVanWitness::from(fork),
+            VotingVanWitness {
+                auth_path: vec![vec![1], vec![2, 3]],
+                position: 4,
+                anchor_height: 5,
+            }
+        );
+    }
+
+    #[test]
+    fn voting_signed_vote_commitments_from_maps_all_fields() {
+        let fork = SignedVoteCommitments {
+            bundle_index: 3,
+            commitments: vec![
+                SignedVoteCommitment {
+                    proposal_id: 1,
+                    choice: 2,
+                    vote_round_id: "r".to_string(),
+                    van_nullifier: [3u8; 32],
+                    vote_authority_note_new: [4u8; 32],
+                    vote_commitment: [5u8; 32],
+                    proof: vec![6],
+                    encrypted_shares: vec![],
+                    share_payloads: vec![],
+                    anchor_height: 7,
+                    shares_hash: [8u8; 32],
+                    share_comms: vec![],
+                    r_vpk: [9u8; 32],
+                    vote_auth_sig: [10u8; 64],
+                    commitment_bundle_json: "{}".to_string(),
+                },
+                SignedVoteCommitment {
+                    proposal_id: 11,
+                    choice: 12,
+                    vote_round_id: "r2".to_string(),
+                    van_nullifier: [13u8; 32],
+                    vote_authority_note_new: [14u8; 32],
+                    vote_commitment: [15u8; 32],
+                    proof: vec![16],
+                    encrypted_shares: vec![],
+                    share_payloads: vec![],
+                    anchor_height: 17,
+                    shares_hash: [18u8; 32],
+                    share_comms: vec![],
+                    r_vpk: [19u8; 32],
+                    vote_auth_sig: [20u8; 64],
+                    commitment_bundle_json: "{\"x\":1}".to_string(),
+                },
+            ],
+        };
+        let mirror = VotingVoteCommitments::from(fork);
+        assert_eq!(mirror.bundle_index, 3);
+        assert_eq!(mirror.commitments.len(), 2);
+        assert_eq!(
+            mirror.commitments[0],
+            VotingSignedVoteCommitment {
+                proposal_id: 1,
+                choice: 2,
+                vote_round_id: "r".to_string(),
+                van_nullifier: vec![3u8; 32],
+                vote_authority_note_new: vec![4u8; 32],
+                vote_commitment: vec![5u8; 32],
+                proof: vec![6],
+                anchor_height: 7,
+                r_vpk: vec![9u8; 32],
+                vote_auth_sig: vec![10u8; 64],
+                commitment_bundle_json: "{}".to_string(),
+            }
+        );
+        assert_eq!(mirror.commitments[1].commitment_bundle_json, "{\"x\":1}");
+
+        // Empty edge.
+        let empty = VotingVoteCommitments::from(SignedVoteCommitments {
+            bundle_index: 4,
+            commitments: vec![],
+        });
+        assert!(empty.commitments.is_empty());
+    }
+
+    #[test]
+    fn voting_encrypted_share_from_maps_all_fields() {
+        let fork = WireEncryptedShare {
+            c1: vec![1],
+            c2: vec![2],
+            share_index: 3,
+        };
+        assert_eq!(
+            VotingEncryptedShare::from(&fork),
+            VotingEncryptedShare {
+                c1: vec![1],
+                c2: vec![2],
+                share_index: 3,
+            }
+        );
+    }
+
+    #[test]
+    fn voting_share_payload_from_maps_all_fields() {
+        let fork = SharePayload {
+            shares_hash: vec![1],
+            proposal_id: 2,
+            vote_decision: 3,
+            enc_share: WireEncryptedShare {
+                c1: vec![4],
+                c2: vec![5],
+                share_index: 6,
+            },
+            tree_position: 7,
+            all_enc_shares: vec![WireEncryptedShare {
+                c1: vec![8],
+                c2: vec![9],
+                share_index: 10,
+            }],
+            share_comms: vec![vec![11]],
+            primary_blind: vec![12],
+        };
+        assert_eq!(
+            VotingSharePayload::from(&fork),
+            VotingSharePayload {
+                shares_hash: vec![1],
+                proposal_id: 2,
+                vote_decision: 3,
+                enc_share: VotingEncryptedShare {
+                    c1: vec![4],
+                    c2: vec![5],
+                    share_index: 6,
+                },
+                tree_position: 7,
+                all_enc_shares: vec![VotingEncryptedShare {
+                    c1: vec![8],
+                    c2: vec![9],
+                    share_index: 10,
+                }],
+                share_comms: vec![vec![11]],
+                primary_blind: vec![12],
+            }
+        );
+    }
+
+    #[test]
+    fn voting_vote_submission_from_maps_all_fields() {
+        let fork = VoteSubmission {
+            vote_round_id: "r".to_string(),
+            proposal_id: 1,
+            van_nullifier: [2u8; 32],
+            vote_authority_note_new: [3u8; 32],
+            vote_commitment: [4u8; 32],
+            proof: vec![5],
+            r_vpk: [6u8; 32],
+            vote_auth_sig: [7u8; 64],
+            anchor_height: 8,
+        };
+        assert_eq!(
+            VotingVoteSubmission::from(fork),
+            VotingVoteSubmission {
+                vote_round_id: "r".to_string(),
+                proposal_id: 1,
+                van_nullifier: vec![2u8; 32],
+                vote_authority_note_new: vec![3u8; 32],
+                vote_commitment: vec![4u8; 32],
+                proof: vec![5],
+                r_vpk: vec![6u8; 32],
+                vote_auth_sig: vec![7u8; 64],
+                anchor_height: 8,
+            }
+        );
+    }
+
+    #[test]
+    fn delegation_progress_maps_every_variant() {
+        let cases = [
+            (
+                DelegationProgress::SelectingNotes,
+                VotingDelegationProgress::SelectingNotes,
+            ),
+            (
+                DelegationProgress::PcztBuilding,
+                VotingDelegationProgress::PcztBuilding,
+            ),
+            (
+                DelegationProgress::PcztBuilt,
+                VotingDelegationProgress::PcztBuilt,
+            ),
+            (
+                DelegationProgress::ProofStarting,
+                VotingDelegationProgress::ProofStarting,
+            ),
+            (
+                DelegationProgress::ProofProgress(0.5),
+                VotingDelegationProgress::ProofProgress { progress: 0.5 },
+            ),
+            (
+                DelegationProgress::ProofComplete,
+                VotingDelegationProgress::ProofComplete,
+            ),
+            (
+                DelegationProgress::SigningPayload,
+                VotingDelegationProgress::SigningPayload,
+            ),
+            (
+                DelegationProgress::PayloadReady,
+                VotingDelegationProgress::PayloadReady,
+            ),
+        ];
+        for (fork, expected) in cases {
+            assert_eq!(VotingDelegationProgress::from(fork), expected);
+        }
+    }
+
+    #[test]
+    fn vote_commit_stage_maps_every_variant() {
+        let cases = [
+            (
+                VoteCommitStage::ProofStarting {
+                    proposal_id: 1,
+                    bundle_index: 2,
+                },
+                VotingVoteCommitStage::ProofStarting {
+                    proposal_id: 1,
+                    bundle_index: 2,
+                },
+            ),
+            (
+                VoteCommitStage::ProofProgress {
+                    proposal_id: 1,
+                    bundle_index: 2,
+                    progress: 0.25,
+                },
+                VotingVoteCommitStage::ProofProgress {
+                    proposal_id: 1,
+                    bundle_index: 2,
+                    progress: 0.25,
+                },
+            ),
+            (
+                VoteCommitStage::SharePayloadsBuilding {
+                    proposal_id: 1,
+                    bundle_index: 2,
+                },
+                VotingVoteCommitStage::SharePayloadsBuilding {
+                    proposal_id: 1,
+                    bundle_index: 2,
+                },
+            ),
+            (
+                VoteCommitStage::Signing {
+                    proposal_id: 1,
+                    bundle_index: 2,
+                },
+                VotingVoteCommitStage::Signing {
+                    proposal_id: 1,
+                    bundle_index: 2,
+                },
+            ),
+        ];
+        for (fork, expected) in cases {
+            assert_eq!(VotingVoteCommitStage::from(fork), expected);
+        }
+    }
+
+    #[test]
+    fn round_info_from_maps_all_fields_and_network_string() {
+        for (network, expected_network) in [
+            (VotingNetwork::Mainnet, "mainnet"),
+            (VotingNetwork::Testnet, "testnet"),
+            (VotingNetwork::Regtest, "regtest"),
+        ] {
+            let fork = ForkRoundInfo {
+                round_id: "r1".to_string(),
+                network,
+                snapshot_height: 100,
+                hotkey_address: Some("addr".to_string()),
+                eligible_weight: Some(50_000),
+                bundle_count: 2,
+                created_at: 123,
+            };
+            let mirror = VotingRoundInfo::from(fork);
+            assert_eq!(mirror.round_id, "r1");
+            assert_eq!(mirror.network, expected_network);
+            assert_eq!(mirror.snapshot_height, 100);
+            assert_eq!(mirror.hotkey_address.as_deref(), Some("addr"));
+            assert_eq!(mirror.eligible_weight_zatoshi, Some(50_000));
+            assert_eq!(mirror.bundle_count, 2);
+            assert_eq!(mirror.created_at, 123);
+        }
+
+        let fork = ForkRoundInfo {
+            round_id: "r2".to_string(),
+            network: VotingNetwork::Mainnet,
+            snapshot_height: 0,
+            hotkey_address: None,
+            eligible_weight: None,
+            bundle_count: 0,
+            created_at: 0,
+        };
+        let mirror = VotingRoundInfo::from(fork);
+        assert_eq!(mirror.hotkey_address, None);
+        assert_eq!(mirror.eligible_weight_zatoshi, None);
+    }
+
+    #[test]
+    fn next_step_maps_every_variant() {
+        fn assert_step(
+            step: NextStep,
+            kind: &str,
+            bundle: u32,
+            proposal: u32,
+            choice: u32,
+            share: u32,
+        ) {
+            let mirror = VotingNextStep::from(step);
+            assert_eq!(mirror.kind, kind);
+            assert_eq!(mirror.bundle_index, bundle);
+            assert_eq!(mirror.proposal_id, proposal);
+            assert_eq!(mirror.choice, choice);
+            assert_eq!(mirror.share_index, share);
+        }
+
+        assert_step(NextStep::Delegate { bundle_index: 1 }, "delegate", 1, 0, 0, 0);
+        assert_step(
+            NextStep::PollDelegation { bundle_index: 2 },
+            "poll_delegation",
+            2,
+            0,
+            0,
+            0,
+        );
+        assert_step(
+            NextStep::CastVote {
+                bundle_index: 3,
+                proposal_id: 4,
+                choice: 5,
+            },
+            "cast_vote",
+            3,
+            4,
+            5,
+            0,
+        );
+        assert_step(
+            NextStep::SubmitVote {
+                bundle_index: 6,
+                proposal_id: 7,
+            },
+            "submit_vote",
+            6,
+            7,
+            0,
+            0,
+        );
+        assert_step(
+            NextStep::PollVote {
+                bundle_index: 8,
+                proposal_id: 9,
+            },
+            "poll_vote",
+            8,
+            9,
+            0,
+            0,
+        );
+        assert_step(
+            NextStep::SubmitShares {
+                bundle_index: 10,
+                proposal_id: 11,
+                share_index: 12,
+            },
+            "submit_shares",
+            10,
+            11,
+            0,
+            12,
+        );
+        assert_step(
+            NextStep::ConfirmShare {
+                bundle_index: 13,
+                proposal_id: 14,
+                share_index: 15,
+            },
+            "confirm_share",
+            13,
+            14,
+            0,
+            15,
+        );
+    }
+
+    #[test]
+    fn round_plan_from_maps_all_fields() {
+        let fork = ForkRoundPlan {
+            round_id: "r1".to_string(),
+            pending_recovery: true,
+            next_steps: vec![
+                NextStep::Delegate { bundle_index: 1 },
+                NextStep::PollVote {
+                    bundle_index: 2,
+                    proposal_id: 3,
+                },
+            ],
+            open_proposals: vec![3, 4],
+            all_decided: false,
+            delegation_statuses: vec![DelegationStatus {
+                bundle_index: 1,
+                phase: DelegationPhase::Proved,
+                tx_hash: Some("t1".to_string()),
+            }],
+            blocking_recovery: true,
+            blocking_share_work: false,
+            hotkey_bound: true,
+            completed_vote_artifact: true,
+            completed_for_display: true,
+            completed_vote_display: Some(CompletedVoteDisplay {
+                choices: vec![
+                    CompletedVoteChoice {
+                        proposal_id: 3,
+                        choice: Some(1),
+                    },
+                    CompletedVoteChoice {
+                        proposal_id: 4,
+                        choice: None,
+                    },
+                ],
+                voted_at: Some(42),
+            }),
+            needs_draft_setup: false,
+            primary_action: RoundPlanAction::Done,
+            recovered_delegation_work: vec![DelegationRecoveryWork {
+                kind: DelegationRecoveryWorkKind::PollDelegation,
+                bundle_index: 1,
+                phase: DelegationPhase::Submitted,
+                tx_hash: Some("t1".to_string()),
+            }],
+            recovered_vote_work: vec![],
+        };
+        let mirror = VotingRoundPlan::from(fork);
+        assert_eq!(mirror.round_id, "r1");
+        assert!(mirror.pending_recovery);
+        assert_eq!(mirror.next_steps.len(), 2);
+        assert_eq!(
+            mirror.next_steps[0],
+            VotingNextStep {
+                kind: "delegate".to_string(),
+                bundle_index: 1,
+                proposal_id: 0,
+                choice: 0,
+                share_index: 0,
+            }
+        );
+        assert_eq!(mirror.open_proposals, vec![3, 4]);
+        assert!(!mirror.all_decided);
+        assert_eq!(
+            mirror.delegation_statuses,
+            vec![VotingDelegationStatus {
+                bundle_index: 1,
+                phase: "proved".to_string(),
+                tx_hash: Some("t1".to_string()),
+            }]
+        );
+        assert!(mirror.blocking_recovery);
+        assert!(!mirror.blocking_share_work);
+        assert!(mirror.hotkey_bound);
+        assert!(mirror.completed_vote_artifact);
+        assert!(mirror.completed_for_display);
+        assert!(!mirror.needs_draft_setup);
+        assert_eq!(mirror.primary_action, "done");
+        let display = mirror.completed_vote_display.unwrap();
+        assert_eq!(
+            display.choices,
+            vec![
+                VotingCompletedVoteChoice {
+                    proposal_id: 3,
+                    choice: Some(1),
+                },
+                VotingCompletedVoteChoice {
+                    proposal_id: 4,
+                    choice: None,
+                },
+            ]
+        );
+        assert_eq!(display.voted_at, Some(42));
+    }
+
+    #[test]
+    fn delegation_recovery_from_maps_all_fields() {
+        let fork = ForkDelegationRecovery {
+            bundle_index: 1,
+            phase: DelegationPhase::Confirmed,
+            tx_hash: None,
+            van_leaf_position: Some(2),
+        };
+        let mirror = VotingDelegationRecovery::from(fork);
+        assert_eq!(mirror.bundle_index, 1);
+        assert_eq!(mirror.phase, "confirmed");
+        assert_eq!(mirror.workflow_phase, "confirmed");
+        assert_eq!(mirror.tx_hash, None);
+        assert_eq!(mirror.van_leaf_position, Some(2));
+    }
+
+    #[test]
+    fn vote_recovery_from_maps_all_fields() {
+        let fork = ForkVoteRecovery {
+            bundle_index: 1,
+            proposal_id: 2,
+            choice: 3,
+            phase: VotePhase::Submitted,
+            tx_hash: Some("t".to_string()),
+            vc_tree_position: Some(9),
+            has_commitment_bundle: true,
+        };
+        let mirror = VotingVoteRecovery::from(fork);
+        assert_eq!(mirror.bundle_index, 1);
+        assert_eq!(mirror.proposal_id, 2);
+        assert_eq!(mirror.choice, 3);
+        assert_eq!(mirror.phase, "submitted");
+        assert_eq!(mirror.workflow_phase, "submitted_vote");
+        assert_eq!(mirror.tx_hash.as_deref(), Some("t"));
+        assert_eq!(mirror.vc_tree_position, Some(9));
+        assert!(mirror.has_commitment_bundle);
+    }
+
+    #[test]
+    fn share_workflow_from_maps_all_fields() {
+        let fork = ForkShareWorkflow {
+            bundle_index: 1,
+            proposal_id: 2,
+            share_index: 3,
+            phase: SharePhase::Confirmed,
+        };
+        let mirror = VotingShareWorkflow::from(fork);
+        assert_eq!(mirror.bundle_index, 1);
+        assert_eq!(mirror.proposal_id, 2);
+        assert_eq!(mirror.share_index, 3);
+        assert_eq!(mirror.phase, "confirmed");
+    }
+
+    #[test]
+    fn share_delegation_record_from_maps_all_fields() {
+        let fork = ForkShareDelegationRecord {
+            round_id: "r".to_string(),
+            bundle_index: 1,
+            proposal_id: 2,
+            share_index: 3,
+            sent_to_urls: vec!["u1".to_string()],
+            nullifier: vec![1, 2, 3],
+            confirmed: true,
+            submit_at: 4,
+            created_at: 5,
+        };
+        assert_eq!(
+            VotingShareDelegationRecord::from(fork),
+            VotingShareDelegationRecord {
+                round_id: "r".to_string(),
+                bundle_index: 1,
+                proposal_id: 2,
+                share_index: 3,
+                sent_to_urls: vec!["u1".to_string()],
+                nullifier: vec![1, 2, 3],
+                confirmed: true,
+                submit_at: 4,
+                created_at: 5,
+            }
+        );
+    }
+
+    #[test]
+    fn round_recovery_from_maps_all_fields() {
+        let fork = ForkRoundRecovery {
+            round_id: "r".to_string(),
+            bundle_count: 2,
+            delegation: vec![ForkDelegationRecovery {
+                bundle_index: 1,
+                phase: DelegationPhase::Proved,
+                tx_hash: None,
+                van_leaf_position: None,
+            }],
+            votes: vec![ForkVoteRecovery {
+                bundle_index: 1,
+                proposal_id: 2,
+                choice: 3,
+                phase: VotePhase::Committed,
+                tx_hash: None,
+                vc_tree_position: None,
+                has_commitment_bundle: true,
+            }],
+            commitment_bundles: vec![],
+            shares: vec![ForkShareWorkflow {
+                bundle_index: 1,
+                proposal_id: 2,
+                share_index: 3,
+                phase: SharePhase::Submitted,
+            }],
+            share_delegations: vec![
+                ForkShareDelegationRecord {
+                    round_id: "r".to_string(),
+                    bundle_index: 1,
+                    proposal_id: 2,
+                    share_index: 3,
+                    sent_to_urls: vec!["u1".to_string()],
+                    nullifier: vec![1],
+                    confirmed: false,
+                    submit_at: 4,
+                    created_at: 5,
+                },
+                ForkShareDelegationRecord {
+                    round_id: "r".to_string(),
+                    bundle_index: 1,
+                    proposal_id: 2,
+                    share_index: 4,
+                    sent_to_urls: vec![],
+                    nullifier: vec![2],
+                    confirmed: true,
+                    submit_at: 6,
+                    created_at: 7,
+                },
+            ],
+            unconfirmed_share_delegations: vec![ForkShareDelegationRecord {
+                round_id: "r".to_string(),
+                bundle_index: 1,
+                proposal_id: 2,
+                share_index: 5,
+                sent_to_urls: vec![],
+                nullifier: vec![3],
+                confirmed: false,
+                submit_at: 8,
+                created_at: 9,
+            }],
+        };
+        let mirror = VotingRoundRecovery::from(fork);
+        assert_eq!(mirror.round_id, "r");
+        assert_eq!(mirror.bundle_count, 2);
+        assert_eq!(mirror.delegation.len(), 1);
+        assert_eq!(mirror.votes.len(), 1);
+        assert_eq!(mirror.shares.len(), 1);
+        assert_eq!(mirror.share_delegations.len(), 2);
+        assert_eq!(mirror.unconfirmed_share_delegations.len(), 1);
+        assert_eq!(mirror.votes[0].phase, "committed");
+        assert_eq!(mirror.shares[0].phase, "submitted");
+    }
+
+    #[test]
+    fn ballot_intent_from_maps_choice_and_skipped() {
+        assert_eq!(
+            VotingBallotIntent::from((7u32, Decision::Choice(3))),
+            VotingBallotIntent {
+                proposal_id: 7,
+                skipped: false,
+                choice: Some(3),
+            }
+        );
+        assert_eq!(
+            VotingBallotIntent::from((7u32, Decision::Skipped)),
+            VotingBallotIntent {
+                proposal_id: 7,
+                skipped: true,
+                choice: None,
+            }
+        );
+    }
+
+    #[test]
+    fn share_tracking_summary_from_maps_all_fields() {
+        let fork = ShareTrackingSummary {
+            total: 10,
+            confirmed: 6,
+            waiting: 2,
+            ready: 1,
+            overdue: 1,
+        };
+        assert_eq!(
+            VotingShareTrackingSummary::from(fork),
+            VotingShareTrackingSummary {
+                total: 10,
+                confirmed: 6,
+                waiting: 2,
+                ready: 1,
+                overdue: 1,
+            }
+        );
+    }
+
+    #[test]
+    fn fork_network_string_maps_each_network() {
+        assert_eq!(fork_network_string(VotingNetwork::Mainnet), "mainnet");
+        assert_eq!(fork_network_string(VotingNetwork::Testnet), "testnet");
+        assert_eq!(fork_network_string(VotingNetwork::Regtest), "regtest");
+    }
+
+    #[test]
+    fn config_switch_kind_string_maps_each_kind() {
+        assert_eq!(config_switch_kind_string(ConfigSwitchKind::Unchanged), "unchanged");
+        assert_eq!(config_switch_kind_string(ConfigSwitchKind::InitialLoad), "initial_load");
+        assert_eq!(
+            config_switch_kind_string(ConfigSwitchKind::SameChainServiceUpdate),
+            "same_chain_service_update"
+        );
+        assert_eq!(
+            config_switch_kind_string(ConfigSwitchKind::NewChainOrRound),
+            "new_chain_or_round"
+        );
+        assert_eq!(
+            config_switch_kind_string(ConfigSwitchKind::ProtocolChanged),
+            "protocol_changed"
+        );
+    }
+
+    #[test]
+    fn votechain_proxy_uses_external_proxy_only_for_transport_three() {
+        assert_eq!(
+            votechain_proxy(&coin(3, "socks5://127.0.0.1:1080")),
+            "socks5://127.0.0.1:1080"
+        );
+        assert_eq!(votechain_proxy(&coin(3, "")), "");
+        assert_eq!(votechain_proxy(&coin(0, "socks5://x")), "");
+        assert_eq!(votechain_proxy(&coin(1, "socks5://x")), "");
+        assert_eq!(votechain_proxy(&coin(2, "socks5://x")), "");
+    }
+
+    fn resolved_config(pir_layout: PirLayout) -> ResolvedVotingConfig {
+        ResolvedVotingConfig {
+            source_fingerprint: "sf".to_string(),
+            trusted_key_fingerprint: "tf".to_string(),
+            dynamic_config_fingerprint: "df".to_string(),
+            vote_servers: vec![
+                ServiceEndpoint {
+                    url: "https://v1".to_string(),
+                    label: "vote".to_string(),
+                },
+                ServiceEndpoint {
+                    url: "https://v2".to_string(),
+                    label: "vote2".to_string(),
+                },
+            ],
+            pir_endpoints: vec![ServiceEndpoint {
+                url: "https://p".to_string(),
+                label: "pir".to_string(),
+            }],
+            pir_layout,
+            supported_versions: SupportedVersions {
+                pir: vec!["1".to_string()],
+                vote_protocol: "v1".to_string(),
+                tally: "t1".to_string(),
+                vote_server: "s1".to_string(),
+            },
+            authenticated_rounds: vec![
+                AuthenticatedRound {
+                    round_id: "r1".to_string(),
+                    ea_pk: vec![1, 2],
+                },
+                AuthenticatedRound {
+                    round_id: "r2".to_string(),
+                    ea_pk: vec![3],
+                },
+            ],
+            skipped_round_ids: vec!["r9".to_string()],
+            conditions: vec![ConfigCondition {
+                kind: ConfigConditionKind::VersionsSupported,
+                status: true,
+                message: "m".to_string(),
+            }],
+        }
+    }
+
+    #[test]
+    fn voting_config_from_resolved_maps_all_fields() {
+        let layout = PirLayout {
+            pir_depth: 4,
+            tier0_layers: 2,
+            tier1_layers: 3,
+            poly_len: 2048,
+        };
+        let config = VotingConfig::from_resolved(
+            "https://src".to_string(),
+            &resolved_config(layout),
+            ConfigSwitchKind::NewChainOrRound,
+        );
+        assert_eq!(config.source, "https://src");
+        assert_eq!(config.source_fingerprint, "sf");
+        assert_eq!(config.trusted_key_fingerprint, "tf");
+        assert_eq!(config.switch_kind, "new_chain_or_round");
+        assert_eq!(
+            config.vote_servers,
+            vec![
+                VotingServiceEndpoint {
+                    url: "https://v1".to_string(),
+                    label: "vote".to_string(),
+                },
+                VotingServiceEndpoint {
+                    url: "https://v2".to_string(),
+                    label: "vote2".to_string(),
+                },
+            ]
+        );
+        assert_eq!(
+            config.pir_servers,
+            vec![VotingServiceEndpoint {
+                url: "https://p".to_string(),
+                label: "pir".to_string(),
+            }]
+        );
+        assert_eq!(
+            config.pir_layout,
+            Some(VotingPirLayout {
+                pir_depth: 4,
+                tier0_layers: 2,
+                tier1_layers: 3,
+                poly_len: 2048,
+            })
+        );
+        assert_eq!(
+            config.rounds,
+            vec![
+                VotingConfigRound {
+                    round_id: "r1".to_string(),
+                    ea_pk: vec![1, 2],
+                },
+                VotingConfigRound {
+                    round_id: "r2".to_string(),
+                    ea_pk: vec![3],
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn voting_config_from_resolved_maps_unknown_pir_layout_to_none() {
+        let config = VotingConfig::from_resolved(
+            "https://src".to_string(),
+            &resolved_config(PirLayout::UNKNOWN),
+            ConfigSwitchKind::InitialLoad,
+        );
+        assert_eq!(config.pir_layout, None);
+        assert_eq!(config.switch_kind, "initial_load");
+    }
+
+    #[test]
+    fn share_delivery_parses_dart_wire_json() {
+        let json = r#"{"share_index":1,"sent_to_urls":["https://h1","https://h2"],"submit_at":42,"confirmed":true}"#;
+        let parsed: VotingShareDelivery = serde_json::from_str(json).unwrap();
+        assert_eq!(
+            parsed,
+            VotingShareDelivery {
+                share_index: 1,
+                sent_to_urls: vec!["https://h1".to_string(), "https://h2".to_string()],
+                submit_at: 42,
+                confirmed: true,
+            }
+        );
+    }
+
+    #[test]
+    fn progress_and_stage_enums_serde_round_trip() {
+        assert_round_trips(VotingDelegationProgress::SelectingNotes);
+        assert_round_trips(VotingDelegationProgress::ProofProgress { progress: 0.25 });
+        assert_round_trips(VotingVoteCommitStage::Signing {
+            proposal_id: 1,
+            bundle_index: 2,
+        });
+        assert_round_trips(VotingVoteCommitStage::ProofProgress {
+            proposal_id: 3,
+            bundle_index: 4,
+            progress: 0.5,
+        });
+    }
+
+    #[test]
+    fn leaf_flow_structs_serde_round_trip() {
+        assert_round_trips(VotingDelegationSetup {
+            pczt_bytes: vec![1],
+            pczt_sighash: vec![2u8; 32],
+            rk: vec![3u8; 32],
+            action_index: 4,
+            action_bytes: vec![5],
+            tx1_effects: vec![6],
+        });
+        assert_round_trips(VotingDelegationSubmission {
+            proof: vec![1],
+            rk: vec![2u8; 32],
+            nf_signed: vec![3u8; 32],
+            cmx_new: vec![4u8; 32],
+            gov_comm: vec![5u8; 32],
+            gov_nullifiers: vec![vec![6u8; 32], vec![7u8; 32]],
+            alpha: vec![8u8; 32],
+            vote_round_id: "r".to_string(),
+            spend_auth_sig: vec![9u8; 64],
+            sighash: vec![10u8; 32],
+            tx1_effects: vec![11],
+        });
+        assert_round_trips(VotingDelegationConfirmation {
+            tx_hash: "0x1".to_string(),
+            van_leaf_position: 1,
+        });
+        assert_round_trips(VotingVoteConfirmation {
+            tx_hash: "0x2".to_string(),
+            van_leaf_position: 2,
+            vc_tree_position: 3,
+        });
+        assert_round_trips(VotingVanWitness {
+            auth_path: vec![vec![1], vec![2, 3]],
+            position: 4,
+            anchor_height: 5,
+        });
+        assert_round_trips(VotingVoteSubmission {
+            vote_round_id: "r".to_string(),
+            proposal_id: 1,
+            van_nullifier: vec![2u8; 32],
+            vote_authority_note_new: vec![3u8; 32],
+            vote_commitment: vec![4u8; 32],
+            proof: vec![5],
+            r_vpk: vec![6u8; 32],
+            vote_auth_sig: vec![7u8; 64],
+            anchor_height: 8,
+        });
+        assert_round_trips(VotingEncryptedShare {
+            c1: vec![1],
+            c2: vec![2],
+            share_index: 3,
+        });
+    }
+
+    #[test]
+    fn nested_and_config_structs_serde_round_trip() {
+        assert_round_trips(VotingSharePayload {
+            shares_hash: vec![1],
+            proposal_id: 2,
+            vote_decision: 3,
+            enc_share: VotingEncryptedShare {
+                c1: vec![4],
+                c2: vec![5],
+                share_index: 6,
+            },
+            tree_position: 7,
+            all_enc_shares: vec![VotingEncryptedShare {
+                c1: vec![8],
+                c2: vec![9],
+                share_index: 10,
+            }],
+            share_comms: vec![vec![11]],
+            primary_blind: vec![12],
+        });
+        assert_round_trips(VotingShareDelivery {
+            share_index: 1,
+            sent_to_urls: vec!["https://h1".to_string()],
+            submit_at: 42,
+            confirmed: false,
+        });
+        assert_round_trips(VotingRoundInfo {
+            round_id: "r".to_string(),
+            network: "regtest".to_string(),
+            snapshot_height: 100,
+            hotkey_address: None,
+            eligible_weight_zatoshi: Some(50_000),
+            bundle_count: 2,
+            created_at: 123,
+        });
+        assert_round_trips(VotingBallotIntent {
+            proposal_id: 1,
+            skipped: false,
+            choice: Some(2),
+        });
+        assert_round_trips(VotingShareTrackingSummary {
+            total: 10,
+            confirmed: 6,
+            waiting: 2,
+            ready: 1,
+            overdue: 1,
+        });
+        assert_round_trips(VotingConfig {
+            source: "https://src".to_string(),
+            source_fingerprint: "sf".to_string(),
+            trusted_key_fingerprint: "tf".to_string(),
+            switch_kind: "initial_load".to_string(),
+            vote_servers: vec![VotingServiceEndpoint {
+                url: "https://v".to_string(),
+                label: "vote".to_string(),
+            }],
+            pir_servers: vec![],
+            pir_layout: Some(VotingPirLayout {
+                pir_depth: 4,
+                tier0_layers: 2,
+                tier1_layers: 3,
+                poly_len: 2048,
+            }),
+            rounds: vec![VotingConfigRound {
+                round_id: "r1".to_string(),
+                ea_pk: vec![1, 2],
+            }],
+        });
+        assert_round_trips(VotingDelegationBuild {
+            submission: VotingDelegationSubmission {
+                proof: vec![1],
+                rk: vec![2u8; 32],
+                nf_signed: vec![3u8; 32],
+                cmx_new: vec![4u8; 32],
+                gov_comm: vec![5u8; 32],
+                gov_nullifiers: vec![],
+                alpha: vec![6u8; 32],
+                vote_round_id: "r".to_string(),
+                spend_auth_sig: vec![7u8; 64],
+                sighash: vec![8u8; 32],
+                tx1_effects: vec![9],
+            },
+            wire_json: "{}".to_string(),
+        });
+        assert_round_trips(VotingVotePayloads {
+            submission: VotingVoteSubmission {
+                vote_round_id: "r".to_string(),
+                proposal_id: 1,
+                van_nullifier: vec![2u8; 32],
+                vote_authority_note_new: vec![3u8; 32],
+                vote_commitment: vec![4u8; 32],
+                proof: vec![5],
+                r_vpk: vec![6u8; 32],
+                vote_auth_sig: vec![7u8; 64],
+                anchor_height: 8,
+            },
+            share_payloads: vec![],
+        });
+        assert_round_trips(VotingRoundPlan {
+            round_id: "r".to_string(),
+            pending_recovery: false,
+            next_steps: vec![],
+            open_proposals: vec![],
+            all_decided: true,
+            delegation_statuses: vec![],
+            blocking_recovery: false,
+            blocking_share_work: false,
+            hotkey_bound: false,
+            completed_vote_artifact: false,
+            completed_for_display: false,
+            completed_vote_display: None,
+            needs_draft_setup: false,
+            primary_action: "done".to_string(),
+        });
+        assert_round_trips(VotingRoundRecovery {
+            round_id: "r".to_string(),
+            bundle_count: 0,
+            delegation: vec![],
+            votes: vec![],
+            shares: vec![],
+            share_delegations: vec![],
+            unconfirmed_share_delegations: vec![],
+        });
+        assert_round_trips(VotingSharePlan {
+            summary: VotingShareTrackingSummary {
+                total: 1,
+                confirmed: 0,
+                waiting: 1,
+                ready: 0,
+                overdue: 0,
+            },
+            next_tracking_delay_secs: Some(30),
+            last_moment: false,
+            submissions: vec![VotingSharePlanItem {
+                submit_at: 100,
+                target_count: 1,
+                target_servers: vec!["https://h".to_string()],
+            }],
+        });
+    }
 }
