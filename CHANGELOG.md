@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.28.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc...zkool-v6.28.0-rc.1) (2026-08-16)
+
+
+### Features
+
+* show voting power on voting confirmation and status pages ([73db966](https://github.com/hhanh00/zkool2/commit/73db966629505b865dee82c6b1c3767a03b7a57a))
+
+
+### Bug Fixes
+
+* decode trailing escaped spaces in OA1 records ([1bd7374](https://github.com/hhanh00/zkool2/commit/1bd7374585290a93bab5287e1e0b8fcf612e76ed))
+* persist ballot intents at cast time; parse option index ([04e5358](https://github.com/hhanh00/zkool2/commit/04e53587f17f97547b51055ab09898114786fd6e))
+* save settings on nav away; resolve voting config from form value ([252ab2e](https://github.com/hhanh00/zkool2/commit/252ab2e3379cff5ec72b315a9a5844ea8dd603ed))
+* surface voting config resolve errors instead of swallowing them ([c9516db](https://github.com/hhanh00/zkool2/commit/c9516db23ebe960cc05393eaba7fea54baa14d0d))
+
 ## [6.28.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.27.0...zkool-v6.28.0-rc) (2026-08-15)
 
 
