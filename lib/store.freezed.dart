@@ -5053,6 +5053,10 @@ mixin _$VotingSubmissionJobState {
   double get progress;
   String? get error;
 
+  /// Voting weight (zatoshi) delegated by the prepared bundle, shown in
+  /// the status UI once the delegation prepare step completes.
+  BigInt? get eligibleWeightZatoshi;
+
   /// Create a copy of VotingSubmissionJobState
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -5069,15 +5073,18 @@ mixin _$VotingSubmissionJobState {
             (identical(other.stage, stage) || other.stage == stage) &&
             (identical(other.progress, progress) ||
                 other.progress == progress) &&
-            (identical(other.error, error) || other.error == error));
+            (identical(other.error, error) || other.error == error) &&
+            (identical(other.eligibleWeightZatoshi, eligibleWeightZatoshi) ||
+                other.eligibleWeightZatoshi == eligibleWeightZatoshi));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, stage, progress, error);
+  int get hashCode =>
+      Object.hash(runtimeType, stage, progress, error, eligibleWeightZatoshi);
 
   @override
   String toString() {
-    return 'VotingSubmissionJobState(stage: $stage, progress: $progress, error: $error)';
+    return 'VotingSubmissionJobState(stage: $stage, progress: $progress, error: $error, eligibleWeightZatoshi: $eligibleWeightZatoshi)';
   }
 }
 
@@ -5087,7 +5094,11 @@ abstract mixin class $VotingSubmissionJobStateCopyWith<$Res> {
           $Res Function(VotingSubmissionJobState) _then) =
       _$VotingSubmissionJobStateCopyWithImpl;
   @useResult
-  $Res call({String stage, double progress, String? error});
+  $Res call(
+      {String stage,
+      double progress,
+      String? error,
+      BigInt? eligibleWeightZatoshi});
 }
 
 /// @nodoc
@@ -5106,6 +5117,7 @@ class _$VotingSubmissionJobStateCopyWithImpl<$Res>
     Object? stage = null,
     Object? progress = null,
     Object? error = freezed,
+    Object? eligibleWeightZatoshi = freezed,
   }) {
     return _then(_self.copyWith(
       stage: null == stage
@@ -5120,6 +5132,10 @@ class _$VotingSubmissionJobStateCopyWithImpl<$Res>
           ? _self.error
           : error // ignore: cast_nullable_to_non_nullable
               as String?,
+      eligibleWeightZatoshi: freezed == eligibleWeightZatoshi
+          ? _self.eligibleWeightZatoshi
+          : eligibleWeightZatoshi // ignore: cast_nullable_to_non_nullable
+              as BigInt?,
     ));
   }
 }
@@ -5215,13 +5231,16 @@ extension VotingSubmissionJobStatePatterns on VotingSubmissionJobState {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(String stage, double progress, String? error)? $default, {
+    TResult Function(String stage, double progress, String? error,
+            BigInt? eligibleWeightZatoshi)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _VotingSubmissionJobState() when $default != null:
-        return $default(_that.stage, _that.progress, _that.error);
+        return $default(_that.stage, _that.progress, _that.error,
+            _that.eligibleWeightZatoshi);
       case _:
         return orElse();
     }
@@ -5242,12 +5261,15 @@ extension VotingSubmissionJobStatePatterns on VotingSubmissionJobState {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(String stage, double progress, String? error) $default,
+    TResult Function(String stage, double progress, String? error,
+            BigInt? eligibleWeightZatoshi)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _VotingSubmissionJobState():
-        return $default(_that.stage, _that.progress, _that.error);
+        return $default(_that.stage, _that.progress, _that.error,
+            _that.eligibleWeightZatoshi);
     }
   }
 
@@ -5265,12 +5287,15 @@ extension VotingSubmissionJobStatePatterns on VotingSubmissionJobState {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(String stage, double progress, String? error)? $default,
+    TResult? Function(String stage, double progress, String? error,
+            BigInt? eligibleWeightZatoshi)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _VotingSubmissionJobState() when $default != null:
-        return $default(_that.stage, _that.progress, _that.error);
+        return $default(_that.stage, _that.progress, _that.error,
+            _that.eligibleWeightZatoshi);
       case _:
         return null;
     }
@@ -5281,7 +5306,10 @@ extension VotingSubmissionJobStatePatterns on VotingSubmissionJobState {
 
 class _VotingSubmissionJobState implements VotingSubmissionJobState {
   _VotingSubmissionJobState(
-      {required this.stage, required this.progress, this.error});
+      {required this.stage,
+      required this.progress,
+      this.error,
+      this.eligibleWeightZatoshi});
 
   @override
   final String stage;
@@ -5290,6 +5318,11 @@ class _VotingSubmissionJobState implements VotingSubmissionJobState {
   final double progress;
   @override
   final String? error;
+
+  /// Voting weight (zatoshi) delegated by the prepared bundle, shown in
+  /// the status UI once the delegation prepare step completes.
+  @override
+  final BigInt? eligibleWeightZatoshi;
 
   /// Create a copy of VotingSubmissionJobState
   /// with the given fields replaced by the non-null parameter values.
@@ -5308,15 +5341,18 @@ class _VotingSubmissionJobState implements VotingSubmissionJobState {
             (identical(other.stage, stage) || other.stage == stage) &&
             (identical(other.progress, progress) ||
                 other.progress == progress) &&
-            (identical(other.error, error) || other.error == error));
+            (identical(other.error, error) || other.error == error) &&
+            (identical(other.eligibleWeightZatoshi, eligibleWeightZatoshi) ||
+                other.eligibleWeightZatoshi == eligibleWeightZatoshi));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, stage, progress, error);
+  int get hashCode =>
+      Object.hash(runtimeType, stage, progress, error, eligibleWeightZatoshi);
 
   @override
   String toString() {
-    return 'VotingSubmissionJobState(stage: $stage, progress: $progress, error: $error)';
+    return 'VotingSubmissionJobState(stage: $stage, progress: $progress, error: $error, eligibleWeightZatoshi: $eligibleWeightZatoshi)';
   }
 }
 
@@ -5328,7 +5364,11 @@ abstract mixin class _$VotingSubmissionJobStateCopyWith<$Res>
       __$VotingSubmissionJobStateCopyWithImpl;
   @override
   @useResult
-  $Res call({String stage, double progress, String? error});
+  $Res call(
+      {String stage,
+      double progress,
+      String? error,
+      BigInt? eligibleWeightZatoshi});
 }
 
 /// @nodoc
@@ -5347,6 +5387,7 @@ class __$VotingSubmissionJobStateCopyWithImpl<$Res>
     Object? stage = null,
     Object? progress = null,
     Object? error = freezed,
+    Object? eligibleWeightZatoshi = freezed,
   }) {
     return _then(_VotingSubmissionJobState(
       stage: null == stage
@@ -5361,6 +5402,10 @@ class __$VotingSubmissionJobStateCopyWithImpl<$Res>
           ? _self.error
           : error // ignore: cast_nullable_to_non_nullable
               as String?,
+      eligibleWeightZatoshi: freezed == eligibleWeightZatoshi
+          ? _self.eligibleWeightZatoshi
+          : eligibleWeightZatoshi // ignore: cast_nullable_to_non_nullable
+              as BigInt?,
     ));
   }
 }
