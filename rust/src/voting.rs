@@ -30,7 +30,9 @@ use zcash_voting::prelude::{
     VanWitness, VoteCommitStageReporter, VoteConfirmation, VoteSigner, VoteSubmission, VotingDb,
     VotingHotkey, WitnessData,
 };
-use zcash_voting::{Network as VotingNetwork, VotingRoundParams};
+use zcash_voting::{
+    minimum_voting_eligibility_for_notes, Network as VotingNetwork, VotingRoundParams,
+};
 
 use crate::api::coin::Network as WalletNetwork;
 use crate::warp::hasher::{empty_roots, OrchardHasher};
@@ -341,6 +343,70 @@ async fn unspent_ironwood_notes(
     .await?;
 
     Ok(notes)
+}
+
+/// Computes the quantized voting weight for the account's currently-unspent
+/// Ironwood ZEC notes at `snapshot_height`, using the same canonical bundle
+/// planning as the delegation prepare step (sort by value, greedy chunking,
+/// per-bundle ballot quantization) — but from the local DB only: no tree
+/// state, no witnesses.
+///
+/// Notes received after the snapshot are excluded, mirroring the prepare-time
+/// rejection (their witness cannot anchor at the snapshot tree).
+pub async fn eligible_voting_weight(
+    connection: &mut SqliteConnection,
+    account: u32,
+    snapshot_height: u32,
+) -> Result<u64> {
+    let rows = sqlx::query(
+        "SELECT a.value, a.position, a.cmx, a.nullifier, a.scope, a.diversifier, a.rcm, a.rho
+         FROM notes a
+         LEFT JOIN spends b ON a.id_note = b.id_note
+         LEFT JOIN assets ast ON a.id_asset = ast.id_asset
+         WHERE b.id_note IS NULL AND a.account = ?
+           AND a.pool = 3 AND a.locked = 0
+           AND a.height <= ?
+           AND COALESCE(ast.asset_base, X'0000000000000000000000000000000000000000000000000000000000000000') = X'0000000000000000000000000000000000000000000000000000000000000000'",
+    )
+    .bind(account)
+    .bind(snapshot_height)
+    .map(|row: sqlx::sqlite::SqliteRow| {
+        (
+            row.get::<i64, _>(0) as u64,   // value
+            row.get::<u32, _>(1),          // position
+            row.get::<Vec<u8>, _>(2),      // cmx
+            row.get::<Vec<u8>, _>(3),      // nullifier
+            row.get::<Option<u8>, _>(4),   // scope
+            row.get::<Vec<u8>, _>(5),      // diversifier
+            row.get::<Vec<u8>, _>(6),      // rcm (rseed)
+            row.get::<Vec<u8>, _>(7),      // rho
+        )
+    })
+    .fetch_all(&mut *connection)
+    .await?;
+
+    let notes: Vec<NoteInfo> = rows
+        .into_iter()
+        .map(
+            |(value, position, cmx, nullifier, scope, diversifier, rcm, rho)| NoteInfo {
+                commitment: cmx,
+                nullifier,
+                value,
+                position: position as u64,
+                diversifier,
+                rho,
+                rseed: rcm,
+                scope: scope.unwrap_or(0) as u32,
+                ufvk_str: String::new(),
+            },
+        )
+        .collect();
+
+    Ok(
+        minimum_voting_eligibility_for_notes(&notes, BundlePolicy::default())
+            .map(|e| e.eligible_weight)
+            .unwrap_or(0),
+    )
 }
 
 async fn unified_full_viewing_key(
@@ -743,4 +809,196 @@ pub fn load_prepared_bundle(
         .ok_or_else(|| {
             anyhow!("delegation bundle not prepared; run delegation_prepare first")
         })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use halo2_proofs::pasta::pallas::Scalar;
+    use orchard::primitives::redpallas::{Signature, VerificationKey};
+    use zcash_protocol::{
+        consensus::{BlockHeight, OrchardMode},
+        local_consensus::LocalNetwork,
+    };
+    use zip32::fingerprint::SeedFingerprint;
+
+    /// Standard BIP-39 test vector; its 64-byte seed is valid for ZIP-32.
+    fn test_seed() -> Vec<u8> {
+        Mnemonic::parse(
+            "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+        )
+        .unwrap()
+        .to_seed("")
+        .to_vec()
+    }
+
+    fn local_network() -> LocalNetwork {
+        LocalNetwork {
+            overwinter: Some(BlockHeight::from_u32(1)),
+            sapling: Some(BlockHeight::from_u32(1)),
+            blossom: Some(BlockHeight::from_u32(1)),
+            heartwood: Some(BlockHeight::from_u32(1)),
+            canopy: Some(BlockHeight::from_u32(1)),
+            nu5: Some(BlockHeight::from_u32(1)),
+            nu6: Some(BlockHeight::from_u32(1)),
+            nu6_1: Some(BlockHeight::from_u32(1)),
+            nu6_2: Some(BlockHeight::from_u32(1)),
+            nu6_3: Some(BlockHeight::from_u32(250)),
+            nu7: None,
+            orchard_mode: OrchardMode::Normal,
+        }
+    }
+
+    fn signing_request(
+        fingerprint: [u8; 32],
+        account_index: u32,
+        alpha: [u8; 32],
+    ) -> DelegationSigningRequest {
+        DelegationSigningRequest {
+            account_index,
+            network: VotingNetwork::Mainnet,
+            seed_fingerprint: fingerprint,
+            sighash: [7u8; 32],
+            alpha,
+        }
+    }
+
+    /// Rebuilds the signing key from the request the same way
+    /// `sign_delegation_request` does, and verifies the returned signature.
+    fn assert_valid_signature(
+        request: &DelegationSigningRequest,
+        seed: &[u8],
+        sig_bytes: &[u8; 64],
+    ) {
+        let account = AccountId::try_from(request.account_index).unwrap();
+        let usk = UnifiedSpendingKey::from_seed(&request.network, seed, account).unwrap();
+        let sk = *usk.orchard();
+        let ask = orchard::keys::SpendAuthorizingKey::from(&sk);
+        let alpha = Scalar::from_repr(request.alpha).unwrap();
+        let vk = VerificationKey::from(&ask.randomize(&alpha));
+        let sig = Signature::from(*sig_bytes);
+        vk.verify(&request.sighash, &sig).unwrap();
+    }
+
+    #[test]
+    fn voting_network_maps_each_wallet_network_to_fork_network() {
+        assert_eq!(
+            voting_network(&WalletNetwork::Main).unwrap(),
+            VotingNetwork::Mainnet
+        );
+        assert_eq!(
+            voting_network(&WalletNetwork::Test).unwrap(),
+            VotingNetwork::Testnet
+        );
+        assert_eq!(
+            voting_network(&WalletNetwork::Regtest(local_network())).unwrap(),
+            VotingNetwork::Regtest
+        );
+    }
+
+    #[test]
+    fn voting_network_rejects_zsa_regtest() {
+        let err = voting_network(&WalletNetwork::ZsaRegtest(local_network())).unwrap_err();
+        assert_eq!(err.to_string(), "voting is not supported on the ZSA network");
+    }
+
+    #[test]
+    fn sign_delegation_request_rejects_invalid_seed_length() {
+        let request = signing_request([0u8; 32], 0, [0u8; 32]);
+        let err = sign_delegation_request(&[0xAAu8; 16], request).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "wallet seed length is not valid for ZIP-32"
+        );
+    }
+
+    #[test]
+    fn sign_delegation_request_rejects_seed_fingerprint_mismatch() {
+        let seed = test_seed();
+        let mut fingerprint = SeedFingerprint::from_seed(&seed).unwrap().to_bytes();
+        fingerprint[0] ^= 0x01;
+        let request = signing_request(fingerprint, 0, [0u8; 32]);
+        let err = sign_delegation_request(&seed, request).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "wallet seed fingerprint does not match delegation signing request"
+        );
+    }
+
+    #[test]
+    fn sign_delegation_request_rejects_account_index_at_or_above_2_to_31() {
+        let seed = test_seed();
+        let fingerprint = SeedFingerprint::from_seed(&seed).unwrap().to_bytes();
+        let request = signing_request(fingerprint, 1 << 31, [0u8; 32]);
+        let err = sign_delegation_request(&seed, request).unwrap_err();
+        assert_eq!(err.to_string(), "invalid account_index 2147483648");
+
+        // One below the boundary passes the account-index check; the request
+        // then fails on the intentionally non-canonical alpha, pinning the
+        // exact boundary.
+        let request = signing_request(fingerprint, (1 << 31) - 1, [0xFFu8; 32]);
+        let err = sign_delegation_request(&seed, request).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "delegation alpha is not a valid Pallas scalar"
+        );
+    }
+
+    #[test]
+    fn sign_delegation_request_rejects_noncanonical_alpha() {
+        let seed = test_seed();
+        let fingerprint = SeedFingerprint::from_seed(&seed).unwrap().to_bytes();
+        let request = signing_request(fingerprint, 0, [0xFFu8; 32]);
+        let err = sign_delegation_request(&seed, request).unwrap_err();
+        assert_eq!(
+            err.to_string(),
+            "delegation alpha is not a valid Pallas scalar"
+        );
+    }
+
+    #[test]
+    fn sign_delegation_request_signs_with_zero_alpha_and_returns_sighash() {
+        let seed = test_seed();
+        let fingerprint = SeedFingerprint::from_seed(&seed).unwrap().to_bytes();
+        let request = signing_request(fingerprint, 0, [0u8; 32]);
+        let (sig_bytes, sighash) = sign_delegation_request(&seed, request).unwrap();
+        assert_eq!(sighash, [7u8; 32]);
+        assert_valid_signature(&request, &seed, &sig_bytes);
+    }
+
+    #[test]
+    fn sign_delegation_request_signs_with_nonzero_alpha_under_randomized_key() {
+        let seed = test_seed();
+        let fingerprint = SeedFingerprint::from_seed(&seed).unwrap().to_bytes();
+        let mut alpha = [0u8; 32];
+        alpha[0] = 7;
+        let request = signing_request(fingerprint, 0, alpha);
+        let (sig_bytes, _) = sign_delegation_request(&seed, request).unwrap();
+        assert_valid_signature(&request, &seed, &sig_bytes);
+
+        // Negative control: the *unrandomized* ak must not verify, proving
+        // the alpha randomizer actually enters the signing key.
+        let account = AccountId::try_from(request.account_index).unwrap();
+        let usk = UnifiedSpendingKey::from_seed(&request.network, &seed, account).unwrap();
+        let ask = orchard::keys::SpendAuthorizingKey::from(&*usk.orchard());
+        let zero = Scalar::from_repr([0u8; 32]).unwrap();
+        let vk_ak = VerificationKey::from(&ask.randomize(&zero));
+        let sig = Signature::from(sig_bytes);
+        assert!(vk_ak.verify(&request.sighash, &sig).is_err());
+    }
+
+    #[test]
+    fn bundle_cache_key_formats_wallet_round_bundle() {
+        assert_eq!(
+            bundle_cache_key("wallet-abc", "round-42", 0),
+            "wallet-abc:round-42:0"
+        );
+        assert_eq!(bundle_cache_key("w", "r", u32::MAX), "w:r:4294967295");
+        assert_eq!(bundle_cache_key("", "", 0), "::0");
+        assert_ne!(
+            bundle_cache_key("a", "r", 1),
+            bundle_cache_key("b", "r", 1),
+            "different wallet ids must not share a cache key"
+        );
+    }
 }
