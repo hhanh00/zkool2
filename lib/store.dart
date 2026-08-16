@@ -1566,6 +1566,12 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     String? txHash;
     if (delegateStep != null || freshDelegate) {
       state = state.copyWith(stage: "preparing");
+      // The voting pages never pass a lightwalletd URL — use the app's
+      // configured one for the fresh prepare (the fork needs it to fetch
+      // the snapshot anchor tree state).
+      final lwdUrl = (lightwalletdUrl == null || lightwalletdUrl!.isEmpty)
+          ? await _appLwdUrl()
+          : lightwalletdUrl!;
       final prepared = roundParamsJson != null && roundName != null
           ? await delegationPrepare(
               roundParamsJson: roundParamsJson,
@@ -1573,7 +1579,7 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
               sessionJson: null,
               bundleIndex: bundleIndex,
               maxRealNotesPerBundle: maxRealNotesPerBundle,
-              lightwalletdUrl: lightwalletdUrl ?? "",
+              lightwalletdUrl: lwdUrl,
               c: c,
             )
           : await delegationPrepareResume(
@@ -1708,6 +1714,17 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       return (url, pirLayout ?? config?.pirLayout);
     } on Exception {
       return (pirServerUrl, pirLayout);
+    }
+  }
+
+  /// Returns the app-configured lightwalletd URL (settings `lwd`) — the
+  /// voting pages never pass one. Empty when unavailable; the fork then
+  /// errors with a clear message.
+  Future<String> _appLwdUrl() async {
+    try {
+      return (await ref.read(appSettingsProvider.future)).lwd;
+    } on Exception {
+      return "";
     }
   }
 
