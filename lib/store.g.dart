@@ -1748,7 +1748,7 @@ final class VotingSubmissionJobProvider
 }
 
 String _$votingSubmissionJobHash() =>
-    r'9715bec132ec57c8d4851296748578307db3d5bf';
+    r'ea5e767799c528ecce54ebc14d41c9ac85c64db7';
 
 /// Delegation execution job for one round. Runs the serialized chain:
 /// prepare (or resume) → setup → build submission (progress stream) →

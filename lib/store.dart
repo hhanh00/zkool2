@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/services/block_height_service.dart';
+import 'package:zkool/services/votechain_confirmation.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/contacts.dart';
@@ -1329,14 +1330,31 @@ class VotingSession extends _$VotingSession {
 
   Future<VotingSessionState> _load() async {
     final c = coinContext.coin;
+    // Pass the draft proposal ids so the fork's plan can see open proposals:
+    // `needs_draft_setup` (the fresh-round trigger) and `all_decided` are
+    // computed against them, and are vacuously false/true with an empty list.
+    final draftIds = await _draftProposalIds(c);
     final plan = await votingPlan(
       roundId: _roundId,
-      proposalIds: const [],
+      proposalIds: draftIds,
       c: c,
     );
     final recovery = await votingRecovery(roundId: _roundId, c: c);
     final intents = await votingBallotIntents(roundId: _roundId, c: c);
     return VotingSessionState(plan: plan, recovery: recovery, intents: intents);
+  }
+
+  Future<List<int>> _draftProposalIds(Coin c) async {
+    try {
+      final drafts = await votingDraftsLoad(roundId: _roundId, c: c);
+      if (drafts == null || drafts.isEmpty) return const [];
+      return (jsonDecode(drafts) as List<dynamic>)
+          .map((d) => (d as Map<String, dynamic>)['proposal_id'] as int? ?? 0)
+          .where((id) => id > 0)
+          .toList();
+    } on Exception {
+      return const [];
+    }
   }
 
   Future<void> refresh() async {
@@ -1414,12 +1432,19 @@ class VotingSubmissionGuard extends _$VotingSubmissionGuard {
 @freezed
 sealed class VotingSubmissionJobState with _$VotingSubmissionJobState {
   factory VotingSubmissionJobState({
-    required String stage, // idle|preparing|proving|submitting|confirming|done|error
+    required String stage, // idle|preparing|proving|submitting|confirming|voting|shares|done|error
     required double progress,
     String? error,
     /// Voting weight (zatoshi) delegated by the prepared bundle, shown in
     /// the status UI once the delegation prepare step completes.
     BigInt? eligibleWeightZatoshi,
+    /// Chain evidence of what this run confirmed: the delegation tx hash, or
+    /// the first confirmed vote hash when no delegation ran.
+    String? txHash,
+    /// Block height at which [txHash] was included; set together with it.
+    int? confirmHeight,
+    /// Honest "done" headline describing what THIS run actually completed.
+    String? doneLabel,
   }) = _VotingSubmissionJobState;
 }
 
@@ -1460,7 +1485,7 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     state = state.copyWith(stage: "running", progress: 0, error: null);
     ref.read(votingSubmissionGuardProvider.notifier).setActive(true);
     try {
-      await _runDelegation(
+      final delegated = await _runDelegation(
         chainUrl: chainUrl,
         pirServerUrl: pirServerUrl,
         pirLayout: pirLayout,
@@ -1469,20 +1494,24 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
         maxRealNotesPerBundle: maxRealNotesPerBundle,
         lightwalletdUrl: lightwalletdUrl,
       );
-      final session = await ref.read(votingSessionProvider(roundId).future);
-      await _runVotes(
+      final voted = await _runVotes(
         chainUrl: chainUrl,
         voteNodeUrl: voteNodeUrl,
-        plan: session.plan,
-        recovery: session.recovery,
       );
-      await _submitShares(
+      final shared = await _submitShares(
         ceremonyStart: ceremonyStart,
         voteEnd: voteEnd,
         shareServerUrls: shareServerUrls,
         singleShare: singleShare,
       );
-      state = state.copyWith(stage: "done", progress: 1);
+      final doneLabel = delegated
+          ? "Delegation confirmed"
+          : voted
+              ? "Votes submitted"
+              : shared
+                  ? "Shares submitted"
+                  : "All steps already confirmed";
+      state = state.copyWith(stage: "done", progress: 1, doneLabel: doneLabel);
       ref.read(votingSubmissionGuardProvider.notifier).setActive(false);
     } on Exception catch (e) {
       state = state.copyWith(stage: "error", error: e.toString());
@@ -1494,7 +1523,9 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     state = VotingSubmissionJobState(stage: "idle", progress: 0);
   }
 
-  Future<void> _runDelegation({
+  /// Runs the delegation steps for this round; returns true when a delegation
+  /// was confirmed in this run (fresh broadcast or recorded-hash poll).
+  Future<bool> _runDelegation({
     required String chainUrl,
     required String pirServerUrl,
     VotingPirLayout? pirLayout,
@@ -1510,13 +1541,30 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     final delegateStep = steps.where((s) => s.kind == "delegate").firstOrNull;
     final pollStep =
         steps.where((s) => s.kind == "poll_delegation").firstOrNull;
-    if (delegateStep == null && pollStep == null) {
-      return; // no delegation work for this round
+    // A fresh round has no plan steps at all; the fork's plan flags it with
+    // `needs_draft_setup`. Treat that as delegation work for the first bundle
+    // that still needs it (mirrors vizor's roundPlanNeedsDraftSetup trigger).
+    var freshDelegate = false;
+    int bundleIndex;
+    if (delegateStep != null || pollStep != null) {
+      bundleIndex = (delegateStep ?? pollStep!).bundleIndex;
+    } else {
+      final p = plan;
+      if (p == null || !p.needsDraftSetup) {
+        return false; // no delegation work for this round
+      }
+      final pending = p.delegationStatuses
+          .where((s) => s.phase == "prepared" || s.phase == "committed")
+          .firstOrNull;
+      if (p.delegationStatuses.isNotEmpty && pending == null) {
+        return false; // all bundles confirmed; _runVotes handles casting
+      }
+      bundleIndex = pending?.bundleIndex ?? 0;
+      freshDelegate = true;
     }
-    final bundleIndex = (delegateStep ?? pollStep!).bundleIndex;
 
     String? txHash;
-    if (delegateStep != null) {
+    if (delegateStep != null || freshDelegate) {
       state = state.copyWith(stage: "preparing");
       final prepared = roundParamsJson != null && roundName != null
           ? await delegationPrepare(
@@ -1546,12 +1594,16 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       );
 
       state = state.copyWith(stage: "proving");
+      final pir = await _resolvePirConfig(
+        pirServerUrl: pirServerUrl,
+        pirLayout: pirLayout,
+      );
       final stream = delegationBuildSubmission(
         roundId: roundId,
         bundleIndex: bundleIndex,
         pcztBytes: setup.pcztBytes,
-        pirLayout: pirLayout,
-        pirServerUrl: pirServerUrl,
+        pirLayout: pir.$2,
+        pirServerUrl: pir.$1,
         c: c,
       );
       await for (final event in stream) {
@@ -1622,19 +1674,46 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     }
 
     state = state.copyWith(stage: "confirming");
-    final eventsJson =
-        await _pollTxConfirmation(chainUrl: chainUrl, txHash: txHash!);
+    final conf = await _pollTxConfirmation(chainUrl: chainUrl, txHash: txHash!);
     await delegationConfirm(
       roundId: roundId,
       bundleIndex: bundleIndex,
       txHash: txHash,
-      eventsJson: eventsJson,
+      eventsJson: conf.eventsJson,
       c: c,
     );
+    state = state.copyWith(txHash: txHash, confirmHeight: conf.height);
     await ref.read(votingSessionProvider(roundId).notifier).refresh();
+    return true;
   }
 
-  Future<String> _pollTxConfirmation({
+  /// Fills a missing PIR server URL / layout from the resolved voting config
+  /// (the UI never passes them — both push sites send "" / null). Falls back
+  /// to the passed values; when the config is unavailable the Rust side
+  /// errors with a clear message.
+  Future<(String, VotingPirLayout?)> _resolvePirConfig({
+    required String pirServerUrl,
+    required VotingPirLayout? pirLayout,
+  }) async {
+    if (pirServerUrl.isNotEmpty && pirLayout != null) {
+      return (pirServerUrl, pirLayout);
+    }
+    try {
+      final config = await ref.read(votingConfigProvider.future);
+      final url = pirServerUrl.isNotEmpty
+          ? pirServerUrl
+          : (config?.pirServers.isNotEmpty ?? false)
+              ? config!.pirServers.first.url
+              : "";
+      return (url, pirLayout ?? config?.pirLayout);
+    } on Exception {
+      return (pirServerUrl, pirLayout);
+    }
+  }
+
+  /// Polls the vote chain until the tx is included in a block (HTTP 200 with
+  /// a positive `height`), returning the parsed confirmation.
+  Future<VoteChainTxConfirmation> _pollTxConfirmation({
     required String chainUrl,
     required String txHash,
   }) async {
@@ -1646,9 +1725,8 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
         c: c,
       );
       if (res.statusCode == 200) {
-        final body = jsonDecode(res.body) as Map<String, dynamic>;
-        final events = body['events'];
-        return jsonEncode(events ?? const []);
+        final conf = parseVoteChainTxConfirmation(res.body);
+        if (conf != null) return conf;
       }
       await Future<void>.delayed(const Duration(seconds: 2));
     }
@@ -1659,30 +1737,20 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
 
   /// Casts and confirms the remaining votes for a round, recovery-first:
   /// `cast_vote` steps commit (streamed), `submit_vote` steps broadcast and
-  /// confirm, `poll_vote` steps only poll a previously recorded tx.
-  Future<void> _runVotes({
+  /// confirm, `poll_vote` steps only poll a previously recorded tx. Ballot
+  /// intents are written from the drafts BEFORE the plan is read so a fresh
+  /// round's cast steps appear (mirrors vizor's writeBallotIntents). Returns
+  /// true when at least one vote was confirmed in this run.
+  Future<bool> _runVotes({
     required String chainUrl,
     required String voteNodeUrl,
-    required VotingRoundPlan? plan,
-    required VotingRoundRecovery? recovery,
   }) async {
-    if (plan == null) return;
     final c = coinContext.coin;
-    final voteSteps = plan.nextSteps
-        .where((s) =>
-            s.kind == "cast_vote" ||
-            s.kind == "submit_vote" ||
-            s.kind == "poll_vote")
-        .toList();
-    if (voteSteps.isEmpty) return;
 
+    // Durable ballot intents first (mirrors vizor's writeBallotIntents):
+    // recovery can resume from the right choice if the app dies mid-vote.
+    // The round row exists by now (delegation prepared), so the FK holds.
     final draftsJson = await votingDraftsLoad(roundId: roundId, c: c);
-    final byBundle = groupBy(voteSteps, (s) => s.bundleIndex);
-
-    // Write durable ballot intents before the cast loop (mirrors vizor's
-    // writeBallotIntents): recovery can resume from the right choice if the
-    // app dies mid-vote. The round row exists by now (delegation prepared),
-    // so the FK is satisfied.
     if (draftsJson != null && draftsJson.isNotEmpty) {
       final drafts = jsonDecode(draftsJson) as List<dynamic>;
       for (final d in drafts) {
@@ -1702,6 +1770,39 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       }
     }
 
+    // Re-read the session: with intents written, the plan now carries the
+    // cast_vote steps (bundles exist after delegation).
+    await ref.read(votingSessionProvider(roundId).notifier).refresh();
+    final session = await ref.read(votingSessionProvider(roundId).future);
+    final plan = session.plan;
+    final recovery = session.recovery;
+    if (plan == null) return false;
+
+    // Defer votes for bundles whose delegation still needs to run (a fresh
+    // prepare creates rows for all policy bundles; each run advances one).
+    final delegateBundles = plan.nextSteps
+        .where((s) => s.kind == "delegate")
+        .map((s) => s.bundleIndex)
+        .toSet();
+    final voteSteps = plan.nextSteps
+        .where(
+          (s) =>
+              (s.kind == "cast_vote" ||
+                  s.kind == "submit_vote" ||
+                  s.kind == "poll_vote") &&
+              !delegateBundles.contains(s.bundleIndex),
+        )
+        .toList();
+
+    if (voteSteps.isEmpty) return false;
+    var didWork = false;
+    final byBundle = groupBy(voteSteps, (s) => s.bundleIndex);
+
+    // The commit step deserializes drafts as fork DraftVote, which requires
+    // vc_tree_position + single_share and rejects skipped choices and empty
+    // batches — sanitize the UI drafts for the cast call.
+    final commitDraftsJson = _sanitizedCommitDrafts(draftsJson);
+
     for (final entry in byBundle.entries) {
       final bundleIndex = entry.key;
       final steps = entry.value;
@@ -1709,17 +1810,17 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       final castSteps =
           steps.where((s) => s.kind == "cast_vote").toList();
       if (castSteps.isNotEmpty) {
-        if (draftsJson == null || draftsJson.isEmpty) {
+        if (commitDraftsJson == null || commitDraftsJson.isEmpty) {
           throw AnyhowException(
             "No draft ballot saved for round $roundId; "
             "open the ballot and review first",
           );
         }
-        state = state.copyWith(stage: "voting");
+        state = state.copyWith(stage: "voting", progress: 0);
         final stream = votingCommitWithProgress(
           roundId: roundId,
           bundleIndex: bundleIndex,
-          draftsJson: draftsJson,
+          draftsJson: commitDraftsJson,
           voteNodeUrl: voteNodeUrl,
           c: c,
         );
@@ -1731,10 +1832,11 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
               break;
           }
         }
+        didWork = true;
       }
 
       for (final step in steps.where((s) => s.kind == "submit_vote")) {
-        state = state.copyWith(stage: "voting");
+        state = state.copyWith(stage: "voting", progress: 0);
         final wireJson = await votingVoteWireJson(
           roundId: roundId,
           bundleIndex: bundleIndex,
@@ -1773,16 +1875,20 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
           c: c,
         );
         state = state.copyWith(stage: "confirming");
-        final eventsJson =
+        final conf =
             await _pollTxConfirmation(chainUrl: chainUrl, txHash: txHash);
         await votingConfirm(
           roundId: roundId,
           bundleIndex: bundleIndex,
           proposalId: step.proposalId,
           txHash: txHash,
-          eventsJson: eventsJson,
+          eventsJson: conf.eventsJson,
           c: c,
         );
+        didWork = true;
+        if (state.txHash == null) {
+          state = state.copyWith(txHash: txHash, confirmHeight: conf.height);
+        }
       }
 
       for (final step in steps.where((s) => s.kind == "poll_vote")) {
@@ -1799,24 +1905,51 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
           );
         }
         state = state.copyWith(stage: "confirming");
-        final eventsJson =
+        final conf =
             await _pollTxConfirmation(chainUrl: chainUrl, txHash: txHash);
         await votingConfirm(
           roundId: roundId,
           bundleIndex: bundleIndex,
           proposalId: step.proposalId,
           txHash: txHash,
-          eventsJson: eventsJson,
+          eventsJson: conf.eventsJson,
           c: c,
         );
+        didWork = true;
+        if (state.txHash == null) {
+          state = state.copyWith(txHash: txHash, confirmHeight: conf.height);
+        }
       }
     }
+    return didWork;
+  }
+
+  /// Converts UI drafts to the fork's DraftVote JSON for the commit step:
+  /// drops skipped choices (validation rejects choice == num_options) and
+  /// fills the fields the fork requires with no serde defaults. Returns null
+  /// when there is nothing to cast (no drafts or all-skipped ballot).
+  String? _sanitizedCommitDrafts(String? draftsJson) {
+    if (draftsJson == null || draftsJson.isEmpty) return null;
+    final drafts = jsonDecode(draftsJson) as List<dynamic>;
+    final commit = <Map<String, dynamic>>[
+      for (final d in drafts)
+        if ((d as Map<String, dynamic>)['choice'] != d['num_options'])
+          {
+            'proposal_id': d['proposal_id'],
+            'choice': d['choice'],
+            'num_options': d['num_options'],
+            'vc_tree_position': 0,
+            'single_share': false,
+          },
+    ];
+    return commit.isEmpty ? null : jsonEncode(commit);
   }
 
   /// Plans and submits helper shares for unconfirmed share rows. With no
   /// active vote window or no helper servers configured this is a no-op
   /// (the real inputs arrive with the dynamic config in a later phase).
-  Future<void> _submitShares({
+  /// Returns true when at least one share was submitted and recorded.
+  Future<bool> _submitShares({
     required int ceremonyStart,
     required int? voteEnd,
     required List<String> shareServerUrls,
@@ -1824,6 +1957,7 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
   }) async {
     final c = coinContext.coin;
     state = state.copyWith(stage: "shares");
+    var submitted = false;
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     final sharePlan = await votingSharePlan(
       roundId: roundId,
@@ -1872,6 +2006,7 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
         submitAt: item.submitAt,
         c: c,
       );
+      submitted = true;
     }
 
     // Background tracking until every share confirms (or the vote window ends).
@@ -1884,6 +2019,7 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
         singleShare: singleShare,
       );
     }
+    return submitted;
   }
 
   void _scheduleShareTracking({

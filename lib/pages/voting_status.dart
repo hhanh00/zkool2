@@ -73,8 +73,8 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
         );
   }
 
-  String _stageLabel(String stage) {
-    switch (stage) {
+  String _stageLabel(VotingSubmissionJobState job) {
+    switch (job.stage) {
       case "preparing":
         return "Preparing delegation bundle";
       case "proving":
@@ -83,8 +83,12 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
         return "Submitting delegation to the vote chain";
       case "confirming":
         return "Waiting for confirmation";
+      case "voting":
+        return "Casting votes";
+      case "shares":
+        return "Submitting shares";
       case "done":
-        return "Delegation confirmed";
+        return job.doneLabel ?? "Delegation confirmed";
       case "error":
         return "Submission failed";
       default:
@@ -128,7 +132,7 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  _stageLabel(job.stage),
+                  _stageLabel(job),
                   style: Theme.of(context).textTheme.titleLarge,
                   textAlign: TextAlign.center,
                 ),
@@ -136,7 +140,9 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
                 LinearProgressIndicator(
                   value: job.stage == "done"
                       ? 1
-                      : job.stage == "proving" || job.stage == "confirming"
+                      : job.stage == "proving" ||
+                              job.stage == "confirming" ||
+                              job.stage == "shares"
                           ? null
                           : job.progress,
                   minHeight: 6,
@@ -158,6 +164,23 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ),
+                if (job.stage == "done" && job.txHash != null) ...[
+                  const SizedBox(height: 12),
+                  SelectableText(
+                    "Transaction: ${job.txHash}",
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  if (job.confirmHeight != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        "Included in block ${job.confirmHeight}",
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                ],
                 const SizedBox(height: 24),
                 if (job.stage == "error") ...[
                   Text(
