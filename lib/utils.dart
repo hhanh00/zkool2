@@ -45,6 +45,14 @@ final invertSeparator = NumberFormat.decimalPattern(locale).symbols.DECIMAL_SEP 
 
 final int zatsPerZec = 100000000;
 
+/// Formats raw zatoshi voting power as e.g. `12.5 ZEC` (up to 4 decimals).
+String formatVotingPower(BigInt zatoshi) {
+  final zec = zatoshi.toDouble() / zatsPerZec;
+  var s = zec.toStringAsFixed(4);
+  s = s.replaceFirst(RegExp(r'\.?0+$'), '');
+  return "$s ZEC";
+}
+
 /// Format a fiat amount with its currency code.
 /// Uses the locale-aware number formatter followed by the uppercased currency code.
 String formatFiat(double amount, String currency) {

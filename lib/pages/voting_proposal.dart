@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 
 /// One parsed proposal option.
@@ -55,6 +56,7 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
   String? _roundParamsJson;
   String? _roundName;
   int? _snapshotHeight;
+  BigInt? _votingPower;
 
   @override
   void initState() {
@@ -102,6 +104,8 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
       final nullifierImtRoot = _find(round, "nullifier_imt_root");
       if (snapshotHeight is int && ncRoot is String && nullifierImtRoot is String) {
         _snapshotHeight = snapshotHeight;
+        _votingPower =
+            await votingEligibleWeight(snapshotHeight: snapshotHeight, c: c);
         _roundName = (_find(round, "round_name") ?? _find(round, "name"))
                 ?.toString() ??
             widget.roundId;
@@ -280,17 +284,34 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
       bottomNavigationBar: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12),
-          child: FilledButton(
-            onPressed: allAnswered
-                ? () => GoRouter.of(context).push("/voting/review", extra: {
-                      "roundId": widget.roundId,
-                      "chainUrl": widget.chainUrl,
-                      "roundParamsJson": _roundParamsJson,
-                      "roundName": _roundName,
-                      "snapshotHeight": _snapshotHeight,
-                    })
-                : null,
-            child: const Text("Review answers"),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (_snapshotHeight != null)
+                Text(
+                  "Snapshot height: $_snapshotHeight",
+                  textAlign: TextAlign.center,
+                ),
+              if (_votingPower != null)
+                Text(
+                  "Voting power: ${formatVotingPower(_votingPower!)}",
+                  textAlign: TextAlign.center,
+                ),
+              if (_snapshotHeight != null || _votingPower != null)
+                const SizedBox(height: 8),
+              FilledButton(
+                onPressed: allAnswered
+                    ? () => GoRouter.of(context).push("/voting/review", extra: {
+                          "roundId": widget.roundId,
+                          "chainUrl": widget.chainUrl,
+                          "roundParamsJson": _roundParamsJson,
+                          "roundName": _roundName,
+                          "snapshotHeight": _snapshotHeight,
+                        })
+                    : null,
+                child: const Text("Review answers"),
+              ),
+            ],
           ),
         ),
       ),
