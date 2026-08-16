@@ -252,8 +252,10 @@ pub async fn load_round_inputs(
         h.height
     );
 
-    // Select unspent, unlocked Ironwood (pool 3) ZEC notes.
-    let notes = unspent_ironwood_notes(connection, account).await?;
+    // Select unspent, unlocked Ironwood (pool 3) ZEC notes that existed at
+    // the snapshot height (mirrors eligible_voting_weight): notes created
+    // after the snapshot sit past the anchor edge and cannot be rewound.
+    let notes = unspent_ironwood_notes(connection, account, snapshot_height).await?;
     ensure!(
         !notes.is_empty(),
         "no unspent Ironwood notes available for voting"
@@ -319,10 +321,12 @@ pub async fn load_round_inputs(
     })
 }
 
-/// Unspent, unlocked Ironwood (pool 3) ZEC notes as `(note_id, scope)`.
+/// Unspent, unlocked Ironwood (pool 3) ZEC notes that existed at or before
+/// `snapshot_height`, as `(note_id, scope)`.
 async fn unspent_ironwood_notes(
     connection: &mut SqliteConnection,
     account: u32,
+    snapshot_height: u32,
 ) -> Result<Vec<(u32, u8)>> {
     let notes = sqlx::query(
         "SELECT a.id_note, a.scope
@@ -331,9 +335,11 @@ async fn unspent_ironwood_notes(
          LEFT JOIN assets ast ON a.id_asset = ast.id_asset
          WHERE b.id_note IS NULL AND a.account = ?
            AND a.pool = 3 AND a.locked = 0
+           AND a.height <= ?
            AND COALESCE(ast.asset_base, X'0000000000000000000000000000000000000000000000000000000000000000') = X'0000000000000000000000000000000000000000000000000000000000000000'",
     )
     .bind(account)
+    .bind(snapshot_height)
     .map(|row: sqlx::sqlite::SqliteRow| {
         let id: u32 = row.get(0);
         let scope: Option<u8> = row.get(1);
