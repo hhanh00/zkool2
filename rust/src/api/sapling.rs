@@ -1,20 +1,30 @@
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::Result;
+#[cfg(not(feature = "bundled-sapling-params"))]
+use anyhow::{anyhow, Context};
 
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 
 // Sapling parameter constants — must match those in zcash_proofs.
+// Only needed when the parameters are loaded from disk (not bundled).
+#[cfg(not(feature = "bundled-sapling-params"))]
 const SAPLING_SPEND_NAME: &str = "sapling-spend.params";
+#[cfg(not(feature = "bundled-sapling-params"))]
 const SAPLING_OUTPUT_NAME: &str = "sapling-output.params";
+#[cfg(not(feature = "bundled-sapling-params"))]
 const SAPLING_SPEND_HASH: &str =
     "8270785a1a0d0bc77196f000ee6d221c9c9894f55307bd9357c3f0105d31ca63991ab91324160d8f53e2bbd3c2633a6eb8bdf5205d822e7f3f73edac51b2b70c";
+#[cfg(not(feature = "bundled-sapling-params"))]
 const SAPLING_OUTPUT_HASH: &str =
     "657e3d38dbb5cb5e7dd2970e8b03d69b4787dd907285b5a7f0790dcc8072f60bf593b32cc2d1c030e00ff5ae64bf84c5c3beb84ddc841d48264b4a171744d028";
+#[cfg(not(feature = "bundled-sapling-params"))]
 const SAPLING_SPEND_BYTES: u64 = 47_958_396;
+#[cfg(not(feature = "bundled-sapling-params"))]
 const SAPLING_OUTPUT_BYTES: u64 = 3_592_860;
+#[cfg(not(feature = "bundled-sapling-params"))]
 const DOWNLOAD_URL: &str = "https://download.z.cash/downloads";
 
 /// Custom Sapling parameters directory, set on platforms where
@@ -34,6 +44,7 @@ pub(crate) fn set_sapling_params_dir(dir: PathBuf) {
 ///
 /// Returns the custom directory if set (via `set_sapling_params_dir`),
 /// otherwise falls back to `zcash_proofs::default_params_folder()`.
+#[cfg(not(feature = "bundled-sapling-params"))]
 pub(crate) fn resolve_params_dir() -> Option<PathBuf> {
     SAFLING_PARAMS_DIR
         .get()
@@ -47,54 +58,74 @@ pub struct SaplingParamsStatus {
     pub downloaded: bool,
 }
 
-/// Check whether Sapling parameters are already on disk.
+/// Check whether Sapling parameters are available.
+///
+/// With `bundled-sapling-params` they are compiled into the binary and always
+/// considered available. Otherwise checks whether they are on disk.
 #[cfg_attr(feature = "flutter", frb(sync))]
 pub fn check_sapling_params() -> SaplingParamsStatus {
-    let params_dir = resolve_params_dir();
-    let downloaded = params_dir
-        .map(|dir| dir.join(SAPLING_SPEND_NAME).exists() && dir.join(SAPLING_OUTPUT_NAME).exists())
-        .unwrap_or(false);
-    SaplingParamsStatus { downloaded }
+    #[cfg(feature = "bundled-sapling-params")]
+    {
+        return SaplingParamsStatus { downloaded: true };
+    }
+    #[cfg(not(feature = "bundled-sapling-params"))]
+    {
+        let params_dir = resolve_params_dir();
+        let downloaded = params_dir
+            .map(|dir| dir.join(SAPLING_SPEND_NAME).exists() && dir.join(SAPLING_OUTPUT_NAME).exists())
+            .unwrap_or(false);
+        SaplingParamsStatus { downloaded }
+    }
 }
 
 /// Download Sapling parameters from the z.cash download server.
 ///
 /// Verifies file size and Blake2b hash upon download.
 /// Safe to call even if they are already downloaded (no-op if valid).
+/// With `bundled-sapling-params` the parameters are compiled into the binary
+/// and this is a no-op.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn download_sapling_params() -> Result<()> {
-    let params_dir =
-        resolve_params_dir().context("Could not resolve Sapling parameters directory")?;
+    #[cfg(feature = "bundled-sapling-params")]
+    {
+        Ok(())
+    }
+    #[cfg(not(feature = "bundled-sapling-params"))]
+    {
+        let params_dir =
+            resolve_params_dir().context("Could not resolve Sapling parameters directory")?;
 
-    // Ensure the params directory exists.
-    std::fs::create_dir_all(&params_dir)
-        .with_context(|| format!("Failed to create params directory: {:?}", params_dir))?;
+        // Ensure the params directory exists.
+        std::fs::create_dir_all(&params_dir)
+            .with_context(|| format!("Failed to create params directory: {:?}", params_dir))?;
 
-    download_and_verify(
-        &params_dir,
-        SAPLING_SPEND_NAME,
-        SAPLING_SPEND_HASH,
-        SAPLING_SPEND_BYTES,
-    )
-    .await
-    .context("Failed to download/verify sapling-spend.params")?;
+        download_and_verify(
+            &params_dir,
+            SAPLING_SPEND_NAME,
+            SAPLING_SPEND_HASH,
+            SAPLING_SPEND_BYTES,
+        )
+        .await
+        .context("Failed to download/verify sapling-spend.params")?;
 
-    download_and_verify(
-        &params_dir,
-        SAPLING_OUTPUT_NAME,
-        SAPLING_OUTPUT_HASH,
-        SAPLING_OUTPUT_BYTES,
-    )
-    .await
-    .context("Failed to download/verify sapling-output.params")?;
+        download_and_verify(
+            &params_dir,
+            SAPLING_OUTPUT_NAME,
+            SAPLING_OUTPUT_HASH,
+            SAPLING_OUTPUT_BYTES,
+        )
+        .await
+        .context("Failed to download/verify sapling-output.params")?;
 
-    Ok(())
+        Ok(())
+    }
 }
 
 /// Download a single parameter file from `download.z.cash`, verify its size
 /// and Blake2b hash, then save it to the given directory.
 ///
 /// Skips download if an already-validated file exists at the target location.
+#[cfg(not(feature = "bundled-sapling-params"))]
 async fn download_and_verify(
     dir: &PathBuf,
     name: &str,
