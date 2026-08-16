@@ -149,6 +149,15 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
                       textAlign: TextAlign.center,
                     ),
                   ),
+                if (job.eligibleWeightZatoshi != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      "Voting power: ${formatVotingPower(job.eligibleWeightZatoshi!)}",
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
                 const SizedBox(height: 24),
                 if (job.stage == "error") ...[
                   Text(

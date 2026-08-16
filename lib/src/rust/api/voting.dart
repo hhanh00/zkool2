@@ -163,6 +163,15 @@ Future<void> votingSetBallotIntent(
         numOptions: numOptions,
         c: c);
 
+/// Returns the quantized voting weight (zatoshi) for the account's eligible
+/// shielded notes at `snapshot_height`, computed with the same canonical
+/// bundle planning as the delegation prepare step — but from the local DB
+/// only (no witnesses, no tree state). Shown pre-submission as an estimate.
+Future<BigInt> votingEligibleWeight(
+        {required int snapshotHeight, required Coin c}) =>
+    RustLib.instance.api.crateApiVotingVotingEligibleWeight(
+        snapshotHeight: snapshotHeight, c: c);
+
 /// Persists the draft ballot for a round (props table, wallet-scoped).
 Future<void> votingDraftsSave(
         {required String roundId,

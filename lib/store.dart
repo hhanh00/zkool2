@@ -1417,6 +1417,9 @@ sealed class VotingSubmissionJobState with _$VotingSubmissionJobState {
     required String stage, // idle|preparing|proving|submitting|confirming|done|error
     required double progress,
     String? error,
+    /// Voting weight (zatoshi) delegated by the prepared bundle, shown in
+    /// the status UI once the delegation prepare step completes.
+    BigInt? eligibleWeightZatoshi,
   }) = _VotingSubmissionJobState;
 }
 
@@ -1515,25 +1518,26 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     String? txHash;
     if (delegateStep != null) {
       state = state.copyWith(stage: "preparing");
-      if (roundParamsJson != null && roundName != null) {
-        await delegationPrepare(
-          roundParamsJson: roundParamsJson,
-          roundName: roundName,
-          sessionJson: null,
-          bundleIndex: bundleIndex,
-          maxRealNotesPerBundle: maxRealNotesPerBundle,
-          lightwalletdUrl: lightwalletdUrl ?? "",
-          c: c,
-        );
-      } else {
-        await delegationPrepareResume(
-          roundId: roundId,
-          bundleIndex: bundleIndex,
-          maxRealNotesPerBundle: maxRealNotesPerBundle,
-          lightwalletdUrl: lightwalletdUrl,
-          c: c,
-        );
-      }
+      final prepared = roundParamsJson != null && roundName != null
+          ? await delegationPrepare(
+              roundParamsJson: roundParamsJson,
+              roundName: roundName,
+              sessionJson: null,
+              bundleIndex: bundleIndex,
+              maxRealNotesPerBundle: maxRealNotesPerBundle,
+              lightwalletdUrl: lightwalletdUrl ?? "",
+              c: c,
+            )
+          : await delegationPrepareResume(
+              roundId: roundId,
+              bundleIndex: bundleIndex,
+              maxRealNotesPerBundle: maxRealNotesPerBundle,
+              lightwalletdUrl: lightwalletdUrl,
+              c: c,
+            );
+      state = state.copyWith(
+        eligibleWeightZatoshi: prepared.eligibleWeightZatoshi,
+      );
 
       final setup = await delegationSetup(
         roundId: roundId,
