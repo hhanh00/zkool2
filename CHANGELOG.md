@@ -1,5 +1,26 @@
 # Changelog
 
+## [6.28.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.2...zkool-v6.28.0-rc.3) (2026-08-17)
+
+
+### Features
+
+* gate voting round actions on chain status; zero tally for voteless closed rounds ([1ca2716](https://github.com/hhanh00/zkool2/commit/1ca2716fd79b0db90d617bee6d2eed422a8238fb))
+* results page title shows the round title ([85b97d9](https://github.com/hhanh00/zkool2/commit/85b97d91c565a6aea8316b7a0aad757fa80c1d14))
+* show proposal title and selection in the ballot evidence ([890b398](https://github.com/hhanh00/zkool2/commit/890b3983bd755aade2499def6585525fc036888e))
+* show proposal titles and option labels in the tally results ([c99c0c4](https://github.com/hhanh00/zkool2/commit/c99c0c4b03578aec13dc9530323a8f61f9e1617b))
+
+
+### Bug Fixes
+
+* don't re-send recorded shares; refresh status after tracking ([1c3df78](https://github.com/hhanh00/zkool2/commit/1c3df78da4a66e4968dd0008e5fda1758971b370))
+* key ballot evidence proposals by id, not list position ([55f89e3](https://github.com/hhanh00/zkool2/commit/55f89e34d91cedcf0bb974225090371fda5e0b21))
+* parse vote-sdk tally entries per-entry decision and amount ([9f7f2ff](https://github.com/hhanh00/zkool2/commit/9f7f2ffdb8b595b407b5087631ae34d1578ee516))
+* render option labels with vote-sdk ids, not 1-based positions ([f6af47e](https://github.com/hhanh00/zkool2/commit/f6af47e3db3a5509e292869a9ef0271c64c65c29))
+* resolve share-window timing from the chain round status ([fc3ee70](https://github.com/hhanh00/zkool2/commit/fc3ee7027ee9e29751ee699a87177a5a7f26ab35))
+* submit helper shares from the confirmed votes' payloads ([c1b2226](https://github.com/hhanh00/zkool2/commit/c1b2226875846113b3485081d646141123cfe03e))
+* tally entries without a decision key are decision 0, not a total ([23f0097](https://github.com/hhanh00/zkool2/commit/23f009757e38829af8e013c0b145f0f83f705cd7))
+
 ## [6.28.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.1...zkool-v6.28.0-rc.2) (2026-08-17)
 
 
