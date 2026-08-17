@@ -40,15 +40,18 @@ class VotingConfirmationPageState extends ConsumerState<VotingConfirmationPage> 
             const <VotingVoteRecovery>[])
         .where((v) => v.phase == "confirmed" && (v.txHash ?? "").isNotEmpty)
         .toList();
-    // Human-readable ballot evidence: proposal titles and option labels.
-    final proposals = (ref
-                .watch(votingRoundProposalsProvider(
-                  widget.roundId,
-                  widget.chainUrl,
-                ))
-                .value ??
-            const <VotingProposalInfo>[])
-        .asMap();
+    // Human-readable ballot evidence: proposal titles and option labels,
+    // keyed by proposal id (not list position).
+    final proposals = {
+      for (final p in (ref
+                  .watch(votingRoundProposalsProvider(
+                    widget.roundId,
+                    widget.chainUrl,
+                  ))
+                  .value ??
+              const <VotingProposalInfo>[]))
+        p.id: p,
+    };
 
     String voteLabel(VotingVoteRecovery v) {
       final proposal = proposals[v.proposalId];
