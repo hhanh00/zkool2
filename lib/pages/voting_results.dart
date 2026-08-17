@@ -207,8 +207,13 @@ class VotingResultsPageState extends ConsumerState<VotingResultsPage> {
         p.id: p,
     };
 
+    final roundTitle = (ref
+                .watch(votingRoundTitleProvider(widget.roundId, widget.chainUrl))
+                .value ??
+            widget.roundId);
+
     return Scaffold(
-      appBar: AppBar(title: Text("${widget.roundId} results")),
+      appBar: AppBar(title: Text(roundTitle)),
       body: _error != null
           ? Center(child: Text(_error!))
           : _tallies.isEmpty
