@@ -1577,9 +1577,20 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       // flow never passes shareServerUrls, so fall back to the configured
       // vote servers (mirrors vizor's context.config.voteServers).
       final shareUrls = await _effectiveShareServerUrls(shareServerUrls);
+      // The voting pages never pass ceremonyStart/voteEnd either — resolve
+      // them from the chain round status so the share plan can schedule.
+      var effectiveCeremony = ceremonyStart;
+      var effectiveVoteEnd = voteEnd;
+      if (effectiveCeremony == 0 || effectiveVoteEnd == null) {
+        final timing = await _roundShareTiming(chainUrl: chainUrl);
+        if (timing != null) {
+          effectiveCeremony = timing.ceremonyStart;
+          effectiveVoteEnd = timing.voteEnd;
+        }
+      }
       final shared = await _submitShares(
-        ceremonyStart: ceremonyStart,
-        voteEnd: voteEnd,
+        ceremonyStart: effectiveCeremony,
+        voteEnd: effectiveVoteEnd,
         shareServerUrls: shareUrls,
         singleShare: singleShare,
       );
@@ -1817,6 +1828,28 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     const shareKinds = {"submit_shares", "confirm_share"};
     final allShares = pending.every((s) => shareKinds.contains(s.kind));
     return allShares ? "Waiting for the share window" : "Waiting for the next step";
+  }
+
+  /// Resolves the round's ceremony start / vote end from the chain round
+  /// status when the flow didn't provide them (the voting pages never pass
+  /// them, and the share plan needs both to schedule submissions). Returns
+  /// null when the fetch fails or the fields are missing.
+  Future<({int ceremonyStart, int voteEnd})?> _roundShareTiming({
+    required String chainUrl,
+  }) async {
+    final c = coinContext.coin;
+    final res = await votechainRoundStatus(
+      baseUrl: chainUrl,
+      roundId: roundId,
+      c: c,
+    );
+    if (res.statusCode < 200 || res.statusCode >= 300) return null;
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final round = body['round'] as Map<String, dynamic>? ?? {};
+    final ceremony = round['ceremony_phase_start'];
+    final end = round['vote_end_time'];
+    if (ceremony is! int || end is! int) return null;
+    return (ceremonyStart: ceremony, voteEnd: end);
   }
 
   /// The vote chain servers double as helper (share) servers. The voting
