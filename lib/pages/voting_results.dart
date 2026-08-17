@@ -111,12 +111,39 @@ class VotingResultsPageState extends ConsumerState<VotingResultsPage> {
         ? v
         : num.tryParse(v?.toString() ?? "");
 
-    int decisionOf(Object? v) => toInt(value(["vote_decision", "voteDecision", "decision", "choice", "index", "option", "option_id", "optionId"])) ?? 0;
+    const decisionKeys = [
+      "vote_decision",
+      "voteDecision",
+      "decision",
+      "choice",
+      "index",
+      "option",
+      "option_id",
+      "optionId",
+    ];
+    const amountKeys = ["total_value", "totalValue", "amount", "votes", "value"];
 
-    num? amountOf(Object? v) => toNum(value(["total_value", "totalValue", "amount", "votes", "value"]));
+    int decisionOf(Object? v) {
+      if (v is! Map) return 0;
+      for (final k in decisionKeys) {
+        if (v.containsKey(k)) return toInt(v[k]) ?? 0;
+      }
+      return 0;
+    }
+
+    num? amountOf(Object? v) {
+      if (v is! Map) return null;
+      for (final k in amountKeys) {
+        if (v.containsKey(k)) return toNum(v[k]);
+      }
+      return null;
+    }
 
     void addDirect(Object? object, int proposalId) {
       if (object is! Map) return;
+      // A tally entry without a decision key is the aggregate total row —
+      // skip it so per-option amounts don't double-count.
+      if (!object.keys.any((k) => decisionKeys.contains(k))) return;
       final d = decisionOf(object);
       final a = amountOf(object);
       if (a != null) {
