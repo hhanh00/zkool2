@@ -488,10 +488,19 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             buffers.push(data);
         }
         // Read zkproof from sapling-crypto types (pczt types don't expose it)
-        let anchor = pczt
-            .sapling()
-            .anchor()
-            .expect("a Sapling bundle with spends must have an anchor");
+        // The Sapling anchor is only present when there are Sapling spends. A
+        // transparent-only transaction has no Sapling bundle, so `anchor()` is
+        // `None`; only fetch it when there are spends to serialize.
+        let anchor = if stin > 0 {
+            Some(
+                pczt
+                    .sapling()
+                    .anchor()
+                    .expect("a Sapling bundle with spends must have an anchor"),
+            )
+        } else {
+            None
+        };
         // Use update_sapling_with to access sapling-crypto Spend/Output which have full
         // getters including zkproof()
         let mut proof_bufs: Vec<Vec<u8>> = vec![];
@@ -503,7 +512,10 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
                     for sin in bundle.spends() {
                         let mut data = vec![];
                         data.write_all(&sin.cv().to_bytes()).unwrap();
-                        data.write_all(&anchor).unwrap();
+                        data.write_all(
+                            anchor.as_ref().expect("anchor present for Sapling spends"),
+                        )
+                        .unwrap();
                         data.write_all(sin.nullifier().as_ref()).unwrap();
                         let rk_bytes: [u8; 32] = VerificationKeyBytes::from(*sin.rk()).into();
                         data.write_all(&rk_bytes).unwrap();
