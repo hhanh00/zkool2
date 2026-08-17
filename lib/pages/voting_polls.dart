@@ -11,9 +11,17 @@ import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 
 /// Round list for shielded voting (ZIP 262). Each row derives its action
-/// label from the fork's resume plan (`primary_action`), so a restart shows
-/// the correct "Resume"/"Start"/"View results" affordance without any Dart
-/// session state.
+/// label from the fork's resume plan (`primary_action`) plus the chain round
+/// status, so a restart shows the correct affordance without any Dart session
+/// state:
+///
+/// - chain tallying/closed → "View results" (a tally exists).
+/// - chain active, plan has recovery work (incl. shares sent but unconfirmed)
+///   → "Resume" → status page, which re-arms share tracking.
+/// - chain active, wallet done → "Review" → vote receipt (no tally yet).
+/// - otherwise → "Start voting".
+///
+/// An unresolved chain status falls back to the plan-only rule.
 class VotingPollsPage extends ConsumerStatefulWidget {
   const VotingPollsPage({super.key});
 
@@ -91,16 +99,26 @@ class VotingPollsPageState extends ConsumerState<VotingPollsPage> {
         data: (list) {
           final configRounds = config.value?.rounds ?? const <VotingConfigRound>[];
           final localIds = list.map((r) => r.roundId).toSet();
-          final joinable = configRounds
-              .where((r) => !localIds.contains(r.roundId))
-              .toList();
-          if (list.isEmpty && joinable.isEmpty) {
-            return const Center(child: Text("No voting rounds"));
-          }
           final chainUrl = (config.value != null &&
                   config.value!.voteServers.isNotEmpty)
               ? config.value!.voteServers.first.url
               : "";
+          // Only rounds the chain reports as active are joinable: a closed
+          // or tallying round has no open voting window, so it is not
+          // offered. An unresolved status (fetch in flight or failed) keeps
+          // the round visible rather than hiding it.
+          final joinable = configRounds
+              .where((r) => !localIds.contains(r.roundId))
+              .where((r) {
+                final status = ref
+                    .watch(votingRoundStatusProvider(r.roundId, chainUrl))
+                    .value;
+                return status == null || status == "active";
+              })
+              .toList();
+          if (list.isEmpty && joinable.isEmpty) {
+            return const Center(child: Text("No voting rounds"));
+          }
           return RefreshIndicator(
             onRefresh: () async =>
                 ref.invalidate(votingRoundListProvider),
@@ -150,12 +168,15 @@ class _RoundTile extends ConsumerWidget {
 
   const _RoundTile({required this.round, required this.chainUrl});
 
-  String _actionLabel(String primaryAction) {
+  String _actionLabel(String primaryAction, {bool pendingRecovery = false}) {
     switch (primaryAction) {
       case "delegate" || "vote" || "submit_shares":
         return "Resume";
       case "done":
-        return "View results";
+        // "done" with recovery steps still pending (e.g. helper shares sent
+        // but not confirmed) is not finished — keep "Resume" so the status
+        // page, which re-arms share tracking, stays reachable.
+        return pendingRecovery ? "Resume" : "View results";
       default:
         return "Start voting";
     }
@@ -187,8 +208,27 @@ class _RoundTile extends ConsumerWidget {
         ),
       ),
       data: (state) {
-        final action = state.plan?.primaryAction ?? "idle";
-        final label = _actionLabel(action);
+        final plan = state.plan;
+        final action = plan?.primaryAction ?? "idle";
+        final pending = plan?.pendingRecovery ?? false;
+        // The chain round status decides whether results exist: an active
+        // round has no published tally, so the tile must not offer
+        // "View results" even when the wallet's part is done — the plan only
+        // picks between "Resume" (work pending) and "Review" (done). An
+        // unresolved chain status (fetch failed / no chain URL) falls back
+        // to the plan-only rule.
+        final chainStatus = ref
+            .watch(votingRoundStatusProvider(round.roundId, chainUrl))
+            .value;
+        final chainDone = chainStatus == "tallying" || chainStatus == "closed";
+        final planDone = action == "done" && !pending;
+        final done = chainDone || (chainStatus == null && planDone);
+        final review = action == "done" && !done && chainStatus != null;
+        final label = done
+            ? "View results"
+            : review
+                ? "Review"
+                : _actionLabel(action, pendingRecovery: pending);
         return ListTile(
           title: Text(roundTitle),
           subtitle: Text(
@@ -196,10 +236,17 @@ class _RoundTile extends ConsumerWidget {
             "${round.bundleCount} bundle${round.bundleCount == 1 ? "" : "s"}",
           ),
           trailing: FilledButton.tonal(
-            onPressed: () => _openStatus(context, ref, action),
+            onPressed: () => _openStatus(
+              context,
+              ref,
+              action,
+              done: done,
+              review: review,
+              roundName: roundTitle,
+            ),
             child: Text(label),
           ),
-          selected: action != "idle" && action != "done",
+          selected: pending && !done,
           selectedTileColor: cs.primaryContainer.withValues(alpha: 0.3),
         );
       },
@@ -209,8 +256,11 @@ class _RoundTile extends ConsumerWidget {
   Future<void> _openStatus(
     BuildContext context,
     WidgetRef ref,
-    String action,
-  ) async {
+    String action, {
+    required bool done,
+    required bool review,
+    String? roundName,
+  }) async {
     final c = coinContext.coin;
     final configValue = ref.read(votingConfigProvider).value;
     final chainUrl = (configValue != null && configValue.voteServers.isNotEmpty)
@@ -225,7 +275,7 @@ class _RoundTile extends ConsumerWidget {
       return;
     }
     if (!context.mounted) return;
-    if (action == "done") {
+    if (done) {
       await GoRouter.of(context).push("/voting/results", extra: {
         "roundId": round.roundId,
         "chainUrl": chainUrl,
@@ -236,6 +286,16 @@ class _RoundTile extends ConsumerWidget {
       // Fresh round: open the ballot first.
       await GoRouter.of(context).push("/voting/proposal", extra: {
         "roundId": round.roundId,
+        "chainUrl": chainUrl,
+      });
+      return;
+    }
+    if (review) {
+      // Wallet done but the round is still open on the chain: show the
+      // vote receipt, not the (not-yet-published) tally.
+      await GoRouter.of(context).push("/voting/confirmation", extra: {
+        "roundId": round.roundId,
+        "roundName": roundName,
         "chainUrl": chainUrl,
       });
       return;
