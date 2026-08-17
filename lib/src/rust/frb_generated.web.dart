@@ -437,6 +437,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<VotingSharePlanItem> dco_decode_list_voting_share_plan_item(dynamic raw);
 
   @protected
+  List<VotingShareSubmissionPayload>
+      dco_decode_list_voting_share_submission_payload(dynamic raw);
+
+  @protected
   List<VotingShareWorkflow> dco_decode_list_voting_share_workflow(dynamic raw);
 
   @protected
@@ -721,6 +725,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VotingSharePlanItem dco_decode_voting_share_plan_item(dynamic raw);
+
+  @protected
+  VotingShareSubmissionPayload dco_decode_voting_share_submission_payload(
+      dynamic raw);
 
   @protected
   VotingShareTrackingSummary dco_decode_voting_share_tracking_summary(
@@ -1158,6 +1166,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  List<VotingShareSubmissionPayload>
+      sse_decode_list_voting_share_submission_payload(
+          SseDeserializer deserializer);
+
+  @protected
   List<VotingShareWorkflow> sse_decode_list_voting_share_workflow(
       SseDeserializer deserializer);
 
@@ -1466,6 +1479,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VotingSharePlanItem sse_decode_voting_share_plan_item(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingShareSubmissionPayload sse_decode_voting_share_submission_payload(
       SseDeserializer deserializer);
 
   @protected
@@ -1931,6 +1948,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<VotingSharePlanItem> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_voting_share_submission_payload(
+      List<VotingShareSubmissionPayload> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_voting_share_workflow(
       List<VotingShareWorkflow> self, SseSerializer serializer);
 
@@ -2253,6 +2274,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_voting_share_plan_item(
       VotingSharePlanItem self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_share_submission_payload(
+      VotingShareSubmissionPayload self, SseSerializer serializer);
 
   @protected
   void sse_encode_voting_share_tracking_summary(
