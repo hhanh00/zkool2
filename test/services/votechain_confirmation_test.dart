@@ -47,6 +47,22 @@ void main() {
       expect(conf!.height, 12);
     });
 
+    test('string height is accepted (the chain reports heights as strings)', () {
+      final conf = parseVoteChainTxConfirmation(
+        '{"height": "7163319", "events": [{"type": "delegate_vote"}]}',
+      );
+      expect(conf, isNotNull);
+      expect(conf!.height, 7163319);
+      expect(conf.eventsJson, contains('delegate_vote'));
+    });
+
+    test('non-numeric string height is not a confirmation', () {
+      expect(
+        parseVoteChainTxConfirmation('{"height": "abc", "events": []}'),
+        isNull,
+      );
+    });
+
     test('malformed JSON is not a confirmation', () {
       expect(parseVoteChainTxConfirmation('not json'), isNull);
     });
