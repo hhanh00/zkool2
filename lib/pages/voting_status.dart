@@ -131,6 +131,17 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (widget.roundName != null &&
+                    widget.roundName!.isNotEmpty &&
+                    widget.roundName != widget.roundId)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      widget.roundName!,
+                      style: Theme.of(context).textTheme.titleMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
                 Text(
                   _stageLabel(job),
                   style: Theme.of(context).textTheme.titleLarge,
@@ -183,7 +194,7 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
                 ],
                 const SizedBox(height: 24),
                 if (job.stage == "error") ...[
-                  Text(
+                  SelectableText(
                     job.error ?? "Unknown error",
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
@@ -204,7 +215,10 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
                   FilledButton(
                     onPressed: () => GoRouter.of(context).pushReplacement(
                       "/voting/confirmation",
-                      extra: {"roundId": widget.roundId},
+                      extra: {
+                        "roundId": widget.roundId,
+                        "roundName": widget.roundName,
+                      },
                     ),
                     child: const Text("Done"),
                   ),
