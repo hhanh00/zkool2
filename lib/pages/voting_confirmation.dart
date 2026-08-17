@@ -10,8 +10,14 @@ import 'package:zkool/utils.dart';
 class VotingConfirmationPage extends ConsumerStatefulWidget {
   final String roundId;
   final String? roundName;
+  final String chainUrl;
 
-  const VotingConfirmationPage({super.key, required this.roundId, this.roundName});
+  const VotingConfirmationPage({
+    super.key,
+    required this.roundId,
+    this.roundName,
+    this.chainUrl = "",
+  });
 
   @override
   ConsumerState<VotingConfirmationPage> createState() =>
@@ -34,6 +40,22 @@ class VotingConfirmationPageState extends ConsumerState<VotingConfirmationPage> 
             const <VotingVoteRecovery>[])
         .where((v) => v.phase == "confirmed" && (v.txHash ?? "").isNotEmpty)
         .toList();
+    // Human-readable ballot evidence: proposal titles and option labels.
+    final proposals = (ref
+                .watch(votingRoundProposalsProvider(
+                  widget.roundId,
+                  widget.chainUrl,
+                ))
+                .value ??
+            const <VotingProposalInfo>[])
+        .asMap();
+
+    String voteLabel(VotingVoteRecovery v) {
+      final proposal = proposals[v.proposalId];
+      final title = proposal?.title ?? "Proposal ${v.proposalId}";
+      final choice = proposal?.optionLabels[v.choice] ?? "Option ${v.choice + 1}";
+      return "$title — $choice";
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text("Vote submitted")),
@@ -72,8 +94,7 @@ class VotingConfirmationPageState extends ConsumerState<VotingConfirmationPage> 
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: SelectableText(
-                    "Proposal ${v.proposalId}: ${v.txHash} · "
-                    "tree ${v.vcTreePosition}",
+                    "${voteLabel(v)}\n${v.txHash} · tree ${v.vcTreePosition}",
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
