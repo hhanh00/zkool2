@@ -125,7 +125,9 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
     String voteLabel(VotingVoteRecovery v) {
       final proposal = proposals[v.proposalId];
       final title = proposal?.title ?? "Proposal ${v.proposalId}";
-      final choice = proposal?.optionLabels[v.choice] ?? "Option ${v.choice + 1}";
+      // Option ids are the vote-sdk `index` values (omitted = 0 for the
+      // first); never render 1-based list positions.
+      final choice = proposal?.optionLabels[v.choice] ?? "Option ${v.choice}";
       return "$title — $choice";
     }
 
