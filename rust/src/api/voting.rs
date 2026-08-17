@@ -616,20 +616,52 @@ pub async fn delegation_build_submission(
     let prepared = voting::load_prepared_bundle(&wallet_id, &round_id, bundle_index)?;
     let seed = voting::account_seed(&mut connection, account).await?;
 
-    let progress = DelegationProgressBridge::new(move |p| {
-        let _ = sink.add(p.into());
+    let progress = DelegationProgressBridge::new({
+        let sink_for_progress = sink.clone();
+        move |p| {
+            let _ = sink_for_progress.add(p.into());
+        }
     });
-    let (submission, wire_json) = voting::prove_and_submit_delegation_with_progress(
-        c.get_pool()?,
-        &wallet_id,
-        &prepared,
-        &seed,
-        pczt_bytes,
-        pir_layout.to_fork(),
-        &pir_server_url,
-        &progress,
-    )
-    .await?;
+    let (submission, wire_json) =
+        match voting::prove_and_submit_delegation_with_progress(
+            c.get_pool()?,
+            &wallet_id,
+            &prepared,
+            &seed,
+            pczt_bytes,
+            pir_layout.to_fork(),
+            &pir_server_url,
+            &progress,
+        )
+        .await
+        {
+            Ok(v) => v,
+            Err(e) => {
+                // The FRB stream binding runs the call with `unawaited` and
+                // discards the returned future, so a plain `Err` would surface
+                // as an unhandled exception the app can never catch. Deliver
+                // the error through the sink (decoded as AnyhowException on
+                // the Dart stream) and return a benign Ok — the binding
+                // discards this value anyway.
+                let _ = sink.add_error(e);
+                return Ok(VotingDelegationBuild {
+                    submission: VotingDelegationSubmission {
+                        proof: Vec::new(),
+                        rk: Vec::new(),
+                        nf_signed: Vec::new(),
+                        cmx_new: Vec::new(),
+                        gov_comm: Vec::new(),
+                        gov_nullifiers: Vec::new(),
+                        alpha: Vec::new(),
+                        vote_round_id: String::new(),
+                        spend_auth_sig: Vec::new(),
+                        sighash: Vec::new(),
+                        tx1_effects: Vec::new(),
+                    },
+                    wire_json: String::new(),
+                });
+            }
+        };
     // The FRB boundary drops this return value (StreamSink params take over),
     // so persist the wire body for `delegation_wire_json` to pick up. This also
     // makes a crash between proving and broadcasting resumable without
@@ -793,10 +825,13 @@ pub async fn voting_commit_with_progress(
         voting::vote_van_witness(c.get_pool()?, &wallet_id, &round_id, bundle_index, &vote_node_url)
             .await?;
 
-    let stages = VoteCommitStageBridge::new(move |s| {
-        let _ = sink.add(s.into());
+    let stages = VoteCommitStageBridge::new({
+        let sink_for_stages = sink.clone();
+        move |s| {
+            let _ = sink_for_stages.add(s.into());
+        }
     });
-    let commitments = voting::commit_votes_with_progress(
+    let commitments = match voting::commit_votes_with_progress(
         c.get_pool()?,
         &wallet_id,
         &round_id,
@@ -806,7 +841,20 @@ pub async fn voting_commit_with_progress(
         &hotkey,
         &stages,
     )
-    .await?;
+    .await
+    {
+        Ok(v) => v,
+        Err(e) => {
+            // Same FRB stream footgun as delegation_build_submission: the
+            // binding drops the returned future, so deliver the error via the
+            // sink and return a benign Ok (the value is discarded anyway).
+            let _ = sink.add_error(e);
+            return Ok(VotingVoteCommitments {
+                bundle_index,
+                commitments: Vec::new(),
+            });
+        }
+    };
     Ok(commitments.into())
 }
 
@@ -1952,6 +2000,22 @@ pub async fn voting_recovery_clear(round_id: &str, c: &Coin) -> Result<()> {
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
     let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
     zcash_voting::recovery::clear(&db, &round_id).await?;
+    Ok(())
+}
+
+/// Resets process-local vote-tree cache and clears unsigned delegation setup
+/// fields for a round (the fork's recovery when a restart after
+/// `build_governance_pczt` persisted `pczt_sighash` makes re-setup refuse to
+/// overwrite it). Submitted bundles, imported capabilities, and bundles with
+/// persisted Keystone signatures are preserved.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_reset_session_state(round_id: &str, c: &Coin) -> Result<()> {
+    let account = c.account;
+    let round_id = round_id.to_string();
+    let mut connection = c.get_connection().await?;
+    let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
+    zcash_voting::precompute::reset_voting_session_state(&db, &round_id).await?;
     Ok(())
 }
 

@@ -1463,7 +1463,7 @@ final class VotingSessionProvider
   }
 }
 
-String _$votingSessionHash() => r'74d90be6f0517caae693468712cabce9319f0584';
+String _$votingSessionHash() => r'194096c377208865fd439826f7355d88d99e93ff';
 
 /// Per-round voting session. `build()` is the recovery-first triple load;
 /// `refresh()` re-runs it after an action mutates the voting DB.
@@ -1748,7 +1748,7 @@ final class VotingSubmissionJobProvider
 }
 
 String _$votingSubmissionJobHash() =>
-    r'ea5e767799c528ecce54ebc14d41c9ac85c64db7';
+    r'6447bed624023babc55b25ef6c72b5bd58052f20';
 
 /// Delegation execution job for one round. Runs the serialized chain:
 /// prepare (or resume) → setup → build submission (progress stream) →

@@ -1601,33 +1601,17 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
         eligibleWeightZatoshi: prepared.eligibleWeightZatoshi,
       );
 
-      final setup = await delegationSetup(
-        roundId: roundId,
-        bundleIndex: bundleIndex,
-        c: c,
-      );
-
       state = state.copyWith(stage: "proving");
       final pir = await _resolvePirConfig(
         pirServerUrl: pirServerUrl,
         pirLayout: pirLayout,
       );
-      final stream = delegationBuildSubmission(
+      await _buildDelegation(
         roundId: roundId,
         bundleIndex: bundleIndex,
-        pcztBytes: setup.pcztBytes,
         pirLayout: pir.$2,
         pirServerUrl: pir.$1,
-        c: c,
       );
-      await for (final event in stream) {
-        switch (event) {
-          case VotingDelegationProgress_ProofProgress(:final progress):
-            state = state.copyWith(progress: progress);
-          default:
-            break;
-        }
-      }
 
       // The FRB boundary drops the build result when a StreamSink is present,
       // so the wire body comes from the prop persisted by the build.
@@ -1698,6 +1682,22 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     );
     state = state.copyWith(txHash: txHash, confirmHeight: conf.height);
     await ref.read(votingSessionProvider(roundId).notifier).refresh();
+    // The done state must be backed by the fork's recorded confirmation:
+    // verify the bundle reads back as confirmed (tx hash + VAN leaf) before
+    // claiming success — a stale or partial state must not show
+    // "Delegation confirmed".
+    final verified = await ref.read(votingSessionProvider(roundId).future);
+    final status = verified.plan?.delegationStatuses
+        .where((s) => s.bundleIndex == bundleIndex)
+        .firstOrNull;
+    if (status == null ||
+        status.phase != "confirmed" ||
+        (status.txHash ?? "").isEmpty) {
+      throw AnyhowException(
+        "Delegation confirmation was not recorded for "
+        "round $roundId bundle $bundleIndex",
+      );
+    }
     return true;
   }
 
@@ -1745,6 +1745,57 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       await votingHotkeyGet(c: c);
     } on AnyhowException {
       await votingHotkeyCreate(c: c);
+    }
+  }
+
+  /// Runs the delegation build/prove stream with the fork's software path:
+  /// the build re-runs `setup` internally (sampling fresh PCZT randomness),
+  /// so the app must NOT call `delegationSetup` separately and must pass
+  /// empty `pcztBytes` (skips the sighash consistency check). A restart
+  /// after a partial run leaves a stored sighash that the internal setup
+  /// refuses to overwrite — reset the unsigned setup and retry once
+  /// (mirrors vizor's keystone-stale-setup recovery).
+  Future<void> _buildDelegation({
+    required String roundId,
+    required int bundleIndex,
+    required VotingPirLayout? pirLayout,
+    required String pirServerUrl,
+  }) async {
+    final c = coinContext.coin;
+    debugPrint(
+      "Voting: delegation build starting for round $roundId bundle "
+      "$bundleIndex (no separate setup, empty pczt bytes)",
+    );
+    for (var attempt = 0; attempt < 2; attempt++) {
+      try {
+        final stream = delegationBuildSubmission(
+          roundId: roundId,
+          bundleIndex: bundleIndex,
+          pcztBytes: const [],
+          pirLayout: pirLayout,
+          pirServerUrl: pirServerUrl,
+          c: c,
+        );
+        await for (final event in stream) {
+          switch (event) {
+            case VotingDelegationProgress_ProofProgress(:final progress):
+              state = state.copyWith(progress: progress);
+            default:
+              break;
+          }
+        }
+        return;
+      } on AnyhowException catch (e) {
+        if (!e.message.toLowerCase().contains("refusing to overwrite")) {
+          rethrow;
+        }
+        if (attempt == 1) rethrow;
+        debugPrint(
+          "Voting: stale delegation setup during build for round $roundId "
+          "bundle $bundleIndex; resetting and retrying",
+        );
+        await votingResetSessionState(roundId: roundId, c: c);
+      }
     }
   }
 

@@ -42,7 +42,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -440572071;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1940546024;
 
 // Section: executor
 
@@ -8429,6 +8429,45 @@ fn wire__crate__api__voting__voting_recovery_clear_impl(
         },
     )
 }
+fn wire__crate__api__voting__voting_reset_session_state_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "voting_reset_session_state",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_round_id = <String>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::voting::voting_reset_session_state(&api_round_id, &api_c)
+                                .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__voting__voting_round_params_json_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -12333,44 +12372,50 @@ fn pde_ffi_dispatcher_primary_impl(
         212 => {
             wire__crate__api__voting__voting_recovery_clear_impl(port, ptr, rust_vec_len, data_len)
         }
-        213 => wire__crate__api__voting__voting_round_params_json_impl(
+        213 => wire__crate__api__voting__voting_reset_session_state_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        214 => wire__crate__api__voting__voting_rounds_impl(port, ptr, rust_vec_len, data_len),
-        215 => wire__crate__api__voting__voting_set_ballot_intent_impl(
+        214 => wire__crate__api__voting__voting_round_params_json_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        216 => wire__crate__api__voting__voting_share_add_servers_impl(
+        215 => wire__crate__api__voting__voting_rounds_impl(port, ptr, rust_vec_len, data_len),
+        216 => wire__crate__api__voting__voting_set_ballot_intent_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        217 => {
+        217 => wire__crate__api__voting__voting_share_add_servers_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        218 => {
             wire__crate__api__voting__voting_share_confirm_impl(port, ptr, rust_vec_len, data_len)
         }
-        218 => wire__crate__api__voting__voting_share_plan_impl(port, ptr, rust_vec_len, data_len),
-        219 => {
+        219 => wire__crate__api__voting__voting_share_plan_impl(port, ptr, rust_vec_len, data_len),
+        220 => {
             wire__crate__api__voting__voting_share_record_impl(port, ptr, rust_vec_len, data_len)
         }
-        220 => wire__crate__api__voting__voting_share_unconfirmed_impl(
+        221 => wire__crate__api__voting__voting_share_unconfirmed_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        221 => {
+        222 => {
             wire__crate__api__voting__voting_share_wire_json_impl(port, ptr, rust_vec_len, data_len)
         }
-        222 => wire__crate__api__voting__voting_sync_tree_impl(port, ptr, rust_vec_len, data_len),
-        223 => wire__crate__api__voting__voting_van_witness_impl(port, ptr, rust_vec_len, data_len),
-        224 => {
+        223 => wire__crate__api__voting__voting_sync_tree_impl(port, ptr, rust_vec_len, data_len),
+        224 => wire__crate__api__voting__voting_van_witness_impl(port, ptr, rust_vec_len, data_len),
+        225 => {
             wire__crate__api__voting__voting_vote_wire_json_impl(port, ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
