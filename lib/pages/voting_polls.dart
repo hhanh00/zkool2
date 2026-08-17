@@ -113,23 +113,28 @@ class VotingPollsPageState extends ConsumerState<VotingPollsPage> {
                         style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                   ...joinable.map(
-                    (r) => ListTile(
-                      title: Text(r.roundId),
-                      trailing: FilledButton.tonal(
-                        onPressed: chainUrl.isEmpty
-                            ? null
-                            : () => GoRouter.of(context)
-                                .push("/voting/proposal", extra: {
-                                    "roundId": r.roundId,
-                                    "chainUrl": chainUrl,
-                                  }),
-                        child: const Text("Join"),
-                      ),
-                    ),
+                    (r) {
+                      final title = ref.watch(
+                        votingRoundTitleProvider(r.roundId, chainUrl),
+                      );
+                      return ListTile(
+                        title: Text(title.value ?? r.roundId),
+                        trailing: FilledButton.tonal(
+                          onPressed: chainUrl.isEmpty
+                              ? null
+                              : () => GoRouter.of(context)
+                                  .push("/voting/proposal", extra: {
+                                      "roundId": r.roundId,
+                                      "chainUrl": chainUrl,
+                                    }),
+                          child: const Text("Join"),
+                        ),
+                      );
+                    },
                   ),
                   const Divider(),
                 ],
-                ...list.map((r) => _RoundTile(round: r)),
+                ...list.map((r) => _RoundTile(round: r, chainUrl: chainUrl)),
               ],
             ),
           );
@@ -141,8 +146,9 @@ class VotingPollsPageState extends ConsumerState<VotingPollsPage> {
 
 class _RoundTile extends ConsumerWidget {
   final VotingRoundInfo round;
+  final String chainUrl;
 
-  const _RoundTile({required this.round});
+  const _RoundTile({required this.round, required this.chainUrl});
 
   String _actionLabel(String primaryAction) {
     switch (primaryAction) {
@@ -159,9 +165,11 @@ class _RoundTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     final session = ref.watch(votingSessionProvider(round.roundId));
+    final title = ref.watch(votingRoundTitleProvider(round.roundId, chainUrl));
+    final roundTitle = title.value ?? round.roundId;
     return session.when(
       loading: () => ListTile(
-        title: Text(round.roundId),
+        title: Text(roundTitle),
         subtitle: Text("Snapshot height ${round.snapshotHeight}"),
         trailing: SizedBox(
           width: 24,
@@ -170,7 +178,7 @@ class _RoundTile extends ConsumerWidget {
         ),
       ),
       error: (e, _) => ListTile(
-        title: Text(round.roundId),
+        title: Text(roundTitle),
         subtitle: Text("Snapshot height ${round.snapshotHeight}"),
         trailing: IconButton(
           icon: Icon(Icons.refresh),
@@ -182,7 +190,7 @@ class _RoundTile extends ConsumerWidget {
         final action = state.plan?.primaryAction ?? "idle";
         final label = _actionLabel(action);
         return ListTile(
-          title: Text(round.roundId),
+          title: Text(roundTitle),
           subtitle: Text(
             "Snapshot height ${round.snapshotHeight} • "
             "${round.bundleCount} bundle${round.bundleCount == 1 ? "" : "s"}",

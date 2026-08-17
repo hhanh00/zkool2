@@ -1370,6 +1370,25 @@ Future<List<VotingRoundInfo>> votingRoundList(Ref ref) async {
   return await votingRounds(c: c);
 }
 
+/// Friendly round title from the vote chain round status, falling back to
+/// the round id. The chain's `title` field is the only friendly name source
+/// (the config and the local DB carry no titles).
+@riverpod
+Future<String> votingRoundTitle(Ref ref, String roundId, String chainUrl) async {
+  final c = coinContext.coin;
+  final res = await votechainRoundStatus(
+    baseUrl: chainUrl,
+    roundId: roundId,
+    c: c,
+  );
+  if (res.statusCode < 200 || res.statusCode >= 300) return roundId;
+  final body = jsonDecode(res.body) as Map<String, dynamic>;
+  final round = body['round'] as Map<String, dynamic>? ?? {};
+  final title = round['title'];
+  if (title is String && title.trim().isNotEmpty) return title;
+  return roundId;
+}
+
 /// Resolved and authenticated voting config for the configured source URL.
 /// `build()` returns the last cached resolved config without touching the
 /// network (so merely reading the provider never triggers a fetch); call

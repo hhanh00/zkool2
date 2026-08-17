@@ -32,6 +32,9 @@ class VotingReviewPage extends ConsumerStatefulWidget {
 
 class VotingReviewPageState extends ConsumerState<VotingReviewPage> {
   List<Map<String, dynamic>> _drafts = [];
+  /// proposal id -> option ids and their labels, from the chain round status
+  /// (the drafts store only the choice index).
+  final Map<int, List<_ReviewOption>> _optionsByProposal = {};
   String? _error;
 
   @override
@@ -49,16 +52,65 @@ class VotingReviewPageState extends ConsumerState<VotingReviewPage> {
             .map((d) => d as Map<String, dynamic>)
             .toList();
       }
+      await _loadOptions();
       if (mounted) setState(() {});
     } on AnyhowException catch (e) {
       if (mounted) setState(() => _error = e.message);
     }
   }
 
+  /// Best-effort: fetches the proposal options from the chain so the review
+  /// can show option labels instead of indices. On failure the review falls
+  /// back to "Option N".
+  Future<void> _loadOptions() async {
+    try {
+      final c = coinContext.coin;
+      final res = await votechainRoundStatus(
+        baseUrl: widget.chainUrl,
+        roundId: widget.roundId,
+        c: c,
+      );
+      if (res.statusCode < 200 || res.statusCode >= 300) return;
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      final round = body['round'] as Map<String, dynamic>? ?? {};
+      final proposals = round['proposals'] as List<dynamic>? ?? [];
+      for (final p in proposals) {
+        if (p is! Map) continue;
+        final pid = p['id'];
+        if (pid is! int || pid < 1) continue;
+        var options = (p['options'] as List<dynamic>? ?? [])
+            .asMap()
+            .entries
+            .map((entry) {
+              final o = entry.value;
+              if (o is! Map) return null;
+              final id = (o['index'] is int) ? o['index'] as int : entry.key;
+              final label =
+                  (o['label'] ?? o['short_title'] ?? o['title'] ?? "Option")
+                      .toString();
+              return _ReviewOption(id, label);
+            })
+            .whereType<_ReviewOption>()
+            .toList();
+        if (options.isEmpty) {
+          // Vote-sdk default: Yes/No when options are missing.
+          options = const [_ReviewOption(0, "Yes"), _ReviewOption(1, "No")];
+        }
+        _optionsByProposal[pid] = options;
+      }
+    } on AnyhowException {
+      // Best-effort only; _answerLabel falls back to indices.
+    }
+  }
+
   String _answerLabel(Map<String, dynamic> draft) {
+    final proposalId = draft['proposal_id'] as int? ?? 0;
     final choice = draft['choice'] as int? ?? 0;
     final numOptions = draft['num_options'] as int? ?? 2;
     if (choice == numOptions) return "Skipped";
+    for (final option in _optionsByProposal[proposalId] ?? const []) {
+      if (option.id == choice) return option.label;
+    }
     return "Option ${choice + 1}";
   }
 
@@ -115,4 +167,11 @@ class VotingReviewPageState extends ConsumerState<VotingReviewPage> {
       ),
     );
   }
+}
+
+class _ReviewOption {
+  final int id;
+  final String label;
+
+  const _ReviewOption(this.id, this.label,);
 }
