@@ -103,6 +103,15 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
 
     final job = ref.watch(votingSubmissionJobProvider(widget.roundId));
     final running = job.stage != "done" && job.stage != "error";
+    // Confirmed vote txs (per proposal), shown as evidence on the done state.
+    final confirmedVotes = (ref
+                .watch(votingSessionProvider(widget.roundId))
+                .value
+                ?.recovery
+                ?.votes ??
+            const <VotingVoteRecovery>[])
+        .where((v) => v.phase == "confirmed" && (v.txHash ?? "").isNotEmpty)
+        .toList();
 
     return PopScope(
       canPop: !running,
@@ -192,6 +201,16 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
                       ),
                     ),
                 ],
+                for (final v in confirmedVotes)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: SelectableText(
+                      "Proposal ${v.proposalId}: ${v.txHash} · "
+                      "tree ${v.vcTreePosition}",
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
                 const SizedBox(height: 24),
                 if (job.stage == "error") ...[
                   SelectableText(
