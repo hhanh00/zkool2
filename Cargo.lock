@@ -13237,8 +13237,7 @@ dependencies = [
 
 [[package]]
 name = "voting-circuits"
-version = "0.9.0-rc.3"
-source = "git+https://github.com/hhanh00/voting-circuits.git?rev=9b408e712f8a2db8ca0b006846b310c6fd994941#9b408e712f8a2db8ca0b006846b310c6fd994941"
+version = "0.10.0"
 dependencies = [
  "blake2b_simd",
  "ff",
