@@ -2191,6 +2191,23 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     }
   }
 
+  /// Delay until the next planned share submission (min positive
+  /// submitAt − now), capped at an hour; 60s when nothing is pending.
+  int _shareTrackingDelaySeconds(List<VotingSharePlanItem> plans, int now) {
+    final nowBig = BigInt.from(now);
+    var minDelta = BigInt.zero;
+    var found = false;
+    for (final p in plans) {
+      final delta = p.submitAt - nowBig;
+      if (delta > BigInt.zero && (!found || delta < minDelta)) {
+        minDelta = delta;
+        found = true;
+      }
+    }
+    if (!found) return 60;
+    return minDelta > BigInt.from(3600) ? 3600 : minDelta.toInt();
+  }
+
   /// Converts UI drafts to the fork's DraftVote JSON for the commit step:
   /// drops skipped choices (validation rejects choice == num_options) and
   /// fills the fields the fork requires with no serde defaults. Returns null
@@ -2225,33 +2242,41 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     final c = coinContext.coin;
     state = state.copyWith(stage: "shares");
     var submitted = false;
+    final voteEndValue = voteEnd;
+    if (voteEndValue == null || shareServerUrls.isEmpty) {
+      return false;
+    }
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final sharePlan = await votingSharePlan(
-      roundId: roundId,
-      now: BigInt.from(now),
-      ceremonyStart: BigInt.from(ceremonyStart),
-      voteEnd: voteEnd == null ? null : BigInt.from(voteEnd),
+    // First-pass source: the confirmed votes' share payloads — the share
+    // delegation rows only exist after a submission records them, so the
+    // old unconfirmed-row pairing could never start (mirrors vizor's
+    // commitment-driven share submission).
+    final payloads = await votingSharePayloads(roundId: roundId, c: c);
+    if (payloads.isEmpty) return false;
+    final plans = await votingSharePlans(
+      shareCount: payloads.length,
       serverUrls: shareServerUrls,
+      now: BigInt.from(now),
+      voteEnd: BigInt.from(voteEndValue),
+      ceremonyStart: BigInt.from(ceremonyStart),
       singleShare: singleShare,
       c: c,
     );
-    final unconfirmed = await votingShareUnconfirmed(roundId: roundId, c: c);
-    final count = min(sharePlan.submissions.length, unconfirmed.length);
-    for (var i = 0; i < count; i++) {
-      final item = sharePlan.submissions[i];
-      final share = unconfirmed[i];
+    for (var i = 0; i < payloads.length && i < plans.length; i++) {
+      final payload = payloads[i];
+      final plan = plans[i];
       final wireJson = await votingShareWireJson(
         roundId: roundId,
-        bundleIndex: share.bundleIndex,
-        proposalId: share.proposalId,
-        shareIndex: share.shareIndex,
-        vcTreePosition: null,
-        submitAt: item.submitAt,
+        bundleIndex: payload.bundleIndex,
+        proposalId: payload.proposalId,
+        shareIndex: payload.shareIndex,
+        vcTreePosition: payload.vcTreePosition,
+        submitAt: plan.submitAt,
         c: c,
       );
       final body =
           jsonEncode({...jsonDecode(wireJson), "vote_round_id": roundId});
-      for (final server in item.targetServers) {
+      for (final server in plan.targetServers) {
         final res = await votechainSubmitShare(
           serverUrl: server,
           payloadJson: body,
@@ -2266,26 +2291,24 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       }
       await votingShareRecord(
         roundId: roundId,
-        bundleIndex: share.bundleIndex,
-        proposalId: share.proposalId,
-        shareIndex: share.shareIndex,
-        sentToUrls: item.targetServers,
-        submitAt: item.submitAt,
+        bundleIndex: payload.bundleIndex,
+        proposalId: payload.proposalId,
+        shareIndex: payload.shareIndex,
+        sentToUrls: plan.targetServers,
+        submitAt: plan.submitAt,
         c: c,
       );
       submitted = true;
     }
 
     // Background tracking until every share confirms (or the vote window ends).
-    if (voteEnd != null && sharePlan.nextTrackingDelaySecs != null) {
-      _scheduleShareTracking(
-        delaySeconds: sharePlan.nextTrackingDelaySecs!.toInt(),
-        ceremonyStart: ceremonyStart,
-        voteEnd: voteEnd,
-        shareServerUrls: shareServerUrls,
-        singleShare: singleShare,
-      );
-    }
+    _scheduleShareTracking(
+      delaySeconds: _shareTrackingDelaySeconds(plans, now),
+      ceremonyStart: ceremonyStart,
+      voteEnd: voteEndValue,
+      shareServerUrls: shareServerUrls,
+      singleShare: singleShare,
+    );
     return submitted;
   }
 

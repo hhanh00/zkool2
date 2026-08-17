@@ -11,7 +11,7 @@ part 'voting.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `config_switch_kind_string`, `fork_network_string`, `from_resolved`, `prepare_bundle`, `to_fork`, `votechain_proxy`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `VotingShareDelivery`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// Creates and persists a fresh app-owned voting hotkey (hex stored secret).
 Future<String> votingHotkeyCreate({required Coin c}) =>
@@ -311,9 +311,33 @@ Future<int> votingSyncTree(
     RustLib.instance.api.crateApiVotingVotingSyncTree(
         roundId: roundId, voteNodeUrl: voteNodeUrl, c: c);
 
-/// Computes the share tracking plan for a round: summary counts, next poll
-/// delay, last-moment flag, and freshly planned submissions (with local
-/// entropy) for the unconfirmed shares.
+/// Enumerates the share payloads of the round's confirmed votes — the
+/// first-pass submission source.
+Future<List<VotingShareSubmissionPayload>> votingSharePayloads(
+        {required String roundId, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiVotingVotingSharePayloads(roundId: roundId, c: c);
+
+/// Count-based share submission plans (submitAt + target servers per share),
+/// mirroring vizor's `planShareSubmissions`: policy-sized CSPRNG entropy
+/// drawn per call, timing from the round's ceremony start / vote end.
+Future<List<VotingSharePlanItem>> votingSharePlans(
+        {required int shareCount,
+        required List<String> serverUrls,
+        required BigInt now,
+        required BigInt voteEnd,
+        required BigInt ceremonyStart,
+        required bool singleShare,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiVotingVotingSharePlans(
+        shareCount: shareCount,
+        serverUrls: serverUrls,
+        now: now,
+        voteEnd: voteEnd,
+        ceremonyStart: ceremonyStart,
+        singleShare: singleShare,
+        c: c);
+
 Future<VotingSharePlan> votingSharePlan(
         {required String roundId,
         required BigInt now,
@@ -859,6 +883,23 @@ sealed class VotingSharePlanItem with _$VotingSharePlanItem {
     required int targetCount,
     required List<String> targetServers,
   }) = _VotingSharePlanItem;
+}
+
+/// Computes the share tracking plan for a round: summary counts, next poll
+/// delay, last-moment flag, and freshly planned submissions (with local
+/// entropy) for the unconfirmed shares.
+/// One share of a confirmed vote pending helper submission. First-pass
+/// submission must enumerate from the confirmed votes' recovery bundles —
+/// the `voting_share_delegations` rows only exist after a submission
+/// records them.
+@freezed
+sealed class VotingShareSubmissionPayload with _$VotingShareSubmissionPayload {
+  const factory VotingShareSubmissionPayload({
+    required int bundleIndex,
+    required int proposalId,
+    required int shareIndex,
+    BigInt? vcTreePosition,
+  }) = _VotingShareSubmissionPayload;
 }
 
 /// Share tracking summary, one-to-one with the fork's `ShareTrackingSummary`.
