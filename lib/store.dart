@@ -1916,18 +1916,35 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
 
       final castSteps =
           steps.where((s) => s.kind == "cast_vote").toList();
-      if (castSteps.isNotEmpty) {
+      for (final step in castSteps) {
         if (commitDraftsJson == null || commitDraftsJson.isEmpty) {
           throw AnyhowException(
             "No draft ballot saved for round $roundId; "
             "open the ballot and review first",
           );
         }
+        // Cast ONE proposal at a time and submit it before the next cast:
+        // the fork derives the next VAN from the submission state (the
+        // proposal-authority mask clears per recorded tx_hash), so the VAN
+        // chaining only works when builds interleave with submissions
+        // (mirrors vizor's per-draft build loop).
+        final drafts = jsonDecode(commitDraftsJson) as List<dynamic>;
+        final draft = drafts
+            .where(
+              (d) => (d as Map<String, dynamic>)['proposal_id'] ==
+                  step.proposalId,
+            )
+            .firstOrNull;
+        if (draft == null) {
+          throw AnyhowException(
+            "No draft for proposal ${step.proposalId} in round $roundId",
+          );
+        }
         state = state.copyWith(stage: "voting", progress: 0);
         final stream = votingCommitWithProgress(
           roundId: roundId,
           bundleIndex: bundleIndex,
-          draftsJson: commitDraftsJson,
+          draftsJson: jsonEncode([draft]),
           voteNodeUrl: voteNodeUrl,
           c: c,
         );
@@ -1939,63 +1956,21 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
               break;
           }
         }
+        await _submitVote(
+          bundleIndex: bundleIndex,
+          proposalId: step.proposalId,
+          chainUrl: chainUrl,
+        );
         didWork = true;
       }
 
       for (final step in steps.where((s) => s.kind == "submit_vote")) {
-        state = state.copyWith(stage: "voting", progress: 0);
-        final wireJson = await votingVoteWireJson(
-          roundId: roundId,
+        await _submitVote(
           bundleIndex: bundleIndex,
           proposalId: step.proposalId,
-          c: c,
-        );
-        final res = await votechainSubmitVote(
-          baseUrl: chainUrl,
-          submissionJson: wireJson,
-          c: c,
-        );
-        if (res.statusCode == 422) {
-          throw AnyhowException(
-            "Vote rejected by the vote chain: ${res.body}",
-          );
-        }
-        if (res.statusCode < 200 || res.statusCode >= 300) {
-          throw AnyhowException(
-            "Vote chain submit failed (HTTP ${res.statusCode}): ${res.body}",
-          );
-        }
-        final result = jsonDecode(res.body) as Map<String, dynamic>;
-        final txHash = result['tx_hash'] as String? ?? "";
-        final code = result['code'] as int? ?? -1;
-        if (code != 0 || txHash.isEmpty) {
-          throw AnyhowException(
-            "Vote chain rejected the vote: ${result['log'] ?? res.body}",
-          );
-        }
-
-        await votingMarkVoteSubmitted(
-          roundId: roundId,
-          bundleIndex: bundleIndex,
-          proposalId: step.proposalId,
-          txHash: txHash,
-          c: c,
-        );
-        state = state.copyWith(stage: "confirming");
-        final conf =
-            await _pollTxConfirmation(chainUrl: chainUrl, txHash: txHash);
-        await votingConfirm(
-          roundId: roundId,
-          bundleIndex: bundleIndex,
-          proposalId: step.proposalId,
-          txHash: txHash,
-          eventsJson: conf.eventsJson,
-          c: c,
+          chainUrl: chainUrl,
         );
         didWork = true;
-        if (state.txHash == null) {
-          state = state.copyWith(txHash: txHash, confirmHeight: conf.height);
-        }
       }
 
       for (final step in steps.where((s) => s.kind == "poll_vote")) {
@@ -2029,6 +2004,68 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       }
     }
     return didWork;
+  }
+
+  /// Broadcasts one committed vote and confirms it: rebuild the wire from
+  /// the persisted commitment, submit to the vote chain, record the tx hash,
+  /// poll until included in a block, and record the confirmation.
+  Future<void> _submitVote({
+    required int bundleIndex,
+    required int proposalId,
+    required String chainUrl,
+  }) async {
+    final c = coinContext.coin;
+    state = state.copyWith(stage: "voting", progress: 0);
+    final wireJson = await votingVoteWireJson(
+      roundId: roundId,
+      bundleIndex: bundleIndex,
+      proposalId: proposalId,
+      c: c,
+    );
+    final res = await votechainSubmitVote(
+      baseUrl: chainUrl,
+      submissionJson: wireJson,
+      c: c,
+    );
+    if (res.statusCode == 422) {
+      throw AnyhowException(
+        "Vote rejected by the vote chain: ${res.body}",
+      );
+    }
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw AnyhowException(
+        "Vote chain submit failed (HTTP ${res.statusCode}): ${res.body}",
+      );
+    }
+    final result = jsonDecode(res.body) as Map<String, dynamic>;
+    final txHash = result['tx_hash'] as String? ?? "";
+    final code = result['code'] as int? ?? -1;
+    if (code != 0 || txHash.isEmpty) {
+      throw AnyhowException(
+        "Vote chain rejected the vote: ${result['log'] ?? res.body}",
+      );
+    }
+
+    await votingMarkVoteSubmitted(
+      roundId: roundId,
+      bundleIndex: bundleIndex,
+      proposalId: proposalId,
+      txHash: txHash,
+      c: c,
+    );
+    state = state.copyWith(stage: "confirming");
+    final conf = await _pollTxConfirmation(chainUrl: chainUrl, txHash: txHash);
+    await votingConfirm(
+      roundId: roundId,
+      bundleIndex: bundleIndex,
+      proposalId: proposalId,
+      txHash: txHash,
+      eventsJson: conf.eventsJson,
+      c: c,
+    );
+    if (state.txHash == null) {
+      state = state.copyWith(txHash: txHash, confirmHeight: conf.height);
+    }
   }
 
   /// Converts UI drafts to the fork's DraftVote JSON for the commit step:
