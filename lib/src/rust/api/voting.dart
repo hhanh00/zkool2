@@ -472,6 +472,16 @@ Future<void> votingRecoveryClear({required String roundId, required Coin c}) =>
     RustLib.instance.api
         .crateApiVotingVotingRecoveryClear(roundId: roundId, c: c);
 
+/// Resets process-local vote-tree cache and clears unsigned delegation setup
+/// fields for a round (the fork's recovery when a restart after
+/// `build_governance_pczt` persisted `pczt_sighash` makes re-setup refuse to
+/// overwrite it). Submitted bundles, imported capabilities, and bundles with
+/// persisted Keystone signatures are preserved.
+Future<void> votingResetSessionState(
+        {required String roundId, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiVotingVotingResetSessionState(roundId: roundId, c: c);
+
 /// Returns the persisted ballot intents for a round, sorted by proposal id.
 Future<List<VotingBallotIntent>> votingBallotIntents(
         {required String roundId, required Coin c}) =>
