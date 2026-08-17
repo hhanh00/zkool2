@@ -1825,9 +1825,15 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     final session = await ref.read(votingSessionProvider(roundId).future);
     final pending = session.plan?.nextSteps ?? const <VotingNextStep>[];
     if (pending.isEmpty) return "All steps already confirmed";
-    const shareKinds = {"submit_shares", "confirm_share"};
-    final allShares = pending.every((s) => shareKinds.contains(s.kind));
-    return allShares ? "Waiting for the share window" : "Waiting for the next step";
+    const shareSubmitKinds = {"submit_shares"};
+    const shareConfirmKinds = {"confirm_share"};
+    if (pending.every((s) => shareSubmitKinds.contains(s.kind))) {
+      return "Waiting for the share window";
+    }
+    if (pending.every((s) => shareConfirmKinds.contains(s.kind))) {
+      return "Waiting for share confirmations";
+    }
+    return "Waiting for the next step";
   }
 
   /// Resolves the round's ceremony start / vote end from the chain round
@@ -2252,7 +2258,22 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     // old unconfirmed-row pairing could never start (mirrors vizor's
     // commitment-driven share submission).
     final payloads = await votingSharePayloads(roundId: roundId, c: c);
-    if (payloads.isEmpty) return false;
+    if (payloads.isEmpty) {
+      // All shares already recorded — a resume must not re-send them, but
+      // the tracker still needs to run to poll the helpers for
+      // confirmations.
+      final unconfirmed = await votingShareUnconfirmed(roundId: roundId, c: c);
+      if (unconfirmed.isNotEmpty) {
+        _scheduleShareTracking(
+          delaySeconds: 60,
+          ceremonyStart: ceremonyStart,
+          voteEnd: voteEndValue,
+          shareServerUrls: shareServerUrls,
+          singleShare: singleShare,
+        );
+      }
+      return false;
+    }
     final plans = await votingSharePlans(
       shareCount: payloads.length,
       serverUrls: shareServerUrls,
@@ -2427,5 +2448,8 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
         singleShare: singleShare,
       );
     }
+    // Reflect the confirmations in the plan so the round tile and status
+    // screens update ("Resume" -> "View results" once every share confirms).
+    await ref.read(votingSessionProvider(roundId).notifier).refresh();
   }
 }

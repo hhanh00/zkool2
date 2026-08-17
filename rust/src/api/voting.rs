@@ -1078,6 +1078,12 @@ pub async fn voting_share_payloads(
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
     let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
     let snapshot = zcash_voting::recovery::round_snapshot(&db, &round_id).await?;
+    let recorded: std::collections::BTreeSet<(u32, u32, u32)> = db
+        .share_phases(&round_id)
+        .await?
+        .into_iter()
+        .map(|(b, p, s, _)| (b, p, s))
+        .collect();
     let mut payloads = Vec::new();
     for vote in snapshot.votes {
         if vote.phase != zcash_voting::phases::VotePhase::Confirmed {
@@ -1090,6 +1096,15 @@ pub async fn voting_share_payloads(
             continue;
         };
         for payload in zcash_voting::share::recover_payloads(&bundle)? {
+            // Skip shares already recorded — a resume must not re-send them
+            // (the tracking loop polls the helpers for their confirmations).
+            if recorded.contains(&(
+                vote.bundle_index,
+                vote.proposal_id,
+                payload.enc_share.share_index,
+            )) {
+                continue;
+            }
             payloads.push(VotingShareSubmissionPayload {
                 bundle_index: vote.bundle_index,
                 proposal_id: vote.proposal_id,
