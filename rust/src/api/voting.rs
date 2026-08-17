@@ -1052,6 +1052,107 @@ pub async fn voting_sync_tree(
 /// delay, last-moment flag, and freshly planned submissions (with local
 /// entropy) for the unconfirmed shares.
 #[cfg_attr(feature = "flutter", frb)]
+/// One share of a confirmed vote pending helper submission. First-pass
+/// submission must enumerate from the confirmed votes' recovery bundles —
+/// the `voting_share_delegations` rows only exist after a submission
+/// records them.
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VotingShareSubmissionPayload {
+    pub bundle_index: u32,
+    pub proposal_id: u32,
+    pub share_index: u32,
+    pub vc_tree_position: Option<u64>,
+}
+
+/// Enumerates the share payloads of the round's confirmed votes — the
+/// first-pass submission source.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_share_payloads(
+    round_id: &str,
+    c: &Coin,
+) -> Result<Vec<VotingShareSubmissionPayload>> {
+    let account = c.account;
+    let round_id = round_id.to_string();
+    let mut connection = c.get_connection().await?;
+    let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
+    let snapshot = zcash_voting::recovery::round_snapshot(&db, &round_id).await?;
+    let mut payloads = Vec::new();
+    for vote in snapshot.votes {
+        if vote.phase != zcash_voting::phases::VotePhase::Confirmed {
+            continue;
+        }
+        let Some(bundle) =
+            zcash_voting::vote::recovery_bundle(&db, &round_id, vote.bundle_index, vote.proposal_id)
+                .await?
+        else {
+            continue;
+        };
+        for payload in zcash_voting::share::recover_payloads(&bundle)? {
+            payloads.push(VotingShareSubmissionPayload {
+                bundle_index: vote.bundle_index,
+                proposal_id: vote.proposal_id,
+                share_index: payload.enc_share.share_index,
+                vc_tree_position: vote.vc_tree_position.map(|p| p as u64),
+            });
+        }
+    }
+    Ok(payloads)
+}
+
+/// Count-based share submission plans (submitAt + target servers per share),
+/// mirroring vizor's `planShareSubmissions`: policy-sized CSPRNG entropy
+/// drawn per call, timing from the round's ceremony start / vote end.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_share_plans(
+    share_count: u32,
+    server_urls: Vec<String>,
+    now: u64,
+    vote_end: u64,
+    ceremony_start: u64,
+    single_share: bool,
+    c: &Coin,
+) -> Result<Vec<VotingSharePlanItem>> {
+    let buffer =
+        zcash_voting::share_policy::last_moment_buffer_seconds(ceremony_start, vote_end);
+    let share_count = share_count as usize;
+    let required = zcash_voting::share_policy::share_submission_random_bytes_required(
+        share_count,
+        server_urls.len(),
+        now,
+        vote_end,
+        buffer,
+        single_share,
+    );
+    let mut submit_at_random_bytes = vec![0u8; required.submit_at_random_bytes];
+    let mut server_random_bytes = vec![0u8; required.server_random_bytes];
+    OsRng
+        .try_fill_bytes(&mut submit_at_random_bytes)
+        .map_err(|e| anyhow!("failed to draw submit_at entropy: {e}"))?;
+    OsRng
+        .try_fill_bytes(&mut server_random_bytes)
+        .map_err(|e| anyhow!("failed to draw share-server entropy: {e}"))?;
+    let plans = zcash_voting::share_policy::plan_share_submissions(
+        share_count,
+        &server_urls,
+        now,
+        vote_end,
+        buffer,
+        single_share,
+        &submit_at_random_bytes,
+        &server_random_bytes,
+    )?;
+    Ok(plans
+        .into_iter()
+        .map(|p| VotingSharePlanItem {
+            submit_at: p.submit_at,
+            target_count: p.target_count,
+            target_servers: p.target_servers,
+        })
+        .collect())
+}
+
 pub async fn voting_share_plan(
     round_id: &str,
     now: u64,
