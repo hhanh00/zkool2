@@ -1,5 +1,29 @@
 # Changelog
 
+## [6.28.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.1...zkool-v6.28.0-rc.2) (2026-08-17)
+
+
+### Features
+
+* show friendly round titles and option labels in the voting UI ([5f9e2c8](https://github.com/hhanh00/zkool2/commit/5f9e2c825e4b0a2b379d077808cfa7c5e5588381))
+* show per-vote on-chain evidence on the done and confirmation screens ([f7f6093](https://github.com/hhanh00/zkool2/commit/f7f6093af04760544ef100796938291fd12d74df))
+
+
+### Bug Fixes
+
+* auto-create the voting hotkey at delegation time ([8e2fcc5](https://github.com/hhanh00/zkool2/commit/8e2fcc509dc4e5239c482c5a1881bb00a8902574))
+* bundle sapling params in desktop and graphql builds ([83565d8](https://github.com/hhanh00/zkool2/commit/83565d8d0d0024bccc80bffcc77a06722b4b09c8))
+* cast one proposal at a time so the vote VAN chains ([bbf85e6](https://github.com/hhanh00/zkool2/commit/bbf85e6e85a39900c3db46ddc066befc19bafb1f))
+* exclude post-snapshot notes from delegation prepare ([a81a4ff](https://github.com/hhanh00/zkool2/commit/a81a4ffe0be1064ae94ff86a7d4f6175101ff983))
+* fall back to the configured vote servers for helper shares ([7417291](https://github.com/hhanh00/zkool2/commit/74172914302ba70ab95c0169e388b150f8a3dbec))
+* honest done label when only time-scheduled steps remain ([0b1b316](https://github.com/hhanh00/zkool2/commit/0b1b316db9f86aecd84a13d3287c87d690ccede8))
+* make delegation confirmation real and recoverable ([eac4655](https://github.com/hhanh00/zkool2/commit/eac46550883426bd1fd6c485c01af4da8352ebdc))
+* parse the chain's string block heights; prove with voting-circuits 0.10.0 ([b22d304](https://github.com/hhanh00/zkool2/commit/b22d3046eb593b284a971b55d5c3b34acff36446))
+* run fresh voting submissions end-to-end (delegate + vote) ([13f2f31](https://github.com/hhanh00/zkool2/commit/13f2f31b0d242c71bb4af6bb8f6bd50a441bf211))
+* run the PIR connect inside the prove thread ([cb51c89](https://github.com/hhanh00/zkool2/commit/cb51c893221aef78b6a80e434bba4ccc9727d559))
+* use app lightwalletd URL for fresh delegation prepare ([76d231e](https://github.com/hhanh00/zkool2/commit/76d231e98c9143d15d4e0fda5937e2ba7e62b5bd))
+* use the async PIR client for delegation proving ([726f296](https://github.com/hhanh00/zkool2/commit/726f296dd3d5567644e4eae89e47f4cbdd06934c))
+
 ## [6.28.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc...zkool-v6.28.0-rc.1) (2026-08-16)
 
 
