@@ -1517,10 +1517,14 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
         chainUrl: chainUrl,
         voteNodeUrl: voteNodeUrl,
       );
+      // The vote chain servers double as helper (share) servers; the voting
+      // flow never passes shareServerUrls, so fall back to the configured
+      // vote servers (mirrors vizor's context.config.voteServers).
+      final shareUrls = await _effectiveShareServerUrls(shareServerUrls);
       final shared = await _submitShares(
         ceremonyStart: ceremonyStart,
         voteEnd: voteEnd,
-        shareServerUrls: shareServerUrls,
+        shareServerUrls: shareUrls,
         singleShare: singleShare,
       );
       final doneLabel = delegated
@@ -1741,6 +1745,21 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       return (url, pirLayout ?? config?.pirLayout);
     } on Exception {
       return (pirServerUrl, pirLayout);
+    }
+  }
+
+  /// The vote chain servers double as helper (share) servers. The voting
+  /// flow never passes `shareServerUrls`, so fall back to the configured
+  /// vote servers — mirrors vizor's `context.config.voteServers`.
+  Future<List<String>> _effectiveShareServerUrls(
+    List<String> shareServerUrls,
+  ) async {
+    if (shareServerUrls.isNotEmpty) return shareServerUrls;
+    try {
+      final config = await ref.read(votingConfigProvider.future);
+      return config?.voteServers.map((s) => s.url).toList() ?? const [];
+    } on Exception {
+      return const [];
     }
   }
 
