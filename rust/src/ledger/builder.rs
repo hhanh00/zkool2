@@ -68,14 +68,6 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
 
         let coin_type = network.coin_type();
         let aindex = get_account_aindex(&mut *connection, account).await?;
-        let (xvk,): (Vec<u8>,) =
-            sqlx::query_as("SELECT xvk FROM sapling_accounts WHERE account = ?1")
-                .bind(account)
-                .fetch_one(&mut *connection)
-                .await
-                .anyhow()?;
-        let fvk = FullViewingKey::read(&*xvk)?;
-        let ovk = fvk.ovk;
 
         let pczt = Pczt::parse(&package.pczt).expect("cannot parse PCZT");
 
@@ -93,6 +85,25 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
         if ctin > 5 || ctout > 5 || stin > 5 || stout > 5 {
             return Err(LedgerError::TooComplex);
         }
+
+        // The Sapling full viewing key is only needed when the transaction
+        // actually contains Sapling spends/outputs. Transparent-only accounts
+        // (e.g. BIP-44 Ledger accounts) have no `sapling_accounts` row, so
+        // fetching it unconditionally would fail with `RowNotFound` and abort
+        // signing before the Ledger is ever contacted. The values derived from
+        // it (`fvk`, `ovk`) are only referenced inside the Sapling loops below,
+        // which only iterate when Sapling components are present.
+        let fvk = if stin > 0 || stout > 0 {
+            let (xvk,): (Vec<u8>,) =
+                sqlx::query_as("SELECT xvk FROM sapling_accounts WHERE account = ?1")
+                    .bind(account)
+                    .fetch_one(&mut *connection)
+                    .await
+                    .anyhow()?;
+            Some(FullViewingKey::read(&*xvk)?)
+        } else {
+            None
+        };
 
         // Signing a tx with the Ledger involves several steps
         // Step 1. Send a InitTx instruction with inputs/outputs
@@ -162,6 +173,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             .await.anyhow()?;
 
             let diversifier = Diversifier(tiu!(diversifier));
+            let fvk = fvk.as_ref().expect("fvk present for Sapling spends");
             let recipient = fvk.vk.to_payment_address(diversifier).unwrap();
             let mut data = vec![];
             data.write_u32::<LE>(aindex)?;
@@ -173,6 +185,8 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
 
         let mut memos = vec![];
         for sout in pczt.sapling().outputs().iter() {
+            let fvk = fvk.as_ref().expect("fvk present for Sapling outputs");
+            let ovk = fvk.ovk;
             let recipient = sout.recipient().unwrap();
             // Decrypt the memo so that we can reencrypt it with the
             // randomness
@@ -292,6 +306,7 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             let rcm: [u8; 32] = tiu!(rcm);
             let rcv: [u8; 32] = tiu!(rcv);
             let diversifier = Diversifier(tiu!(diversifier));
+            let fvk = fvk.as_ref().expect("fvk present for Sapling spends");
             let recipient = fvk.vk.to_payment_address(diversifier).unwrap();
             let rseed = Rseed::BeforeZip212(Fr::from_bytes(&rcm).unwrap());
             let note = Note::from_parts(recipient, NoteValue::from_raw(value), rseed);
@@ -317,6 +332,8 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
             data: vec![],
         };
         for (out, memo) in pczt.sapling().outputs().iter().zip(memos.iter()) {
+            let fvk = fvk.as_ref().expect("fvk present for Sapling outputs");
+            let ovk = fvk.ovk;
             let _ = sink.add(SigningEvent::Progress(
                 "Extracting output randomness".to_string(),
             ));
@@ -414,8 +431,9 @@ pub async fn sign_transaction<D: Device + Sync, R: RngCore + CryptoRng>(
 
         let pczt = if !pczt.sapling().spends().is_empty() || !pczt.sapling().outputs().is_empty() {
             let updater = Updater::new(pczt);
+            let fvk = fvk.as_ref().expect("fvk present for Sapling proofs");
             let nsk = Fr::from_bytes(&nsk).unwrap();
-            let pgk = ProofGenerationKey { ak: fvk.vk.ak, nsk };
+            let pgk = ProofGenerationKey { ak: fvk.vk.ak.clone(), nsk };
 
             let updater = updater
                 .update_sapling_with(|mut u| {
