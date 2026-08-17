@@ -141,9 +141,9 @@ class VotingResultsPageState extends ConsumerState<VotingResultsPage> {
 
     void addDirect(Object? object, int proposalId) {
       if (object is! Map) return;
-      // A tally entry without a decision key is the aggregate total row —
-      // skip it so per-option amounts don't double-count.
-      if (!object.keys.any((k) => decisionKeys.contains(k))) return;
+      // The vote-sdk emits one row per decision; decision 0 omits the
+      // decision key (the default), so a missing key maps to 0 — it is NOT
+      // an aggregate total row.
       final d = decisionOf(object);
       final a = amountOf(object);
       if (a != null) {
