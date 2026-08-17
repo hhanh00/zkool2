@@ -178,7 +178,10 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
           path: '/voting/confirmation',
           builder: (context, state) {
             final args = state.extra as Map<String, dynamic>;
-            return VotingConfirmationPage(roundId: args['roundId'] as String);
+            return VotingConfirmationPage(
+              roundId: args['roundId'] as String,
+              roundName: args['roundName'] as String?,
+            );
           },
         ),
         GoRoute(

@@ -1563,6 +1563,117 @@ final class VotingRoundListProvider extends $FunctionalProvider<
 
 String _$votingRoundListHash() => r'12d2cfda4753a04d9343e21a6637789106c3ffb5';
 
+/// Friendly round title from the vote chain round status, falling back to
+/// the round id. The chain's `title` field is the only friendly name source
+/// (the config and the local DB carry no titles).
+
+@ProviderFor(votingRoundTitle)
+const votingRoundTitleProvider = VotingRoundTitleFamily._();
+
+/// Friendly round title from the vote chain round status, falling back to
+/// the round id. The chain's `title` field is the only friendly name source
+/// (the config and the local DB carry no titles).
+
+final class VotingRoundTitleProvider
+    extends $FunctionalProvider<AsyncValue<String>, String, FutureOr<String>>
+    with $FutureModifier<String>, $FutureProvider<String> {
+  /// Friendly round title from the vote chain round status, falling back to
+  /// the round id. The chain's `title` field is the only friendly name source
+  /// (the config and the local DB carry no titles).
+  const VotingRoundTitleProvider._(
+      {required VotingRoundTitleFamily super.from,
+      required (
+        String,
+        String,
+      )
+          super.argument})
+      : super(
+          retry: null,
+          name: r'votingRoundTitleProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$votingRoundTitleHash();
+
+  @override
+  String toString() {
+    return r'votingRoundTitleProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<String> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<String> create(Ref ref) {
+    final argument = this.argument as (
+      String,
+      String,
+    );
+    return votingRoundTitle(
+      ref,
+      argument.$1,
+      argument.$2,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is VotingRoundTitleProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$votingRoundTitleHash() => r'2331b63b18a1e939e9bc168a386eae6a081e0edf';
+
+/// Friendly round title from the vote chain round status, falling back to
+/// the round id. The chain's `title` field is the only friendly name source
+/// (the config and the local DB carry no titles).
+
+final class VotingRoundTitleFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+            FutureOr<String>,
+            (
+              String,
+              String,
+            )> {
+  const VotingRoundTitleFamily._()
+      : super(
+          retry: null,
+          name: r'votingRoundTitleProvider',
+          dependencies: null,
+          $allTransitiveDependencies: null,
+          isAutoDispose: true,
+        );
+
+  /// Friendly round title from the vote chain round status, falling back to
+  /// the round id. The chain's `title` field is the only friendly name source
+  /// (the config and the local DB carry no titles).
+
+  VotingRoundTitleProvider call(
+    String roundId,
+    String chainUrl,
+  ) =>
+      VotingRoundTitleProvider._(argument: (
+        roundId,
+        chainUrl,
+      ), from: this);
+
+  @override
+  String toString() => r'votingRoundTitleProvider';
+}
+
 /// Resolved and authenticated voting config for the configured source URL.
 /// `build()` returns the last cached resolved config without touching the
 /// network (so merely reading the provider never triggers a fetch); call
@@ -1748,7 +1859,7 @@ final class VotingSubmissionJobProvider
 }
 
 String _$votingSubmissionJobHash() =>
-    r'6447bed624023babc55b25ef6c72b5bd58052f20';
+    r'a283728879caa8ee179da7d5bf490d4e2da6c217';
 
 /// Delegation execution job for one round. Runs the serialized chain:
 /// prepare (or resume) → setup → build submission (progress stream) →

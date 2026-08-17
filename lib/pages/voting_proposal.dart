@@ -106,7 +106,9 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
         _snapshotHeight = snapshotHeight;
         _votingPower =
             await votingEligibleWeight(snapshotHeight: snapshotHeight, c: c);
-        _roundName = (_find(round, "round_name") ?? _find(round, "name"))
+        _roundName = (_find(round, "title") ??
+                    _find(round, "round_name") ??
+                    _find(round, "name"))
                 ?.toString() ??
             widget.roundId;
         final settings = await ref.read(appSettingsProvider.future);
