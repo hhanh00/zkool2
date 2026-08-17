@@ -28,7 +28,14 @@ VoteChainTxConfirmation? parseVoteChainTxConfirmation(String body) {
   }
   if (decoded is! Map<String, dynamic>) return null;
   final rawHeight = decoded['height'];
-  final height = rawHeight is int ? rawHeight : (rawHeight is num ? rawHeight.toInt() : 0);
+  // The chain reports height as a JSON string ("7163319"), sometimes a number.
+  final height = rawHeight is int
+      ? rawHeight
+      : rawHeight is num
+          ? rawHeight.toInt()
+          : rawHeight is String
+              ? int.tryParse(rawHeight) ?? 0
+              : 0;
   if (height <= 0) return null;
   return VoteChainTxConfirmation(
     eventsJson: jsonEncode(decoded['events'] ?? const []),
