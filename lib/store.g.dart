@@ -1674,6 +1674,122 @@ final class VotingRoundTitleFamily extends $Family
   String toString() => r'votingRoundTitleProvider';
 }
 
+/// Normalized chain round status ("active" / "tallying" / "closed") from the
+/// vote chain round status, or null when unresolved (non-2xx or absent).
+/// Mirrors vizor's `votingPollListStatus`: numeric 1/2/3 plus lenient string
+/// forms. Only "tallying"/"closed" rounds have a published tally.
+
+@ProviderFor(votingRoundStatus)
+const votingRoundStatusProvider = VotingRoundStatusFamily._();
+
+/// Normalized chain round status ("active" / "tallying" / "closed") from the
+/// vote chain round status, or null when unresolved (non-2xx or absent).
+/// Mirrors vizor's `votingPollListStatus`: numeric 1/2/3 plus lenient string
+/// forms. Only "tallying"/"closed" rounds have a published tally.
+
+final class VotingRoundStatusProvider
+    extends $FunctionalProvider<AsyncValue<String?>, String?, FutureOr<String?>>
+    with $FutureModifier<String?>, $FutureProvider<String?> {
+  /// Normalized chain round status ("active" / "tallying" / "closed") from the
+  /// vote chain round status, or null when unresolved (non-2xx or absent).
+  /// Mirrors vizor's `votingPollListStatus`: numeric 1/2/3 plus lenient string
+  /// forms. Only "tallying"/"closed" rounds have a published tally.
+  const VotingRoundStatusProvider._(
+      {required VotingRoundStatusFamily super.from,
+      required (
+        String,
+        String,
+      )
+          super.argument})
+      : super(
+          retry: null,
+          name: r'votingRoundStatusProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$votingRoundStatusHash();
+
+  @override
+  String toString() {
+    return r'votingRoundStatusProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<String?> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<String?> create(Ref ref) {
+    final argument = this.argument as (
+      String,
+      String,
+    );
+    return votingRoundStatus(
+      ref,
+      argument.$1,
+      argument.$2,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is VotingRoundStatusProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$votingRoundStatusHash() => r'4c74a550b6b3e70e3b66eccd55b4dc5ce240dac0';
+
+/// Normalized chain round status ("active" / "tallying" / "closed") from the
+/// vote chain round status, or null when unresolved (non-2xx or absent).
+/// Mirrors vizor's `votingPollListStatus`: numeric 1/2/3 plus lenient string
+/// forms. Only "tallying"/"closed" rounds have a published tally.
+
+final class VotingRoundStatusFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+            FutureOr<String?>,
+            (
+              String,
+              String,
+            )> {
+  const VotingRoundStatusFamily._()
+      : super(
+          retry: null,
+          name: r'votingRoundStatusProvider',
+          dependencies: null,
+          $allTransitiveDependencies: null,
+          isAutoDispose: true,
+        );
+
+  /// Normalized chain round status ("active" / "tallying" / "closed") from the
+  /// vote chain round status, or null when unresolved (non-2xx or absent).
+  /// Mirrors vizor's `votingPollListStatus`: numeric 1/2/3 plus lenient string
+  /// forms. Only "tallying"/"closed" rounds have a published tally.
+
+  VotingRoundStatusProvider call(
+    String roundId,
+    String chainUrl,
+  ) =>
+      VotingRoundStatusProvider._(argument: (
+        roundId,
+        chainUrl,
+      ), from: this);
+
+  @override
+  String toString() => r'votingRoundStatusProvider';
+}
+
 /// Parsed proposals (id, title, option id → label) for a round, from the
 /// chain round status. Empty when the fetch fails.
 
@@ -1971,7 +2087,7 @@ final class VotingSubmissionJobProvider
 }
 
 String _$votingSubmissionJobHash() =>
-    r'eeef388d321875ba8c2035e67ba5ad5ae7e7bfa7';
+    r'84d1b907680edbebd5282f81e43d2d3590b991fb';
 
 /// Delegation execution job for one round. Runs the serialized chain:
 /// prepare (or resume) → setup → build submission (progress stream) →

@@ -29,6 +29,7 @@ class VotingResultsPageState extends ConsumerState<VotingResultsPage> {
   Timer? _pollTimer;
   String? _error;
   bool _tallying = false;
+  bool _zeroFilled = false;
   Map<int, Map<int, num>> _tallies = {}; // proposal id -> option id -> amount
 
   @override
@@ -47,11 +48,7 @@ class VotingResultsPageState extends ConsumerState<VotingResultsPage> {
     try {
       final c = coinContext.coin;
       final session = await ref.read(votingSessionProvider(widget.roundId).future);
-      final intents = session.intents
-          .map((i) => i.proposalId)
-          .toSet()
-          .toList()
-        ..sort();
+      final intents = session.intents.map((i) => i.proposalId).toSet().toList()..sort();
       final drafts = await votingDraftsLoad(roundId: widget.roundId, c: c);
       if (drafts != null && drafts.isNotEmpty) {
         for (final d in jsonDecode(drafts) as List<dynamic>) {
@@ -76,10 +73,21 @@ class VotingResultsPageState extends ConsumerState<VotingResultsPage> {
         );
       }
       final body = jsonDecode(res.body) as Map<String, dynamic>;
-      final status = ((body['status'] ?? body['phase'] ?? "") as String)
-          .toLowerCase();
+      final status = ((body['status'] ?? body['phase'] ?? "") as String).toLowerCase();
       _tallying = status == "2" || status == "tallying" || status == "pending";
       _tallies = _parseTally(body, intents);
+      if (_tallies.isEmpty) {
+        // A closed round with no recorded votes still shows its ballot at
+        // zero rather than an empty screen.
+        final roundStatus = await ref.read(votingRoundStatusProvider(widget.roundId, widget.chainUrl).future);
+        if (roundStatus == "closed") {
+          final proposals = await ref.read(votingRoundProposalsProvider(widget.roundId, widget.chainUrl).future);
+          _zeroFilled = true;
+          _tallies = {
+            for (final p in proposals) p.id: {for (final o in p.optionLabels.keys) o: 0},
+          };
+        }
+      }
       if (mounted) setState(() {});
       if (_tallying) _schedulePoll();
     } on AnyhowException catch (e) {
@@ -107,9 +115,7 @@ class VotingResultsPageState extends ConsumerState<VotingResultsPage> {
             ? v.toInt()
             : int.tryParse(v?.toString() ?? "");
 
-    num? toNum(Object? v) => v is num
-        ? v
-        : num.tryParse(v?.toString() ?? "");
+    num? toNum(Object? v) => v is num ? v : num.tryParse(v?.toString() ?? "");
 
     const decisionKeys = [
       "vote_decision",
@@ -203,14 +209,10 @@ class VotingResultsPageState extends ConsumerState<VotingResultsPage> {
       votingRoundProposalsProvider(widget.roundId, widget.chainUrl),
     );
     final proposals = {
-      for (final p in (proposalsAsync.value ?? const <VotingProposalInfo>[]))
-        p.id: p,
+      for (final p in (proposalsAsync.value ?? const <VotingProposalInfo>[])) p.id: p,
     };
 
-    final roundTitle = (ref
-                .watch(votingRoundTitleProvider(widget.roundId, widget.chainUrl))
-                .value ??
-            widget.roundId);
+    final roundTitle = (ref.watch(votingRoundTitleProvider(widget.roundId, widget.chainUrl)).value ?? widget.roundId);
 
     return Scaffold(
       appBar: AppBar(title: Text(roundTitle)),
@@ -219,73 +221,81 @@ class VotingResultsPageState extends ConsumerState<VotingResultsPage> {
           : _tallies.isEmpty
               ? Center(
                   child: Text(
-                    _tallying
-                        ? "Results pending..."
-                        : "No tally data for this round",
+                    _tallying ? "Results pending..." : "No tally data for this round",
                   ),
                 )
-              : ListView.builder(
-                  itemCount: _tallies.length,
-                  itemBuilder: (context, i) {
-                    final pid = _tallies.keys.elementAt(i);
-                    final tally = _tallies[pid]!;
-                    final total = tally.values.fold<num>(0, (a, b) => a + b);
-                    final winner = tally.entries.reduce(
-                      (a, b) => a.value >= b.value ? a : b,
-                    );
-                    final proposal = proposals[pid];
-                    return Card(
-                      child: Padding(
+              : Column(
+                  children: [
+                    if (_zeroFilled)
+                      Padding(
                         padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(proposal?.title ?? "Proposal $pid",
-                                style: Theme.of(context).textTheme.titleMedium),
-                            const SizedBox(height: 8),
-                            ...tally.entries.map((e) {
-                              final fraction = total == 0
-                                  ? 0.0
-                                  : e.value / total;
-                              final winning = e.key == winner.key;
-                              return Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 2),
-                                child: Row(
-                                  children: [
-                                    SizedBox(
-                                      width: 80,
-                                      child: Text(
-                                        proposal?.optionLabels[e.key] ??
-                                            "Option ${e.key}",
-                                        style: TextStyle(
-                                          fontWeight: winning
-                                              ? FontWeight.bold
-                                              : FontWeight.normal,
-                                        ),
-                                      ),
-                                    ),
-                                    Expanded(
-                                      child: LinearProgressIndicator(
-                                        value: fraction.clamp(0.0, 1.0),
-                                        minHeight: 8,
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: 90,
-                                      child: Text(
-                                        "${(fraction * 100).toStringAsFixed(1)}%",
-                                        textAlign: TextAlign.end,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
-                          ],
+                        child: Text(
+                          "No votes were recorded for this round",
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
-                    );
-                  },
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: _tallies.length,
+                        itemBuilder: (context, i) {
+                          final pid = _tallies.keys.elementAt(i);
+                          final tally = _tallies[pid]!;
+                          final total = tally.values.fold<num>(0, (a, b) => a + b);
+                          final winner = tally.entries.reduce(
+                            (a, b) => a.value >= b.value ? a : b,
+                          );
+                          final proposal = proposals[pid];
+                          return Card(
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Text(proposal?.title ?? "Proposal $pid", style: Theme.of(context).textTheme.titleMedium),
+                                  const SizedBox(height: 8),
+                                  ...tally.entries.map((e) {
+                                    final fraction = total == 0 ? 0.0 : e.value / total;
+                                    final winning = e.key == winner.key;
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 2),
+                                      child: Row(
+                                        children: [
+                                          SizedBox(
+                                            width: 80,
+                                            child: Text(
+                                              proposal?.optionLabels[e.key] ?? "Option ${e.key}",
+                                              style: TextStyle(
+                                                fontWeight: winning ? FontWeight.bold : FontWeight.normal,
+                                              ),
+                                            ),
+                                          ),
+                                          Expanded(
+                                            child: LinearProgressIndicator(
+                                              value: fraction.clamp(0.0, 1.0),
+                                              minHeight: 8,
+                                            ),
+                                          ),
+                                          SizedBox(
+                                            width: 90,
+                                            child: Text(
+                                              "${(fraction * 100).toStringAsFixed(1)}%",
+                                              textAlign: TextAlign.end,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
     );
   }

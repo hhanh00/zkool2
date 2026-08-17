@@ -1389,6 +1389,46 @@ Future<String> votingRoundTitle(Ref ref, String roundId, String chainUrl) async 
   return roundId;
 }
 
+/// Normalized chain round status ("active" / "tallying" / "closed") from the
+/// vote chain round status, or null when unresolved (non-2xx or absent).
+/// Mirrors vizor's `votingPollListStatus`: numeric 1/2/3 plus lenient string
+/// forms. Only "tallying"/"closed" rounds have a published tally.
+@riverpod
+Future<String?> votingRoundStatus(Ref ref, String roundId, String chainUrl) async {
+  final c = coinContext.coin;
+  final res = await votechainRoundStatus(
+    baseUrl: chainUrl,
+    roundId: roundId,
+    c: c,
+  );
+  if (res.statusCode < 200 || res.statusCode >= 300) return null;
+  final body = jsonDecode(res.body) as Map<String, dynamic>;
+  final round = body['round'] as Map<String, dynamic>? ?? {};
+  final status = round['status'];
+  if (status is int) {
+    return switch (status) {
+      2 => "tallying",
+      3 => "closed",
+      _ => "active",
+    };
+  }
+  if (status is String) {
+    final s = status.trim().toLowerCase();
+    if (s == '2' || s.contains('tally') || s == 'pending') return "tallying";
+    if (s == '3' ||
+        s.contains('closed') ||
+        s.contains('complete') ||
+        s.contains('done') ||
+        s.contains('ended') ||
+        s.contains('final') ||
+        s.contains('result')) {
+      return "closed";
+    }
+    return "active";
+  }
+  return null;
+}
+
 /// One round proposal with its option labels, from the vote chain round
 /// status — used to render human-readable ballot evidence.
 class VotingProposalInfo {
