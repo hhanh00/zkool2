@@ -197,6 +197,16 @@ class VotingResultsPageState extends ConsumerState<VotingResultsPage> {
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
 
+    // Proposal titles and option labels, keyed by proposal id (not list
+    // position) — decision ids are the vote-sdk option ids.
+    final proposalsAsync = ref.watch(
+      votingRoundProposalsProvider(widget.roundId, widget.chainUrl),
+    );
+    final proposals = {
+      for (final p in (proposalsAsync.value ?? const <VotingProposalInfo>[]))
+        p.id: p,
+    };
+
     return Scaffold(
       appBar: AppBar(title: Text("${widget.roundId} results")),
       body: _error != null
@@ -218,13 +228,14 @@ class VotingResultsPageState extends ConsumerState<VotingResultsPage> {
                     final winner = tally.entries.reduce(
                       (a, b) => a.value >= b.value ? a : b,
                     );
+                    final proposal = proposals[pid];
                     return Card(
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Text("Proposal $pid",
+                            Text(proposal?.title ?? "Proposal $pid",
                                 style: Theme.of(context).textTheme.titleMedium),
                             const SizedBox(height: 8),
                             ...tally.entries.map((e) {
@@ -239,7 +250,8 @@ class VotingResultsPageState extends ConsumerState<VotingResultsPage> {
                                     SizedBox(
                                       width: 80,
                                       child: Text(
-                                        "Option ${e.key + 1}",
+                                        proposal?.optionLabels[e.key] ??
+                                            "Option ${e.key}",
                                         style: TextStyle(
                                           fontWeight: winning
                                               ? FontWeight.bold
