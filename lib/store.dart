@@ -1389,6 +1389,62 @@ Future<String> votingRoundTitle(Ref ref, String roundId, String chainUrl) async 
   return roundId;
 }
 
+/// One round proposal with its option labels, from the vote chain round
+/// status — used to render human-readable ballot evidence.
+class VotingProposalInfo {
+  final int id;
+  final String title;
+  final Map<int, String> optionLabels;
+
+  const VotingProposalInfo({
+    required this.id,
+    required this.title,
+    required this.optionLabels,
+  });
+}
+
+/// Parsed proposals (id, title, option id → label) for a round, from the
+/// chain round status. Empty when the fetch fails.
+@riverpod
+Future<List<VotingProposalInfo>> votingRoundProposals(
+  Ref ref,
+  String roundId,
+  String chainUrl,
+) async {
+  final c = coinContext.coin;
+  final res = await votechainRoundStatus(
+    baseUrl: chainUrl,
+    roundId: roundId,
+    c: c,
+  );
+  if (res.statusCode < 200 || res.statusCode >= 300) return const [];
+  final body = jsonDecode(res.body) as Map<String, dynamic>;
+  final round = body['round'] as Map<String, dynamic>? ?? {};
+  final proposals = round['proposals'] as List<dynamic>? ?? [];
+  final result = <VotingProposalInfo>[];
+  for (final p in proposals) {
+    if (p is! Map) continue;
+    final pid = p['id'];
+    if (pid is! int || pid < 1) continue;
+    final title = (p['title'] ?? "Proposal $pid").toString();
+    var options = <int, String>{};
+    final opts = p['options'] as List<dynamic>? ?? [];
+    for (final entry in opts.asMap().entries) {
+      final o = entry.value;
+      if (o is! Map) continue;
+      final id = (o['index'] is int) ? o['index'] as int : entry.key;
+      options[id] =
+          (o['label'] ?? o['short_title'] ?? o['title'] ?? "Option").toString();
+    }
+    if (options.isEmpty) {
+      // Vote-sdk default: Yes/No when options are missing.
+      options = const {0: "Yes", 1: "No"};
+    }
+    result.add(VotingProposalInfo(id: pid, title: title, optionLabels: options));
+  }
+  return result;
+}
+
 /// Resolved and authenticated voting config for the configured source URL.
 /// `build()` returns the last cached resolved config without touching the
 /// network (so merely reading the provider never triggers a fetch); call
