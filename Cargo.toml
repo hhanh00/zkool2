@@ -50,3 +50,9 @@ halo2_proofs = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "
 halo2_poseidon = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "dcdbd1df2b30fd8d709c1a7c4ad9c4e091789d00" }
 voting-circuits = { git = "https://github.com/hhanh00/voting-circuits.git", rev = "9b408e712f8a2db8ca0b006846b310c6fd994941" }
 
+# Local fork fixes not yet on the pinned rev: queries.rs referenced the
+# voting_votes table as `votes` without an alias, breaking ballot-intent
+# writes and vote submission recording. See ~/projects/zcash_voting.
+[patch."https://github.com/hhanh00/zcash_voting.git"]
+zcash_voting = { path = "/Users/hanh/projects/zcash_voting/zcash_voting" }
+

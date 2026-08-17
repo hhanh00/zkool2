@@ -88,7 +88,7 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
       case "shares":
         return "Submitting shares";
       case "done":
-        return job.doneLabel ?? "Delegation confirmed";
+        return job.doneLabel ?? "Submission complete";
       case "error":
         return "Submission failed";
       default:
