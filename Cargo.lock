@@ -8207,6 +8207,7 @@ dependencies = [
 [[package]]
 name = "pir-client"
 version = "0.4.0-rc.7"
+source = "git+https://github.com/hhanh00/vote-nullifier-pir.git?rev=b704640df339a98330a5b8e4582144fde67d0b0c#b704640df339a98330a5b8e4582144fde67d0b0c"
 dependencies = [
  "anyhow",
  "ff",
@@ -13209,6 +13210,7 @@ checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 [[package]]
 name = "vote-commitment-tree"
 version = "0.4.0-rc.2"
+source = "git+https://github.com/hhanh00/zcash_voting.git?rev=aa5338f112a47626cd0fa79ca25cdf544c918b28#aa5338f112a47626cd0fa79ca25cdf544c918b28"
 dependencies = [
  "anyhow",
  "ff",
@@ -13224,6 +13226,7 @@ dependencies = [
 [[package]]
 name = "vote-commitment-tree-client"
 version = "0.6.0-rc.2"
+source = "git+https://github.com/hhanh00/zcash_voting.git?rev=aa5338f112a47626cd0fa79ca25cdf544c918b28#aa5338f112a47626cd0fa79ca25cdf544c918b28"
 dependencies = [
  "base64 0.22.1",
  "ff",
@@ -13238,6 +13241,7 @@ dependencies = [
 [[package]]
 name = "voting-circuits"
 version = "0.10.0"
+source = "git+https://github.com/hhanh00/voting-circuits.git?rev=44033690874bc8b92cf015426d785b0b2e107035#44033690874bc8b92cf015426d785b0b2e107035"
 dependencies = [
  "blake2b_simd",
  "ff",
@@ -14411,6 +14415,7 @@ dependencies = [
 [[package]]
 name = "zcash_voting"
 version = "2.0.0-rc.5"
+source = "git+https://github.com/hhanh00/zcash_voting.git?rev=aa5338f112a47626cd0fa79ca25cdf544c918b28#aa5338f112a47626cd0fa79ca25cdf544c918b28"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
