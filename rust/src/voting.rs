@@ -575,11 +575,15 @@ pub async fn prove_and_submit_delegation_with_progress(
     progress.on_progress(DelegationProgress::SigningPayload);
     let (sig, sighash) = sign_delegation_request(seed, request)?;
 
-    let pir_client = zcash_voting::connect_pir_blocking(
+    // Async PIR client: the blocking variant owns a tokio runtime and would
+    // panic ("cannot start a runtime from within a runtime") inside the FRB
+    // async runtime. The prove path is generic over PirProofSource.
+    let pir_client = zcash_voting::connect_pir(
         pir_layout,
         pir_server_url,
         Arc::new(zcash_voting::HyperTransport::new()),
-    )?;
+    )
+    .await?;
     prepared.prove(&db, &pir_client, progress).await?;
 
     let bundle = prepared
