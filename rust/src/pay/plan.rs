@@ -31,6 +31,7 @@ use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_note_encryption::Domain;
 use zcash_primitives::transaction::{
     builder::{BuildConfig, Builder, BundlePadding},
+    TxVersion,
     fees::zip317::FeeRule,
 };
 use zcash_proofs::prover::LocalTxProver;
@@ -696,6 +697,17 @@ pub async fn plan_transaction(
         ironwood_padding: BundlePadding::DEFAULT,
     };
     let mut builder = Builder::new(network, BlockHeight::from_u32(target_height), build_config);
+
+    // Hardware (Ledger) wallets only support v5 (ZIP-244) transaction signing.
+    // The Zondax "Zcash Shielded" app predates NU6.3 and cannot sign v6/Ironwood
+    // transactions, so force a v5 tx while keeping consensus_branch_id = Nu6_3
+    // (V5 is valid in Nu6_3 per TxVersion::valid_in_branch). A v5 tx carrying the
+    // current Nu6_3 branch id is valid on the network.
+    if hw != 0 {
+        builder
+            .propose_version::<()>(TxVersion::V5)
+            .map_err(|e| anyhow!("failed to force v5 for hardware signing: {e:?}"))?;
+    }
 
     let es = es.to_auth_path(&SaplingHasher::default());
     let eo = eo.to_auth_path(&OrchardHasher::default());
