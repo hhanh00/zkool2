@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
@@ -24,6 +25,15 @@ class VotingConfirmationPageState extends ConsumerState<VotingConfirmationPage> 
     if (pinlock.value ?? false) return PinLock();
 
     final job = ref.watch(votingSubmissionJobProvider(widget.roundId));
+    // Confirmed vote txs (per proposal), shown as on-chain evidence.
+    final confirmedVotes = (ref
+                .watch(votingSessionProvider(widget.roundId))
+                .value
+                ?.recovery
+                ?.votes ??
+            const <VotingVoteRecovery>[])
+        .where((v) => v.phase == "confirmed" && (v.txHash ?? "").isNotEmpty)
+        .toList();
 
     return Scaffold(
       appBar: AppBar(title: const Text("Vote submitted")),
@@ -56,6 +66,16 @@ class VotingConfirmationPageState extends ConsumerState<VotingConfirmationPage> 
                     "Voting power: ${formatVotingPower(job.eligibleWeightZatoshi!)}",
                     style: Theme.of(context).textTheme.bodyMedium,
                     textAlign: TextAlign.center,
+                  ),
+                ),
+              for (final v in confirmedVotes)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: SelectableText(
+                    "Proposal ${v.proposalId}: ${v.txHash} · "
+                    "tree ${v.vcTreePosition}",
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
               const SizedBox(height: 24),
