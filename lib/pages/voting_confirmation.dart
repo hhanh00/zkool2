@@ -8,8 +8,9 @@ import 'package:zkool/utils.dart';
 /// Receipt screen shown after the submission job completes.
 class VotingConfirmationPage extends ConsumerStatefulWidget {
   final String roundId;
+  final String? roundName;
 
-  const VotingConfirmationPage({super.key, required this.roundId});
+  const VotingConfirmationPage({super.key, required this.roundId, this.roundName});
 
   @override
   ConsumerState<VotingConfirmationPage> createState() =>
@@ -40,7 +41,11 @@ class VotingConfirmationPageState extends ConsumerState<VotingConfirmationPage> 
               ),
               const SizedBox(height: 16),
               Text(
-                "Your vote for ${widget.roundId} has been submitted.",
+                widget.roundName != null &&
+                        widget.roundName!.isNotEmpty &&
+                        widget.roundName != widget.roundId
+                    ? "Your vote for ${widget.roundName} has been submitted."
+                    : "Your vote for ${widget.roundId} has been submitted.",
                 style: Theme.of(context).textTheme.titleMedium,
                 textAlign: TextAlign.center,
               ),
