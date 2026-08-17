@@ -5,6 +5,8 @@
 //! transitions follow the plan: prepare → setup → sign/prove/submit → confirm,
 //! then van witness → commit → payloads → record execution → confirm.
 
+use std::sync::Arc;
+
 use anyhow::{anyhow, Result};
 use rand_core::{OsRng, RngCore};
 use serde::{Deserialize, Serialize};
@@ -616,12 +618,12 @@ pub async fn delegation_build_submission(
     let prepared = voting::load_prepared_bundle(&wallet_id, &round_id, bundle_index)?;
     let seed = voting::account_seed(&mut connection, account).await?;
 
-    let progress = DelegationProgressBridge::new({
+    let progress = Arc::new(DelegationProgressBridge::new({
         let sink_for_progress = sink.clone();
         move |p| {
             let _ = sink_for_progress.add(p.into());
         }
-    });
+    }));
     let (submission, wire_json) =
         match voting::prove_and_submit_delegation_with_progress(
             c.get_pool()?,
@@ -631,7 +633,7 @@ pub async fn delegation_build_submission(
             pczt_bytes,
             pir_layout.to_fork(),
             &pir_server_url,
-            &progress,
+            progress.clone(),
         )
         .await
         {

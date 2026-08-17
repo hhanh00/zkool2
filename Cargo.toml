@@ -49,6 +49,11 @@ halo2_gadgets = { git = "https://github.com/zcash-shielded-assets/halo2", rev = 
 halo2_proofs = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "dcdbd1df2b30fd8d709c1a7c4ad9c4e091789d00" }
 halo2_poseidon = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "dcdbd1df2b30fd8d709c1a7c4ad9c4e091789d00" }
 voting-circuits = { git = "https://github.com/hhanh00/voting-circuits.git", rev = "9b408e712f8a2db8ca0b006846b310c6fd994941" }
+# Local patched pir-client: the async PirClient lacks a public circuit_root
+# accessor (private field), which the fork's PirProofSource trait needs.
+# NOTE: the fork's own [patch.crates-io] does NOT apply to this workspace —
+# cargo only honors patches in the workspace root manifest.
+pir-client = { path = "/Users/hanh/projects/pir-client-0.4.0-rc.7" }
 
 # Local fork fixes not yet on the pinned rev: queries.rs referenced the
 # voting_votes table as `votes` without an alias, breaking ballot-intent

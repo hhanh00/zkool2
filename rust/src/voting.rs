@@ -548,7 +548,7 @@ pub async fn prove_and_submit_delegation(
         pczt_bytes,
         pir_layout,
         pir_server_url,
-        &NoopProgressReporter,
+        Arc::new(NoopProgressReporter),
     )
     .await
 }
@@ -566,25 +566,46 @@ pub async fn prove_and_submit_delegation_with_progress(
     pczt_bytes: Vec<u8>,
     pir_layout: zcash_voting::config::PirLayout,
     pir_server_url: &str,
-    progress: &dyn DelegationProgressReporter,
+    progress: Arc<dyn DelegationProgressReporter>,
 ) -> Result<(DelegationSubmission, String)> {
     let db = open_voting_db(pool, wallet_id).await?;
 
-    let _setup = prepared.setup(&db, progress).await?;
+    let _setup = prepared.setup(&db, progress.as_ref()).await?;
     let request = prepared.signing_request(&db).await?;
     progress.on_progress(DelegationProgress::SigningPayload);
     let (sig, sighash) = sign_delegation_request(seed, request)?;
 
-    // Async PIR client: the blocking variant owns a tokio runtime and would
-    // panic ("cannot start a runtime from within a runtime") inside the FRB
-    // async runtime. The prove path is generic over PirProofSource.
-    let pir_client = zcash_voting::connect_pir(
-        pir_layout,
-        pir_server_url,
-        Arc::new(zcash_voting::HyperTransport::new()),
-    )
-    .await?;
-    prepared.prove(&db, &pir_client, progress).await?;
+    // Halo2 delegation proving recurses deeply and overflows the FRB worker
+    // thread's stack; run it on a dedicated thread with a large stack (the
+    // same pattern zcashd uses for its proving threads). The PIR client is
+    // created INSIDE the thread too: its hyper connections are then owned by
+    // the thread's own runtime, so nothing in the PIR path depends on the
+    // FRB runtime (which is parked on the thread join) — a cross-runtime
+    // hyper pool there stalled requests until the 60s transport timeout.
+    let prove_db = db.clone();
+    let prove_prepared = prepared.clone();
+    let prove_progress = progress.clone();
+    let prove_pir_url = pir_server_url.to_string();
+    let join = std::thread::Builder::new()
+        .stack_size(512 * 1024 * 1024)
+        .name("delegation-prove".to_string())
+        .spawn(move || -> Result<zcash_voting::delegate::DelegationProof, anyhow::Error> {
+            let rt = tokio::runtime::Runtime::new()
+                .map_err(|e| anyhow!("failed to create proving runtime: {e}"))?;
+            let pir_client = rt.block_on(zcash_voting::connect_pir(
+                pir_layout,
+                &prove_pir_url,
+                Arc::new(zcash_voting::HyperTransport::new()),
+            ))?;
+            Ok(rt.block_on(prove_prepared.prove(
+                &prove_db,
+                &pir_client,
+                prove_progress.as_ref(),
+            ))?)
+        })
+        .map_err(|e| anyhow!("failed to spawn delegation proof thread: {e}"))?;
+    join.join()
+        .map_err(|e| anyhow!("delegation proof thread panicked: {e:?}"))??;
 
     let bundle = prepared
         .signed_bundle(&db, pczt_bytes, PreparedSigner::signature(sig, sighash))

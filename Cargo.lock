@@ -8207,8 +8207,6 @@ dependencies = [
 [[package]]
 name = "pir-client"
 version = "0.4.0-rc.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf6547ec35c8d4af154bc73d60fe2773be50f7c089e79414983d721d0dbc13db"
 dependencies = [
  "anyhow",
  "ff",
