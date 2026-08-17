@@ -112,6 +112,27 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
             const <VotingVoteRecovery>[])
         .where((v) => v.phase == "confirmed" && (v.txHash ?? "").isNotEmpty)
         .toList();
+    // Human-readable ballot evidence: proposal titles and option labels,
+    // keyed by proposal id (not list position).
+    final proposals = {
+      for (final p in (ref
+                  .watch(votingRoundProposalsProvider(
+                    widget.roundId,
+                    widget.chainUrl,
+                  ))
+                  .value ??
+              const <VotingProposalInfo>[]))
+        p.id: p,
+    };
+
+    String voteLabel(VotingVoteRecovery v) {
+      final proposal = proposals[v.proposalId];
+      final title = proposal?.title ?? "Proposal ${v.proposalId}";
+      // Option ids are the vote-sdk `index` values (omitted = 0 for the
+      // first); never render 1-based list positions.
+      final choice = proposal?.optionLabels[v.choice] ?? "Option ${v.choice}";
+      return "$title — $choice";
+    }
 
     return PopScope(
       canPop: !running,
@@ -205,8 +226,7 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: SelectableText(
-                      "Proposal ${v.proposalId}: ${v.txHash} · "
-                      "tree ${v.vcTreePosition}",
+                      "${voteLabel(v)}\n${v.txHash} · tree ${v.vcTreePosition}",
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
@@ -237,6 +257,7 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
                       extra: {
                         "roundId": widget.roundId,
                         "roundName": widget.roundName,
+                        "chainUrl": widget.chainUrl,
                       },
                     ),
                     child: const Text("Done"),

@@ -10,8 +10,14 @@ import 'package:zkool/utils.dart';
 class VotingConfirmationPage extends ConsumerStatefulWidget {
   final String roundId;
   final String? roundName;
+  final String chainUrl;
 
-  const VotingConfirmationPage({super.key, required this.roundId, this.roundName});
+  const VotingConfirmationPage({
+    super.key,
+    required this.roundId,
+    this.roundName,
+    this.chainUrl = "",
+  });
 
   @override
   ConsumerState<VotingConfirmationPage> createState() =>
@@ -34,6 +40,27 @@ class VotingConfirmationPageState extends ConsumerState<VotingConfirmationPage> 
             const <VotingVoteRecovery>[])
         .where((v) => v.phase == "confirmed" && (v.txHash ?? "").isNotEmpty)
         .toList();
+    // Human-readable ballot evidence: proposal titles and option labels,
+    // keyed by proposal id (not list position).
+    final proposals = {
+      for (final p in (ref
+                  .watch(votingRoundProposalsProvider(
+                    widget.roundId,
+                    widget.chainUrl,
+                  ))
+                  .value ??
+              const <VotingProposalInfo>[]))
+        p.id: p,
+    };
+
+    String voteLabel(VotingVoteRecovery v) {
+      final proposal = proposals[v.proposalId];
+      final title = proposal?.title ?? "Proposal ${v.proposalId}";
+      // Option ids are the vote-sdk `index` values (omitted = 0 for the
+      // first); never render 1-based list positions.
+      final choice = proposal?.optionLabels[v.choice] ?? "Option ${v.choice}";
+      return "$title — $choice";
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text("Vote submitted")),
@@ -72,8 +99,7 @@ class VotingConfirmationPageState extends ConsumerState<VotingConfirmationPage> 
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: SelectableText(
-                    "Proposal ${v.proposalId}: ${v.txHash} · "
-                    "tree ${v.vcTreePosition}",
+                    "${voteLabel(v)}\n${v.txHash} · tree ${v.vcTreePosition}",
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),

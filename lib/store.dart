@@ -1389,6 +1389,102 @@ Future<String> votingRoundTitle(Ref ref, String roundId, String chainUrl) async 
   return roundId;
 }
 
+/// Normalized chain round status ("active" / "tallying" / "closed") from the
+/// vote chain round status, or null when unresolved (non-2xx or absent).
+/// Mirrors vizor's `votingPollListStatus`: numeric 1/2/3 plus lenient string
+/// forms. Only "tallying"/"closed" rounds have a published tally.
+@riverpod
+Future<String?> votingRoundStatus(Ref ref, String roundId, String chainUrl) async {
+  final c = coinContext.coin;
+  final res = await votechainRoundStatus(
+    baseUrl: chainUrl,
+    roundId: roundId,
+    c: c,
+  );
+  if (res.statusCode < 200 || res.statusCode >= 300) return null;
+  final body = jsonDecode(res.body) as Map<String, dynamic>;
+  final round = body['round'] as Map<String, dynamic>? ?? {};
+  final status = round['status'];
+  if (status is int) {
+    return switch (status) {
+      2 => "tallying",
+      3 => "closed",
+      _ => "active",
+    };
+  }
+  if (status is String) {
+    final s = status.trim().toLowerCase();
+    if (s == '2' || s.contains('tally') || s == 'pending') return "tallying";
+    if (s == '3' ||
+        s.contains('closed') ||
+        s.contains('complete') ||
+        s.contains('done') ||
+        s.contains('ended') ||
+        s.contains('final') ||
+        s.contains('result')) {
+      return "closed";
+    }
+    return "active";
+  }
+  return null;
+}
+
+/// One round proposal with its option labels, from the vote chain round
+/// status — used to render human-readable ballot evidence.
+class VotingProposalInfo {
+  final int id;
+  final String title;
+  final Map<int, String> optionLabels;
+
+  const VotingProposalInfo({
+    required this.id,
+    required this.title,
+    required this.optionLabels,
+  });
+}
+
+/// Parsed proposals (id, title, option id → label) for a round, from the
+/// chain round status. Empty when the fetch fails.
+@riverpod
+Future<List<VotingProposalInfo>> votingRoundProposals(
+  Ref ref,
+  String roundId,
+  String chainUrl,
+) async {
+  final c = coinContext.coin;
+  final res = await votechainRoundStatus(
+    baseUrl: chainUrl,
+    roundId: roundId,
+    c: c,
+  );
+  if (res.statusCode < 200 || res.statusCode >= 300) return const [];
+  final body = jsonDecode(res.body) as Map<String, dynamic>;
+  final round = body['round'] as Map<String, dynamic>? ?? {};
+  final proposals = round['proposals'] as List<dynamic>? ?? [];
+  final result = <VotingProposalInfo>[];
+  for (final p in proposals) {
+    if (p is! Map) continue;
+    final pid = p['id'];
+    if (pid is! int || pid < 1) continue;
+    final title = (p['title'] ?? "Proposal $pid").toString();
+    var options = <int, String>{};
+    final opts = p['options'] as List<dynamic>? ?? [];
+    for (final entry in opts.asMap().entries) {
+      final o = entry.value;
+      if (o is! Map) continue;
+      final id = (o['index'] is int) ? o['index'] as int : entry.key;
+      options[id] =
+          (o['label'] ?? o['short_title'] ?? o['title'] ?? "Option").toString();
+    }
+    if (options.isEmpty) {
+      // Vote-sdk default: Yes/No when options are missing.
+      options = const {0: "Yes", 1: "No"};
+    }
+    result.add(VotingProposalInfo(id: pid, title: title, optionLabels: options));
+  }
+  return result;
+}
+
 /// Resolved and authenticated voting config for the configured source URL.
 /// `build()` returns the last cached resolved config without touching the
 /// network (so merely reading the provider never triggers a fetch); call
@@ -1521,9 +1617,20 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       // flow never passes shareServerUrls, so fall back to the configured
       // vote servers (mirrors vizor's context.config.voteServers).
       final shareUrls = await _effectiveShareServerUrls(shareServerUrls);
+      // The voting pages never pass ceremonyStart/voteEnd either — resolve
+      // them from the chain round status so the share plan can schedule.
+      var effectiveCeremony = ceremonyStart;
+      var effectiveVoteEnd = voteEnd;
+      if (effectiveCeremony == 0 || effectiveVoteEnd == null) {
+        final timing = await _roundShareTiming(chainUrl: chainUrl);
+        if (timing != null) {
+          effectiveCeremony = timing.ceremonyStart;
+          effectiveVoteEnd = timing.voteEnd;
+        }
+      }
       final shared = await _submitShares(
-        ceremonyStart: ceremonyStart,
-        voteEnd: voteEnd,
+        ceremonyStart: effectiveCeremony,
+        voteEnd: effectiveVoteEnd,
         shareServerUrls: shareUrls,
         singleShare: singleShare,
       );
@@ -1758,9 +1865,37 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     final session = await ref.read(votingSessionProvider(roundId).future);
     final pending = session.plan?.nextSteps ?? const <VotingNextStep>[];
     if (pending.isEmpty) return "All steps already confirmed";
-    const shareKinds = {"submit_shares", "confirm_share"};
-    final allShares = pending.every((s) => shareKinds.contains(s.kind));
-    return allShares ? "Waiting for the share window" : "Waiting for the next step";
+    const shareSubmitKinds = {"submit_shares"};
+    const shareConfirmKinds = {"confirm_share"};
+    if (pending.every((s) => shareSubmitKinds.contains(s.kind))) {
+      return "Waiting for the share window";
+    }
+    if (pending.every((s) => shareConfirmKinds.contains(s.kind))) {
+      return "Waiting for share confirmations";
+    }
+    return "Waiting for the next step";
+  }
+
+  /// Resolves the round's ceremony start / vote end from the chain round
+  /// status when the flow didn't provide them (the voting pages never pass
+  /// them, and the share plan needs both to schedule submissions). Returns
+  /// null when the fetch fails or the fields are missing.
+  Future<({int ceremonyStart, int voteEnd})?> _roundShareTiming({
+    required String chainUrl,
+  }) async {
+    final c = coinContext.coin;
+    final res = await votechainRoundStatus(
+      baseUrl: chainUrl,
+      roundId: roundId,
+      c: c,
+    );
+    if (res.statusCode < 200 || res.statusCode >= 300) return null;
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final round = body['round'] as Map<String, dynamic>? ?? {};
+    final ceremony = round['ceremony_phase_start'];
+    final end = round['vote_end_time'];
+    if (ceremony is! int || end is! int) return null;
+    return (ceremonyStart: ceremony, voteEnd: end);
   }
 
   /// The vote chain servers double as helper (share) servers. The voting
@@ -2102,6 +2237,23 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     }
   }
 
+  /// Delay until the next planned share submission (min positive
+  /// submitAt − now), capped at an hour; 60s when nothing is pending.
+  int _shareTrackingDelaySeconds(List<VotingSharePlanItem> plans, int now) {
+    final nowBig = BigInt.from(now);
+    var minDelta = BigInt.zero;
+    var found = false;
+    for (final p in plans) {
+      final delta = p.submitAt - nowBig;
+      if (delta > BigInt.zero && (!found || delta < minDelta)) {
+        minDelta = delta;
+        found = true;
+      }
+    }
+    if (!found) return 60;
+    return minDelta > BigInt.from(3600) ? 3600 : minDelta.toInt();
+  }
+
   /// Converts UI drafts to the fork's DraftVote JSON for the commit step:
   /// drops skipped choices (validation rejects choice == num_options) and
   /// fills the fields the fork requires with no serde defaults. Returns null
@@ -2136,33 +2288,56 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     final c = coinContext.coin;
     state = state.copyWith(stage: "shares");
     var submitted = false;
+    final voteEndValue = voteEnd;
+    if (voteEndValue == null || shareServerUrls.isEmpty) {
+      return false;
+    }
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-    final sharePlan = await votingSharePlan(
-      roundId: roundId,
-      now: BigInt.from(now),
-      ceremonyStart: BigInt.from(ceremonyStart),
-      voteEnd: voteEnd == null ? null : BigInt.from(voteEnd),
+    // First-pass source: the confirmed votes' share payloads — the share
+    // delegation rows only exist after a submission records them, so the
+    // old unconfirmed-row pairing could never start (mirrors vizor's
+    // commitment-driven share submission).
+    final payloads = await votingSharePayloads(roundId: roundId, c: c);
+    if (payloads.isEmpty) {
+      // All shares already recorded — a resume must not re-send them, but
+      // the tracker still needs to run to poll the helpers for
+      // confirmations.
+      final unconfirmed = await votingShareUnconfirmed(roundId: roundId, c: c);
+      if (unconfirmed.isNotEmpty) {
+        _scheduleShareTracking(
+          delaySeconds: 60,
+          ceremonyStart: ceremonyStart,
+          voteEnd: voteEndValue,
+          shareServerUrls: shareServerUrls,
+          singleShare: singleShare,
+        );
+      }
+      return false;
+    }
+    final plans = await votingSharePlans(
+      shareCount: payloads.length,
       serverUrls: shareServerUrls,
+      now: BigInt.from(now),
+      voteEnd: BigInt.from(voteEndValue),
+      ceremonyStart: BigInt.from(ceremonyStart),
       singleShare: singleShare,
       c: c,
     );
-    final unconfirmed = await votingShareUnconfirmed(roundId: roundId, c: c);
-    final count = min(sharePlan.submissions.length, unconfirmed.length);
-    for (var i = 0; i < count; i++) {
-      final item = sharePlan.submissions[i];
-      final share = unconfirmed[i];
+    for (var i = 0; i < payloads.length && i < plans.length; i++) {
+      final payload = payloads[i];
+      final plan = plans[i];
       final wireJson = await votingShareWireJson(
         roundId: roundId,
-        bundleIndex: share.bundleIndex,
-        proposalId: share.proposalId,
-        shareIndex: share.shareIndex,
-        vcTreePosition: null,
-        submitAt: item.submitAt,
+        bundleIndex: payload.bundleIndex,
+        proposalId: payload.proposalId,
+        shareIndex: payload.shareIndex,
+        vcTreePosition: payload.vcTreePosition,
+        submitAt: plan.submitAt,
         c: c,
       );
       final body =
           jsonEncode({...jsonDecode(wireJson), "vote_round_id": roundId});
-      for (final server in item.targetServers) {
+      for (final server in plan.targetServers) {
         final res = await votechainSubmitShare(
           serverUrl: server,
           payloadJson: body,
@@ -2177,26 +2352,24 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       }
       await votingShareRecord(
         roundId: roundId,
-        bundleIndex: share.bundleIndex,
-        proposalId: share.proposalId,
-        shareIndex: share.shareIndex,
-        sentToUrls: item.targetServers,
-        submitAt: item.submitAt,
+        bundleIndex: payload.bundleIndex,
+        proposalId: payload.proposalId,
+        shareIndex: payload.shareIndex,
+        sentToUrls: plan.targetServers,
+        submitAt: plan.submitAt,
         c: c,
       );
       submitted = true;
     }
 
     // Background tracking until every share confirms (or the vote window ends).
-    if (voteEnd != null && sharePlan.nextTrackingDelaySecs != null) {
-      _scheduleShareTracking(
-        delaySeconds: sharePlan.nextTrackingDelaySecs!.toInt(),
-        ceremonyStart: ceremonyStart,
-        voteEnd: voteEnd,
-        shareServerUrls: shareServerUrls,
-        singleShare: singleShare,
-      );
-    }
+    _scheduleShareTracking(
+      delaySeconds: _shareTrackingDelaySeconds(plans, now),
+      ceremonyStart: ceremonyStart,
+      voteEnd: voteEndValue,
+      shareServerUrls: shareServerUrls,
+      singleShare: singleShare,
+    );
     return submitted;
   }
 
@@ -2315,5 +2488,8 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
         singleShare: singleShare,
       );
     }
+    // Reflect the confirmations in the plan so the round tile and status
+    // screens update ("Resume" -> "View results" once every share confirms).
+    await ref.read(votingSessionProvider(roundId).notifier).refresh();
   }
 }
