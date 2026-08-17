@@ -181,6 +181,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode) => GoRouter(
             return VotingConfirmationPage(
               roundId: args['roundId'] as String,
               roundName: args['roundName'] as String?,
+              chainUrl: args['chainUrl'] as String? ?? "",
             );
           },
         ),

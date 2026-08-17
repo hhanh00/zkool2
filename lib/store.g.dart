@@ -1674,6 +1674,118 @@ final class VotingRoundTitleFamily extends $Family
   String toString() => r'votingRoundTitleProvider';
 }
 
+/// Parsed proposals (id, title, option id → label) for a round, from the
+/// chain round status. Empty when the fetch fails.
+
+@ProviderFor(votingRoundProposals)
+const votingRoundProposalsProvider = VotingRoundProposalsFamily._();
+
+/// Parsed proposals (id, title, option id → label) for a round, from the
+/// chain round status. Empty when the fetch fails.
+
+final class VotingRoundProposalsProvider extends $FunctionalProvider<
+        AsyncValue<List<VotingProposalInfo>>,
+        List<VotingProposalInfo>,
+        FutureOr<List<VotingProposalInfo>>>
+    with
+        $FutureModifier<List<VotingProposalInfo>>,
+        $FutureProvider<List<VotingProposalInfo>> {
+  /// Parsed proposals (id, title, option id → label) for a round, from the
+  /// chain round status. Empty when the fetch fails.
+  const VotingRoundProposalsProvider._(
+      {required VotingRoundProposalsFamily super.from,
+      required (
+        String,
+        String,
+      )
+          super.argument})
+      : super(
+          retry: null,
+          name: r'votingRoundProposalsProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$votingRoundProposalsHash();
+
+  @override
+  String toString() {
+    return r'votingRoundProposalsProvider'
+        ''
+        '$argument';
+  }
+
+  @$internal
+  @override
+  $FutureProviderElement<List<VotingProposalInfo>> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<List<VotingProposalInfo>> create(Ref ref) {
+    final argument = this.argument as (
+      String,
+      String,
+    );
+    return votingRoundProposals(
+      ref,
+      argument.$1,
+      argument.$2,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is VotingRoundProposalsProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$votingRoundProposalsHash() =>
+    r'f8e7d46668f5f221a85e0eb62b9c7ec2462a5a6e';
+
+/// Parsed proposals (id, title, option id → label) for a round, from the
+/// chain round status. Empty when the fetch fails.
+
+final class VotingRoundProposalsFamily extends $Family
+    with
+        $FunctionalFamilyOverride<
+            FutureOr<List<VotingProposalInfo>>,
+            (
+              String,
+              String,
+            )> {
+  const VotingRoundProposalsFamily._()
+      : super(
+          retry: null,
+          name: r'votingRoundProposalsProvider',
+          dependencies: null,
+          $allTransitiveDependencies: null,
+          isAutoDispose: true,
+        );
+
+  /// Parsed proposals (id, title, option id → label) for a round, from the
+  /// chain round status. Empty when the fetch fails.
+
+  VotingRoundProposalsProvider call(
+    String roundId,
+    String chainUrl,
+  ) =>
+      VotingRoundProposalsProvider._(argument: (
+        roundId,
+        chainUrl,
+      ), from: this);
+
+  @override
+  String toString() => r'votingRoundProposalsProvider';
+}
+
 /// Resolved and authenticated voting config for the configured source URL.
 /// `build()` returns the last cached resolved config without touching the
 /// network (so merely reading the provider never triggers a fetch); call
@@ -1859,7 +1971,7 @@ final class VotingSubmissionJobProvider
 }
 
 String _$votingSubmissionJobHash() =>
-    r'a283728879caa8ee179da7d5bf490d4e2da6c217';
+    r'916ea9b36272623d969a1f8b7bb9a61e95d5f56c';
 
 /// Delegation execution job for one round. Runs the serialized chain:
 /// prepare (or resume) → setup → build submission (progress stream) →
