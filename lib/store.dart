@@ -1527,13 +1527,16 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
         shareServerUrls: shareUrls,
         singleShare: singleShare,
       );
-      final doneLabel = delegated
-          ? "Delegation confirmed"
-          : voted
-              ? "Votes submitted"
-              : shared
-                  ? "Shares submitted"
-                  : "All steps already confirmed";
+      final String doneLabel;
+      if (delegated) {
+        doneLabel = "Delegation confirmed";
+      } else if (voted) {
+        doneLabel = "Votes submitted";
+      } else if (shared) {
+        doneLabel = "Shares submitted";
+      } else {
+        doneLabel = await _remainingLabel();
+      }
       state = state.copyWith(stage: "done", progress: 1, doneLabel: doneLabel);
       ref.read(votingSubmissionGuardProvider.notifier).setActive(false);
     } on Exception catch (e) {
@@ -1746,6 +1749,18 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     } on Exception {
       return (pirServerUrl, pirLayout);
     }
+  }
+
+  /// Honest done label when a run performed no work: the plan may still have
+  /// pending steps (e.g. helper shares scheduled near the vote window) even
+  /// though nothing was due this run.
+  Future<String> _remainingLabel() async {
+    final session = await ref.read(votingSessionProvider(roundId).future);
+    final pending = session.plan?.nextSteps ?? const <VotingNextStep>[];
+    if (pending.isEmpty) return "All steps already confirmed";
+    const shareKinds = {"submit_shares", "confirm_share"};
+    final allShares = pending.every((s) => shareKinds.contains(s.kind));
+    return allShares ? "Waiting for the share window" : "Waiting for the next step";
   }
 
   /// The vote chain servers double as helper (share) servers. The voting
