@@ -1563,6 +1563,55 @@ final class VotingRoundListProvider extends $FunctionalProvider<
 
 String _$votingRoundListHash() => r'12d2cfda4753a04d9343e21a6637789106c3ffb5';
 
+/// Sessions for every locally-known round, fetched in ONE Rust call that
+/// holds a single pool connection (per-round loads would need one connection
+/// per round and stall the pool once the page lists many rounds).
+
+@ProviderFor(votingSessionsAll)
+const votingSessionsAllProvider = VotingSessionsAllProvider._();
+
+/// Sessions for every locally-known round, fetched in ONE Rust call that
+/// holds a single pool connection (per-round loads would need one connection
+/// per round and stall the pool once the page lists many rounds).
+
+final class VotingSessionsAllProvider extends $FunctionalProvider<
+        AsyncValue<Map<String, VotingSessionState>>,
+        Map<String, VotingSessionState>,
+        FutureOr<Map<String, VotingSessionState>>>
+    with
+        $FutureModifier<Map<String, VotingSessionState>>,
+        $FutureProvider<Map<String, VotingSessionState>> {
+  /// Sessions for every locally-known round, fetched in ONE Rust call that
+  /// holds a single pool connection (per-round loads would need one connection
+  /// per round and stall the pool once the page lists many rounds).
+  const VotingSessionsAllProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'votingSessionsAllProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$votingSessionsAllHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<Map<String, VotingSessionState>> $createElement(
+          $ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Map<String, VotingSessionState>> create(Ref ref) {
+    return votingSessionsAll(ref);
+  }
+}
+
+String _$votingSessionsAllHash() => r'f5e91aa2e64beabfa71ae55bf357734a59e7e44f';
+
 /// Friendly round title from the vote chain round status, falling back to
 /// the round id. The chain's `title` field is the only friendly name source
 /// (the config and the local DB carry no titles).
@@ -2087,7 +2136,7 @@ final class VotingSubmissionJobProvider
 }
 
 String _$votingSubmissionJobHash() =>
-    r'84d1b907680edbebd5282f81e43d2d3590b991fb';
+    r'8ab47e4d2b936d5e6c152c05f85197abb7a0d648';
 
 /// Delegation execution job for one round. Runs the serialized chain:
 /// prepare (or resume) → setup → build submission (progress stream) →

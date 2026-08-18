@@ -421,6 +421,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<VotingRoundInfo> dco_decode_list_voting_round_info(dynamic raw);
 
   @protected
+  List<VotingRoundSession> dco_decode_list_voting_round_session(dynamic raw);
+
+  @protected
   List<VotingServiceEndpoint> dco_decode_list_voting_service_endpoint(
       dynamic raw);
 
@@ -707,6 +710,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VotingRoundRecovery dco_decode_voting_round_recovery(dynamic raw);
+
+  @protected
+  VotingRoundSession dco_decode_voting_round_session(dynamic raw);
 
   @protected
   VotingServiceEndpoint dco_decode_voting_service_endpoint(dynamic raw);
@@ -1147,6 +1153,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  List<VotingRoundSession> sse_decode_list_voting_round_session(
+      SseDeserializer deserializer);
+
+  @protected
   List<VotingServiceEndpoint> sse_decode_list_voting_service_endpoint(
       SseDeserializer deserializer);
 
@@ -1458,6 +1468,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VotingRoundRecovery sse_decode_voting_round_recovery(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingRoundSession sse_decode_voting_round_session(
       SseDeserializer deserializer);
 
   @protected
@@ -1930,6 +1944,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<VotingRoundInfo> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_voting_round_session(
+      List<VotingRoundSession> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_voting_service_endpoint(
       List<VotingServiceEndpoint> self, SseSerializer serializer);
 
@@ -2252,6 +2270,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_voting_round_recovery(
       VotingRoundRecovery self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_round_session(
+      VotingRoundSession self, SseSerializer serializer);
 
   @protected
   void sse_encode_voting_service_endpoint(

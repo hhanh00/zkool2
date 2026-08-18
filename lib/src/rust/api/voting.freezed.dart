@@ -8068,6 +8068,413 @@ class __$VotingRoundRecoveryCopyWithImpl<$Res>
 }
 
 /// @nodoc
+mixin _$VotingRoundSession {
+  String get roundId;
+  VotingRoundPlan get plan;
+  VotingRoundRecovery get recovery;
+  List<VotingBallotIntent> get intents;
+
+  /// Create a copy of VotingRoundSession
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingRoundSessionCopyWith<VotingRoundSession> get copyWith =>
+      _$VotingRoundSessionCopyWithImpl<VotingRoundSession>(
+          this as VotingRoundSession, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingRoundSession &&
+            (identical(other.roundId, roundId) || other.roundId == roundId) &&
+            (identical(other.plan, plan) || other.plan == plan) &&
+            (identical(other.recovery, recovery) ||
+                other.recovery == recovery) &&
+            const DeepCollectionEquality().equals(other.intents, intents));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, roundId, plan, recovery,
+      const DeepCollectionEquality().hash(intents));
+
+  @override
+  String toString() {
+    return 'VotingRoundSession(roundId: $roundId, plan: $plan, recovery: $recovery, intents: $intents)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingRoundSessionCopyWith<$Res> {
+  factory $VotingRoundSessionCopyWith(
+          VotingRoundSession value, $Res Function(VotingRoundSession) _then) =
+      _$VotingRoundSessionCopyWithImpl;
+  @useResult
+  $Res call(
+      {String roundId,
+      VotingRoundPlan plan,
+      VotingRoundRecovery recovery,
+      List<VotingBallotIntent> intents});
+
+  $VotingRoundPlanCopyWith<$Res> get plan;
+  $VotingRoundRecoveryCopyWith<$Res> get recovery;
+}
+
+/// @nodoc
+class _$VotingRoundSessionCopyWithImpl<$Res>
+    implements $VotingRoundSessionCopyWith<$Res> {
+  _$VotingRoundSessionCopyWithImpl(this._self, this._then);
+
+  final VotingRoundSession _self;
+  final $Res Function(VotingRoundSession) _then;
+
+  /// Create a copy of VotingRoundSession
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? roundId = null,
+    Object? plan = null,
+    Object? recovery = null,
+    Object? intents = null,
+  }) {
+    return _then(_self.copyWith(
+      roundId: null == roundId
+          ? _self.roundId
+          : roundId // ignore: cast_nullable_to_non_nullable
+              as String,
+      plan: null == plan
+          ? _self.plan
+          : plan // ignore: cast_nullable_to_non_nullable
+              as VotingRoundPlan,
+      recovery: null == recovery
+          ? _self.recovery
+          : recovery // ignore: cast_nullable_to_non_nullable
+              as VotingRoundRecovery,
+      intents: null == intents
+          ? _self.intents
+          : intents // ignore: cast_nullable_to_non_nullable
+              as List<VotingBallotIntent>,
+    ));
+  }
+
+  /// Create a copy of VotingRoundSession
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingRoundPlanCopyWith<$Res> get plan {
+    return $VotingRoundPlanCopyWith<$Res>(_self.plan, (value) {
+      return _then(_self.copyWith(plan: value));
+    });
+  }
+
+  /// Create a copy of VotingRoundSession
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingRoundRecoveryCopyWith<$Res> get recovery {
+    return $VotingRoundRecoveryCopyWith<$Res>(_self.recovery, (value) {
+      return _then(_self.copyWith(recovery: value));
+    });
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingRoundSession].
+extension VotingRoundSessionPatterns on VotingRoundSession {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingRoundSession value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundSession() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingRoundSession value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundSession():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingRoundSession value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundSession() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(String roundId, VotingRoundPlan plan,
+            VotingRoundRecovery recovery, List<VotingBallotIntent> intents)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundSession() when $default != null:
+        return $default(
+            _that.roundId, _that.plan, _that.recovery, _that.intents);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(String roundId, VotingRoundPlan plan,
+            VotingRoundRecovery recovery, List<VotingBallotIntent> intents)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundSession():
+        return $default(
+            _that.roundId, _that.plan, _that.recovery, _that.intents);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(String roundId, VotingRoundPlan plan,
+            VotingRoundRecovery recovery, List<VotingBallotIntent> intents)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundSession() when $default != null:
+        return $default(
+            _that.roundId, _that.plan, _that.recovery, _that.intents);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingRoundSession implements VotingRoundSession {
+  const _VotingRoundSession(
+      {required this.roundId,
+      required this.plan,
+      required this.recovery,
+      required final List<VotingBallotIntent> intents})
+      : _intents = intents;
+
+  @override
+  final String roundId;
+  @override
+  final VotingRoundPlan plan;
+  @override
+  final VotingRoundRecovery recovery;
+  final List<VotingBallotIntent> _intents;
+  @override
+  List<VotingBallotIntent> get intents {
+    if (_intents is EqualUnmodifiableListView) return _intents;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_intents);
+  }
+
+  /// Create a copy of VotingRoundSession
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingRoundSessionCopyWith<_VotingRoundSession> get copyWith =>
+      __$VotingRoundSessionCopyWithImpl<_VotingRoundSession>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingRoundSession &&
+            (identical(other.roundId, roundId) || other.roundId == roundId) &&
+            (identical(other.plan, plan) || other.plan == plan) &&
+            (identical(other.recovery, recovery) ||
+                other.recovery == recovery) &&
+            const DeepCollectionEquality().equals(other._intents, _intents));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, roundId, plan, recovery,
+      const DeepCollectionEquality().hash(_intents));
+
+  @override
+  String toString() {
+    return 'VotingRoundSession(roundId: $roundId, plan: $plan, recovery: $recovery, intents: $intents)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingRoundSessionCopyWith<$Res>
+    implements $VotingRoundSessionCopyWith<$Res> {
+  factory _$VotingRoundSessionCopyWith(
+          _VotingRoundSession value, $Res Function(_VotingRoundSession) _then) =
+      __$VotingRoundSessionCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {String roundId,
+      VotingRoundPlan plan,
+      VotingRoundRecovery recovery,
+      List<VotingBallotIntent> intents});
+
+  @override
+  $VotingRoundPlanCopyWith<$Res> get plan;
+  @override
+  $VotingRoundRecoveryCopyWith<$Res> get recovery;
+}
+
+/// @nodoc
+class __$VotingRoundSessionCopyWithImpl<$Res>
+    implements _$VotingRoundSessionCopyWith<$Res> {
+  __$VotingRoundSessionCopyWithImpl(this._self, this._then);
+
+  final _VotingRoundSession _self;
+  final $Res Function(_VotingRoundSession) _then;
+
+  /// Create a copy of VotingRoundSession
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? roundId = null,
+    Object? plan = null,
+    Object? recovery = null,
+    Object? intents = null,
+  }) {
+    return _then(_VotingRoundSession(
+      roundId: null == roundId
+          ? _self.roundId
+          : roundId // ignore: cast_nullable_to_non_nullable
+              as String,
+      plan: null == plan
+          ? _self.plan
+          : plan // ignore: cast_nullable_to_non_nullable
+              as VotingRoundPlan,
+      recovery: null == recovery
+          ? _self.recovery
+          : recovery // ignore: cast_nullable_to_non_nullable
+              as VotingRoundRecovery,
+      intents: null == intents
+          ? _self._intents
+          : intents // ignore: cast_nullable_to_non_nullable
+              as List<VotingBallotIntent>,
+    ));
+  }
+
+  /// Create a copy of VotingRoundSession
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingRoundPlanCopyWith<$Res> get plan {
+    return $VotingRoundPlanCopyWith<$Res>(_self.plan, (value) {
+      return _then(_self.copyWith(plan: value));
+    });
+  }
+
+  /// Create a copy of VotingRoundSession
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingRoundRecoveryCopyWith<$Res> get recovery {
+    return $VotingRoundRecoveryCopyWith<$Res>(_self.recovery, (value) {
+      return _then(_self.copyWith(recovery: value));
+    });
+  }
+}
+
+/// @nodoc
 mixin _$VotingServiceEndpoint {
   String get url;
   String get label;

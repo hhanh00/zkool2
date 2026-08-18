@@ -185,10 +185,12 @@ class _RoundTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
-    final session = ref.watch(votingSessionProvider(round.roundId));
+    // All tiles share one batch load (a single pool connection); the tile
+    // reads its round's session from the shared map.
+    final sessions = ref.watch(votingSessionsAllProvider);
     final title = ref.watch(votingRoundTitleProvider(round.roundId, chainUrl));
     final roundTitle = title.value ?? round.roundId;
-    return session.when(
+    return sessions.when(
       loading: () => ListTile(
         title: Text(roundTitle),
         subtitle: Text("Snapshot height ${round.snapshotHeight}"),
@@ -203,11 +205,22 @@ class _RoundTile extends ConsumerWidget {
         subtitle: Text("Snapshot height ${round.snapshotHeight}"),
         trailing: IconButton(
           icon: Icon(Icons.refresh),
-          onPressed: () =>
-              ref.invalidate(votingSessionProvider(round.roundId)),
+          onPressed: () => ref.invalidate(votingSessionsAllProvider),
         ),
       ),
-      data: (state) {
+      data: (map) {
+        final state = map[round.roundId];
+        if (state == null) {
+          return ListTile(
+            title: Text(roundTitle),
+            subtitle: Text("Snapshot height ${round.snapshotHeight}"),
+            trailing: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+          );
+        }
         final plan = state.plan;
         final action = plan?.primaryAction ?? "idle";
         final pending = plan?.pendingRecovery ?? false;
