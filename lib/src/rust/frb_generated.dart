@@ -95,7 +95,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 1724058360;
+  int get rustContentHash => -1211184662;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -798,6 +798,9 @@ abstract class RustLibApi extends BaseApi {
       required Coin c});
 
   Future<List<VotingRoundInfo>> crateApiVotingVotingRounds({required Coin c});
+
+  Future<List<VotingRoundSession>> crateApiVotingVotingSessions(
+      {required List<String> roundIds, required Coin c});
 
   Future<void> crateApiVotingVotingSetBallotIntent(
       {required String roundId,
@@ -7368,6 +7371,35 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<List<VotingRoundSession>> crateApiVotingVotingSessions(
+      {required List<String> roundIds, required Coin c}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_list_String(roundIds, serializer);
+          sse_encode_box_autoadd_coin(c, serializer);
+          pdeCallFfi(generalizedFrbRustBinding, serializer,
+              funcId: 216, port: port_);
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_list_voting_round_session,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiVotingVotingSessionsConstMeta,
+        argValues: [roundIds, c],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVotingVotingSessionsConstMeta =>
+      const TaskConstMeta(
+        debugName: "voting_sessions",
+        argNames: ["roundIds", "c"],
+      );
+
+  @override
   Future<void> crateApiVotingVotingSetBallotIntent(
       {required String roundId,
       required int proposalId,
@@ -7386,7 +7418,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_32(numOptions, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 216, port: port_);
+              funcId: 217, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -7431,7 +7463,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_list_String(newUrls, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 217, port: port_);
+              funcId: 218, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -7474,7 +7506,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_32(shareIndex, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 218, port: port_);
+              funcId: 219, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -7503,7 +7535,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(roundId, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 219, port: port_);
+              funcId: 220, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_voting_share_submission_payload,
@@ -7543,7 +7575,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_bool(singleShare, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 220, port: port_);
+              funcId: 221, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_voting_share_plan,
@@ -7599,7 +7631,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_bool(singleShare, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 221, port: port_);
+              funcId: 222, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_voting_share_plan_item,
@@ -7655,7 +7687,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_64(submitAt, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 222, port: port_);
+              funcId: 223, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -7701,7 +7733,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(roundId, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 223, port: port_);
+              funcId: 224, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_voting_share_delegation_record,
@@ -7741,7 +7773,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_64(submitAt, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 224, port: port_);
+              funcId: 225, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -7787,7 +7819,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(voteNodeUrl, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 225, port: port_);
+              funcId: 226, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_u_32,
@@ -7821,7 +7853,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(voteNodeUrl, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 226, port: port_);
+              funcId: 227, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_voting_van_witness,
@@ -7855,7 +7887,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_32(proposalId, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 227, port: port_);
+              funcId: 228, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -8772,6 +8804,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   List<VotingRoundInfo> dco_decode_list_voting_round_info(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_voting_round_info).toList();
+  }
+
+  @protected
+  List<VotingRoundSession> dco_decode_list_voting_round_session(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>).map(dco_decode_voting_round_session).toList();
   }
 
   @protected
@@ -9962,6 +10000,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       shareDelegations: dco_decode_list_voting_share_delegation_record(arr[5]),
       unconfirmedShareDelegations:
           dco_decode_list_voting_share_delegation_record(arr[6]),
+    );
+  }
+
+  @protected
+  VotingRoundSession dco_decode_voting_round_session(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 4)
+      throw Exception('unexpected arr length: expect 4 but see ${arr.length}');
+    return VotingRoundSession(
+      roundId: dco_decode_String(arr[0]),
+      plan: dco_decode_voting_round_plan(arr[1]),
+      recovery: dco_decode_voting_round_recovery(arr[2]),
+      intents: dco_decode_list_voting_ballot_intent(arr[3]),
     );
   }
 
@@ -11319,6 +11371,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var ans_ = <VotingRoundInfo>[];
     for (var idx_ = 0; idx_ < len_; ++idx_) {
       ans_.add(sse_decode_voting_round_info(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
+  List<VotingRoundSession> sse_decode_list_voting_round_session(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <VotingRoundSession>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_voting_round_session(deserializer));
     }
     return ans_;
   }
@@ -12684,6 +12749,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  VotingRoundSession sse_decode_voting_round_session(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_roundId = sse_decode_String(deserializer);
+    var var_plan = sse_decode_voting_round_plan(deserializer);
+    var var_recovery = sse_decode_voting_round_recovery(deserializer);
+    var var_intents = sse_decode_list_voting_ballot_intent(deserializer);
+    return VotingRoundSession(
+        roundId: var_roundId,
+        plan: var_plan,
+        recovery: var_recovery,
+        intents: var_intents);
+  }
+
+  @protected
   VotingServiceEndpoint sse_decode_voting_service_endpoint(
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -14022,6 +14102,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_voting_round_session(
+      List<VotingRoundSession> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_voting_round_session(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_voting_service_endpoint(
       List<VotingServiceEndpoint> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -15024,6 +15114,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         self.shareDelegations, serializer);
     sse_encode_list_voting_share_delegation_record(
         self.unconfirmedShareDelegations, serializer);
+  }
+
+  @protected
+  void sse_encode_voting_round_session(
+      VotingRoundSession self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.roundId, serializer);
+    sse_encode_voting_round_plan(self.plan, serializer);
+    sse_encode_voting_round_recovery(self.recovery, serializer);
+    sse_encode_list_voting_ballot_intent(self.intents, serializer);
   }
 
   @protected
