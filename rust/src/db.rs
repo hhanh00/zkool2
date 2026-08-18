@@ -663,7 +663,7 @@ pub async fn backfill_diversifier_index(connection: &mut SqliteConnection) -> Re
 
     // Fetch distinct accounts with unbackfilled notes
     let accounts: Vec<(u32,)> = sqlx::query_as(
-        "SELECT DISTINCT account FROM notes WHERE pool IN (1, 2) AND diversifier IS NOT NULL AND diversifier_index IS NULL",
+        "SELECT DISTINCT account FROM notes WHERE pool IN (1, 2, 3) AND diversifier IS NOT NULL AND diversifier_index IS NULL",
     )
     .fetch_all(&mut *connection)
     .await?;
@@ -691,7 +691,7 @@ pub async fn backfill_diversifier_index(connection: &mut SqliteConnection) -> Re
 
         // Fetch unbackfilled notes for this account
         let notes: Vec<(u32, u8, u8, Vec<u8>)> = sqlx::query_as(
-            "SELECT id_note, pool, scope, diversifier FROM notes WHERE account = ? AND pool IN (1, 2) AND diversifier IS NOT NULL AND diversifier_index IS NULL",
+            "SELECT id_note, pool, scope, diversifier FROM notes WHERE account = ? AND pool IN (1, 2, 3) AND diversifier IS NOT NULL AND diversifier_index IS NULL",
         )
         .bind(account)
         .fetch_all(&mut *connection)
@@ -702,7 +702,7 @@ pub async fn backfill_diversifier_index(connection: &mut SqliteConnection) -> Re
                 1 => sapling_dfvk
                     .as_ref()
                     .and_then(|dfvk| resolve_sapling_diversifier_index(dfvk, scope, &diversifier)),
-                2 => orchard_fvk
+                2 | 3 => orchard_fvk
                     .as_ref()
                     .and_then(|fvk| resolve_orchard_diversifier_index(fvk, scope, &diversifier)),
                 _ => None,
