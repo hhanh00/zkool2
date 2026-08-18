@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.28.0-rc.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.6...zkool-v6.28.0-rc.7) (2026-08-18)
+
+
+### Bug Fixes
+
+* **voting:** keep back navigation to account after vote submission ([9f7cf4f](https://github.com/hhanh00/zkool2/commit/9f7cf4fb98ef7b06ebe8a6fef20cab4faf859605))
+
 ## [6.28.0-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.5...zkool-v6.28.0-rc.6) (2026-08-18)
 
 
