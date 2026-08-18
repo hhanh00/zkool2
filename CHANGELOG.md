@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.28.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.4...zkool-v6.28.0-rc.5) (2026-08-18)
+
+
+### Bug Fixes
+
+* batch-load voting sessions on one pool connection; keep the pool free during delegation ([8375475](https://github.com/hhanh00/zkool2/commit/8375475c9e8201a9eae4cbd54c6286a56624b0bf))
+
 ## [6.28.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.3...zkool-v6.28.0-rc.4) (2026-08-18)
 
 
