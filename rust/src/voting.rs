@@ -56,8 +56,12 @@ pub fn voting_network(network: &WalletNetwork) -> Result<VotingNetwork> {
 ///
 /// Migrations are additive and idempotent; all voting state is scoped to
 /// `wallet_id` (the hex-encoded ZIP-32 seed fingerprint).
-pub async fn open_voting_db(pool: SqlitePool, wallet_id: &str) -> Result<VotingDb> {
-    let db = VotingDb::from_pool(pool).await?;
+pub async fn open_voting_db(
+    pool: SqlitePool,
+    conn: &mut SqliteConnection,
+    wallet_id: &str,
+) -> Result<VotingDb> {
+    let db = VotingDb::from_pool(pool, conn).await?;
     db.set_wallet_id(wallet_id);
     Ok(db)
 }
@@ -478,7 +482,8 @@ pub async fn prepare_delegation_bundle(
     bundle_index: u32,
     bundle_policy: BundlePolicy,
 ) -> Result<PreparedDelegationBundle> {
-    let db = open_voting_db(pool, wallet_id).await?;
+    let mut conn = pool.acquire().await?;
+    let db = open_voting_db(pool, &mut conn, wallet_id).await?;
     Ok(zcash_voting::delegate::prepare_delegation_bundle_with_inputs(
         &db,
         PrepareDelegationBundleWithInputsParams {
@@ -568,7 +573,8 @@ pub async fn prove_and_submit_delegation_with_progress(
     pir_server_url: &str,
     progress: Arc<dyn DelegationProgressReporter>,
 ) -> Result<(DelegationSubmission, String)> {
-    let db = open_voting_db(pool, wallet_id).await?;
+    let mut conn = pool.acquire().await?;
+    let db = open_voting_db(pool, &mut conn, wallet_id).await?;
 
     let _setup = prepared.setup(&db, progress.as_ref()).await?;
     let request = prepared.signing_request(&db).await?;
@@ -627,7 +633,8 @@ pub async fn confirm_delegation(
     tx_hash: &str,
     events: &[TxEvent],
 ) -> Result<DelegationConfirmation> {
-    let db = open_voting_db(pool, wallet_id).await?;
+    let mut conn = pool.acquire().await?;
+    let db = open_voting_db(pool, &mut conn, wallet_id).await?;
     Ok(confirm_delegation_submission(&db, round_id, bundle_index, tx_hash, events).await?)
 }
 
@@ -641,7 +648,8 @@ pub async fn confirm_vote(
     tx_hash: &str,
     events: &[TxEvent],
 ) -> Result<VoteConfirmation> {
-    let db = open_voting_db(pool, wallet_id).await?;
+    let mut conn = pool.acquire().await?;
+    let db = open_voting_db(pool, &mut conn, wallet_id).await?;
     Ok(confirm_vote_submission(&db, round_id, bundle_index, proposal_id, tx_hash, events).await?)
 }
 
@@ -655,7 +663,8 @@ pub async fn vote_van_witness(
     bundle_index: u32,
     vote_node_url: &str,
 ) -> Result<VanWitness> {
-    let db = open_voting_db(pool, wallet_id).await?;
+    let mut conn = pool.acquire().await?;
+    let db = open_voting_db(pool, &mut conn, wallet_id).await?;
     let anchor_height = zcash_voting::prelude::sync_vote_tree(&db, round_id, vote_node_url).await?;
     Ok(zcash_voting::prelude::van_witness(&db, round_id, bundle_index, anchor_height).await?)
 }
@@ -696,7 +705,8 @@ pub async fn commit_votes_with_progress(
     hotkey: &VotingHotkey,
     stages: &dyn VoteCommitStageReporter,
 ) -> Result<SignedVoteCommitments> {
-    let db = open_voting_db(pool, wallet_id).await?;
+    let mut conn = pool.acquire().await?;
+    let db = open_voting_db(pool, &mut conn, wallet_id).await?;
     Ok(zcash_voting::prelude::commit_batch(
         &db,
         round_id,
@@ -718,7 +728,8 @@ pub async fn vote_payloads(
     bundle_index: u32,
     proposal_id: u32,
 ) -> Result<(VoteSubmission, Vec<SharePayload>)> {
-    let db = open_voting_db(pool, wallet_id).await?;
+    let mut conn = pool.acquire().await?;
+    let db = open_voting_db(pool, &mut conn, wallet_id).await?;
     let committed = CommittedVote::recover(&db, round_id, bundle_index, proposal_id).await?;
     Ok((
         committed.submission(&db).await?,
@@ -734,7 +745,8 @@ pub async fn vote_wire_json(
     bundle_index: u32,
     proposal_id: u32,
 ) -> Result<String> {
-    let db = open_voting_db(pool, wallet_id).await?;
+    let mut conn = pool.acquire().await?;
+    let db = open_voting_db(pool, &mut conn, wallet_id).await?;
     let committed = CommittedVote::recover(&db, round_id, bundle_index, proposal_id).await?;
     let signed = committed.signed_commitment(&db).await?;
     Ok(zcash_voting::wire::VoteCommitmentWire::try_from(&signed)?.to_json()?)
@@ -752,9 +764,11 @@ pub async fn share_wire_json(
     vc_tree_position: Option<u64>,
     submit_at: u64,
 ) -> Result<String> {
-    let db = open_voting_db(pool, wallet_id).await?;
+    let mut conn = pool.acquire().await?;
+    let db = open_voting_db(pool, &mut conn, wallet_id).await?;
     let bundle = zcash_voting::recovery::recoverable_commitment_bundle(
         &db,
+        &mut conn,
         round_id,
         bundle_index,
         proposal_id,
@@ -786,7 +800,8 @@ pub async fn record_vote_execution(
     vc_tree_position: u64,
     shares: &[(u32, Vec<String>, u64, bool)],
 ) -> Result<()> {
-    let db = open_voting_db(pool, wallet_id).await?;
+    let mut conn = pool.acquire().await?;
+    let db = open_voting_db(pool, &mut conn, wallet_id).await?;
     let committed = CommittedVote::recover(&db, round_id, bundle_index, proposal_id).await?;
     committed.record_submission(&db, vote_tx_hash).await?;
     committed.record_vc_position(&db, vc_tree_position).await?;
