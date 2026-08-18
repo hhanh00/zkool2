@@ -233,7 +233,7 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
     );
 
     return Scaffold(
-      appBar: AppBar(title: Text(widget.roundId)),
+      appBar: AppBar(title: Text(_roundName ?? widget.roundId)),
       body: _error != null
           ? Center(child: Text(_error!))
           : _proposals.isEmpty
