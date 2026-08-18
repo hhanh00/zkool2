@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.28.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.4...zkool-v6.28.0-rc.5) (2026-08-18)
+
+
+### Bug Fixes
+
+* batch-load voting sessions on one pool connection; keep the pool free during delegation ([8375475](https://github.com/hhanh00/zkool2/commit/8375475c9e8201a9eae4cbd54c6286a56624b0bf))
+* build with Flutter 3.47.0 ([e6bd2fa](https://github.com/hhanh00/zkool2/commit/e6bd2fac8d9c4b8855c19f59bc15ca35e5366955))
+* bump Kotlin to 2.2.20 for Flutter 3.47.0 Android build ([581fbcf](https://github.com/hhanh00/zkool2/commit/581fbcfaec3ef40eeb16c69807d988b48e241281))
+
 ## [6.28.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.3...zkool-v6.28.0-rc.4) (2026-08-18)
 
 
