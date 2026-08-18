@@ -151,7 +151,7 @@ class VotingReviewPageState extends ConsumerState<VotingReviewPage> {
                 : () async {
                     final settings = await ref.read(appSettingsProvider.future);
                     if (!context.mounted) return;
-                    await GoRouter.of(context).push("/voting/status", extra: {
+                    await GoRouter.of(context).pushReplacement("/voting/status", extra: {
                       "roundId": widget.roundId,
                       "chainUrl": widget.chainUrl,
                       "pirServerUrl": "",

@@ -303,7 +303,7 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
                 const SizedBox(height: 8),
               FilledButton(
                 onPressed: allAnswered
-                    ? () => GoRouter.of(context).push("/voting/review", extra: {
+                    ? () => GoRouter.of(context).pushReplacement("/voting/review", extra: {
                           "roundId": widget.roundId,
                           "chainUrl": widget.chainUrl,
                           "roundParamsJson": _roundParamsJson,
