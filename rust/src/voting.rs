@@ -482,8 +482,10 @@ pub async fn prepare_delegation_bundle(
     bundle_index: u32,
     bundle_policy: BundlePolicy,
 ) -> Result<PreparedDelegationBundle> {
-    let mut conn = pool.acquire().await?;
-    let db = open_voting_db(pool, &mut conn, wallet_id).await?;
+    let db = {
+        let mut conn = pool.acquire().await?;
+        open_voting_db(pool, &mut conn, wallet_id).await?
+    };
     Ok(zcash_voting::delegate::prepare_delegation_bundle_with_inputs(
         &db,
         PrepareDelegationBundleWithInputsParams {
@@ -573,8 +575,10 @@ pub async fn prove_and_submit_delegation_with_progress(
     pir_server_url: &str,
     progress: Arc<dyn DelegationProgressReporter>,
 ) -> Result<(DelegationSubmission, String)> {
-    let mut conn = pool.acquire().await?;
-    let db = open_voting_db(pool, &mut conn, wallet_id).await?;
+    let db = {
+        let mut conn = pool.acquire().await?;
+        open_voting_db(pool, &mut conn, wallet_id).await?
+    };
 
     let _setup = prepared.setup(&db, progress.as_ref()).await?;
     let request = prepared.signing_request(&db).await?;
