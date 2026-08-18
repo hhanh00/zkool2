@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.28.0-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.5...zkool-v6.28.0-rc.6) (2026-08-18)
+
+
+### Bug Fixes
+
+* drop redundant pool predicate from diversifier index backfill ([370e06d](https://github.com/hhanh00/zkool2/commit/370e06d360b12220fb55dd5b075e12fbbd4941ca))
+* stop ref use after unmount when closing Folders page (issue 1203) ([d866c5e](https://github.com/hhanh00/zkool2/commit/d866c5e2c8c122f9c8842cbc0cf46fb936f3abfa))
+
 ## [6.28.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.4...zkool-v6.28.0-rc.5) (2026-08-18)
 
 
