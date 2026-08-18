@@ -502,7 +502,7 @@ pub async fn delegation_setup(
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, c.account).await?;
     let prepared = voting::load_prepared_bundle(&wallet_id, round_id, bundle_index)?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
 
     let setup = prepared.setup(&db, &NoopProgressReporter).await?;
     Ok(setup.into())
@@ -714,7 +714,7 @@ pub async fn delegation_mark_submitted(
     let tx_hash = tx_hash.to_string();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
     db.mark_delegation_submitted(&round_id, bundle_index, &tx_hash)
         .await?;
     Ok(())
@@ -731,8 +731,8 @@ pub async fn delegation_tx_hash(
     let round_id = round_id.to_string();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
-    Ok(db.get_delegation_tx_hash(&round_id, bundle_index).await?)
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
+    Ok(db.get_delegation_tx_hash(&mut *connection, &round_id, bundle_index).await?)
 }
 
 // ---------------------------------------------------------------------------
@@ -760,7 +760,7 @@ pub async fn voting_set_ballot_intent(
     };
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
     db.set_ballot_intent(&round_id, proposal_id, decision, num_options)
         .await?;
     Ok(())
@@ -897,7 +897,7 @@ pub async fn voting_mark_vote_submitted(
     let tx_hash = tx_hash.to_string();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
     db.mark_vote_submitted(&round_id, bundle_index, proposal_id, &tx_hash)
         .await?;
     Ok(())
@@ -924,7 +924,7 @@ pub async fn voting_share_record(
     let round_id = round_id.to_string();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
     zcash_voting::share::record(
         &db,
         &round_id,
@@ -948,8 +948,8 @@ pub async fn voting_share_unconfirmed(
     let round_id = round_id.to_string();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
-    Ok(zcash_voting::share::unconfirmed(&db, &round_id)
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
+    Ok(zcash_voting::share::unconfirmed(&db, &mut *connection, &round_id)
         .await?
         .into_iter()
         .map(Into::into)
@@ -969,7 +969,7 @@ pub async fn voting_share_confirm(
     let round_id = round_id.to_string();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
     zcash_voting::share::confirm(&db, &round_id, bundle_index, proposal_id, share_index).await?;
     Ok(())
 }
@@ -988,7 +988,7 @@ pub async fn voting_share_add_servers(
     let round_id = round_id.to_string();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
     zcash_voting::share::add_sent_servers(
         &db,
         &round_id,
@@ -1044,7 +1044,7 @@ pub async fn voting_sync_tree(
     let vote_node_url = vote_node_url.to_string();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
     Ok(zcash_voting::precompute::sync_vote_tree(&db, &round_id, &vote_node_url).await?)
 }
 
@@ -1076,10 +1076,10 @@ pub async fn voting_share_payloads(
     let round_id = round_id.to_string();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
-    let snapshot = zcash_voting::recovery::round_snapshot(&db, &round_id).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
+    let snapshot = zcash_voting::recovery::round_snapshot(&db, &mut *connection, &round_id).await?;
     let recorded: std::collections::BTreeSet<(u32, u32, u32)> = db
-        .share_phases(&round_id)
+        .share_phases(&mut *connection, &round_id)
         .await?
         .into_iter()
         .map(|(b, p, s, _)| (b, p, s))
@@ -1181,8 +1181,8 @@ pub async fn voting_share_plan(
     let round_id = round_id.to_string();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
-    let shares = zcash_voting::share::unconfirmed(&db, &round_id).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
+    let shares = zcash_voting::share::unconfirmed(&db, &mut *connection, &round_id).await?;
 
     let policy = ShareTimingPolicy::default();
     let summary = zcash_voting::share_policy::summarize_share_tracking(
@@ -2077,8 +2077,8 @@ pub async fn voting_rounds(c: &Coin) -> Result<Vec<VotingRoundInfo>> {
     let account = c.account;
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
-    let rounds = db.rounds().await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
+    let rounds = db.rounds(&mut *connection).await?;
     Ok(rounds.into_iter().map(Into::into).collect())
 }
 
@@ -2091,8 +2091,8 @@ pub async fn voting_plan(round_id: &str, proposal_ids: Vec<u32>, c: &Coin) -> Re
     let round_id = round_id.to_string();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
-    let plan = zcash_voting::session::resume_plan(&db, &round_id, &proposal_ids).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
+    let plan = zcash_voting::session::resume_plan(&db, &mut *connection, &round_id, &proposal_ids).await?;
     Ok(plan.into())
 }
 
@@ -2103,8 +2103,8 @@ pub async fn voting_recovery(round_id: &str, c: &Coin) -> Result<VotingRoundReco
     let round_id = round_id.to_string();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
-    let snapshot = zcash_voting::recovery::round_snapshot(&db, &round_id).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
+    let snapshot = zcash_voting::recovery::round_snapshot(&db, &mut *connection, &round_id).await?;
     Ok(snapshot.into())
 }
 
@@ -2116,7 +2116,7 @@ pub async fn voting_recovery_clear(round_id: &str, c: &Coin) -> Result<()> {
     let round_id = round_id.to_string();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
     zcash_voting::recovery::clear(&db, &round_id).await?;
     Ok(())
 }
@@ -2132,7 +2132,7 @@ pub async fn voting_reset_session_state(round_id: &str, c: &Coin) -> Result<()> 
     let round_id = round_id.to_string();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
     zcash_voting::precompute::reset_voting_session_state(&db, &round_id).await?;
     Ok(())
 }
@@ -2144,8 +2144,8 @@ pub async fn voting_ballot_intents(round_id: &str, c: &Coin) -> Result<Vec<Votin
     let round_id = round_id.to_string();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let db = voting::open_voting_db(c.get_pool()?, &wallet_id).await?;
-    let intents = db.ballot_intents(&round_id).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
+    let intents = db.ballot_intents(&mut *connection, &round_id).await?;
     Ok(intents.into_iter().map(Into::into).collect())
 }
 
