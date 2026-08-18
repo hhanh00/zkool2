@@ -44,7 +44,7 @@ dependencies:
 
   flutter_svg: ^2.0.10+1
 
-  fixed: ^5.3.3
+  fixed: ^6.2.0
   decimal: ^3.2.1
   intl: ^0.20.2
 
