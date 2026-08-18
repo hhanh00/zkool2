@@ -24,6 +24,7 @@ import 'api/sync.dart';
 import 'api/transaction.dart';
 import 'api/vault.dart';
 import 'api/voting.dart';
+import 'api/voting_workflow.dart';
 import 'api/zsa.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -95,7 +96,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1211184662;
+  int get rustContentHash => -1814002413;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -882,6 +883,15 @@ abstract class RustLibApi extends BaseApi {
       required int bundleIndex,
       required int proposalId,
       required Coin c});
+
+  Future<VotingWorkflowStatus> crateApiVotingWorkflowVotingWorkflowRetry(
+      {required String roundId, required Coin c});
+
+  Future<VotingWorkflowStatus> crateApiVotingWorkflowVotingWorkflowStart(
+      {required VoteRoundInput input, required Coin c});
+
+  Future<VotingWorkflowStatus?> crateApiVotingWorkflowVotingWorkflowStatus(
+      {required String roundId, required Coin c});
 
   RustArcIncrementStrongCountFnType
       get rust_arc_increment_strong_count_DartVault;
@@ -7906,6 +7916,93 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         argNames: ["roundId", "bundleIndex", "proposalId", "c"],
       );
 
+  @override
+  Future<VotingWorkflowStatus> crateApiVotingWorkflowVotingWorkflowRetry(
+      {required String roundId, required Coin c}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(roundId, serializer);
+          sse_encode_box_autoadd_coin(c, serializer);
+          pdeCallFfi(generalizedFrbRustBinding, serializer,
+              funcId: 229, port: port_);
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_voting_workflow_status,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiVotingWorkflowVotingWorkflowRetryConstMeta,
+        argValues: [roundId, c],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVotingWorkflowVotingWorkflowRetryConstMeta =>
+      const TaskConstMeta(
+        debugName: "voting_workflow_retry",
+        argNames: ["roundId", "c"],
+      );
+
+  @override
+  Future<VotingWorkflowStatus> crateApiVotingWorkflowVotingWorkflowStart(
+      {required VoteRoundInput input, required Coin c}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_box_autoadd_vote_round_input(input, serializer);
+          sse_encode_box_autoadd_coin(c, serializer);
+          pdeCallFfi(generalizedFrbRustBinding, serializer,
+              funcId: 230, port: port_);
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_voting_workflow_status,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiVotingWorkflowVotingWorkflowStartConstMeta,
+        argValues: [input, c],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVotingWorkflowVotingWorkflowStartConstMeta =>
+      const TaskConstMeta(
+        debugName: "voting_workflow_start",
+        argNames: ["input", "c"],
+      );
+
+  @override
+  Future<VotingWorkflowStatus?> crateApiVotingWorkflowVotingWorkflowStatus(
+      {required String roundId, required Coin c}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(roundId, serializer);
+          sse_encode_box_autoadd_coin(c, serializer);
+          pdeCallFfi(generalizedFrbRustBinding, serializer,
+              funcId: 231, port: port_);
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_voting_workflow_status,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiVotingWorkflowVotingWorkflowStatusConstMeta,
+        argValues: [roundId, c],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVotingWorkflowVotingWorkflowStatusConstMeta =>
+      const TaskConstMeta(
+        debugName: "voting_workflow_status",
+        argNames: ["roundId", "c"],
+      );
+
   Future<void> Function(int, dynamic)
       encode_DartFn_Inputs_list_prim_u_8_strict_Output_unit_AnyhowException(
           FutureOr<void> Function(Uint8List) raw) {
@@ -8348,6 +8445,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  VoteRoundInput dco_decode_box_autoadd_vote_round_input(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_vote_round_input(raw);
+  }
+
+  @protected
   VotingCompletedVoteDisplay
       dco_decode_box_autoadd_voting_completed_vote_display(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -8364,6 +8467,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   VotingPirLayout dco_decode_box_autoadd_voting_pir_layout(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_voting_pir_layout(raw);
+  }
+
+  @protected
+  VotingWorkflowStatus dco_decode_box_autoadd_voting_workflow_status(
+      dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_voting_workflow_status(raw);
   }
 
   @protected
@@ -9194,6 +9304,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  VotingWorkflowStatus? dco_decode_opt_box_autoadd_voting_workflow_status(
+      dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return raw == null
+        ? null
+        : dco_decode_box_autoadd_voting_workflow_status(raw);
+  }
+
+  @protected
   List<String>? dco_decode_opt_list_String(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return raw == null ? null : dco_decode_list_String(raw);
@@ -9685,6 +9804,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   UsizeArray4 dco_decode_usize_array_4(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return UsizeArray4(dco_decode_list_prim_usize_strict(raw));
+  }
+
+  @protected
+  VoteRoundInput dco_decode_vote_round_input(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 20)
+      throw Exception('unexpected arr length: expect 20 but see ${arr.length}');
+    return VoteRoundInput(
+      roundId: dco_decode_String(arr[0]),
+      coin: dco_decode_u_8(arr[1]),
+      account: dco_decode_u_32(arr[2]),
+      dbFilepath: dco_decode_String(arr[3]),
+      url: dco_decode_String(arr[4]),
+      serverType: dco_decode_u_8(arr[5]),
+      transport: dco_decode_u_8(arr[6]),
+      proxy: dco_decode_String(arr[7]),
+      chainUrl: dco_decode_String(arr[8]),
+      pirServerUrl: dco_decode_String(arr[9]),
+      pirLayout: dco_decode_opt_box_autoadd_voting_pir_layout(arr[10]),
+      roundParamsJson: dco_decode_opt_String(arr[11]),
+      roundName: dco_decode_opt_String(arr[12]),
+      maxRealNotesPerBundle: dco_decode_opt_box_autoadd_u_32(arr[13]),
+      lightwalletdUrl: dco_decode_opt_String(arr[14]),
+      voteNodeUrl: dco_decode_String(arr[15]),
+      ceremonyStart: dco_decode_u_64(arr[16]),
+      voteEnd: dco_decode_opt_box_autoadd_u_64(arr[17]),
+      shareServerUrls: dco_decode_list_String(arr[18]),
+      singleShare: dco_decode_bool(arr[19]),
+    );
   }
 
   @protected
@@ -10279,6 +10428,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  VotingWorkflowStatus dco_decode_voting_workflow_status(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
+    return VotingWorkflowStatus(
+      roundId: dco_decode_String(arr[0]),
+      status: dco_decode_String(arr[1]),
+      stage: dco_decode_String(arr[2]),
+      progress: dco_decode_opt_box_autoadd_f_64(arr[3]),
+      error: dco_decode_opt_String(arr[4]),
+      doneLabel: dco_decode_opt_String(arr[5]),
+      txHash: dco_decode_opt_String(arr[6]),
+      confirmHeight: dco_decode_opt_box_autoadd_u_64(arr[7]),
+      eligibleWeightZatoshi: dco_decode_opt_box_autoadd_u_64(arr[8]),
+    );
+  }
+
+  @protected
   ZsaHolding dco_decode_zsa_holding(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -10711,6 +10879,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  VoteRoundInput sse_decode_box_autoadd_vote_round_input(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_vote_round_input(deserializer));
+  }
+
+  @protected
   VotingCompletedVoteDisplay
       sse_decode_box_autoadd_voting_completed_vote_display(
           SseDeserializer deserializer) {
@@ -10730,6 +10905,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_voting_pir_layout(deserializer));
+  }
+
+  @protected
+  VotingWorkflowStatus sse_decode_box_autoadd_voting_workflow_status(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_voting_workflow_status(deserializer));
   }
 
   @protected
@@ -11890,6 +12072,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  VotingWorkflowStatus? sse_decode_opt_box_autoadd_voting_workflow_status(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    if (sse_decode_bool(deserializer)) {
+      return (sse_decode_box_autoadd_voting_workflow_status(deserializer));
+    } else {
+      return null;
+    }
+  }
+
+  @protected
   List<String>? sse_decode_opt_list_String(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -12409,6 +12603,54 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_list_prim_usize_strict(deserializer);
     return UsizeArray4(inner);
+  }
+
+  @protected
+  VoteRoundInput sse_decode_vote_round_input(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_roundId = sse_decode_String(deserializer);
+    var var_coin = sse_decode_u_8(deserializer);
+    var var_account = sse_decode_u_32(deserializer);
+    var var_dbFilepath = sse_decode_String(deserializer);
+    var var_url = sse_decode_String(deserializer);
+    var var_serverType = sse_decode_u_8(deserializer);
+    var var_transport = sse_decode_u_8(deserializer);
+    var var_proxy = sse_decode_String(deserializer);
+    var var_chainUrl = sse_decode_String(deserializer);
+    var var_pirServerUrl = sse_decode_String(deserializer);
+    var var_pirLayout =
+        sse_decode_opt_box_autoadd_voting_pir_layout(deserializer);
+    var var_roundParamsJson = sse_decode_opt_String(deserializer);
+    var var_roundName = sse_decode_opt_String(deserializer);
+    var var_maxRealNotesPerBundle =
+        sse_decode_opt_box_autoadd_u_32(deserializer);
+    var var_lightwalletdUrl = sse_decode_opt_String(deserializer);
+    var var_voteNodeUrl = sse_decode_String(deserializer);
+    var var_ceremonyStart = sse_decode_u_64(deserializer);
+    var var_voteEnd = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_shareServerUrls = sse_decode_list_String(deserializer);
+    var var_singleShare = sse_decode_bool(deserializer);
+    return VoteRoundInput(
+        roundId: var_roundId,
+        coin: var_coin,
+        account: var_account,
+        dbFilepath: var_dbFilepath,
+        url: var_url,
+        serverType: var_serverType,
+        transport: var_transport,
+        proxy: var_proxy,
+        chainUrl: var_chainUrl,
+        pirServerUrl: var_pirServerUrl,
+        pirLayout: var_pirLayout,
+        roundParamsJson: var_roundParamsJson,
+        roundName: var_roundName,
+        maxRealNotesPerBundle: var_maxRealNotesPerBundle,
+        lightwalletdUrl: var_lightwalletdUrl,
+        voteNodeUrl: var_voteNodeUrl,
+        ceremonyStart: var_ceremonyStart,
+        voteEnd: var_voteEnd,
+        shareServerUrls: var_shareServerUrls,
+        singleShare: var_singleShare);
   }
 
   @protected
@@ -13056,6 +13298,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  VotingWorkflowStatus sse_decode_voting_workflow_status(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_roundId = sse_decode_String(deserializer);
+    var var_status = sse_decode_String(deserializer);
+    var var_stage = sse_decode_String(deserializer);
+    var var_progress = sse_decode_opt_box_autoadd_f_64(deserializer);
+    var var_error = sse_decode_opt_String(deserializer);
+    var var_doneLabel = sse_decode_opt_String(deserializer);
+    var var_txHash = sse_decode_opt_String(deserializer);
+    var var_confirmHeight = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_eligibleWeightZatoshi =
+        sse_decode_opt_box_autoadd_u_64(deserializer);
+    return VotingWorkflowStatus(
+        roundId: var_roundId,
+        status: var_status,
+        stage: var_stage,
+        progress: var_progress,
+        error: var_error,
+        doneLabel: var_doneLabel,
+        txHash: var_txHash,
+        confirmHeight: var_confirmHeight,
+        eligibleWeightZatoshi: var_eligibleWeightZatoshi);
+  }
+
+  @protected
   ZsaHolding sse_decode_zsa_holding(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_idAsset = sse_decode_i_64(deserializer);
@@ -13557,6 +13825,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_box_autoadd_vote_round_input(
+      VoteRoundInput self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_vote_round_input(self, serializer);
+  }
+
+  @protected
   void sse_encode_box_autoadd_voting_completed_vote_display(
       VotingCompletedVoteDisplay self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -13575,6 +13850,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       VotingPirLayout self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_voting_pir_layout(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_voting_workflow_status(
+      VotingWorkflowStatus self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_voting_workflow_status(self, serializer);
   }
 
   @protected
@@ -14500,6 +14782,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_opt_box_autoadd_voting_workflow_status(
+      VotingWorkflowStatus? self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    sse_encode_bool(self != null, serializer);
+    if (self != null) {
+      sse_encode_box_autoadd_voting_workflow_status(self, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_opt_list_String(
       List<String>? self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -14879,6 +15172,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_usize_array_4(UsizeArray4 self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_usize_strict(self.inner, serializer);
+  }
+
+  @protected
+  void sse_encode_vote_round_input(
+      VoteRoundInput self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.roundId, serializer);
+    sse_encode_u_8(self.coin, serializer);
+    sse_encode_u_32(self.account, serializer);
+    sse_encode_String(self.dbFilepath, serializer);
+    sse_encode_String(self.url, serializer);
+    sse_encode_u_8(self.serverType, serializer);
+    sse_encode_u_8(self.transport, serializer);
+    sse_encode_String(self.proxy, serializer);
+    sse_encode_String(self.chainUrl, serializer);
+    sse_encode_String(self.pirServerUrl, serializer);
+    sse_encode_opt_box_autoadd_voting_pir_layout(self.pirLayout, serializer);
+    sse_encode_opt_String(self.roundParamsJson, serializer);
+    sse_encode_opt_String(self.roundName, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.maxRealNotesPerBundle, serializer);
+    sse_encode_opt_String(self.lightwalletdUrl, serializer);
+    sse_encode_String(self.voteNodeUrl, serializer);
+    sse_encode_u_64(self.ceremonyStart, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.voteEnd, serializer);
+    sse_encode_list_String(self.shareServerUrls, serializer);
+    sse_encode_bool(self.singleShare, serializer);
   }
 
   @protected
@@ -15329,6 +15648,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_list_prim_u_8_strict(self.rVpk, serializer);
     sse_encode_list_prim_u_8_strict(self.voteAuthSig, serializer);
     sse_encode_u_32(self.anchorHeight, serializer);
+  }
+
+  @protected
+  void sse_encode_voting_workflow_status(
+      VotingWorkflowStatus self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.roundId, serializer);
+    sse_encode_String(self.status, serializer);
+    sse_encode_String(self.stage, serializer);
+    sse_encode_opt_box_autoadd_f_64(self.progress, serializer);
+    sse_encode_opt_String(self.error, serializer);
+    sse_encode_opt_String(self.doneLabel, serializer);
+    sse_encode_opt_String(self.txHash, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.confirmHeight, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.eligibleWeightZatoshi, serializer);
   }
 
   @protected

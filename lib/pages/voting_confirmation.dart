@@ -30,7 +30,7 @@ class VotingConfirmationPageState extends ConsumerState<VotingConfirmationPage> 
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
 
-    final job = ref.watch(votingSubmissionJobProvider(widget.roundId));
+    final job = ref.watch(votingSubmissionMonitorProvider(widget.roundId));
     // Confirmed vote txs (per proposal), shown as on-chain evidence.
     final confirmedVotes = (ref
                 .watch(votingSessionProvider(widget.roundId))

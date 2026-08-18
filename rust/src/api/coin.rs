@@ -504,7 +504,12 @@ impl Coin {
 fn get_connect_options(db_filepath: &str, password: &Option<String>) -> SqliteConnectOptions {
     let options = SqliteConnectOptions::new()
         .filename(db_filepath)
-        .create_if_missing(true);
+        .create_if_missing(true)
+        // The durare workflow engine's dispatcher and step checkpoints share
+        // this single SQLite writer with wallet sync; without a busy timeout a
+        // lock conflict surfaces as an immediate SQLITE_BUSY error instead of
+        // waiting for the lock to clear.
+        .busy_timeout(std::time::Duration::from_secs(5));
     let options = match password.as_ref() {
         Some(password) => {
             let escaped_password = format!("'{}'", password.replace('\'', "''"));

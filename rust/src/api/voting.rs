@@ -51,7 +51,7 @@ pub struct VotingPirLayout {
 }
 
 impl VotingPirLayout {
-    fn to_fork(&self) -> zcash_voting::config::PirLayout {
+    pub(crate) fn to_fork(&self) -> zcash_voting::config::PirLayout {
         zcash_voting::config::PirLayout {
             pir_depth: self.pir_depth,
             tier0_layers: self.tier0_layers,
@@ -429,8 +429,9 @@ pub async fn delegation_prepare_resume(
     .await
 }
 
-/// Shared prepare pipeline; see [`delegation_prepare`].
-async fn prepare_bundle(
+/// Shared prepare pipeline; see [`delegation_prepare`]. `pub(crate)` for the
+/// durable workflow (which calls it inside a checkpointed step).
+pub(crate) async fn prepare_bundle(
     round_params_json: &str,
     round_name: &str,
     session_json: Option<String>,

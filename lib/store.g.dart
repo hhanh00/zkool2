@@ -2070,51 +2070,54 @@ abstract class _$VotingSubmissionGuard extends $Notifier<bool> {
   }
 }
 
-/// Delegation execution job for one round. Runs the serialized chain:
-/// prepare (or resume) → setup → build submission (progress stream) →
-/// broadcast → mark submitted → poll confirmation → confirm. Vote casting
-/// lands in a later phase. Restart-safe: the resume plan decides which steps
-/// run (`delegate` vs `poll_delegation`), never re-broadcasting a recorded tx.
+/// Durable-workflow monitor for one round. All orchestration lives in the
+/// Rust `vote_round` workflow (durare, see docs/voting-workflow.md); this
+/// monitor only starts it, polls its status every second, and offers retry
+/// on terminal error. The workflow survives app restarts and resumes from its
+/// checkpoints; re-entering this screen attaches to the existing run
+/// (votingWorkflowStart is idempotent).
 
-@ProviderFor(VotingSubmissionJob)
-const votingSubmissionJobProvider = VotingSubmissionJobFamily._();
+@ProviderFor(VotingSubmissionMonitor)
+const votingSubmissionMonitorProvider = VotingSubmissionMonitorFamily._();
 
-/// Delegation execution job for one round. Runs the serialized chain:
-/// prepare (or resume) → setup → build submission (progress stream) →
-/// broadcast → mark submitted → poll confirmation → confirm. Vote casting
-/// lands in a later phase. Restart-safe: the resume plan decides which steps
-/// run (`delegate` vs `poll_delegation`), never re-broadcasting a recorded tx.
-final class VotingSubmissionJobProvider
-    extends $NotifierProvider<VotingSubmissionJob, VotingSubmissionJobState> {
-  /// Delegation execution job for one round. Runs the serialized chain:
-  /// prepare (or resume) → setup → build submission (progress stream) →
-  /// broadcast → mark submitted → poll confirmation → confirm. Vote casting
-  /// lands in a later phase. Restart-safe: the resume plan decides which steps
-  /// run (`delegate` vs `poll_delegation`), never re-broadcasting a recorded tx.
-  const VotingSubmissionJobProvider._(
-      {required VotingSubmissionJobFamily super.from,
+/// Durable-workflow monitor for one round. All orchestration lives in the
+/// Rust `vote_round` workflow (durare, see docs/voting-workflow.md); this
+/// monitor only starts it, polls its status every second, and offers retry
+/// on terminal error. The workflow survives app restarts and resumes from its
+/// checkpoints; re-entering this screen attaches to the existing run
+/// (votingWorkflowStart is idempotent).
+final class VotingSubmissionMonitorProvider extends $NotifierProvider<
+    VotingSubmissionMonitor, VotingSubmissionJobState> {
+  /// Durable-workflow monitor for one round. All orchestration lives in the
+  /// Rust `vote_round` workflow (durare, see docs/voting-workflow.md); this
+  /// monitor only starts it, polls its status every second, and offers retry
+  /// on terminal error. The workflow survives app restarts and resumes from its
+  /// checkpoints; re-entering this screen attaches to the existing run
+  /// (votingWorkflowStart is idempotent).
+  const VotingSubmissionMonitorProvider._(
+      {required VotingSubmissionMonitorFamily super.from,
       required String super.argument})
       : super(
           retry: null,
-          name: r'votingSubmissionJobProvider',
+          name: r'votingSubmissionMonitorProvider',
           isAutoDispose: false,
           dependencies: null,
           $allTransitiveDependencies: null,
         );
 
   @override
-  String debugGetCreateSourceHash() => _$votingSubmissionJobHash();
+  String debugGetCreateSourceHash() => _$votingSubmissionMonitorHash();
 
   @override
   String toString() {
-    return r'votingSubmissionJobProvider'
+    return r'votingSubmissionMonitorProvider'
         ''
         '($argument)';
   }
 
   @$internal
   @override
-  VotingSubmissionJob create() => VotingSubmissionJob();
+  VotingSubmissionMonitor create() => VotingSubmissionMonitor();
 
   /// {@macro riverpod.override_with_value}
   Override overrideWithValue(VotingSubmissionJobState value) {
@@ -2126,7 +2129,8 @@ final class VotingSubmissionJobProvider
 
   @override
   bool operator ==(Object other) {
-    return other is VotingSubmissionJobProvider && other.argument == argument;
+    return other is VotingSubmissionMonitorProvider &&
+        other.argument == argument;
   }
 
   @override
@@ -2135,50 +2139,53 @@ final class VotingSubmissionJobProvider
   }
 }
 
-String _$votingSubmissionJobHash() =>
-    r'8ab47e4d2b936d5e6c152c05f85197abb7a0d648';
+String _$votingSubmissionMonitorHash() =>
+    r'd05523d43c9a310e135ac212e26daf2269408831';
 
-/// Delegation execution job for one round. Runs the serialized chain:
-/// prepare (or resume) → setup → build submission (progress stream) →
-/// broadcast → mark submitted → poll confirmation → confirm. Vote casting
-/// lands in a later phase. Restart-safe: the resume plan decides which steps
-/// run (`delegate` vs `poll_delegation`), never re-broadcasting a recorded tx.
+/// Durable-workflow monitor for one round. All orchestration lives in the
+/// Rust `vote_round` workflow (durare, see docs/voting-workflow.md); this
+/// monitor only starts it, polls its status every second, and offers retry
+/// on terminal error. The workflow survives app restarts and resumes from its
+/// checkpoints; re-entering this screen attaches to the existing run
+/// (votingWorkflowStart is idempotent).
 
-final class VotingSubmissionJobFamily extends $Family
+final class VotingSubmissionMonitorFamily extends $Family
     with
-        $ClassFamilyOverride<VotingSubmissionJob, VotingSubmissionJobState,
+        $ClassFamilyOverride<VotingSubmissionMonitor, VotingSubmissionJobState,
             VotingSubmissionJobState, VotingSubmissionJobState, String> {
-  const VotingSubmissionJobFamily._()
+  const VotingSubmissionMonitorFamily._()
       : super(
           retry: null,
-          name: r'votingSubmissionJobProvider',
+          name: r'votingSubmissionMonitorProvider',
           dependencies: null,
           $allTransitiveDependencies: null,
           isAutoDispose: false,
         );
 
-  /// Delegation execution job for one round. Runs the serialized chain:
-  /// prepare (or resume) → setup → build submission (progress stream) →
-  /// broadcast → mark submitted → poll confirmation → confirm. Vote casting
-  /// lands in a later phase. Restart-safe: the resume plan decides which steps
-  /// run (`delegate` vs `poll_delegation`), never re-broadcasting a recorded tx.
+  /// Durable-workflow monitor for one round. All orchestration lives in the
+  /// Rust `vote_round` workflow (durare, see docs/voting-workflow.md); this
+  /// monitor only starts it, polls its status every second, and offers retry
+  /// on terminal error. The workflow survives app restarts and resumes from its
+  /// checkpoints; re-entering this screen attaches to the existing run
+  /// (votingWorkflowStart is idempotent).
 
-  VotingSubmissionJobProvider call(
+  VotingSubmissionMonitorProvider call(
     String roundId,
   ) =>
-      VotingSubmissionJobProvider._(argument: roundId, from: this);
+      VotingSubmissionMonitorProvider._(argument: roundId, from: this);
 
   @override
-  String toString() => r'votingSubmissionJobProvider';
+  String toString() => r'votingSubmissionMonitorProvider';
 }
 
-/// Delegation execution job for one round. Runs the serialized chain:
-/// prepare (or resume) → setup → build submission (progress stream) →
-/// broadcast → mark submitted → poll confirmation → confirm. Vote casting
-/// lands in a later phase. Restart-safe: the resume plan decides which steps
-/// run (`delegate` vs `poll_delegation`), never re-broadcasting a recorded tx.
+/// Durable-workflow monitor for one round. All orchestration lives in the
+/// Rust `vote_round` workflow (durare, see docs/voting-workflow.md); this
+/// monitor only starts it, polls its status every second, and offers retry
+/// on terminal error. The workflow survives app restarts and resumes from its
+/// checkpoints; re-entering this screen attaches to the existing run
+/// (votingWorkflowStart is idempotent).
 
-abstract class _$VotingSubmissionJob
+abstract class _$VotingSubmissionMonitor
     extends $Notifier<VotingSubmissionJobState> {
   late final _$args = ref.$arg as String;
   String get roundId => _$args;

@@ -27,6 +27,7 @@ import 'api/sync.dart';
 import 'api/transaction.dart';
 import 'api/vault.dart';
 import 'api/voting.dart';
+import 'api/voting_workflow.dart';
 import 'api/zsa.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -240,6 +241,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int dco_decode_box_autoadd_u_8(dynamic raw);
 
   @protected
+  VoteRoundInput dco_decode_box_autoadd_vote_round_input(dynamic raw);
+
+  @protected
   VotingCompletedVoteDisplay
       dco_decode_box_autoadd_voting_completed_vote_display(dynamic raw);
 
@@ -248,6 +252,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VotingPirLayout dco_decode_box_autoadd_voting_pir_layout(dynamic raw);
+
+  @protected
+  VotingWorkflowStatus dco_decode_box_autoadd_voting_workflow_status(
+      dynamic raw);
 
   @protected
   Category dco_decode_category(dynamic raw);
@@ -539,6 +547,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   VotingPirLayout? dco_decode_opt_box_autoadd_voting_pir_layout(dynamic raw);
 
   @protected
+  VotingWorkflowStatus? dco_decode_opt_box_autoadd_voting_workflow_status(
+      dynamic raw);
+
+  @protected
   List<String>? dco_decode_opt_list_String(dynamic raw);
 
   @protected
@@ -648,6 +660,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   UsizeArray4 dco_decode_usize_array_4(dynamic raw);
+
+  @protected
+  VoteRoundInput dco_decode_vote_round_input(dynamic raw);
 
   @protected
   VotingBallotIntent dco_decode_voting_ballot_intent(dynamic raw);
@@ -767,6 +782,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VotingVoteSubmission dco_decode_voting_vote_submission(dynamic raw);
+
+  @protected
+  VotingWorkflowStatus dco_decode_voting_workflow_status(dynamic raw);
 
   @protected
   ZsaHolding dco_decode_zsa_holding(dynamic raw);
@@ -958,6 +976,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   int sse_decode_box_autoadd_u_8(SseDeserializer deserializer);
 
   @protected
+  VoteRoundInput sse_decode_box_autoadd_vote_round_input(
+      SseDeserializer deserializer);
+
+  @protected
   VotingCompletedVoteDisplay
       sse_decode_box_autoadd_voting_completed_vote_display(
           SseDeserializer deserializer);
@@ -968,6 +990,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VotingPirLayout sse_decode_box_autoadd_voting_pir_layout(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingWorkflowStatus sse_decode_box_autoadd_voting_workflow_status(
       SseDeserializer deserializer);
 
   @protected
@@ -1284,6 +1310,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  VotingWorkflowStatus? sse_decode_opt_box_autoadd_voting_workflow_status(
+      SseDeserializer deserializer);
+
+  @protected
   List<String>? sse_decode_opt_list_String(SseDeserializer deserializer);
 
   @protected
@@ -1396,6 +1426,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   UsizeArray4 sse_decode_usize_array_4(SseDeserializer deserializer);
+
+  @protected
+  VoteRoundInput sse_decode_vote_round_input(SseDeserializer deserializer);
 
   @protected
   VotingBallotIntent sse_decode_voting_ballot_intent(
@@ -1536,6 +1569,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VotingVoteSubmission sse_decode_voting_vote_submission(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingWorkflowStatus sse_decode_voting_workflow_status(
       SseDeserializer deserializer);
 
   @protected
@@ -1737,6 +1774,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_u_8(int self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_vote_round_input(
+      VoteRoundInput self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_voting_completed_vote_display(
       VotingCompletedVoteDisplay self, SseSerializer serializer);
 
@@ -1747,6 +1788,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_voting_pir_layout(
       VotingPirLayout self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_voting_workflow_status(
+      VotingWorkflowStatus self, SseSerializer serializer);
 
   @protected
   void sse_encode_category(Category self, SseSerializer serializer);
@@ -2075,6 +2120,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       VotingPirLayout? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_voting_workflow_status(
+      VotingWorkflowStatus? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_list_String(List<String>? self, SseSerializer serializer);
 
   @protected
@@ -2193,6 +2242,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize_array_4(UsizeArray4 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_vote_round_input(
+      VoteRoundInput self, SseSerializer serializer);
 
   @protected
   void sse_encode_voting_ballot_intent(
@@ -2340,6 +2393,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_voting_vote_submission(
       VotingVoteSubmission self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_workflow_status(
+      VotingWorkflowStatus self, SseSerializer serializer);
 
   @protected
   void sse_encode_zsa_holding(ZsaHolding self, SseSerializer serializer);

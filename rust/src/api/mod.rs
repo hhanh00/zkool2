@@ -19,4 +19,5 @@ pub mod sync;
 pub mod transaction;
 pub mod vault;
 pub mod voting;
+pub mod voting_workflow;
 pub mod zsa;

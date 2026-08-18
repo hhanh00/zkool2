@@ -56,7 +56,7 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
 
   Future<void> _start() async {
     await ref
-        .read(votingSubmissionJobProvider(widget.roundId).notifier)
+        .read(votingSubmissionMonitorProvider(widget.roundId).notifier)
         .start(
           chainUrl: widget.chainUrl,
           pirServerUrl: widget.pirServerUrl,
@@ -101,7 +101,7 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
 
-    final job = ref.watch(votingSubmissionJobProvider(widget.roundId));
+    final job = ref.watch(votingSubmissionMonitorProvider(widget.roundId));
     final running = job.stage != "done" && job.stage != "error";
     // Confirmed vote txs (per proposal), shown as evidence on the done state.
     final confirmedVotes = (ref
@@ -244,9 +244,11 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
                   FilledButton(
                     onPressed: () {
                       ref
-                          .read(votingSubmissionJobProvider(widget.roundId).notifier)
-                          .reset();
-                      Future(_start);
+                          .read(
+                            votingSubmissionMonitorProvider(widget.roundId)
+                                .notifier,
+                          )
+                          .retry();
                     },
                     child: const Text("Retry"),
                   ),

@@ -821,6 +821,137 @@ pub async fn record_vote_execution(
 }
 
 // ---------------------------------------------------------------------------
+// Vote chain client (network boundary for the durable workflow; mockable)
+//
+// Lives here (the core module) rather than in `api/voting_workflow` so the
+// FRB codegen — which scans `crate::api` only — never treats it as a
+// cross-boundary surface. Status codes: 404 = not confirmed yet, 422 =
+// deterministic chain rejection (body is a `VotingTxResult`).
+// ---------------------------------------------------------------------------
+
+/// The vote-chain HTTP surface the durable workflow uses. Tests inject a
+/// mock via [`VOTECHAIN_OVERRIDE`].
+pub trait VoteChainClient: Send + Sync {
+    fn submit_delegation(
+        &self,
+        base_url: String,
+        submission_json: String,
+    ) -> futures::future::BoxFuture<'_, Result<(u16, String)>>;
+    fn submit_vote(
+        &self,
+        base_url: String,
+        commitment_json: String,
+    ) -> futures::future::BoxFuture<'_, Result<(u16, String)>>;
+    fn tx_confirmation(
+        &self,
+        base_url: String,
+        tx_hash: String,
+    ) -> futures::future::BoxFuture<'_, Result<(u16, String)>>;
+    fn submit_share(
+        &self,
+        server_url: String,
+        payload_json: String,
+    ) -> futures::future::BoxFuture<'_, Result<(u16, String)>>;
+    fn share_status(
+        &self,
+        server_url: String,
+        round_id: String,
+        share_id: String,
+    ) -> futures::future::BoxFuture<'_, Result<(u16, String)>>;
+    fn round_status(
+        &self,
+        base_url: String,
+        round_id: String,
+    ) -> futures::future::BoxFuture<'_, Result<(u16, String)>>;
+}
+
+/// Default chain client: delegates to `crate::net::votechain` with the
+/// external-proxy setting (transport 3 only, mirroring `votechain_proxy`).
+pub struct NetVoteChain {
+    pub proxy: String,
+}
+
+impl VoteChainClient for NetVoteChain {
+    fn submit_delegation(
+        &self,
+        base_url: String,
+        submission_json: String,
+    ) -> futures::future::BoxFuture<'_, Result<(u16, String)>> {
+        let proxy = self.proxy.clone();
+        Box::pin(async move {
+            crate::net::votechain::submit_delegation(&base_url, &submission_json, &proxy).await
+        })
+    }
+    fn submit_vote(
+        &self,
+        base_url: String,
+        commitment_json: String,
+    ) -> futures::future::BoxFuture<'_, Result<(u16, String)>> {
+        let proxy = self.proxy.clone();
+        Box::pin(async move {
+            crate::net::votechain::submit_vote_commitment(&base_url, &commitment_json, &proxy)
+                .await
+        })
+    }
+    fn tx_confirmation(
+        &self,
+        base_url: String,
+        tx_hash: String,
+    ) -> futures::future::BoxFuture<'_, Result<(u16, String)>> {
+        let proxy = self.proxy.clone();
+        Box::pin(async move {
+            crate::net::votechain::tx_confirmation(&base_url, &tx_hash, &proxy).await
+        })
+    }
+    fn submit_share(
+        &self,
+        server_url: String,
+        payload_json: String,
+    ) -> futures::future::BoxFuture<'_, Result<(u16, String)>> {
+        let proxy = self.proxy.clone();
+        Box::pin(async move {
+            crate::net::votechain::submit_share(&server_url, &payload_json, &proxy).await
+        })
+    }
+    fn share_status(
+        &self,
+        server_url: String,
+        round_id: String,
+        share_id: String,
+    ) -> futures::future::BoxFuture<'_, Result<(u16, String)>> {
+        let proxy = self.proxy.clone();
+        Box::pin(async move {
+            crate::net::votechain::share_status(&server_url, &round_id, &share_id, &proxy).await
+        })
+    }
+    fn round_status(
+        &self,
+        base_url: String,
+        round_id: String,
+    ) -> futures::future::BoxFuture<'_, Result<(u16, String)>> {
+        let proxy = self.proxy.clone();
+        Box::pin(async move {
+            crate::net::votechain::round_status(&base_url, &round_id, &proxy).await
+        })
+    }
+}
+
+/// Test seam: when set, every workflow step uses this client instead of the
+/// network.
+pub static VOTECHAIN_OVERRIDE: OnceLock<Arc<dyn VoteChainClient>> = OnceLock::new();
+
+/// Resolves the chain client honoring the transport setting (external proxy
+/// only for transport 3, mirroring `votechain_proxy`).
+pub fn resolve_chain_client(transport3: bool, proxy: &str) -> Arc<dyn VoteChainClient> {
+    if let Some(client) = VOTECHAIN_OVERRIDE.get() {
+        return client.clone();
+    }
+    Arc::new(NetVoteChain {
+        proxy: if transport3 { proxy.to_string() } else { String::new() },
+    })
+}
+
+// ---------------------------------------------------------------------------
 // Prepared bundle cache
 //
 // PreparedDelegationBundle is plain data and the fork persists all durable
