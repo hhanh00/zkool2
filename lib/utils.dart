@@ -66,13 +66,13 @@ String doubleToString(double v, {required int decimals}) {
 }
 
 String zatToString(BigInt zat) {
-  final z = Fixed.fromBigInt(zat, scale: 8);
+  final z = Fixed.fromBigInt(zat, decimalDigits: 8);
   final s = zatFormatter.format(z.toDecimal());
   return s;
 }
 
 String zatToShortString(BigInt zat) {
-  final z = Fixed.fromBigInt(zat, scale: 8);
+  final z = Fixed.fromBigInt(zat, decimalDigits: 8);
   final s = zatShortFormatter.format(z.toDecimal());
   return s;
 }
@@ -114,7 +114,7 @@ Widget zatToText(BigInt zat, {String prefix = "", TextStyle? style, Function()? 
 
 Fixed stringToDecimal(String s, {int? scale}) {
   try {
-    return Fixed.parse(s, scale: scale, invertSeparator: invertSeparator);
+    return Fixed.parse(s, decimalDigits: scale, invertSeparator: invertSeparator);
   } on RangeError {
     throw FormatException('Invalid decimal: $s');
   }
@@ -122,7 +122,7 @@ Fixed stringToDecimal(String s, {int? scale}) {
 
 BigInt stringToZat(String s) {
   try {
-    final z = Fixed.parse(s, scale: 8, invertSeparator: invertSeparator);
+    final z = Fixed.parse(s, decimalDigits: 8, invertSeparator: invertSeparator);
     return z.minorUnits;
   } on RangeError {
     throw FormatException('Invalid amount: $s');
