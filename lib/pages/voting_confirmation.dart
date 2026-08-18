@@ -106,7 +106,10 @@ class VotingConfirmationPageState extends ConsumerState<VotingConfirmationPage> 
                 ),
               const SizedBox(height: 24),
               FilledButton(
-                onPressed: () => GoRouter.of(context).go("/voting"),
+                // The submission flow uses pushReplacement, so the stack
+                // below is [account, /voting] — pop back to the polls page,
+                // whose back arrow still returns to the account page.
+                onPressed: () => GoRouter.of(context).pop(),
                 child: const Text("Done"),
               ),
             ],
