@@ -649,7 +649,7 @@ fn resolve_diversifier_index(
         1 => cache.sapling.get(&account).and_then(|keys| {
             crate::db::resolve_sapling_diversifier_index(&keys.dfvk, scope, diversifier)
         }),
-        2 => cache.orchard.get(&account).and_then(|keys| {
+        2 | 3 => cache.orchard.get(&account).and_then(|keys| {
             crate::db::resolve_orchard_diversifier_index(&keys.fvk, scope, diversifier)
         }),
         _ => None,
