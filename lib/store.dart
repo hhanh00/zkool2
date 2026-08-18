@@ -1370,6 +1370,28 @@ Future<List<VotingRoundInfo>> votingRoundList(Ref ref) async {
   return await votingRounds(c: c);
 }
 
+/// Sessions for every locally-known round, fetched in ONE Rust call that
+/// holds a single pool connection (per-round loads would need one connection
+/// per round and stall the pool once the page lists many rounds).
+@riverpod
+Future<Map<String, VotingSessionState>> votingSessionsAll(Ref ref) async {
+  final rounds = await ref.watch(votingRoundListProvider.future);
+  if (rounds.isEmpty) return const {};
+  final c = coinContext.coin;
+  final sessions = await votingSessions(
+    roundIds: rounds.map((r) => r.roundId).toList(),
+    c: c,
+  );
+  return {
+    for (final s in sessions)
+      s.roundId: VotingSessionState(
+        plan: s.plan,
+        recovery: s.recovery,
+        intents: s.intents,
+      ),
+  };
+}
+
 /// Friendly round title from the vote chain round status, falling back to
 /// the round id. The chain's `title` field is the only friendly name source
 /// (the config and the local DB carry no titles).
@@ -1646,6 +1668,11 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       }
       state = state.copyWith(stage: "done", progress: 1, doneLabel: doneLabel);
       ref.read(votingSubmissionGuardProvider.notifier).setActive(false);
+      // The round is now recorded locally and its plan advanced; refresh the
+      // voting page so the tile leaves "Join" and shows the real status
+      // without a manual refresh.
+      ref.invalidate(votingRoundListProvider);
+      ref.invalidate(votingSessionProvider(roundId));
     } on Exception catch (e) {
       state = state.copyWith(stage: "error", error: e.toString());
       ref.read(votingSubmissionGuardProvider.notifier).setActive(false);

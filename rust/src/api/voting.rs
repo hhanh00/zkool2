@@ -446,11 +446,12 @@ async fn prepare_bundle(
     let snapshot_height = u32::try_from(round_params.snapshot_height)
         .map_err(|_| anyhow!("snapshot height {} does not fit u32", round_params.snapshot_height))?;
 
-    let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
-
+    // The lwd tree-state fetch can take a while (bounded retries); don't hold
+    // a pool connection across it.
     let lwd =
         voting::gather_lwd_inputs(lightwalletd_url, network, &round_params, round_name).await?;
+    let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
     let inputs = voting::load_round_inputs(
         wallet_network,
@@ -499,11 +500,17 @@ pub async fn delegation_setup(
     bundle_index: u32,
     c: &Coin,
 ) -> Result<VotingDelegationSetup> {
-    let mut connection = c.get_connection().await?;
-    let wallet_id = voting::voting_wallet_id(&mut connection, c.account).await?;
+    let wallet_id = {
+        let mut connection = c.get_connection().await?;
+        voting::voting_wallet_id(&mut connection, c.account).await?
+    };
     let prepared = voting::load_prepared_bundle(&wallet_id, round_id, bundle_index)?;
-    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
+    let db = {
+        let mut connection = c.get_connection().await?;
+        voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?
+    };
 
+    // setup builds the PCZT (long-running); no connection is held across it.
     let setup = prepared.setup(&db, &NoopProgressReporter).await?;
     Ok(setup.into())
 }
@@ -520,11 +527,15 @@ pub async fn delegation_sign_and_submit(
     pir_server_url: &str,
     c: &Coin,
 ) -> Result<VotingDelegationSubmission> {
-    let mut connection = c.get_connection().await?;
-    let wallet_id = voting::voting_wallet_id(&mut connection, c.account).await?;
+    let (wallet_id, seed) = {
+        let mut connection = c.get_connection().await?;
+        let wallet_id = voting::voting_wallet_id(&mut connection, c.account).await?;
+        let seed = voting::account_seed(&mut connection, c.account).await?;
+        (wallet_id, seed)
+    };
     let prepared = voting::load_prepared_bundle(&wallet_id, round_id, bundle_index)?;
-    let seed = voting::account_seed(&mut connection, c.account).await?;
 
+    // PIR proving runs for a while; no connection is held across it.
     let (submission, _wire_json) = voting::prove_and_submit_delegation(
         c.get_pool()?,
         &wallet_id,
@@ -583,40 +594,46 @@ pub async fn delegation_build_submission(
     let account = c.account;
     let round_id = round_id.to_string();
     let pir_server_url = pir_server_url.to_string();
-    let mut connection = c.get_connection().await?;
-    let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let pir_server_url = if pir_server_url.is_empty() {
-        crate::db::get_prop(
-            &mut connection,
-            &format!("voting_round_pir_url:{round_id}"),
-        )
-        .await?
-        .ok_or_else(|| {
-            anyhow!("no saved PIR server URL for round {round_id}; pass pir_server_url once")
-        })?
-    } else {
-        crate::db::put_prop(
-            &mut connection,
-            &format!("voting_round_pir_url:{round_id}"),
-            &pir_server_url,
-        )
-        .await?;
-        pir_server_url
-    };
-    let pir_layout = match pir_layout {
-        Some(layout) => {
-            voting::save_pir_layout(&mut connection, &round_id, &layout.to_fork()).await?;
-            layout
-        }
-        None => voting::load_pir_layout(&mut connection, &round_id)
+    let (wallet_id, pir_server_url, pir_layout, seed) = {
+        let mut connection = c.get_connection().await?;
+        let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
+        let pir_server_url = if pir_server_url.is_empty() {
+            crate::db::get_prop(
+                &mut connection,
+                &format!("voting_round_pir_url:{round_id}"),
+            )
             .await?
-            .map(Into::into)
             .ok_or_else(|| {
-                anyhow!("no saved PIR layout for round {round_id}; pass pir_layout once")
-            })?,
+                anyhow!("no saved PIR server URL for round {round_id}; pass pir_server_url once")
+            })?
+        } else {
+            crate::db::put_prop(
+                &mut connection,
+                &format!("voting_round_pir_url:{round_id}"),
+                &pir_server_url,
+            )
+            .await?;
+            pir_server_url
+        };
+        let pir_layout = match pir_layout {
+            Some(layout) => {
+                voting::save_pir_layout(&mut connection, &round_id, &layout.to_fork()).await?;
+                layout
+            }
+            None => voting::load_pir_layout(&mut connection, &round_id)
+                .await?
+                .map(Into::into)
+                .ok_or_else(|| {
+                    anyhow!("no saved PIR layout for round {round_id}; pass pir_layout once")
+                })?,
+        };
+        let seed = voting::account_seed(&mut connection, account).await?;
+        // Release the connection before setup + signing + PIR proving, which
+        // run for a while; don't hold a pool slot hostage during the long
+        // phase (a later internal acquire would queue behind it).
+        (wallet_id, pir_server_url, pir_layout, seed)
     };
     let prepared = voting::load_prepared_bundle(&wallet_id, &round_id, bundle_index)?;
-    let seed = voting::account_seed(&mut connection, account).await?;
 
     let progress = Arc::new(DelegationProgressBridge::new({
         let sink_for_progress = sink.clone();
@@ -668,6 +685,7 @@ pub async fn delegation_build_submission(
     // so persist the wire body for `delegation_wire_json` to pick up. This also
     // makes a crash between proving and broadcasting resumable without
     // re-proving.
+    let mut connection = c.get_connection().await?;
     crate::db::put_prop(
         &mut connection,
         &format!("voting_round_delegation_wire:{round_id}:{bundle_index}"),
@@ -1645,6 +1663,17 @@ pub struct VotingBallotIntent {
     pub choice: Option<u32>,
 }
 
+/// One round's full session state: resume plan, recovery snapshot, and
+/// ballot intents — loaded together under a single pool connection.
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VotingRoundSession {
+    pub round_id: String,
+    pub plan: VotingRoundPlan,
+    pub recovery: VotingRoundRecovery,
+    pub intents: Vec<VotingBallotIntent>,
+}
+
 /// Delegation proof/signing progress event, one-to-one with the fork's
 /// `DelegationProgress`. The bookend variants (`SelectingNotes`,
 /// `SigningPayload`, `PayloadReady`) are emitted by the host wrapper; the
@@ -2147,6 +2176,49 @@ pub async fn voting_ballot_intents(round_id: &str, c: &Coin) -> Result<Vec<Votin
     let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
     let intents = db.ballot_intents(&mut *connection, &round_id).await?;
     Ok(intents.into_iter().map(Into::into).collect())
+}
+
+/// Loads sessions for many rounds in a single Rust call that holds ONE pool
+/// connection (the per-round entry points above would need one connection per
+/// round and stall the pool once the page has many rounds).
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_sessions(round_ids: Vec<String>, c: &Coin) -> Result<Vec<VotingRoundSession>> {
+    let account = c.account;
+    let mut connection = c.get_connection().await?;
+    let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
+    let mut sessions = Vec::with_capacity(round_ids.len());
+    for round_id in round_ids {
+        // Draft proposal ids live in wallet props; read them on the same
+        // connection so the plan sees open proposals (mirrors the Dart
+        // votingSession._draftProposalIds).
+        let draft_ids = match crate::db::get_prop(
+            &mut connection,
+            &format!("voting_drafts:{round_id}"),
+        )
+        .await?
+        {
+            Some(d) if !d.is_empty() => serde_json::from_str::<Vec<serde_json::Value>>(&d)
+                .unwrap_or_default()
+                .iter()
+                .filter_map(|x| x.get("proposal_id").and_then(|v| v.as_u64()).map(|n| n as u32))
+                .filter(|&id| id > 0)
+                .collect::<Vec<u32>>(),
+            _ => Vec::new(),
+        };
+        let plan = zcash_voting::session::resume_plan(&db, &mut *connection, &round_id, &draft_ids)
+            .await?;
+        let recovery =
+            zcash_voting::recovery::round_snapshot(&db, &mut *connection, &round_id).await?;
+        let intents = db.ballot_intents(&mut *connection, &round_id).await?;
+        sessions.push(VotingRoundSession {
+            round_id,
+            plan: plan.into(),
+            recovery: recovery.into(),
+            intents: intents.into_iter().map(Into::into).collect(),
+        });
+    }
+    Ok(sessions)
 }
 
 // ---------------------------------------------------------------------------

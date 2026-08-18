@@ -141,7 +141,18 @@ impl Coin {
 
     pub(crate) async fn get_connection(&self) -> Result<PoolConnection<Sqlite>> {
         let pool = self.get_pool()?;
-        pool.acquire().await.anyhow()
+        let start = std::time::Instant::now();
+        let result = pool.acquire().await.anyhow();
+        let elapsed = start.elapsed();
+        if elapsed > std::time::Duration::from_secs(2) {
+            tracing::warn!(
+                "slow pool acquire took {:?} (size={}, idle={})",
+                elapsed,
+                pool.size(),
+                pool.num_idle()
+            );
+        }
+        result
     }
 
     #[cfg_attr(feature = "flutter", frb)]
