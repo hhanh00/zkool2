@@ -13,29 +13,53 @@ class FolderPage extends ConsumerStatefulWidget {
 
 class FolderPageState extends ConsumerState<FolderPage> {
   late final c = coinContext.coin;
+  late final ProviderContainer container;
+  late final SelectedFolder selectedFolderNotifier;
   List<(Folder, bool)> folders = [];
   int? selectedIndex;
 
   @override
   void initState() {
     super.initState();
-    Future(refresh);
+    // Capture these now: `ref` is unsafe to use once the widget is unmounted,
+    // so the disposal path must not touch it. `containerOf(listen: false)`
+    // avoids the inherited-widget dependency that `ref.container` creates
+    // (not allowed in initState).
+    container = ProviderScope.containerOf(context, listen: false);
+    selectedFolderNotifier = ref.read(selectedFolderProvider.notifier);
+    _load();
   }
 
   @override
   void dispose() {
-    Future(refresh);
+    // Unselect the folder if it was deleted while the page was open. Runs on
+    // a later tick and never uses `ref`.
+    Future(() async {
+      final selected = container.exists(selectedFolderProvider)
+          ? container.read(selectedFolderProvider)
+          : null;
+      if (selected == null) return;
+      final foldrs = await listFolders(c: c);
+      refresh(foldrs, selected);
+    });
     super.dispose();
   }
 
-  Future<void> refresh() async {
+  // Fetches the latest folders and applies them to the page. `ref` is only
+  // used before the await, so this stays safe if the widget unmounts mid-load.
+  Future<void> _load() async {
     final foldrs = await ref.read(getFoldersProvider.future);
-    final selectedFolder = ref.read(selectedFolderProvider);
+    refresh(foldrs, container.read(selectedFolderProvider));
+  }
+
+  // Applies a folder list to the page. Takes everything it needs as
+  // parameters and never touches `ref`, so it is safe to call after unmount.
+  void refresh(List<Folder> foldrs, Folder? selectedFolder) {
     if (selectedFolder != null) {
       selectedIndex = foldrs.indexWhere((f) => f.id == selectedFolder.id);
       if (selectedIndex == -1) {
         selectedIndex = null;
-        (ref.read(selectedFolderProvider.notifier)).unselect();
+        if (container.exists(selectedFolderProvider)) selectedFolderNotifier.unselect();
       }
     }
     folders = foldrs.map((f) => (f, false)).toList();
@@ -86,7 +110,7 @@ class FolderPageState extends ConsumerState<FolderPage> {
     final folderName = await inputText(context, title: "New Folder");
     if (folderName != null) {
       await createNewFolder(name: folderName, c: c);
-      await refresh();
+      await _load();
     }
   }
 
@@ -94,7 +118,7 @@ class FolderPageState extends ConsumerState<FolderPage> {
     final folderName = await inputText(context, title: "Rename Folder");
     if (folderName != null) {
       await renameFolder(id: selection.first.id, name: folderName, c: c);
-      await refresh();
+      await _load();
     }
   }
 
@@ -102,7 +126,7 @@ class FolderPageState extends ConsumerState<FolderPage> {
     final confirmed = await confirmDialog(context, title: "Do you want to delete these folders?", message: "Accounts assigned to these folders will be kept.");
     if (confirmed) {
       await deleteFolders(ids: selection.map((f) => f.id).toList(), c: c);
-      await refresh();
+      await _load();
       ref.invalidate(getAccountsProvider);
     }
   }
