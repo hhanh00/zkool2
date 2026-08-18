@@ -1,5 +1,19 @@
 # Changelog
 
+## [6.28.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.3...zkool-v6.28.0-rc.4) (2026-08-18)
+
+
+### Features
+
+* ballot page AppBar shows the round title ([5ec5ac8](https://github.com/hhanh00/zkool2/commit/5ec5ac87aac68c5f8a8f68d85389cf005189145d))
+
+
+### Bug Fixes
+
+* **ledger:** transparent-only signing + NU6.3 v5 workaround for hardware wallets ([#1208](https://github.com/hhanh00/zkool2/issues/1208)) ([6645459](https://github.com/hhanh00/zkool2/commit/6645459cc3fae8868d760fcb89e8112cf5fc964d))
+* pass one connection through voting DB reads; stop pool stalls on voting page ([ca3e4dd](https://github.com/hhanh00/zkool2/commit/ca3e4ddea58bf0e068c782a7c5f1bd6532a16aa0))
+* support flutter 3.47 (intl 0.20.3); fixed 6.2.0 rename scale→decimalDigits ([f399940](https://github.com/hhanh00/zkool2/commit/f399940a15689907d49eb8bba777b63290ea8185))
+
 ## [6.28.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.2...zkool-v6.28.0-rc.3) (2026-08-17)
 
 
