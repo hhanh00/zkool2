@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.28.0-rc.8](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.7...zkool-v6.28.0-rc.8) (2026-08-19)
+
+
+### Bug Fixes
+
+* **settings:** keep transport selector within screen width (FittedBox + padding) ([0b3d72e](https://github.com/hhanh00/zkool2/commit/0b3d72ec73b97ff42156338436d406db24790b4f))
+
 ## [6.28.0-rc.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.6...zkool-v6.28.0-rc.7) (2026-08-18)
 
 
