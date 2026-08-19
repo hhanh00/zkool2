@@ -171,9 +171,12 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 Tooltip(
                   message: "Network transport: connect directly, through the embedded "
                       "Tor (Arti) client, through the Nym mixnet, or via an external proxy",
-                  child: Row(
-                    children: [
-                      SegmentedButton<int>(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: SegmentedButton<int>(
                         segments: const [
                           ButtonSegment(value: 0, label: Text("Direct")),
                           ButtonSegment(value: 1, label: Text("Tor")),
@@ -183,7 +186,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                         selected: {isNymServer ? 0 : settings.transport},
                         onSelectionChanged: isNymServer ? null : onChangedTransport,
                       ),
-                    ],
+                    ),
                   ),
                 ),
                 if (isNymServer)
