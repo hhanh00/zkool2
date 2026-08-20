@@ -1,7 +1,7 @@
 use std::{borrow::Cow, collections::HashMap};
 
 use age::{scrypt::Identity, Decryptor, Encryptor};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use serde_with::{hex::Hex, serde_as};
 use sqlx::{
@@ -12,8 +12,10 @@ use sqlx::{
 };
 use std::io::prelude::*;
 use tracing::info;
+use zcash_keys::keys::sapling::{DiversifiableFullViewingKey, ExtendedSpendingKey};
 use zstd::DEFAULT_COMPRESSION_LEVEL;
 
+use crate::api::coin::Network;
 use crate::db::DB_VERSION;
 
 pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> Result<Vec<u8>> {
@@ -474,7 +476,11 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
     Ok(data)
 }
 
-pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> Result<()> {
+pub async fn import_account(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    data: &[u8],
+) -> Result<()> {
     let mut decoder = zstd::Decoder::new(data)?;
     let mut data = String::new();
     decoder.read_to_string(&mut data)?;
@@ -593,6 +599,31 @@ pub async fn import_account(connection: &mut SqliteConnection, data: &[u8]) -> R
         .bind(&skeys.xvk)
         .execute(&mut *tx)
         .await?;
+        // The backup file carries only the sapling keys; the address column
+        // would stay at its empty default, which select_account_sapling
+        // cannot decode (it panicked on it). Derive the address from the
+        // imported keys, mirroring new_account's seed-restore derivation.
+        let sxvk = match skeys.xsk.as_ref() {
+            Some(xsk) => ExtendedSpendingKey::from_bytes(&xsk.0)
+                .map_err(|_| anyhow!("invalid sapling xsk in account backup"))?
+                .to_diversifiable_full_viewing_key(),
+            None => {
+                let bytes: [u8; 128] = skeys
+                    .xvk
+                    .0
+                    .as_slice()
+                    .try_into()
+                    .map_err(|_| anyhow!("invalid sapling xvk length in account backup"))?;
+                DiversifiableFullViewingKey::from_bytes(&bytes)
+                    .ok_or_else(|| anyhow!("invalid sapling xvk in account backup"))?
+            }
+        };
+        let address = crate::account::derive_sapling_address(network, &sxvk, io_account.dindex);
+        sqlx::query("UPDATE sapling_accounts SET address = ?2 WHERE account = ?1")
+            .bind(new_id_account)
+            .bind(&address)
+            .execute(&mut *tx)
+            .await?;
     }
     info!("Importing orchard key");
     if let Some(okeys) = io_account.okeys.as_ref() {
