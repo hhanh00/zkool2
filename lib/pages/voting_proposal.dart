@@ -125,12 +125,16 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
       }
 
       // Best-effort vote-tree pre-sync so the commit step doesn't wait on it.
+      // An unset Vote Node URL falls back to the vote chain server: the same
+      // REST API serves the commitment tree the sync pulls from.
       final settings = await ref.read(appSettingsProvider.future);
-      if (settings.voteNodeUrl.isNotEmpty) {
+      final voteNodeUrl =
+          settings.voteNodeUrl.isNotEmpty ? settings.voteNodeUrl : widget.chainUrl;
+      if (voteNodeUrl.isNotEmpty) {
         try {
           await votingSyncTree(
             roundId: widget.roundId,
-            voteNodeUrl: settings.voteNodeUrl,
+            voteNodeUrl: voteNodeUrl,
             c: c,
           );
         } on AnyhowException catch (_) {
