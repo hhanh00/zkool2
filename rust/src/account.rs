@@ -680,25 +680,31 @@ pub async fn get_account_full_address(
     .await?;
 
     let saddress = sqlx::query(
-        "SELECT sa.xvk, sa.address FROM sapling_accounts sa
+        "SELECT sa.xvk, sa.address, a.dindex FROM sapling_accounts sa
         JOIN accounts a ON sa.account = a.id_account AND sa.account = ?",
     )
     .bind(account)
-    .map(|row: SqliteRow| {
+    .map(|row: SqliteRow| -> Result<PaymentAddress, anyhow::Error> {
         let xvk: Vec<u8> = row.get(0);
         let address: String = row.get(1);
-        let fvk = DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap();
+        let _dindex: u32 = row.get(2);
+        let fvk = DiversifiableFullViewingKey::from_bytes(&xvk.try_into().map_err(|_| {
+            anyhow!("invalid sapling xvk length for account {account}")
+        })?)
+        .ok_or_else(|| anyhow!("invalid sapling xvk for account {account}"))?;
         if scope == 1 && hw == 0 {
             // we do not need to derive a diversified change address
             // since they are not exposed to the user
             let (_, pa) = fvk.change_address();
-            pa
+            Ok(pa)
         } else {
-            PaymentAddress::decode(network, &address).unwrap()
+            PaymentAddress::decode(network, &address)
+                .map_err(|e| anyhow!("invalid stored sapling address for account {account}: {e}"))
         }
     })
     .fetch_optional(&mut *connection)
-    .await?;
+    .await?
+    .transpose()?;
 
     let oaddress = sqlx::query(
         "SELECT a.dindex, oa.xvk FROM orchard_accounts oa
@@ -1351,7 +1357,7 @@ pub async fn has_pool(connection: &mut SqliteConnection, account: u32, pool: u8)
     Ok(has_pool)
 }
 
-fn derive_sapling_address(
+pub(crate) fn derive_sapling_address(
     network: &Network,
     sxvk: &DiversifiableFullViewingKey,
     dindex: u32,

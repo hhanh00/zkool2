@@ -665,7 +665,7 @@ pub async fn import_account(passphrase: &str, data: &[u8], c: &Coin) -> Result<(
     let mut connection = c.get_connection().await?;
 
     let decrypted = decrypt(passphrase, data)?;
-    crate::io::import_account(&mut connection, &decrypted).await?;
+    crate::io::import_account(&c.network(), &mut connection, &decrypted).await?;
     Ok(())
 }
 
