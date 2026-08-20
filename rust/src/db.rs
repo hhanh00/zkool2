@@ -585,18 +585,32 @@ pub async fn migrate_sapling_addresses(
     network: &Network,
     connection: &mut SqliteConnection,
 ) -> Result<()> {
+    // Cover both empty and NULL addresses: older schemas left the column
+    // NULL, newer ones default it to ''.
     let accounts: Vec<(u32, u32, Vec<u8>)> = sqlx::query_as(
         "SELECT id_account, dindex, xvk FROM accounts a
             JOIN sapling_accounts s ON a.id_account = s.account
-            WHERE address = ''",
+            WHERE address IS NULL OR address = ''",
     )
     .fetch_all(&mut *connection)
     .await?;
 
     for (account, dindex, xvk) in accounts {
-        let fvk: [u8; 128] = tiu!(xvk);
-        let fvk = DiversifiableFullViewingKey::from_bytes(&fvk).unwrap();
-        let address = fvk.address((dindex as u64).into()).unwrap();
+        // A row that cannot be backfilled must not abort the migration (or
+        // panic the runtime): skip it, and the lenient address readers will
+        // report it as missing.
+        let Ok(fvk) = <[u8; 128]>::try_from(xvk.as_slice()) else {
+            tracing::warn!("sapling xvk for account {account} is not 128 bytes; skipping backfill");
+            continue;
+        };
+        let Some(fvk) = DiversifiableFullViewingKey::from_bytes(&fvk) else {
+            tracing::warn!("invalid sapling xvk for account {account}; skipping backfill");
+            continue;
+        };
+        let Some(address) = fvk.address((dindex as u64).into()) else {
+            tracing::warn!("invalid diversifier {dindex} for account {account}; skipping backfill");
+            continue;
+        };
         let address = address.encode(network);
         sqlx::query("UPDATE sapling_accounts SET address = ?2 WHERE account = ?1")
             .bind(account)
@@ -1130,7 +1144,15 @@ pub async fn select_account_sapling(
         }),
         xvk: xvk
             .map(|xvk| DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()),
-        address: address.map(|a| PaymentAddress::decode(network, &a).unwrap()),
+        // A corrupt or empty stored address (e.g. rows imported before the
+        // address was backfilled) must not panic the runtime: surface a
+        // clear error instead.
+        address: match address {
+            Some(a) => Some(PaymentAddress::decode(network, &a).map_err(|e| {
+                anyhow!("invalid stored sapling address for account {account}: {e}")
+            })?),
+            None => None,
+        },
     };
 
     Ok(keys)
