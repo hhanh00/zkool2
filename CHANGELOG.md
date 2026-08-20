@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.28.0-rc.9](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.8...zkool-v6.28.0-rc.9) (2026-08-20)
+
+
+### Bug Fixes
+
+* **voting:** default vote node URL to the vote chain server when unset ([3186669](https://github.com/hhanh00/zkool2/commit/3186669e9eef9ea167f75f39ce360c415f444183))
+
 ## [6.28.0-rc.8](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.7...zkool-v6.28.0-rc.8) (2026-08-19)
 
 
