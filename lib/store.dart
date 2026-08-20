@@ -2048,6 +2048,11 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     required String chainUrl,
     required String voteNodeUrl,
   }) async {
+    // An unset Vote Node URL falls back to the vote chain's REST API: the
+    // chain server also serves the commitment tree the VAN witnesses sync
+    // from (the polls page resolves the same default for the chain).
+    final resolvedVoteNodeUrl =
+        voteNodeUrl.isNotEmpty ? voteNodeUrl : chainUrl;
     final c = coinContext.coin;
 
     // Durable ballot intents first (mirrors vizor's writeBallotIntents):
@@ -2141,7 +2146,7 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
           roundId: roundId,
           bundleIndex: bundleIndex,
           draftsJson: jsonEncode([draft]),
-          voteNodeUrl: voteNodeUrl,
+          voteNodeUrl: resolvedVoteNodeUrl,
           c: c,
         );
         await for (final event in stream) {
