@@ -318,7 +318,11 @@ class _RoundTile extends ConsumerWidget {
       "roundId": round.roundId,
       "chainUrl": chainUrl,
       "pirServerUrl": "",
-      "voteNodeUrl": settings.voteNodeUrl,
+      // An unset Vote Node URL defaults to the vote chain server: the same
+      // REST API serves the commitment tree the vote syncs from.
+      "voteNodeUrl": settings.voteNodeUrl.isNotEmpty
+          ? settings.voteNodeUrl
+          : chainUrl,
     });
   }
 }
