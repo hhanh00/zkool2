@@ -13,7 +13,7 @@ required-features = ["graphql"]
 
 [dependencies]
 zcash-trees = { git = "https://github.com/hhanh00/zcash-trees.git", rev = "1c820645e9116bbdfed5719ba8ff1d89b9be6cb1" }
-zcash_voting = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "fccb06451cbc5adde7c274abac08d9e91281e2a4", features = ["zsa-orchard"] }
+zcash_voting = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "049504162f11a09c89d33414d35e747851891d04", features = ["zsa-orchard"] }
 flutter_rust_bridge = { version = "=2.12.0", optional = true }
 
 anyhow = "1.0.97"
@@ -155,7 +155,7 @@ rand = "0.6"
 # Recovery-reconciliation tests exercise the voting fork's public prelude and
 # the in-memory commitment-tree server. Same git source as the zcash_voting
 # dep so the workspace [patch] override applies to it too.
-vote-commitment-tree = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "fccb06451cbc5adde7c274abac08d9e91281e2a4" }
+vote-commitment-tree = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "049504162f11a09c89d33414d35e747851891d04" }
 
 [features]
 default = ["flutter"]
