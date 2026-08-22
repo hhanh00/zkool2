@@ -2136,7 +2136,7 @@ final class VotingSubmissionJobProvider
 }
 
 String _$votingSubmissionJobHash() =>
-    r'f959d1379c1c2fd71f730fcf36c32f2b80bd35dd';
+    r'74833aa2e2d32c5e38e4b931309a4776a4cc3f57';
 
 /// Delegation execution job for one round. Runs the serialized chain:
 /// prepare (or resume) → setup → build submission (progress stream) →
@@ -2261,7 +2261,7 @@ final class VotingShareTrackerProvider
 }
 
 String _$votingShareTrackerHash() =>
-    r'54be86dcd23224ea6f76eebc469ef97181ca15c1';
+    r'fb64664f086a6d186faebbae65da843a83dec41e';
 
 /// Session-independent helper-share tracking for one round.
 ///
@@ -2282,5 +2282,70 @@ abstract class _$VotingShareTracker extends $Notifier<bool> {
     final element = ref.element as $ClassProviderElement<
         AnyNotifier<bool, bool>, bool, Object?, Object?>;
     element.handleValue(ref, created);
+  }
+}
+
+/// Re-runnable trigger for the share-tracking re-arm scan. Runs the scan on a
+/// provider-scoped ref that outlives any page; callers invoke
+/// `ref.read(shareTrackingArmProvider.notifier).run()` from initState, which
+/// is safe even when the page unmounts before the scan completes.
+
+@ProviderFor(ShareTrackingArm)
+const shareTrackingArmProvider = ShareTrackingArmProvider._();
+
+/// Re-runnable trigger for the share-tracking re-arm scan. Runs the scan on a
+/// provider-scoped ref that outlives any page; callers invoke
+/// `ref.read(shareTrackingArmProvider.notifier).run()` from initState, which
+/// is safe even when the page unmounts before the scan completes.
+final class ShareTrackingArmProvider
+    extends $NotifierProvider<ShareTrackingArm, void> {
+  /// Re-runnable trigger for the share-tracking re-arm scan. Runs the scan on a
+  /// provider-scoped ref that outlives any page; callers invoke
+  /// `ref.read(shareTrackingArmProvider.notifier).run()` from initState, which
+  /// is safe even when the page unmounts before the scan completes.
+  const ShareTrackingArmProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'shareTrackingArmProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$shareTrackingArmHash();
+
+  @$internal
+  @override
+  ShareTrackingArm create() => ShareTrackingArm();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(void value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<void>(value),
+    );
+  }
+}
+
+String _$shareTrackingArmHash() => r'd2bf9df564e8f0806abb55ab64c1a9a1e9611a69';
+
+/// Re-runnable trigger for the share-tracking re-arm scan. Runs the scan on a
+/// provider-scoped ref that outlives any page; callers invoke
+/// `ref.read(shareTrackingArmProvider.notifier).run()` from initState, which
+/// is safe even when the page unmounts before the scan completes.
+
+abstract class _$ShareTrackingArm extends $Notifier<void> {
+  void build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    build();
+    final ref = this.ref as $Ref<void, void>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<void, void>, void, Object?, Object?>;
+    element.handleValue(ref, null);
   }
 }

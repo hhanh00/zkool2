@@ -235,7 +235,11 @@ async fn try_open(
     // Create a connection pool
     let options = get_connect_options(db_filepath, password);
     let pool = SqlitePoolOptions::new()
-        .max_connections(5)
+        // Voting proofs hold a connection for minutes at a time while the
+        // synchronizer, share tracker, and session reads run concurrently;
+        // keep headroom so a long proof cannot starve the pool (sqlx's
+        // default 30 s acquire timeout would surface as "pool timed out").
+        .max_connections(10)
         .idle_timeout(std::time::Duration::from_secs(30))
         .max_lifetime(std::time::Duration::from_secs(60 * 60))
         .connect_with(options)

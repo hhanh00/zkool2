@@ -6,3 +6,6 @@
 # stable releases.
 [toolchain]
 channel = "1.95.0"
+# Ship the toolchain-matched rust-analyzer so IDE language support works with
+# the pinned compiler.
+components = ["rust-analyzer"]
