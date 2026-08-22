@@ -106,6 +106,11 @@ class SplashPageState extends ConsumerState<SplashPage> {
     c = c.setTransport(transport: settings.transport);
     c = c.setProxy(proxy: settings.proxy);
     coinContext.set(coin: c);
+    // Re-arm helper-share tracking for rounds with pending share work, so a
+    // client restart resumes share delivery without visiting the voting page.
+    if (settings.votingConfigUrl.isNotEmpty) {
+      unawaited(Future(() => armShareTrackingForPendingRounds(ref)));
+    }
     final synchronizer = ref.read(synchronizerProvider.notifier);
     synchronizer.autoSync();
     final mempool = ref.read(mempoolProvider.notifier);

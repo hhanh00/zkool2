@@ -2136,7 +2136,7 @@ final class VotingSubmissionJobProvider
 }
 
 String _$votingSubmissionJobHash() =>
-    r'8ab47e4d2b936d5e6c152c05f85197abb7a0d648';
+    r'f959d1379c1c2fd71f730fcf36c32f2b80bd35dd';
 
 /// Delegation execution job for one round. Runs the serialized chain:
 /// prepare (or resume) → setup → build submission (progress stream) →
@@ -2199,6 +2199,88 @@ abstract class _$VotingSubmissionJob
         VotingSubmissionJobState,
         Object?,
         Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
+/// Session-independent helper-share tracking for one round.
+///
+/// Armed by the submission job, the voting polls page, and the post-wallet-
+/// open hook, so a client restart does not strand share delivery while the
+/// round window is open. Each tick submits unrecorded share payloads
+/// (a helper outage during the foreground run leaves them unrecorded), polls
+/// helper status for sent shares, and resubmits overdue ones — best-effort,
+/// with the next tick retrying after any failure.
+
+@ProviderFor(VotingShareTracker)
+const votingShareTrackerProvider = VotingShareTrackerProvider._();
+
+/// Session-independent helper-share tracking for one round.
+///
+/// Armed by the submission job, the voting polls page, and the post-wallet-
+/// open hook, so a client restart does not strand share delivery while the
+/// round window is open. Each tick submits unrecorded share payloads
+/// (a helper outage during the foreground run leaves them unrecorded), polls
+/// helper status for sent shares, and resubmits overdue ones — best-effort,
+/// with the next tick retrying after any failure.
+final class VotingShareTrackerProvider
+    extends $NotifierProvider<VotingShareTracker, bool> {
+  /// Session-independent helper-share tracking for one round.
+  ///
+  /// Armed by the submission job, the voting polls page, and the post-wallet-
+  /// open hook, so a client restart does not strand share delivery while the
+  /// round window is open. Each tick submits unrecorded share payloads
+  /// (a helper outage during the foreground run leaves them unrecorded), polls
+  /// helper status for sent shares, and resubmits overdue ones — best-effort,
+  /// with the next tick retrying after any failure.
+  const VotingShareTrackerProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'votingShareTrackerProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$votingShareTrackerHash();
+
+  @$internal
+  @override
+  VotingShareTracker create() => VotingShareTracker();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$votingShareTrackerHash() =>
+    r'54be86dcd23224ea6f76eebc469ef97181ca15c1';
+
+/// Session-independent helper-share tracking for one round.
+///
+/// Armed by the submission job, the voting polls page, and the post-wallet-
+/// open hook, so a client restart does not strand share delivery while the
+/// round window is open. Each tick submits unrecorded share payloads
+/// (a helper outage during the foreground run leaves them unrecorded), polls
+/// helper status for sent shares, and resubmits overdue ones — best-effort,
+/// with the next tick retrying after any failure.
+
+abstract class _$VotingShareTracker extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<bool, bool>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<bool, bool>, bool, Object?, Object?>;
     element.handleValue(ref, created);
   }
 }

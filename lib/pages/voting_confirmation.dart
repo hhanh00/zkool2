@@ -31,14 +31,16 @@ class VotingConfirmationPageState extends ConsumerState<VotingConfirmationPage> 
     if (pinlock.value ?? false) return PinLock();
 
     final job = ref.watch(votingSubmissionJobProvider(widget.roundId));
-    // Confirmed vote txs (per proposal), shown as on-chain evidence.
+    // Confirmed vote txs (per proposal), shown as on-chain evidence. A vote
+    // confirmed via commitment-tree recovery has no tx hash — it still
+    // counts as confirmed evidence.
     final confirmedVotes = (ref
                 .watch(votingSessionProvider(widget.roundId))
                 .value
                 ?.recovery
                 ?.votes ??
             const <VotingVoteRecovery>[])
-        .where((v) => v.phase == "confirmed" && (v.txHash ?? "").isNotEmpty)
+        .where((v) => v.phase == "confirmed")
         .toList();
     // Human-readable ballot evidence: proposal titles and option labels,
     // keyed by proposal id (not list position).
@@ -99,7 +101,10 @@ class VotingConfirmationPageState extends ConsumerState<VotingConfirmationPage> 
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: SelectableText(
-                    "${voteLabel(v)}\n${v.txHash} · tree ${v.vcTreePosition}",
+                    v.txHash != null && v.txHash!.isNotEmpty
+                        ? "${voteLabel(v)}\n${v.txHash} · tree ${v.vcTreePosition}"
+                        : "${voteLabel(v)}\ntree ${v.vcTreePosition} · "
+                            "verified in the commitment tree",
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),

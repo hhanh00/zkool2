@@ -95,7 +95,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1211184662;
+  int get rustContentHash => -353494689;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -740,6 +740,9 @@ abstract class RustLibApi extends BaseApi {
       required String eventsJson,
       required Coin c});
 
+  Future<String?> crateApiVotingVotingDelegationVanCommitmentHex(
+      {required String roundId, required int bundleIndex, required Coin c});
+
   Future<String?> crateApiVotingVotingDraftsLoad(
       {required String roundId, required Coin c});
 
@@ -779,6 +782,21 @@ abstract class RustLibApi extends BaseApi {
       required BigInt vcTreePosition,
       required String shareDeliveriesJson,
       required Coin c});
+
+  Future<void> crateApiVotingVotingRecoverConfirmDelegationFromTree(
+      {required String roundId,
+      required int bundleIndex,
+      required int vanLeafPosition,
+      required Coin c});
+
+  Future<VotingTreeVoteConfirmation>
+      crateApiVotingVotingRecoverConfirmVoteFromTree(
+          {required String roundId,
+          required int bundleIndex,
+          required int proposalId,
+          required BigInt vcTreePosition,
+          int? vanLeafPosition,
+          required Coin c});
 
   Future<VotingRoundRecovery> crateApiVotingVotingRecovery(
       {required String roundId, required Coin c});
@@ -871,10 +889,27 @@ abstract class RustLibApi extends BaseApi {
   Future<int> crateApiVotingVotingSyncTree(
       {required String roundId, required String voteNodeUrl, required Coin c});
 
+  Future<BigInt?> crateApiVotingVotingTreeFindLeaf(
+      {required String roundId,
+      required String nodeUrl,
+      required String targetHex});
+
   Future<VotingVanWitness> crateApiVotingVotingVanWitness(
       {required String roundId,
       required int bundleIndex,
       required String voteNodeUrl,
+      required Coin c});
+
+  Future<String> crateApiVotingVotingVoteCommitmentHex(
+      {required String roundId,
+      required int bundleIndex,
+      required int proposalId,
+      required Coin c});
+
+  Future<String> crateApiVotingVotingVoteVanCommitmentHex(
+      {required String roundId,
+      required int bundleIndex,
+      required int proposalId,
       required Coin c});
 
   Future<String> crateApiVotingVotingVoteWireJson(
@@ -6907,6 +6942,36 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<String?> crateApiVotingVotingDelegationVanCommitmentHex(
+      {required String roundId, required int bundleIndex, required Coin c}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(roundId, serializer);
+          sse_encode_u_32(bundleIndex, serializer);
+          sse_encode_box_autoadd_coin(c, serializer);
+          pdeCallFfi(generalizedFrbRustBinding, serializer,
+              funcId: 202, port: port_);
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_String,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiVotingVotingDelegationVanCommitmentHexConstMeta,
+        argValues: [roundId, bundleIndex, c],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVotingVotingDelegationVanCommitmentHexConstMeta =>
+      const TaskConstMeta(
+        debugName: "voting_delegation_van_commitment_hex",
+        argNames: ["roundId", "bundleIndex", "c"],
+      );
+
+  @override
   Future<String?> crateApiVotingVotingDraftsLoad(
       {required String roundId, required Coin c}) {
     return handler.executeNormal(
@@ -6916,7 +6981,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(roundId, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 202, port: port_);
+              funcId: 203, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_opt_String,
@@ -6946,7 +7011,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(draftsJson, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 203, port: port_);
+              funcId: 204, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -6975,7 +7040,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_32(snapshotHeight, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 204, port: port_);
+              funcId: 205, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_u_64,
@@ -7002,7 +7067,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 205, port: port_);
+              funcId: 206, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -7029,7 +7094,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 206, port: port_);
+              funcId: 207, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -7065,7 +7130,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(txHash, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 207, port: port_);
+              funcId: 208, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -7099,7 +7164,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_32(proposalId, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 208, port: port_);
+              funcId: 209, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_voting_vote_payloads,
@@ -7131,7 +7196,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_list_prim_u_32_loose(proposalIds, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 209, port: port_);
+              funcId: 210, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_voting_round_plan,
@@ -7170,7 +7235,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(shareDeliveriesJson, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 210, port: port_);
+              funcId: 211, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -7206,6 +7271,95 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<void> crateApiVotingVotingRecoverConfirmDelegationFromTree(
+      {required String roundId,
+      required int bundleIndex,
+      required int vanLeafPosition,
+      required Coin c}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(roundId, serializer);
+          sse_encode_u_32(bundleIndex, serializer);
+          sse_encode_u_32(vanLeafPosition, serializer);
+          sse_encode_box_autoadd_coin(c, serializer);
+          pdeCallFfi(generalizedFrbRustBinding, serializer,
+              funcId: 212, port: port_);
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_unit,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta:
+            kCrateApiVotingVotingRecoverConfirmDelegationFromTreeConstMeta,
+        argValues: [roundId, bundleIndex, vanLeafPosition, c],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta
+      get kCrateApiVotingVotingRecoverConfirmDelegationFromTreeConstMeta =>
+          const TaskConstMeta(
+            debugName: "voting_recover_confirm_delegation_from_tree",
+            argNames: ["roundId", "bundleIndex", "vanLeafPosition", "c"],
+          );
+
+  @override
+  Future<VotingTreeVoteConfirmation>
+      crateApiVotingVotingRecoverConfirmVoteFromTree(
+          {required String roundId,
+          required int bundleIndex,
+          required int proposalId,
+          required BigInt vcTreePosition,
+          int? vanLeafPosition,
+          required Coin c}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(roundId, serializer);
+          sse_encode_u_32(bundleIndex, serializer);
+          sse_encode_u_32(proposalId, serializer);
+          sse_encode_u_64(vcTreePosition, serializer);
+          sse_encode_opt_box_autoadd_u_32(vanLeafPosition, serializer);
+          sse_encode_box_autoadd_coin(c, serializer);
+          pdeCallFfi(generalizedFrbRustBinding, serializer,
+              funcId: 213, port: port_);
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_voting_tree_vote_confirmation,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiVotingVotingRecoverConfirmVoteFromTreeConstMeta,
+        argValues: [
+          roundId,
+          bundleIndex,
+          proposalId,
+          vcTreePosition,
+          vanLeafPosition,
+          c
+        ],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVotingVotingRecoverConfirmVoteFromTreeConstMeta =>
+      const TaskConstMeta(
+        debugName: "voting_recover_confirm_vote_from_tree",
+        argNames: [
+          "roundId",
+          "bundleIndex",
+          "proposalId",
+          "vcTreePosition",
+          "vanLeafPosition",
+          "c"
+        ],
+      );
+
+  @override
   Future<VotingRoundRecovery> crateApiVotingVotingRecovery(
       {required String roundId, required Coin c}) {
     return handler.executeNormal(
@@ -7215,7 +7369,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(roundId, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 211, port: port_);
+              funcId: 214, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_voting_round_recovery,
@@ -7244,7 +7398,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(roundId, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 212, port: port_);
+              funcId: 215, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -7273,7 +7427,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(roundId, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 213, port: port_);
+              funcId: 216, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -7311,7 +7465,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_list_prim_u_8_loose(nullifierImtRoot, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 214, port: port_);
+              funcId: 217, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -7352,7 +7506,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           final serializer = SseSerializer(generalizedFrbRustBinding);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 215, port: port_);
+              funcId: 218, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_voting_round_info,
@@ -7380,7 +7534,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_list_String(roundIds, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 216, port: port_);
+              funcId: 219, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_voting_round_session,
@@ -7418,7 +7572,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_32(numOptions, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 217, port: port_);
+              funcId: 220, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -7463,7 +7617,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_list_String(newUrls, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 218, port: port_);
+              funcId: 221, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -7506,7 +7660,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_32(shareIndex, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 219, port: port_);
+              funcId: 222, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -7535,7 +7689,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(roundId, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 220, port: port_);
+              funcId: 223, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_voting_share_submission_payload,
@@ -7575,7 +7729,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_bool(singleShare, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 221, port: port_);
+              funcId: 224, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_voting_share_plan,
@@ -7631,7 +7785,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_bool(singleShare, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 222, port: port_);
+              funcId: 225, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_voting_share_plan_item,
@@ -7687,7 +7841,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_64(submitAt, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 223, port: port_);
+              funcId: 226, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_unit,
@@ -7733,7 +7887,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(roundId, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 224, port: port_);
+              funcId: 227, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_list_voting_share_delegation_record,
@@ -7773,7 +7927,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_64(submitAt, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 225, port: port_);
+              funcId: 228, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -7819,7 +7973,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(voteNodeUrl, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 226, port: port_);
+              funcId: 229, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_u_32,
@@ -7839,6 +7993,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<BigInt?> crateApiVotingVotingTreeFindLeaf(
+      {required String roundId,
+      required String nodeUrl,
+      required String targetHex}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(roundId, serializer);
+          sse_encode_String(nodeUrl, serializer);
+          sse_encode_String(targetHex, serializer);
+          pdeCallFfi(generalizedFrbRustBinding, serializer,
+              funcId: 230, port: port_);
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_opt_box_autoadd_u_64,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiVotingVotingTreeFindLeafConstMeta,
+        argValues: [roundId, nodeUrl, targetHex],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVotingVotingTreeFindLeafConstMeta =>
+      const TaskConstMeta(
+        debugName: "voting_tree_find_leaf",
+        argNames: ["roundId", "nodeUrl", "targetHex"],
+      );
+
+  @override
   Future<VotingVanWitness> crateApiVotingVotingVanWitness(
       {required String roundId,
       required int bundleIndex,
@@ -7853,7 +8039,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_String(voteNodeUrl, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 227, port: port_);
+              funcId: 231, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_voting_van_witness,
@@ -7873,6 +8059,74 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Future<String> crateApiVotingVotingVoteCommitmentHex(
+      {required String roundId,
+      required int bundleIndex,
+      required int proposalId,
+      required Coin c}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(roundId, serializer);
+          sse_encode_u_32(bundleIndex, serializer);
+          sse_encode_u_32(proposalId, serializer);
+          sse_encode_box_autoadd_coin(c, serializer);
+          pdeCallFfi(generalizedFrbRustBinding, serializer,
+              funcId: 232, port: port_);
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiVotingVotingVoteCommitmentHexConstMeta,
+        argValues: [roundId, bundleIndex, proposalId, c],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVotingVotingVoteCommitmentHexConstMeta =>
+      const TaskConstMeta(
+        debugName: "voting_vote_commitment_hex",
+        argNames: ["roundId", "bundleIndex", "proposalId", "c"],
+      );
+
+  @override
+  Future<String> crateApiVotingVotingVoteVanCommitmentHex(
+      {required String roundId,
+      required int bundleIndex,
+      required int proposalId,
+      required Coin c}) {
+    return handler.executeNormal(
+      NormalTask(
+        callFfi: (port_) {
+          final serializer = SseSerializer(generalizedFrbRustBinding);
+          sse_encode_String(roundId, serializer);
+          sse_encode_u_32(bundleIndex, serializer);
+          sse_encode_u_32(proposalId, serializer);
+          sse_encode_box_autoadd_coin(c, serializer);
+          pdeCallFfi(generalizedFrbRustBinding, serializer,
+              funcId: 233, port: port_);
+        },
+        codec: SseCodec(
+          decodeSuccessData: sse_decode_String,
+          decodeErrorData: sse_decode_AnyhowException,
+        ),
+        constMeta: kCrateApiVotingVotingVoteVanCommitmentHexConstMeta,
+        argValues: [roundId, bundleIndex, proposalId, c],
+        apiImpl: this,
+      ),
+    );
+  }
+
+  TaskConstMeta get kCrateApiVotingVotingVoteVanCommitmentHexConstMeta =>
+      const TaskConstMeta(
+        debugName: "voting_vote_van_commitment_hex",
+        argNames: ["roundId", "bundleIndex", "proposalId", "c"],
+      );
+
+  @override
   Future<String> crateApiVotingVotingVoteWireJson(
       {required String roundId,
       required int bundleIndex,
@@ -7887,7 +8141,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           sse_encode_u_32(proposalId, serializer);
           sse_encode_box_autoadd_coin(c, serializer);
           pdeCallFfi(generalizedFrbRustBinding, serializer,
-              funcId: 228, port: port_);
+              funcId: 234, port: port_);
         },
         codec: SseCodec(
           decodeSuccessData: sse_decode_String,
@@ -9704,11 +9958,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   VotingChainResponse dco_decode_voting_chain_response(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return VotingChainResponse(
       statusCode: dco_decode_u_16(arr[0]),
       body: dco_decode_String(arr[1]),
+      retryAfterSecs: dco_decode_opt_box_autoadd_u_64(arr[2]),
     );
   }
 
@@ -10158,6 +10413,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       rVpk: dco_decode_list_prim_u_8_strict(arr[8]),
       voteAuthSig: dco_decode_list_prim_u_8_strict(arr[9]),
       commitmentBundleJson: dco_decode_String(arr[10]),
+    );
+  }
+
+  @protected
+  VotingTreeVoteConfirmation dco_decode_voting_tree_vote_confirmation(
+      dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return VotingTreeVoteConfirmation(
+      vcTreePosition: dco_decode_u_64(arr[0]),
+      vanLeafPosition: dco_decode_opt_box_autoadd_u_32(arr[1]),
     );
   }
 
@@ -12428,7 +12696,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_statusCode = sse_decode_u_16(deserializer);
     var var_body = sse_decode_String(deserializer);
-    return VotingChainResponse(statusCode: var_statusCode, body: var_body);
+    var var_retryAfterSecs = sse_decode_opt_box_autoadd_u_64(deserializer);
+    return VotingChainResponse(
+        statusCode: var_statusCode,
+        body: var_body,
+        retryAfterSecs: var_retryAfterSecs);
   }
 
   @protected
@@ -12923,6 +13195,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         rVpk: var_rVpk,
         voteAuthSig: var_voteAuthSig,
         commitmentBundleJson: var_commitmentBundleJson);
+  }
+
+  @protected
+  VotingTreeVoteConfirmation sse_decode_voting_tree_vote_confirmation(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_vcTreePosition = sse_decode_u_64(deserializer);
+    var var_vanLeafPosition = sse_decode_opt_box_autoadd_u_32(deserializer);
+    return VotingTreeVoteConfirmation(
+        vcTreePosition: var_vcTreePosition,
+        vanLeafPosition: var_vanLeafPosition);
   }
 
   @protected
@@ -14896,6 +15179,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_16(self.statusCode, serializer);
     sse_encode_String(self.body, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.retryAfterSecs, serializer);
   }
 
   @protected
@@ -15228,6 +15512,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_list_prim_u_8_strict(self.rVpk, serializer);
     sse_encode_list_prim_u_8_strict(self.voteAuthSig, serializer);
     sse_encode_String(self.commitmentBundleJson, serializer);
+  }
+
+  @protected
+  void sse_encode_voting_tree_vote_confirmation(
+      VotingTreeVoteConfirmation self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_64(self.vcTreePosition, serializer);
+    sse_encode_opt_box_autoadd_u_32(self.vanLeafPosition, serializer);
   }
 
   @protected

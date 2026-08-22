@@ -332,6 +332,7 @@ class __$VotingBallotIntentCopyWithImpl<$Res>
 mixin _$VotingChainResponse {
   int get statusCode;
   String get body;
+  BigInt? get retryAfterSecs;
 
   /// Create a copy of VotingChainResponse
   /// with the given fields replaced by the non-null parameter values.
@@ -348,15 +349,18 @@ mixin _$VotingChainResponse {
             other is VotingChainResponse &&
             (identical(other.statusCode, statusCode) ||
                 other.statusCode == statusCode) &&
-            (identical(other.body, body) || other.body == body));
+            (identical(other.body, body) || other.body == body) &&
+            (identical(other.retryAfterSecs, retryAfterSecs) ||
+                other.retryAfterSecs == retryAfterSecs));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, statusCode, body);
+  int get hashCode =>
+      Object.hash(runtimeType, statusCode, body, retryAfterSecs);
 
   @override
   String toString() {
-    return 'VotingChainResponse(statusCode: $statusCode, body: $body)';
+    return 'VotingChainResponse(statusCode: $statusCode, body: $body, retryAfterSecs: $retryAfterSecs)';
   }
 }
 
@@ -366,7 +370,7 @@ abstract mixin class $VotingChainResponseCopyWith<$Res> {
           VotingChainResponse value, $Res Function(VotingChainResponse) _then) =
       _$VotingChainResponseCopyWithImpl;
   @useResult
-  $Res call({int statusCode, String body});
+  $Res call({int statusCode, String body, BigInt? retryAfterSecs});
 }
 
 /// @nodoc
@@ -384,6 +388,7 @@ class _$VotingChainResponseCopyWithImpl<$Res>
   $Res call({
     Object? statusCode = null,
     Object? body = null,
+    Object? retryAfterSecs = freezed,
   }) {
     return _then(_self.copyWith(
       statusCode: null == statusCode
@@ -394,6 +399,10 @@ class _$VotingChainResponseCopyWithImpl<$Res>
           ? _self.body
           : body // ignore: cast_nullable_to_non_nullable
               as String,
+      retryAfterSecs: freezed == retryAfterSecs
+          ? _self.retryAfterSecs
+          : retryAfterSecs // ignore: cast_nullable_to_non_nullable
+              as BigInt?,
     ));
   }
 }
@@ -489,13 +498,14 @@ extension VotingChainResponsePatterns on VotingChainResponse {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(int statusCode, String body)? $default, {
+    TResult Function(int statusCode, String body, BigInt? retryAfterSecs)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _VotingChainResponse() when $default != null:
-        return $default(_that.statusCode, _that.body);
+        return $default(_that.statusCode, _that.body, _that.retryAfterSecs);
       case _:
         return orElse();
     }
@@ -516,12 +526,13 @@ extension VotingChainResponsePatterns on VotingChainResponse {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(int statusCode, String body) $default,
+    TResult Function(int statusCode, String body, BigInt? retryAfterSecs)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _VotingChainResponse():
-        return $default(_that.statusCode, _that.body);
+        return $default(_that.statusCode, _that.body, _that.retryAfterSecs);
     }
   }
 
@@ -539,12 +550,13 @@ extension VotingChainResponsePatterns on VotingChainResponse {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(int statusCode, String body)? $default,
+    TResult? Function(int statusCode, String body, BigInt? retryAfterSecs)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _VotingChainResponse() when $default != null:
-        return $default(_that.statusCode, _that.body);
+        return $default(_that.statusCode, _that.body, _that.retryAfterSecs);
       case _:
         return null;
     }
@@ -554,12 +566,15 @@ extension VotingChainResponsePatterns on VotingChainResponse {
 /// @nodoc
 
 class _VotingChainResponse implements VotingChainResponse {
-  const _VotingChainResponse({required this.statusCode, required this.body});
+  const _VotingChainResponse(
+      {required this.statusCode, required this.body, this.retryAfterSecs});
 
   @override
   final int statusCode;
   @override
   final String body;
+  @override
+  final BigInt? retryAfterSecs;
 
   /// Create a copy of VotingChainResponse
   /// with the given fields replaced by the non-null parameter values.
@@ -577,15 +592,18 @@ class _VotingChainResponse implements VotingChainResponse {
             other is _VotingChainResponse &&
             (identical(other.statusCode, statusCode) ||
                 other.statusCode == statusCode) &&
-            (identical(other.body, body) || other.body == body));
+            (identical(other.body, body) || other.body == body) &&
+            (identical(other.retryAfterSecs, retryAfterSecs) ||
+                other.retryAfterSecs == retryAfterSecs));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, statusCode, body);
+  int get hashCode =>
+      Object.hash(runtimeType, statusCode, body, retryAfterSecs);
 
   @override
   String toString() {
-    return 'VotingChainResponse(statusCode: $statusCode, body: $body)';
+    return 'VotingChainResponse(statusCode: $statusCode, body: $body, retryAfterSecs: $retryAfterSecs)';
   }
 }
 
@@ -597,7 +615,7 @@ abstract mixin class _$VotingChainResponseCopyWith<$Res>
       __$VotingChainResponseCopyWithImpl;
   @override
   @useResult
-  $Res call({int statusCode, String body});
+  $Res call({int statusCode, String body, BigInt? retryAfterSecs});
 }
 
 /// @nodoc
@@ -615,6 +633,7 @@ class __$VotingChainResponseCopyWithImpl<$Res>
   $Res call({
     Object? statusCode = null,
     Object? body = null,
+    Object? retryAfterSecs = freezed,
   }) {
     return _then(_VotingChainResponse(
       statusCode: null == statusCode
@@ -625,6 +644,10 @@ class __$VotingChainResponseCopyWithImpl<$Res>
           ? _self.body
           : body // ignore: cast_nullable_to_non_nullable
               as String,
+      retryAfterSecs: freezed == retryAfterSecs
+          ? _self.retryAfterSecs
+          : retryAfterSecs // ignore: cast_nullable_to_non_nullable
+              as BigInt?,
     ));
   }
 }
@@ -12236,6 +12259,312 @@ class __$VotingSignedVoteCommitmentCopyWithImpl<$Res>
           ? _self.commitmentBundleJson
           : commitmentBundleJson // ignore: cast_nullable_to_non_nullable
               as String,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$VotingTreeVoteConfirmation {
+  BigInt get vcTreePosition;
+  int? get vanLeafPosition;
+
+  /// Create a copy of VotingTreeVoteConfirmation
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingTreeVoteConfirmationCopyWith<VotingTreeVoteConfirmation>
+      get copyWith =>
+          _$VotingTreeVoteConfirmationCopyWithImpl<VotingTreeVoteConfirmation>(
+              this as VotingTreeVoteConfirmation, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingTreeVoteConfirmation &&
+            (identical(other.vcTreePosition, vcTreePosition) ||
+                other.vcTreePosition == vcTreePosition) &&
+            (identical(other.vanLeafPosition, vanLeafPosition) ||
+                other.vanLeafPosition == vanLeafPosition));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, vcTreePosition, vanLeafPosition);
+
+  @override
+  String toString() {
+    return 'VotingTreeVoteConfirmation(vcTreePosition: $vcTreePosition, vanLeafPosition: $vanLeafPosition)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingTreeVoteConfirmationCopyWith<$Res> {
+  factory $VotingTreeVoteConfirmationCopyWith(VotingTreeVoteConfirmation value,
+          $Res Function(VotingTreeVoteConfirmation) _then) =
+      _$VotingTreeVoteConfirmationCopyWithImpl;
+  @useResult
+  $Res call({BigInt vcTreePosition, int? vanLeafPosition});
+}
+
+/// @nodoc
+class _$VotingTreeVoteConfirmationCopyWithImpl<$Res>
+    implements $VotingTreeVoteConfirmationCopyWith<$Res> {
+  _$VotingTreeVoteConfirmationCopyWithImpl(this._self, this._then);
+
+  final VotingTreeVoteConfirmation _self;
+  final $Res Function(VotingTreeVoteConfirmation) _then;
+
+  /// Create a copy of VotingTreeVoteConfirmation
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? vcTreePosition = null,
+    Object? vanLeafPosition = freezed,
+  }) {
+    return _then(_self.copyWith(
+      vcTreePosition: null == vcTreePosition
+          ? _self.vcTreePosition
+          : vcTreePosition // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      vanLeafPosition: freezed == vanLeafPosition
+          ? _self.vanLeafPosition
+          : vanLeafPosition // ignore: cast_nullable_to_non_nullable
+              as int?,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingTreeVoteConfirmation].
+extension VotingTreeVoteConfirmationPatterns on VotingTreeVoteConfirmation {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingTreeVoteConfirmation value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingTreeVoteConfirmation() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingTreeVoteConfirmation value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingTreeVoteConfirmation():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingTreeVoteConfirmation value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingTreeVoteConfirmation() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(BigInt vcTreePosition, int? vanLeafPosition)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingTreeVoteConfirmation() when $default != null:
+        return $default(_that.vcTreePosition, _that.vanLeafPosition);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(BigInt vcTreePosition, int? vanLeafPosition) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingTreeVoteConfirmation():
+        return $default(_that.vcTreePosition, _that.vanLeafPosition);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(BigInt vcTreePosition, int? vanLeafPosition)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingTreeVoteConfirmation() when $default != null:
+        return $default(_that.vcTreePosition, _that.vanLeafPosition);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingTreeVoteConfirmation implements VotingTreeVoteConfirmation {
+  const _VotingTreeVoteConfirmation(
+      {required this.vcTreePosition, this.vanLeafPosition});
+
+  @override
+  final BigInt vcTreePosition;
+  @override
+  final int? vanLeafPosition;
+
+  /// Create a copy of VotingTreeVoteConfirmation
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingTreeVoteConfirmationCopyWith<_VotingTreeVoteConfirmation>
+      get copyWith => __$VotingTreeVoteConfirmationCopyWithImpl<
+          _VotingTreeVoteConfirmation>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingTreeVoteConfirmation &&
+            (identical(other.vcTreePosition, vcTreePosition) ||
+                other.vcTreePosition == vcTreePosition) &&
+            (identical(other.vanLeafPosition, vanLeafPosition) ||
+                other.vanLeafPosition == vanLeafPosition));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, vcTreePosition, vanLeafPosition);
+
+  @override
+  String toString() {
+    return 'VotingTreeVoteConfirmation(vcTreePosition: $vcTreePosition, vanLeafPosition: $vanLeafPosition)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingTreeVoteConfirmationCopyWith<$Res>
+    implements $VotingTreeVoteConfirmationCopyWith<$Res> {
+  factory _$VotingTreeVoteConfirmationCopyWith(
+          _VotingTreeVoteConfirmation value,
+          $Res Function(_VotingTreeVoteConfirmation) _then) =
+      __$VotingTreeVoteConfirmationCopyWithImpl;
+  @override
+  @useResult
+  $Res call({BigInt vcTreePosition, int? vanLeafPosition});
+}
+
+/// @nodoc
+class __$VotingTreeVoteConfirmationCopyWithImpl<$Res>
+    implements _$VotingTreeVoteConfirmationCopyWith<$Res> {
+  __$VotingTreeVoteConfirmationCopyWithImpl(this._self, this._then);
+
+  final _VotingTreeVoteConfirmation _self;
+  final $Res Function(_VotingTreeVoteConfirmation) _then;
+
+  /// Create a copy of VotingTreeVoteConfirmation
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? vcTreePosition = null,
+    Object? vanLeafPosition = freezed,
+  }) {
+    return _then(_VotingTreeVoteConfirmation(
+      vcTreePosition: null == vcTreePosition
+          ? _self.vcTreePosition
+          : vcTreePosition // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      vanLeafPosition: freezed == vanLeafPosition
+          ? _self.vanLeafPosition
+          : vanLeafPosition // ignore: cast_nullable_to_non_nullable
+              as int?,
     ));
   }
 }
