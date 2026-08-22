@@ -48,8 +48,9 @@ class VotingPollsPageState extends ConsumerState<VotingPollsPage> {
     });
     // Opening the voting page re-arms helper-share tracking for rounds with
     // pending share work, so a restart resumes delivery without a manual
-    // status-page visit.
-    Future(() => armShareTrackingForPendingRounds(ref));
+    // status-page visit. Runs on a provider-scoped ref, so navigating away
+    // before the scan completes is safe.
+    Future(() => ref.read(shareTrackingArmProvider.notifier).run());
   }
 
   /// Voting v1 supports software accounts only; the fork signs with the

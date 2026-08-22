@@ -33,10 +33,7 @@ pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
     let _ = env_logger::builder().try_init();
 
-    let env_filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::INFO.into())
-        .from_env_lossy();
-    let (filter_layer, reload_handle) = reload::Layer::new(env_filter);
+    let (filter_layer, reload_handle) = reload::Layer::new(base_filter());
     FILTER_HANDLE.set(reload_handle).ok();
 
     let _ = Registry::default()
@@ -55,17 +52,29 @@ pub fn init_app() {
 pub fn set_expert_mode(enabled: bool) {
     if let Some(handle) = FILTER_HANDLE.get() {
         let filter = if enabled {
-            EnvFilter::new("warp=debug,rlz=debug,info")
+            EnvFilter::new("warp=debug,rlz=debug,shardtree=warn,info")
         } else {
-            EnvFilter::builder()
-                .with_default_directive(LevelFilter::INFO.into())
-                .from_env_lossy()
+            base_filter()
         };
         let _ = handle.modify(|f| *f = filter);
     }
 }
 
 pub type BoxedLayer<S> = Box<dyn Layer<S> + Send + Sync + 'static>;
+
+/// The base log filter: INFO by default, RUST_LOG overrides per target, and
+/// the `shardtree` crate pinned at WARN. Every vote-commitment-tree append
+/// runs a `prune_excess_checkpoints` span, and the fmt layer emits its
+/// enter/exit events at the span's level — at INFO that floods the log with
+/// hundreds of lines per tree sync. An explicit RUST_LOG directive for
+/// `shardtree` still wins (this directive is appended last, so user-provided
+/// directives match first).
+fn base_filter() -> EnvFilter {
+    EnvFilter::builder()
+        .with_default_directive(LevelFilter::INFO.into())
+        .from_env_lossy()
+        .add_directive("shardtree=warn".parse().expect("static shardtree filter"))
+}
 
 pub fn default_layer<S>() -> BoxedLayer<S>
 where

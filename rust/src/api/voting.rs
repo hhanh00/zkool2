@@ -834,13 +834,19 @@ pub async fn voting_commit_with_progress(
     let drafts_json = drafts_json.to_string();
     let vote_node_url = vote_node_url.to_string();
     let drafts: Vec<DraftVote> = serde_json::from_str(&drafts_json)?;
-    let mut connection = c.get_connection().await?;
-    let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-    let hotkey = voting::voting_hotkey_load(
-        &mut connection,
-        voting::voting_network(&c.network())?,
-    )
-    .await?;
+    let (wallet_id, hotkey) = {
+        let mut connection = c.get_connection().await?;
+        let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
+        let hotkey = voting::voting_hotkey_load(
+            &mut connection,
+            voting::voting_network(&c.network())?,
+        )
+        .await?;
+        // Release the connection before the tree sync + ZK proof, which run
+        // for a while; don't hold a pool slot hostage during the long phase
+        // (a later internal acquire would queue behind it).
+        (wallet_id, hotkey)
+    };
     let witness =
         voting::vote_van_witness(c.get_pool()?, &wallet_id, &round_id, bundle_index, &vote_node_url)
             .await?;
