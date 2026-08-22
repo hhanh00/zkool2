@@ -13213,7 +13213,7 @@ checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 [[package]]
 name = "vote-commitment-tree"
 version = "0.4.0-rc.2"
-source = "git+https://github.com/hhanh00/zcash_voting.git?rev=fccb06451cbc5adde7c274abac08d9e91281e2a4#fccb06451cbc5adde7c274abac08d9e91281e2a4"
+source = "git+https://github.com/hhanh00/zcash_voting.git?rev=049504162f11a09c89d33414d35e747851891d04#049504162f11a09c89d33414d35e747851891d04"
 dependencies = [
  "anyhow",
  "ff",
@@ -13229,7 +13229,7 @@ dependencies = [
 [[package]]
 name = "vote-commitment-tree-client"
 version = "0.6.0-rc.2"
-source = "git+https://github.com/hhanh00/zcash_voting.git?rev=fccb06451cbc5adde7c274abac08d9e91281e2a4#fccb06451cbc5adde7c274abac08d9e91281e2a4"
+source = "git+https://github.com/hhanh00/zcash_voting.git?rev=049504162f11a09c89d33414d35e747851891d04#049504162f11a09c89d33414d35e747851891d04"
 dependencies = [
  "base64 0.22.1",
  "ff",
@@ -14418,7 +14418,7 @@ dependencies = [
 [[package]]
 name = "zcash_voting"
 version = "2.0.0-rc.5"
-source = "git+https://github.com/hhanh00/zcash_voting.git?rev=fccb06451cbc5adde7c274abac08d9e91281e2a4#fccb06451cbc5adde7c274abac08d9e91281e2a4"
+source = "git+https://github.com/hhanh00/zcash_voting.git?rev=049504162f11a09c89d33414d35e747851891d04#049504162f11a09c89d33414d35e747851891d04"
 dependencies = [
  "anyhow",
  "base64 0.22.1",

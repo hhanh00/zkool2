@@ -351,21 +351,24 @@ pub async fn decrypt_memo(
                     {
                         debug!("decrypt_memo: ivk decrypt ok for vout={vout} pool={pool}");
                         let cmx: ExtractedNoteCommitment = note.commitment().into();
+                        // The note row may be missing (e.g. a tx scanned
+                        // before its note was stored); attach the memo
+                        // without a note link like the sapling path instead
+                        // of failing the whole tx.
                         let id_note =
                             sqlx::query("SELECT id_note FROM notes WHERE account = ? AND cmx = ?")
                                 .bind(account)
                                 .bind(&cmx.to_bytes()[..])
                                 .map(|row: SqliteRow| row.get::<u32, _>(0))
-                                .fetch_one(&mut *connection)
-                                .await
-                                .context("Failed to find note")?;
+                                .fetch_optional(&mut *connection)
+                                .await?;
 
                         process_memo(
                             connection,
                             account,
                             height,
                             id_tx,
-                            Some(id_note),
+                            id_note,
                             None,
                             pool,
                             vout as u32,

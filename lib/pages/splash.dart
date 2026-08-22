@@ -109,7 +109,7 @@ class SplashPageState extends ConsumerState<SplashPage> {
     // Re-arm helper-share tracking for rounds with pending share work, so a
     // client restart resumes share delivery without visiting the voting page.
     if (settings.votingConfigUrl.isNotEmpty) {
-      unawaited(Future(() => armShareTrackingForPendingRounds(ref)));
+      unawaited(Future(() => ref.read(shareTrackingArmProvider.notifier).run()));
     }
     final synchronizer = ref.read(synchronizerProvider.notifier);
     synchronizer.autoSync();
