@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/services/votechain_backoff.dart';
 import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -87,6 +88,9 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
         return "Casting votes";
       case "shares":
         return "Submitting shares";
+      case "retrying":
+        return "Retrying in ${job.retryInSeconds ?? 0}s "
+            "(attempt ${job.retryAttempt ?? 1} of $voteChainMaxAutoRetries)";
       case "done":
         return job.doneLabel ?? "Submission complete";
       case "error":
@@ -102,15 +106,16 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
     if (pinlock.value ?? false) return PinLock();
 
     final job = ref.watch(votingSubmissionJobProvider(widget.roundId));
-    final running = job.stage != "done" && job.stage != "error";
     // Confirmed vote txs (per proposal), shown as evidence on the done state.
+    // A vote confirmed via commitment-tree recovery has no tx hash — it still
+    // counts as confirmed evidence.
     final confirmedVotes = (ref
                 .watch(votingSessionProvider(widget.roundId))
                 .value
                 ?.recovery
                 ?.votes ??
             const <VotingVoteRecovery>[])
-        .where((v) => v.phase == "confirmed" && (v.txHash ?? "").isNotEmpty)
+        .where((v) => v.phase == "confirmed")
         .toList();
     // Human-readable ballot evidence: proposal titles and option labels,
     // keyed by proposal id (not list position).
@@ -135,7 +140,10 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
     }
 
     return PopScope(
-      canPop: !running,
+      // All progress is durable and the resume plan re-enters any incomplete
+      // step on the next run, so leaving is safe in every stage except the
+      // two heavy ZK stages, where aborting mid-proof just wastes the work.
+      canPop: job.stage != "preparing" && job.stage != "proving",
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         if (_handlingLeave) return;
@@ -226,7 +234,10 @@ class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: SelectableText(
-                      "${voteLabel(v)}\n${v.txHash} · tree ${v.vcTreePosition}",
+                      v.txHash != null && v.txHash!.isNotEmpty
+                          ? "${voteLabel(v)}\n${v.txHash} · tree ${v.vcTreePosition}"
+                          : "${voteLabel(v)}\ntree ${v.vcTreePosition} · "
+                              "verified in the commitment tree",
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),

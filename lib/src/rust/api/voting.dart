@@ -11,7 +11,7 @@ part 'voting.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `config_switch_kind_string`, `fork_network_string`, `from_resolved`, `prepare_bundle`, `to_fork`, `votechain_proxy`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `VotingShareDelivery`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
 /// Creates and persists a fresh app-owned voting hotkey (hex stored secret).
 Future<String> votingHotkeyCreate({required Coin c}) =>
@@ -471,6 +471,80 @@ Future<VotingVoteConfirmation> votingConfirm(
         eventsJson: eventsJson,
         c: c);
 
+/// Hex-encoded vote commitment leaf value for one committed vote, used to
+/// locate the vote's commitment-tree leaf when the tx hash is unknown.
+Future<String> votingVoteCommitmentHex(
+        {required String roundId,
+        required int bundleIndex,
+        required int proposalId,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiVotingVotingVoteCommitmentHex(
+        roundId: roundId,
+        bundleIndex: bundleIndex,
+        proposalId: proposalId,
+        c: c);
+
+/// Hex-encoded cast-vote VAN output commitment for one committed vote (the
+/// commitment-tree leaf appended immediately before the vote commitment).
+Future<String> votingVoteVanCommitmentHex(
+        {required String roundId,
+        required int bundleIndex,
+        required int proposalId,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiVotingVotingVoteVanCommitmentHex(
+        roundId: roundId,
+        bundleIndex: bundleIndex,
+        proposalId: proposalId,
+        c: c);
+
+/// Hex-encoded delegation VAN commitment (`gov_comm`) for a bundle, or `None`
+/// when it was never persisted. Used to locate the delegation's tree leaf.
+Future<String?> votingDelegationVanCommitmentHex(
+        {required String roundId, required int bundleIndex, required Coin c}) =>
+    RustLib.instance.api.crateApiVotingVotingDelegationVanCommitmentHex(
+        roundId: roundId, bundleIndex: bundleIndex, c: c);
+
+/// Scans the round's commitment tree for a leaf matching `target_hex` and
+/// returns its global position, or `None` when absent.
+Future<BigInt?> votingTreeFindLeaf(
+        {required String roundId,
+        required String nodeUrl,
+        required String targetHex}) =>
+    RustLib.instance.api.crateApiVotingVotingTreeFindLeaf(
+        roundId: roundId, nodeUrl: nodeUrl, targetHex: targetHex);
+
+/// Records a cast-vote confirmation whose evidence came from a
+/// commitment-tree scan (no tx hash available). The vote's phase becomes
+/// Confirmed so the resume plan proceeds to share submission.
+Future<VotingTreeVoteConfirmation> votingRecoverConfirmVoteFromTree(
+        {required String roundId,
+        required int bundleIndex,
+        required int proposalId,
+        required BigInt vcTreePosition,
+        int? vanLeafPosition,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiVotingVotingRecoverConfirmVoteFromTree(
+        roundId: roundId,
+        bundleIndex: bundleIndex,
+        proposalId: proposalId,
+        vcTreePosition: vcTreePosition,
+        vanLeafPosition: vanLeafPosition,
+        c: c);
+
+/// Records a delegation confirmation recovered from a commitment-tree scan
+/// (no tx hash available). The bundle's phase becomes Confirmed so voting can
+/// proceed.
+Future<void> votingRecoverConfirmDelegationFromTree(
+        {required String roundId,
+        required int bundleIndex,
+        required int vanLeafPosition,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiVotingVotingRecoverConfirmDelegationFromTree(
+        roundId: roundId,
+        bundleIndex: bundleIndex,
+        vanLeafPosition: vanLeafPosition,
+        c: c);
+
 /// Lists rounds persisted in the voting DB for the current wallet.
 Future<List<VotingRoundInfo>> votingRounds({required Coin c}) =>
     RustLib.instance.api.crateApiVotingVotingRounds(c: c);
@@ -605,6 +679,7 @@ sealed class VotingChainResponse with _$VotingChainResponse {
   const factory VotingChainResponse({
     required int statusCode,
     required String body,
+    BigInt? retryAfterSecs,
   }) = _VotingChainResponse;
 }
 
@@ -959,6 +1034,15 @@ sealed class VotingSignedVoteCommitment with _$VotingSignedVoteCommitment {
     required Uint8List voteAuthSig,
     required String commitmentBundleJson,
   }) = _VotingSignedVoteCommitment;
+}
+
+/// Confirmation evidence recovered from a commitment-tree scan.
+@freezed
+sealed class VotingTreeVoteConfirmation with _$VotingTreeVoteConfirmation {
+  const factory VotingTreeVoteConfirmation({
+    required BigInt vcTreePosition,
+    int? vanLeafPosition,
+  }) = _VotingTreeVoteConfirmation;
 }
 
 @freezed

@@ -742,6 +742,12 @@ pub async fn vote_payloads(
 }
 
 /// Reconstructs the chain-ready wire JSON for a committed vote.
+///
+/// The first build is persisted under a prop (mirroring the delegation wire)
+/// and returned verbatim afterwards, so a resubmission after a crash is
+/// byte-identical to the original broadcast — the chain derives the tx hash
+/// from those bytes, and an identical resubmission keeps the recorded hash
+/// valid.
 pub async fn vote_wire_json(
     pool: SqlitePool,
     wallet_id: &str,
@@ -749,11 +755,17 @@ pub async fn vote_wire_json(
     bundle_index: u32,
     proposal_id: u32,
 ) -> Result<String> {
+    let prop_key = format!("voting_round_vote_wire:{round_id}:{bundle_index}:{proposal_id}");
     let mut conn = pool.acquire().await?;
+    if let Some(saved) = crate::db::get_prop(&mut conn, &prop_key).await? {
+        return Ok(saved);
+    }
     let db = open_voting_db(pool, &mut conn, wallet_id).await?;
     let committed = CommittedVote::recover(&db, round_id, bundle_index, proposal_id).await?;
     let signed = committed.signed_commitment(&db).await?;
-    Ok(zcash_voting::wire::VoteCommitmentWire::try_from(&signed)?.to_json()?)
+    let wire = zcash_voting::wire::VoteCommitmentWire::try_from(&signed)?.to_json()?;
+    crate::db::put_prop(&mut conn, &prop_key, &wire).await?;
+    Ok(wire)
 }
 
 /// Reconstructs one helper-share payload as helper wire JSON from the
