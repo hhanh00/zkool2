@@ -1,5 +1,17 @@
 # Changelog
 
+## [6.28.0-rc.10](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.9...zkool-v6.28.0-rc.10) (2026-08-22)
+
+
+### Features
+
+* **voting:** resumable recovery across network, server, and client failures ([a553da0](https://github.com/hhanh00/zkool2/commit/a553da0f7b54e04eea4d4a37827a1b8e4ca79ee9))
+
+
+### Bug Fixes
+
+* **account:** derive sapling address on file import and fail fast on corrupt stored addresses ([57db3c8](https://github.com/hhanh00/zkool2/commit/57db3c8848fe4c9824215a6180f8e5aa013d503d))
+
 ## [6.28.0-rc.9](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.8...zkool-v6.28.0-rc.9) (2026-08-20)
 
 
