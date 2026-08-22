@@ -746,6 +746,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       dynamic raw);
 
   @protected
+  VotingTreeVoteConfirmation dco_decode_voting_tree_vote_confirmation(
+      dynamic raw);
+
+  @protected
   VotingVanWitness dco_decode_voting_van_witness(dynamic raw);
 
   @protected
@@ -1507,6 +1511,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VotingSignedVoteCommitment sse_decode_voting_signed_vote_commitment(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingTreeVoteConfirmation sse_decode_voting_tree_vote_confirmation(
       SseDeserializer deserializer);
 
   @protected
@@ -2310,6 +2318,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_voting_signed_vote_commitment(
       VotingSignedVoteCommitment self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_tree_vote_confirmation(
+      VotingTreeVoteConfirmation self, SseSerializer serializer);
 
   @protected
   void sse_encode_voting_van_witness(

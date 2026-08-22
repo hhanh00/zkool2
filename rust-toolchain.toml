@@ -1,0 +1,8 @@
+# rustc 1.88 (and a few releases around it) fails to compile libcrux-psq
+# 0.0.8 — a transitive nym dependency — with E0716 ("temporary value dropped
+# while borrowed"), a known temporary-lifetime regression. 1.95.0 builds the
+# whole workspace (incl. flutter_rust_bridge codegen) cleanly. Keep this
+# pinned until the nym/libcrux pins move to a version that compiles on newer
+# stable releases.
+[toolchain]
+channel = "1.95.0"

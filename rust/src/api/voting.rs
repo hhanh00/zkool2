@@ -1519,6 +1519,148 @@ pub async fn voting_confirm(
 }
 
 // ---------------------------------------------------------------------------
+// Chain-evidence recovery
+//
+// When a submitted tx's hash is unknown (the broadcast response was lost and
+// the chain spent the nullifier), the commitment tree still holds the
+// evidence: the client's own vote commitment and VAN commitments are known
+// from persisted recovery state. These helpers locate the leaves and record
+// the confirmation without a tx hash.
+// ---------------------------------------------------------------------------
+
+/// Confirmation evidence recovered from a commitment-tree scan.
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VotingTreeVoteConfirmation {
+    pub vc_tree_position: u64,
+    pub van_leaf_position: Option<u32>,
+}
+
+/// Hex-encoded vote commitment leaf value for one committed vote, used to
+/// locate the vote's commitment-tree leaf when the tx hash is unknown.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_vote_commitment_hex(
+    round_id: &str,
+    bundle_index: u32,
+    proposal_id: u32,
+    c: &Coin,
+) -> Result<String> {
+    let mut connection = c.get_connection().await?;
+    let wallet_id = voting::voting_wallet_id(&mut connection, c.account).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
+    let committed =
+        zcash_voting::prelude::CommittedVote::recover(&db, round_id, bundle_index, proposal_id)
+            .await?;
+    let signed = committed.signed_commitment(&db).await?;
+    Ok(hex::encode(signed.vote_commitment))
+}
+
+/// Hex-encoded cast-vote VAN output commitment for one committed vote (the
+/// commitment-tree leaf appended immediately before the vote commitment).
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_vote_van_commitment_hex(
+    round_id: &str,
+    bundle_index: u32,
+    proposal_id: u32,
+    c: &Coin,
+) -> Result<String> {
+    let mut connection = c.get_connection().await?;
+    let wallet_id = voting::voting_wallet_id(&mut connection, c.account).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
+    let committed =
+        zcash_voting::prelude::CommittedVote::recover(&db, round_id, bundle_index, proposal_id)
+            .await?;
+    let signed = committed.signed_commitment(&db).await?;
+    Ok(hex::encode(signed.vote_authority_note_new))
+}
+
+/// Hex-encoded delegation VAN commitment (`gov_comm`) for a bundle, or `None`
+/// when it was never persisted. Used to locate the delegation's tree leaf.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_delegation_van_commitment_hex(
+    round_id: &str,
+    bundle_index: u32,
+    c: &Coin,
+) -> Result<Option<String>> {
+    use ff::PrimeField;
+    let mut connection = c.get_connection().await?;
+    let wallet_id = voting::voting_wallet_id(&mut connection, c.account).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
+    let van = zcash_voting::prelude::delegation_van_commitment(&db, round_id, bundle_index).await?;
+    Ok(van.map(|value| hex::encode(value.to_repr())))
+}
+
+/// Scans the round's commitment tree for a leaf matching `target_hex` and
+/// returns its global position, or `None` when absent.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_tree_find_leaf(
+    round_id: &str,
+    node_url: &str,
+    target_hex: &str,
+) -> Result<Option<u64>> {
+    use ff::PrimeField;
+    let bytes: [u8; 32] = hex::decode(target_hex)?
+        .try_into()
+        .map_err(|_| anyhow::anyhow!("vote commitment hex must be 32 bytes"))?;
+    let target = Option::from(pasta_curves::Fp::from_repr(bytes))
+        .ok_or_else(|| anyhow::anyhow!("vote commitment hex is not a canonical field element"))?;
+    Ok(zcash_voting::prelude::find_leaf_position(node_url, round_id, target).await?)
+}
+
+/// Records a cast-vote confirmation whose evidence came from a
+/// commitment-tree scan (no tx hash available). The vote's phase becomes
+/// Confirmed so the resume plan proceeds to share submission.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_recover_confirm_vote_from_tree(
+    round_id: &str,
+    bundle_index: u32,
+    proposal_id: u32,
+    vc_tree_position: u64,
+    van_leaf_position: Option<u32>,
+    c: &Coin,
+) -> Result<VotingTreeVoteConfirmation> {
+    let mut connection = c.get_connection().await?;
+    let wallet_id = voting::voting_wallet_id(&mut connection, c.account).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
+    let confirmation = zcash_voting::prelude::record_vote_confirmation_from_tree(
+        &db,
+        round_id,
+        bundle_index,
+        proposal_id,
+        vc_tree_position,
+        van_leaf_position,
+    )
+    .await?;
+    Ok(VotingTreeVoteConfirmation {
+        vc_tree_position: confirmation.vc_tree_position,
+        van_leaf_position: confirmation.van_leaf_position,
+    })
+}
+
+/// Records a delegation confirmation recovered from a commitment-tree scan
+/// (no tx hash available). The bundle's phase becomes Confirmed so voting can
+/// proceed.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_recover_confirm_delegation_from_tree(
+    round_id: &str,
+    bundle_index: u32,
+    van_leaf_position: u32,
+    c: &Coin,
+) -> Result<()> {
+    let mut connection = c.get_connection().await?;
+    let wallet_id = voting::voting_wallet_id(&mut connection, c.account).await?;
+    let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
+    zcash_voting::prelude::record_delegation_confirmation_from_tree(
+        &db,
+        round_id,
+        bundle_index,
+        van_leaf_position,
+    )
+    .await?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
 // Recovery / plan mirrors
 // ---------------------------------------------------------------------------
 
@@ -2235,6 +2377,7 @@ pub async fn voting_sessions(round_ids: Vec<String>, c: &Coin) -> Result<Vec<Vot
 pub struct VotingChainResponse {
     pub status_code: u16,
     pub body: String,
+    pub retry_after_secs: Option<u64>,
 }
 
 /// Voting traffic honors the external-proxy setting (transport 3) only; it is
@@ -2252,8 +2395,8 @@ fn votechain_proxy(c: &Coin) -> String {
 pub async fn votechain_list_rounds(base_url: &str, c: &Coin) -> Result<VotingChainResponse> {
     let base_url = base_url.to_string();
     let proxy = votechain_proxy(c);
-    let (status_code, body) = crate::net::votechain::list_rounds(&base_url, &proxy).await?;
-    Ok(VotingChainResponse { status_code, body })
+    let (status_code, body, retry_after_secs) = crate::net::votechain::list_rounds(&base_url, &proxy).await?;
+    Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
 /// Fetches one round's status (`{ "round": ... }` envelope).
@@ -2266,9 +2409,9 @@ pub async fn votechain_round_status(
     let base_url = base_url.to_string();
     let round_id = round_id.to_string();
     let proxy = votechain_proxy(c);
-    let (status_code, body) =
+    let (status_code, body, retry_after_secs) =
         crate::net::votechain::round_status(&base_url, &round_id, &proxy).await?;
-    Ok(VotingChainResponse { status_code, body })
+    Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
 /// Fetches the round tally envelope.
@@ -2281,9 +2424,9 @@ pub async fn votechain_round_tally(
     let base_url = base_url.to_string();
     let round_id = round_id.to_string();
     let proxy = votechain_proxy(c);
-    let (status_code, body) =
+    let (status_code, body, retry_after_secs) =
         crate::net::votechain::round_tally(&base_url, &round_id, &proxy).await?;
-    Ok(VotingChainResponse { status_code, body })
+    Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
 /// Broadcasts a delegation transaction to the vote chain.
@@ -2296,9 +2439,9 @@ pub async fn votechain_submit_delegation(
     let base_url = base_url.to_string();
     let submission_json = submission_json.to_string();
     let proxy = votechain_proxy(c);
-    let (status_code, body) =
+    let (status_code, body, retry_after_secs) =
         crate::net::votechain::submit_delegation(&base_url, &submission_json, &proxy).await?;
-    Ok(VotingChainResponse { status_code, body })
+    Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
 /// Broadcasts a vote commitment transaction to the vote chain.
@@ -2311,9 +2454,9 @@ pub async fn votechain_submit_vote(
     let base_url = base_url.to_string();
     let submission_json = submission_json.to_string();
     let proxy = votechain_proxy(c);
-    let (status_code, body) =
+    let (status_code, body, retry_after_secs) =
         crate::net::votechain::submit_vote_commitment(&base_url, &submission_json, &proxy).await?;
-    Ok(VotingChainResponse { status_code, body })
+    Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
 /// Fetches the on-chain confirmation for a transaction; 404 = not confirmed.
@@ -2326,9 +2469,9 @@ pub async fn votechain_tx_confirmation(
     let base_url = base_url.to_string();
     let tx_hash = tx_hash.to_string();
     let proxy = votechain_proxy(c);
-    let (status_code, body) =
+    let (status_code, body, retry_after_secs) =
         crate::net::votechain::tx_confirmation(&base_url, &tx_hash, &proxy).await?;
-    Ok(VotingChainResponse { status_code, body })
+    Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
 /// Posts one encrypted share to a helper server.
@@ -2341,9 +2484,9 @@ pub async fn votechain_submit_share(
     let server_url = server_url.to_string();
     let payload_json = payload_json.to_string();
     let proxy = votechain_proxy(c);
-    let (status_code, body) =
+    let (status_code, body, retry_after_secs) =
         crate::net::votechain::submit_share(&server_url, &payload_json, &proxy).await?;
-    Ok(VotingChainResponse { status_code, body })
+    Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
 /// Resends a previously generated share to a helper server (same endpoint as
@@ -2357,9 +2500,9 @@ pub async fn votechain_resubmit_share(
     let server_url = server_url.to_string();
     let payload_json = payload_json.to_string();
     let proxy = votechain_proxy(c);
-    let (status_code, body) =
+    let (status_code, body, retry_after_secs) =
         crate::net::votechain::submit_share(&server_url, &payload_json, &proxy).await?;
-    Ok(VotingChainResponse { status_code, body })
+    Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
 /// Checks whether a helper has confirmed a share identified by its nullifier.
@@ -2374,9 +2517,9 @@ pub async fn votechain_share_status(
     let round_id = round_id.to_string();
     let share_id = share_id.to_string();
     let proxy = votechain_proxy(c);
-    let (status_code, body) =
+    let (status_code, body, retry_after_secs) =
         crate::net::votechain::share_status(&server_url, &round_id, &share_id, &proxy).await?;
-    Ok(VotingChainResponse { status_code, body })
+    Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
 #[cfg(test)]

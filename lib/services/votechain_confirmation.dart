@@ -42,3 +42,20 @@ VoteChainTxConfirmation? parseVoteChainTxConfirmation(String body) {
     height: height,
   );
 }
+
+/// Extracts `{code, log}` from a 4xx/5xx chain response body for user-facing
+/// error messages. Falls back to the raw body when it is not the
+/// `{tx_hash, code, log}` envelope.
+({int code, String log}) parseVoteChainRejection(String body) {
+  try {
+    final decoded = jsonDecode(body);
+    if (decoded is Map<String, dynamic>) {
+      final code = decoded['code'] is int ? decoded['code'] as int : -1;
+      final log = decoded['log'] is String ? decoded['log'] as String : '';
+      return (code: code, log: log);
+    }
+  } on FormatException {
+    // Fall through to the raw-body form.
+  }
+  return (code: -1, log: body);
+}

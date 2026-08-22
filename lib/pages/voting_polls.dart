@@ -46,6 +46,10 @@ class VotingPollsPageState extends ConsumerState<VotingPollsPage> {
         if (mounted) await showException(context, e.message);
       }
     });
+    // Opening the voting page re-arms helper-share tracking for rounds with
+    // pending share work, so a restart resumes delivery without a manual
+    // status-page visit.
+    Future(() => armShareTrackingForPendingRounds(ref));
   }
 
   /// Voting v1 supports software accounts only; the fork signs with the
@@ -76,6 +80,7 @@ class VotingPollsPageState extends ConsumerState<VotingPollsPage> {
 
     final config = ref.watch(votingConfigProvider);
     final rounds = ref.watch(votingRoundListProvider);
+    final shareAttention = ref.watch(votingShareTrackerProvider);
     return Scaffold(
       appBar: AppBar(
         title: Text("Voting"),
@@ -124,6 +129,19 @@ class VotingPollsPageState extends ConsumerState<VotingPollsPage> {
                 ref.invalidate(votingRoundListProvider),
             child: ListView(
               children: [
+                if (shareAttention)
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(12, 8, 12, 0),
+                    child: Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(12),
+                        child: Text(
+                          "Helper-share delivery is pending — it will retry "
+                          "in the background while the round is open.",
+                        ),
+                      ),
+                    ),
+                  ),
                 if (joinable.isNotEmpty) ...[
                   const Padding(
                     padding: EdgeInsets.all(12),

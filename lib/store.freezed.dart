@@ -5050,7 +5050,7 @@ class __$VotingSessionStateCopyWithImpl<$Res>
 /// @nodoc
 mixin _$VotingSubmissionJobState {
   String
-      get stage; // idle|preparing|proving|submitting|confirming|voting|shares|done|error
+      get stage; // idle|preparing|proving|submitting|confirming|voting|shares|retrying|done|error
   double get progress;
   String? get error;
 
@@ -5067,6 +5067,12 @@ mixin _$VotingSubmissionJobState {
 
   /// Honest "done" headline describing what THIS run actually completed.
   String? get doneLabel;
+
+  /// Current automatic retry of a transiently failed run (1-based).
+  int? get retryAttempt;
+
+  /// Seconds until the next automatic retry fires.
+  int? get retryInSeconds;
 
   /// Create a copy of VotingSubmissionJobState
   /// with the given fields replaced by the non-null parameter values.
@@ -5091,16 +5097,29 @@ mixin _$VotingSubmissionJobState {
             (identical(other.confirmHeight, confirmHeight) ||
                 other.confirmHeight == confirmHeight) &&
             (identical(other.doneLabel, doneLabel) ||
-                other.doneLabel == doneLabel));
+                other.doneLabel == doneLabel) &&
+            (identical(other.retryAttempt, retryAttempt) ||
+                other.retryAttempt == retryAttempt) &&
+            (identical(other.retryInSeconds, retryInSeconds) ||
+                other.retryInSeconds == retryInSeconds));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, stage, progress, error,
-      eligibleWeightZatoshi, txHash, confirmHeight, doneLabel);
+  int get hashCode => Object.hash(
+      runtimeType,
+      stage,
+      progress,
+      error,
+      eligibleWeightZatoshi,
+      txHash,
+      confirmHeight,
+      doneLabel,
+      retryAttempt,
+      retryInSeconds);
 
   @override
   String toString() {
-    return 'VotingSubmissionJobState(stage: $stage, progress: $progress, error: $error, eligibleWeightZatoshi: $eligibleWeightZatoshi, txHash: $txHash, confirmHeight: $confirmHeight, doneLabel: $doneLabel)';
+    return 'VotingSubmissionJobState(stage: $stage, progress: $progress, error: $error, eligibleWeightZatoshi: $eligibleWeightZatoshi, txHash: $txHash, confirmHeight: $confirmHeight, doneLabel: $doneLabel, retryAttempt: $retryAttempt, retryInSeconds: $retryInSeconds)';
   }
 }
 
@@ -5117,7 +5136,9 @@ abstract mixin class $VotingSubmissionJobStateCopyWith<$Res> {
       BigInt? eligibleWeightZatoshi,
       String? txHash,
       int? confirmHeight,
-      String? doneLabel});
+      String? doneLabel,
+      int? retryAttempt,
+      int? retryInSeconds});
 }
 
 /// @nodoc
@@ -5140,6 +5161,8 @@ class _$VotingSubmissionJobStateCopyWithImpl<$Res>
     Object? txHash = freezed,
     Object? confirmHeight = freezed,
     Object? doneLabel = freezed,
+    Object? retryAttempt = freezed,
+    Object? retryInSeconds = freezed,
   }) {
     return _then(_self.copyWith(
       stage: null == stage
@@ -5170,6 +5193,14 @@ class _$VotingSubmissionJobStateCopyWithImpl<$Res>
           ? _self.doneLabel
           : doneLabel // ignore: cast_nullable_to_non_nullable
               as String?,
+      retryAttempt: freezed == retryAttempt
+          ? _self.retryAttempt
+          : retryAttempt // ignore: cast_nullable_to_non_nullable
+              as int?,
+      retryInSeconds: freezed == retryInSeconds
+          ? _self.retryInSeconds
+          : retryInSeconds // ignore: cast_nullable_to_non_nullable
+              as int?,
     ));
   }
 }
@@ -5272,7 +5303,9 @@ extension VotingSubmissionJobStatePatterns on VotingSubmissionJobState {
             BigInt? eligibleWeightZatoshi,
             String? txHash,
             int? confirmHeight,
-            String? doneLabel)?
+            String? doneLabel,
+            int? retryAttempt,
+            int? retryInSeconds)?
         $default, {
     required TResult orElse(),
   }) {
@@ -5286,7 +5319,9 @@ extension VotingSubmissionJobStatePatterns on VotingSubmissionJobState {
             _that.eligibleWeightZatoshi,
             _that.txHash,
             _that.confirmHeight,
-            _that.doneLabel);
+            _that.doneLabel,
+            _that.retryAttempt,
+            _that.retryInSeconds);
       case _:
         return orElse();
     }
@@ -5314,7 +5349,9 @@ extension VotingSubmissionJobStatePatterns on VotingSubmissionJobState {
             BigInt? eligibleWeightZatoshi,
             String? txHash,
             int? confirmHeight,
-            String? doneLabel)
+            String? doneLabel,
+            int? retryAttempt,
+            int? retryInSeconds)
         $default,
   ) {
     final _that = this;
@@ -5327,7 +5364,9 @@ extension VotingSubmissionJobStatePatterns on VotingSubmissionJobState {
             _that.eligibleWeightZatoshi,
             _that.txHash,
             _that.confirmHeight,
-            _that.doneLabel);
+            _that.doneLabel,
+            _that.retryAttempt,
+            _that.retryInSeconds);
     }
   }
 
@@ -5352,7 +5391,9 @@ extension VotingSubmissionJobStatePatterns on VotingSubmissionJobState {
             BigInt? eligibleWeightZatoshi,
             String? txHash,
             int? confirmHeight,
-            String? doneLabel)?
+            String? doneLabel,
+            int? retryAttempt,
+            int? retryInSeconds)?
         $default,
   ) {
     final _that = this;
@@ -5365,7 +5406,9 @@ extension VotingSubmissionJobStatePatterns on VotingSubmissionJobState {
             _that.eligibleWeightZatoshi,
             _that.txHash,
             _that.confirmHeight,
-            _that.doneLabel);
+            _that.doneLabel,
+            _that.retryAttempt,
+            _that.retryInSeconds);
       case _:
         return null;
     }
@@ -5382,11 +5425,13 @@ class _VotingSubmissionJobState implements VotingSubmissionJobState {
       this.eligibleWeightZatoshi,
       this.txHash,
       this.confirmHeight,
-      this.doneLabel});
+      this.doneLabel,
+      this.retryAttempt,
+      this.retryInSeconds});
 
   @override
   final String stage;
-// idle|preparing|proving|submitting|confirming|voting|shares|done|error
+// idle|preparing|proving|submitting|confirming|voting|shares|retrying|done|error
   @override
   final double progress;
   @override
@@ -5409,6 +5454,14 @@ class _VotingSubmissionJobState implements VotingSubmissionJobState {
   /// Honest "done" headline describing what THIS run actually completed.
   @override
   final String? doneLabel;
+
+  /// Current automatic retry of a transiently failed run (1-based).
+  @override
+  final int? retryAttempt;
+
+  /// Seconds until the next automatic retry fires.
+  @override
+  final int? retryInSeconds;
 
   /// Create a copy of VotingSubmissionJobState
   /// with the given fields replaced by the non-null parameter values.
@@ -5434,16 +5487,29 @@ class _VotingSubmissionJobState implements VotingSubmissionJobState {
             (identical(other.confirmHeight, confirmHeight) ||
                 other.confirmHeight == confirmHeight) &&
             (identical(other.doneLabel, doneLabel) ||
-                other.doneLabel == doneLabel));
+                other.doneLabel == doneLabel) &&
+            (identical(other.retryAttempt, retryAttempt) ||
+                other.retryAttempt == retryAttempt) &&
+            (identical(other.retryInSeconds, retryInSeconds) ||
+                other.retryInSeconds == retryInSeconds));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, stage, progress, error,
-      eligibleWeightZatoshi, txHash, confirmHeight, doneLabel);
+  int get hashCode => Object.hash(
+      runtimeType,
+      stage,
+      progress,
+      error,
+      eligibleWeightZatoshi,
+      txHash,
+      confirmHeight,
+      doneLabel,
+      retryAttempt,
+      retryInSeconds);
 
   @override
   String toString() {
-    return 'VotingSubmissionJobState(stage: $stage, progress: $progress, error: $error, eligibleWeightZatoshi: $eligibleWeightZatoshi, txHash: $txHash, confirmHeight: $confirmHeight, doneLabel: $doneLabel)';
+    return 'VotingSubmissionJobState(stage: $stage, progress: $progress, error: $error, eligibleWeightZatoshi: $eligibleWeightZatoshi, txHash: $txHash, confirmHeight: $confirmHeight, doneLabel: $doneLabel, retryAttempt: $retryAttempt, retryInSeconds: $retryInSeconds)';
   }
 }
 
@@ -5462,7 +5528,9 @@ abstract mixin class _$VotingSubmissionJobStateCopyWith<$Res>
       BigInt? eligibleWeightZatoshi,
       String? txHash,
       int? confirmHeight,
-      String? doneLabel});
+      String? doneLabel,
+      int? retryAttempt,
+      int? retryInSeconds});
 }
 
 /// @nodoc
@@ -5485,6 +5553,8 @@ class __$VotingSubmissionJobStateCopyWithImpl<$Res>
     Object? txHash = freezed,
     Object? confirmHeight = freezed,
     Object? doneLabel = freezed,
+    Object? retryAttempt = freezed,
+    Object? retryInSeconds = freezed,
   }) {
     return _then(_VotingSubmissionJobState(
       stage: null == stage
@@ -5515,6 +5585,14 @@ class __$VotingSubmissionJobStateCopyWithImpl<$Res>
           ? _self.doneLabel
           : doneLabel // ignore: cast_nullable_to_non_nullable
               as String?,
+      retryAttempt: freezed == retryAttempt
+          ? _self.retryAttempt
+          : retryAttempt // ignore: cast_nullable_to_non_nullable
+              as int?,
+      retryInSeconds: freezed == retryInSeconds
+          ? _self.retryInSeconds
+          : retryInSeconds // ignore: cast_nullable_to_non_nullable
+              as int?,
     ));
   }
 }
