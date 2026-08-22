@@ -78,4 +78,20 @@ void main() {
       expect(conf!.eventsJson, '[]');
     });
   });
+
+  group('parseVoteChainRejection', () {
+    test('extracts code and log from the envelope', () {
+      final rejection = parseVoteChainRejection(
+        '{"tx_hash":"","code":3,"log":"nullifier already spent"}',
+      );
+      expect(rejection.code, 3);
+      expect(rejection.log, 'nullifier already spent');
+    });
+
+    test('falls back to the raw body for non-envelope bodies', () {
+      final rejection = parseVoteChainRejection('plain text');
+      expect(rejection.code, -1);
+      expect(rejection.log, 'plain text');
+    });
+  });
 }

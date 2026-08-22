@@ -14,7 +14,10 @@ import 'package:flutter/material.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/services/block_height_service.dart';
+import 'package:zkool/services/votechain_backoff.dart';
+import 'package:zkool/services/votechain_classify.dart';
 import 'package:zkool/services/votechain_confirmation.dart';
+import 'package:zkool/services/votechain_failover.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/contacts.dart';
@@ -1569,7 +1572,7 @@ class VotingSubmissionGuard extends _$VotingSubmissionGuard {
 @freezed
 sealed class VotingSubmissionJobState with _$VotingSubmissionJobState {
   factory VotingSubmissionJobState({
-    required String stage, // idle|preparing|proving|submitting|confirming|voting|shares|done|error
+    required String stage, // idle|preparing|proving|submitting|confirming|voting|shares|retrying|done|error
     required double progress,
     String? error,
     /// Voting weight (zatoshi) delegated by the prepared bundle, shown in
@@ -1582,6 +1585,10 @@ sealed class VotingSubmissionJobState with _$VotingSubmissionJobState {
     int? confirmHeight,
     /// Honest "done" headline describing what THIS run actually completed.
     String? doneLabel,
+    /// Current automatic retry of a transiently failed run (1-based).
+    int? retryAttempt,
+    /// Seconds until the next automatic retry fires.
+    int? retryInSeconds,
   }) = _VotingSubmissionJobState;
 }
 
@@ -1592,11 +1599,8 @@ sealed class VotingSubmissionJobState with _$VotingSubmissionJobState {
 /// run (`delegate` vs `poll_delegation`), never re-broadcasting a recorded tx.
 @Riverpod(keepAlive: true)
 class VotingSubmissionJob extends _$VotingSubmissionJob {
-  Timer? _shareTimer;
-
   @override
   VotingSubmissionJobState build(String roundId) {
-    ref.onDispose(() => _shareTimer?.cancel());
     return VotingSubmissionJobState(stage: "idle", progress: 0);
   }
 
@@ -1617,65 +1621,104 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     if (state.stage != "idle" &&
         state.stage != "error" &&
         state.stage != "done") {
-      return; // already running
+      return; // already running (or waiting to retry)
     }
-    state = state.copyWith(stage: "running", progress: 0, error: null);
+    state = state.copyWith(
+      stage: "running",
+      progress: 0,
+      error: null,
+      retryAttempt: null,
+      retryInSeconds: null,
+    );
     ref.read(votingSubmissionGuardProvider.notifier).setActive(true);
-    try {
-      final delegated = await _runDelegation(
-        chainUrl: chainUrl,
-        pirServerUrl: pirServerUrl,
-        pirLayout: pirLayout,
-        roundParamsJson: roundParamsJson,
-        roundName: roundName,
-        maxRealNotesPerBundle: maxRealNotesPerBundle,
-        lightwalletdUrl: lightwalletdUrl,
-      );
-      final voted = await _runVotes(
-        chainUrl: chainUrl,
-        voteNodeUrl: voteNodeUrl,
-      );
-      // The vote chain servers double as helper (share) servers; the voting
-      // flow never passes shareServerUrls, so fall back to the configured
-      // vote servers (mirrors vizor's context.config.voteServers).
-      final shareUrls = await _effectiveShareServerUrls(shareServerUrls);
-      // The voting pages never pass ceremonyStart/voteEnd either — resolve
-      // them from the chain round status so the share plan can schedule.
-      var effectiveCeremony = ceremonyStart;
-      var effectiveVoteEnd = voteEnd;
-      if (effectiveCeremony == 0 || effectiveVoteEnd == null) {
-        final timing = await _roundShareTiming(chainUrl: chainUrl);
-        if (timing != null) {
-          effectiveCeremony = timing.ceremonyStart;
-          effectiveVoteEnd = timing.voteEnd;
+    // Every step below is plan-driven and idempotent, so re-running the body
+    // after a transient failure is always safe: recorded state is re-read and
+    // the plan decides what still needs doing. Transient failures retry with
+    // backoff; deterministic rejections fail fast to the error stage.
+    var attempt = 0;
+    while (true) {
+      try {
+        final chainUrls = await _effectiveChainUrls(chainUrl);
+        final failover = VoteChainFailover(allServers: chainUrls);
+        final delegated = await _runDelegation(
+          chainUrls: chainUrls,
+          failover: failover,
+          pirServerUrl: pirServerUrl,
+          pirLayout: pirLayout,
+          roundParamsJson: roundParamsJson,
+          roundName: roundName,
+          maxRealNotesPerBundle: maxRealNotesPerBundle,
+          lightwalletdUrl: lightwalletdUrl,
+        );
+        final voted = await _runVotes(
+          chainUrls: chainUrls,
+          failover: failover,
+          voteNodeUrl: voteNodeUrl,
+        );
+        // The vote chain servers double as helper (share) servers; the voting
+        // flow never passes shareServerUrls, so fall back to the configured
+        // vote servers (mirrors vizor's context.config.voteServers).
+        final shareUrls = await _effectiveShareServerUrls(shareServerUrls);
+        // The voting pages never pass ceremonyStart/voteEnd either — resolve
+        // them from the chain round status so the share plan can schedule.
+        var effectiveCeremony = ceremonyStart;
+        var effectiveVoteEnd = voteEnd;
+        if (effectiveCeremony == 0 || effectiveVoteEnd == null) {
+          final timing =
+              await _roundShareTiming(chainUrls: chainUrls, failover: failover);
+          if (timing != null) {
+            effectiveCeremony = timing.ceremonyStart;
+            effectiveVoteEnd = timing.voteEnd;
+          }
         }
+        final shared = await _submitShares(
+          ceremonyStart: effectiveCeremony,
+          voteEnd: effectiveVoteEnd,
+          shareServerUrls: shareUrls,
+          singleShare: singleShare,
+        );
+        final String doneLabel;
+        if (delegated) {
+          doneLabel = "Delegation confirmed";
+        } else if (voted) {
+          doneLabel = "Votes submitted";
+        } else if (shared) {
+          doneLabel = "Shares submitted";
+        } else {
+          doneLabel = await _remainingLabel();
+        }
+        state = state.copyWith(stage: "done", progress: 1, doneLabel: doneLabel);
+        ref.read(votingSubmissionGuardProvider.notifier).setActive(false);
+        // The round is now recorded locally and its plan advanced; refresh the
+        // voting page so the tile leaves "Join" and shows the real status
+        // without a manual refresh.
+        ref.invalidate(votingRoundListProvider);
+        ref.invalidate(votingSessionProvider(roundId));
+        return;
+      } on TransientVoteChainException catch (e) {
+        attempt++;
+        if (attempt > voteChainMaxAutoRetries) {
+          state = state.copyWith(
+            stage: "error",
+            error: e.toString(),
+            retryAttempt: null,
+            retryInSeconds: null,
+          );
+          ref.read(votingSubmissionGuardProvider.notifier).setActive(false);
+          return;
+        }
+        final delay = voteChainRetryDelay(attempt);
+        state = state.copyWith(
+          stage: "retrying",
+          retryAttempt: attempt,
+          retryInSeconds: delay.inSeconds,
+        );
+        await Future<void>.delayed(delay);
+      } on Exception catch (e) {
+        state = state.copyWith(stage: "error", error: e.toString());
+        ref.read(votingSubmissionGuardProvider.notifier).setActive(false);
+        return;
       }
-      final shared = await _submitShares(
-        ceremonyStart: effectiveCeremony,
-        voteEnd: effectiveVoteEnd,
-        shareServerUrls: shareUrls,
-        singleShare: singleShare,
-      );
-      final String doneLabel;
-      if (delegated) {
-        doneLabel = "Delegation confirmed";
-      } else if (voted) {
-        doneLabel = "Votes submitted";
-      } else if (shared) {
-        doneLabel = "Shares submitted";
-      } else {
-        doneLabel = await _remainingLabel();
-      }
-      state = state.copyWith(stage: "done", progress: 1, doneLabel: doneLabel);
-      ref.read(votingSubmissionGuardProvider.notifier).setActive(false);
-      // The round is now recorded locally and its plan advanced; refresh the
-      // voting page so the tile leaves "Join" and shows the real status
-      // without a manual refresh.
-      ref.invalidate(votingRoundListProvider);
-      ref.invalidate(votingSessionProvider(roundId));
-    } on Exception catch (e) {
-      state = state.copyWith(stage: "error", error: e.toString());
-      ref.read(votingSubmissionGuardProvider.notifier).setActive(false);
     }
   }
 
@@ -1683,10 +1726,27 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     state = VotingSubmissionJobState(stage: "idle", progress: 0);
   }
 
+  /// The vote chain front the caller chose first, followed by the remaining
+  /// configured vote servers — the failover candidate list for chain calls.
+  Future<List<String>> _effectiveChainUrls(String chainUrl) async {
+    final urls = <String>[];
+    if (chainUrl.isNotEmpty) urls.add(chainUrl);
+    try {
+      final config = await ref.read(votingConfigProvider.future);
+      for (final s in config?.voteServers ?? const <VotingServiceEndpoint>[]) {
+        if (!urls.contains(s.url)) urls.add(s.url);
+      }
+    } on Exception {
+      // Config unavailable: failover degrades to the single passed URL.
+    }
+    return urls;
+  }
+
   /// Runs the delegation steps for this round; returns true when a delegation
   /// was confirmed in this run (fresh broadcast or recorded-hash poll).
   Future<bool> _runDelegation({
-    required String chainUrl,
+    required List<String> chainUrls,
+    required VoteChainFailover failover,
     required String pirServerUrl,
     VotingPirLayout? pirLayout,
     String? roundParamsJson,
@@ -1787,29 +1847,37 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       }
 
       state = state.copyWith(stage: "submitting");
-      final res = await votechainSubmitDelegation(
-        baseUrl: chainUrl,
-        submissionJson: wireJson,
-        c: c,
+      final res = await failover.run(
+        baseUrls: chainUrls,
+        roundId: roundId,
+        call: (u) => votechainSubmitDelegation(
+          baseUrl: u,
+          submissionJson: wireJson,
+          c: c,
+        ),
       );
       if (res.statusCode == 422) {
         throw AnyhowException(
           "Delegation rejected by the vote chain: ${res.body}",
         );
       }
+      final submittedHash = txHashFromVoteChainBody(res.body) ?? "";
+      final rejection = parseVoteChainRejection(res.body);
       if (res.statusCode < 200 || res.statusCode >= 300) {
+        // A 502 "broadcast outcome unknown" body carries the deterministic
+        // tx hash: the tx may have landed — record it and let confirmation
+        // polling learn the truth. Any other non-2xx without a hash fails.
+        if (submittedHash.isEmpty) {
+          throw AnyhowException(
+            "Vote chain submit failed (HTTP ${res.statusCode}): ${res.body}",
+          );
+        }
+      } else if (rejection.code > 0 || submittedHash.isEmpty) {
         throw AnyhowException(
-          "Vote chain submit failed (HTTP ${res.statusCode}): ${res.body}",
+          "Vote chain rejected the delegation: ${rejection.log}",
         );
       }
-      final result = jsonDecode(res.body) as Map<String, dynamic>;
-      txHash = result['tx_hash'] as String? ?? "";
-      final code = result['code'] as int? ?? -1;
-      if (code != 0 || txHash.isEmpty) {
-        throw AnyhowException(
-          "Vote chain rejected the delegation: ${result['log'] ?? res.body}",
-        );
-      }
+      txHash = submittedHash;
 
       await delegationMarkSubmitted(
         roundId: roundId,
@@ -1832,27 +1900,76 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     }
 
     state = state.copyWith(stage: "confirming");
-    final conf = await _pollTxConfirmation(chainUrl: chainUrl, txHash: txHash!);
-    await delegationConfirm(
-      roundId: roundId,
-      bundleIndex: bundleIndex,
-      txHash: txHash,
-      eventsJson: conf.eventsJson,
-      c: c,
-    );
-    state = state.copyWith(txHash: txHash, confirmHeight: conf.height);
+    final String recordedHash = txHash!;
+    int? confirmHeight;
+    try {
+      final conf = await _pollTxConfirmationWithFallback(
+        chainUrls: chainUrls,
+        failover: failover,
+        txHash: recordedHash,
+        wireJson: () async =>
+            await delegationWireJson(
+              roundId: roundId,
+              bundleIndex: bundleIndex,
+              c: c,
+            ) ??
+            "",
+        rebroadcast: () => failover.run(
+          baseUrls: chainUrls,
+          roundId: roundId,
+          call: (u) async {
+            final wire = await delegationWireJson(
+              roundId: roundId,
+              bundleIndex: bundleIndex,
+              c: c,
+            );
+            if (wire == null || wire.isEmpty) {
+              throw AnyhowException(
+                "No delegation wire JSON to re-broadcast "
+                "round $roundId bundle $bundleIndex",
+              );
+            }
+            return votechainSubmitDelegation(
+              baseUrl: u,
+              submissionJson: wire,
+              c: c,
+            );
+          },
+        ),
+        markSubmitted: (h) => delegationMarkSubmitted(
+          roundId: roundId,
+          bundleIndex: bundleIndex,
+          txHash: h,
+          c: c,
+        ),
+      );
+      confirmHeight = conf.height;
+      await delegationConfirm(
+        roundId: roundId,
+        bundleIndex: bundleIndex,
+        txHash: recordedHash,
+        eventsJson: conf.eventsJson,
+        c: c,
+      );
+    } on DuplicateNullifierOnResubmitException {
+      // The delegation committed on-chain but its hash was never recorded
+      // locally; recover the VAN leaf position from the commitment tree.
+      await _reconcileDelegation(
+        chainUrls: chainUrls,
+        bundleIndex: bundleIndex,
+      );
+    }
+    state = state.copyWith(txHash: recordedHash, confirmHeight: confirmHeight);
     await ref.read(votingSessionProvider(roundId).notifier).refresh();
     // The done state must be backed by the fork's recorded confirmation:
-    // verify the bundle reads back as confirmed (tx hash + VAN leaf) before
-    // claiming success — a stale or partial state must not show
-    // "Delegation confirmed".
+    // verify the bundle reads back as confirmed (tx hash or a
+    // commitment-tree-recovered VAN leaf) before claiming success — a stale
+    // or partial state must not show "Delegation confirmed".
     final verified = await ref.read(votingSessionProvider(roundId).future);
     final status = verified.plan?.delegationStatuses
         .where((s) => s.bundleIndex == bundleIndex)
         .firstOrNull;
-    if (status == null ||
-        status.phase != "confirmed" ||
-        (status.txHash ?? "").isEmpty) {
+    if (status == null || status.phase != "confirmed") {
       throw AnyhowException(
         "Delegation confirmation was not recorded for "
         "round $roundId bundle $bundleIndex",
@@ -1908,14 +2025,24 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
   /// them, and the share plan needs both to schedule submissions). Returns
   /// null when the fetch fails or the fields are missing.
   Future<({int ceremonyStart, int voteEnd})?> _roundShareTiming({
-    required String chainUrl,
+    required List<String> chainUrls,
+    required VoteChainFailover failover,
   }) async {
     final c = coinContext.coin;
-    final res = await votechainRoundStatus(
-      baseUrl: chainUrl,
-      roundId: roundId,
-      c: c,
-    );
+    final VotingChainResponse res;
+    try {
+      res = await failover.run(
+        baseUrls: chainUrls,
+        roundId: roundId,
+        call: (u) => votechainRoundStatus(
+          baseUrl: u,
+          roundId: roundId,
+          c: c,
+        ),
+      );
+    } on TransientVoteChainException {
+      return null;
+    }
     if (res.statusCode < 200 || res.statusCode >= 300) return null;
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     final round = body['round'] as Map<String, dynamic>? ?? {};
@@ -2016,25 +2143,199 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
 
   /// Polls the vote chain until the tx is included in a block (HTTP 200 with
   /// a positive `height`), returning the parsed confirmation.
-  Future<VoteChainTxConfirmation> _pollTxConfirmation({
-    required String chainUrl,
+  ///
+  /// A recorded hash whose tx never confirms is re-broadcast with
+  /// byte-identical wire and polling continues: the chain derives the tx hash
+  /// from the payload, so the recorded hash stays valid, and server-side
+  /// dedup makes the re-broadcast harmless when the tx is merely slow. This
+  /// recovers a server crash that lost an accepted tx from its in-memory
+  /// mempool. A duplicate-nullifier 422 on the re-broadcast means the tx
+  /// committed successfully without the client learning its hash — the
+  /// caller reconciles from the commitment tree via
+  /// [DuplicateNullifierOnResubmitException].
+  Future<VoteChainTxConfirmation> _pollTxConfirmationWithFallback({
+    required List<String> chainUrls,
+    required VoteChainFailover failover,
     required String txHash,
+    required Future<String> Function() wireJson,
+    required Future<VotingChainResponse> Function() rebroadcast,
+    required Future<void> Function(String txHash) markSubmitted,
   }) async {
     final c = coinContext.coin;
-    for (var attempt = 0; attempt < 45; attempt++) {
-      final res = await votechainTxConfirmation(
-        baseUrl: chainUrl,
-        txHash: txHash,
-        c: c,
-      );
-      if (res.statusCode == 200) {
-        final conf = parseVoteChainTxConfirmation(res.body);
-        if (conf != null) return conf;
+    Future<VoteChainTxConfirmation?> pollWindow() async {
+      for (var attempt = 0; attempt < 45; attempt++) {
+        final res = await failover.run(
+          baseUrls: chainUrls,
+          roundId: roundId,
+          call: (u) => votechainTxConfirmation(
+            baseUrl: u,
+            txHash: txHash,
+            c: c,
+          ),
+        );
+        if (res.statusCode == 200) {
+          final conf = parseVoteChainTxConfirmation(res.body);
+          if (conf != null) return conf;
+        } else if (res.statusCode == 422) {
+          // Included in a block but its execution failed — permanent.
+          final rejection = parseVoteChainRejection(res.body);
+          throw AnyhowException(
+            "The vote chain included tx $txHash but its execution "
+            "failed: ${rejection.log}",
+          );
+        }
+        await Future<void>.delayed(const Duration(seconds: 2));
       }
-      await Future<void>.delayed(const Duration(seconds: 2));
+      return null;
     }
-    throw AnyhowException(
+
+    final first = await pollWindow();
+    if (first != null) return first;
+
+    final rebuilt = await wireJson();
+    if (rebuilt.isEmpty) {
+      throw AnyhowException(
+        "No wire JSON available to re-broadcast tx $txHash",
+      );
+    }
+    final res = await rebroadcast();
+    if (res.statusCode == 422) {
+      final rejection = parseVoteChainRejection(res.body);
+      if (classifyVoteChainRejection(res.body) ==
+          ChainRejectionKind.duplicateNullifier) {
+        throw DuplicateNullifierOnResubmitException(
+          "The vote chain says a nullifier in the re-broadcast of $txHash "
+          "was already spent: the submission committed on-chain but its "
+          "confirmation was never recorded locally. ${rejection.log}",
+        );
+      }
+      throw AnyhowException(
+        "Vote chain rejected the re-broadcast of $txHash: ${rejection.log}",
+      );
+    }
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      throw TransientVoteChainException(
+        "Re-broadcast of $txHash failed (HTTP ${res.statusCode}): ${res.body}",
+      );
+    }
+    final rebroadcastHash = txHashFromVoteChainBody(res.body) ?? "";
+    final code = parseVoteChainRejection(res.body).code;
+    if (code > 0) {
+      throw AnyhowException(
+        "Vote chain rejected the re-broadcast of $txHash: "
+        "${parseVoteChainRejection(res.body).log}",
+      );
+    }
+    if (rebroadcastHash.isNotEmpty && rebroadcastHash != txHash) {
+      throw AnyhowException(
+        "Vote chain returned tx hash $rebroadcastHash for a byte-identical "
+        "re-broadcast of $txHash — refusing to record a mismatched hash",
+      );
+    }
+    await markSubmitted(txHash);
+
+    final second = await pollWindow();
+    if (second != null) return second;
+    throw TransientVoteChainException(
       "Timed out waiting for tx $txHash to confirm",
+    );
+  }
+
+  /// Recovers a delegation whose nullifier is spent on-chain but whose tx
+  /// hash was never recorded locally: locate the delegation's VAN commitment
+  /// (`gov_comm`) in the commitment tree and record the confirmation from the
+  /// recovered leaf position.
+  Future<void> _reconcileDelegation({
+    required List<String> chainUrls,
+    required int bundleIndex,
+  }) async {
+    final c = coinContext.coin;
+    final vanHex = await votingDelegationVanCommitmentHex(
+      roundId: roundId,
+      bundleIndex: bundleIndex,
+      c: c,
+    );
+    if (vanHex == null || vanHex.isEmpty) {
+      throw AnyhowException(
+        "The delegation for round $roundId bundle $bundleIndex is on-chain "
+        "but its commitment is not persisted — the wallet cannot locate it "
+        "in the commitment tree. Contact support.",
+      );
+    }
+    BigInt? position;
+    for (final url in chainUrls) {
+      try {
+        position = await votingTreeFindLeaf(
+          roundId: roundId,
+          nodeUrl: url,
+          targetHex: vanHex,
+        );
+      } on Exception {
+        continue; // this server's tree is unavailable; try the next
+      }
+      if (position != null) break;
+    }
+    if (position == null) {
+      throw AnyhowException(
+        "The chain says the delegation nullifier for round $roundId bundle "
+        "$bundleIndex was spent, but its commitment was not found in the "
+        "commitment tree. Contact support.",
+      );
+    }
+    await votingRecoverConfirmDelegationFromTree(
+      roundId: roundId,
+      bundleIndex: bundleIndex,
+      vanLeafPosition: position.toInt(),
+      c: c,
+    );
+  }
+
+  /// Recovers a vote whose nullifier is spent on-chain but whose tx hash was
+  /// never recorded locally: locate the vote commitment in the commitment
+  /// tree and record the confirmation from the recovered leaf positions.
+  Future<void> _reconcileVote({
+    required List<String> chainUrls,
+    required int bundleIndex,
+    required int proposalId,
+  }) async {
+    final c = coinContext.coin;
+    final targetHex = await votingVoteCommitmentHex(
+      roundId: roundId,
+      bundleIndex: bundleIndex,
+      proposalId: proposalId,
+      c: c,
+    );
+    BigInt? vcPosition;
+    for (final url in chainUrls) {
+      try {
+        vcPosition = await votingTreeFindLeaf(
+          roundId: roundId,
+          nodeUrl: url,
+          targetHex: targetHex,
+        );
+      } on Exception {
+        continue;
+      }
+      if (vcPosition != null) break;
+    }
+    if (vcPosition == null) {
+      throw AnyhowException(
+        "The chain says the vote nullifier for proposal $proposalId was "
+        "spent, but the vote commitment was not found in the commitment "
+        "tree. Contact support.",
+      );
+    }
+    // The cast-vote tx appends the VAN output commitment immediately before
+    // the vote commitment (verified against the vote-sdk keeper), so the
+    // vote's VAN position is the vote commitment position minus one.
+    final van = vcPosition > BigInt.zero ? vcPosition - BigInt.one : null;
+    await votingRecoverConfirmVoteFromTree(
+      roundId: roundId,
+      bundleIndex: bundleIndex,
+      proposalId: proposalId,
+      vcTreePosition: vcPosition,
+      vanLeafPosition: van?.toInt(),
+      c: c,
     );
   }
 
@@ -2045,14 +2346,16 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
   /// round's cast steps appear (mirrors vizor's writeBallotIntents). Returns
   /// true when at least one vote was confirmed in this run.
   Future<bool> _runVotes({
-    required String chainUrl,
+    required List<String> chainUrls,
+    required VoteChainFailover failover,
     required String voteNodeUrl,
   }) async {
     // An unset Vote Node URL falls back to the vote chain's REST API: the
     // chain server also serves the commitment tree the VAN witnesses sync
     // from (the polls page resolves the same default for the chain).
-    final resolvedVoteNodeUrl =
-        voteNodeUrl.isNotEmpty ? voteNodeUrl : chainUrl;
+    final resolvedVoteNodeUrl = voteNodeUrl.isNotEmpty
+        ? voteNodeUrl
+        : (chainUrls.isNotEmpty ? chainUrls.first : "");
     final c = coinContext.coin;
 
     // Durable ballot intents first (mirrors vizor's writeBallotIntents):
@@ -2160,7 +2463,8 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
         await _submitVote(
           bundleIndex: bundleIndex,
           proposalId: step.proposalId,
-          chainUrl: chainUrl,
+          chainUrls: chainUrls,
+          failover: failover,
         );
         didWork = true;
       }
@@ -2169,7 +2473,8 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
         await _submitVote(
           bundleIndex: bundleIndex,
           proposalId: step.proposalId,
-          chainUrl: chainUrl,
+          chainUrls: chainUrls,
+          failover: failover,
         );
         didWork = true;
       }
@@ -2188,32 +2493,104 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
           );
         }
         state = state.copyWith(stage: "confirming");
-        final conf =
-            await _pollTxConfirmation(chainUrl: chainUrl, txHash: txHash);
-        await votingConfirm(
-          roundId: roundId,
+        final conf = await _pollVoteWithRecovery(
+          chainUrls: chainUrls,
+          failover: failover,
           bundleIndex: bundleIndex,
           proposalId: step.proposalId,
           txHash: txHash,
-          eventsJson: conf.eventsJson,
-          c: c,
         );
         didWork = true;
         if (state.txHash == null) {
-          state = state.copyWith(txHash: txHash, confirmHeight: conf.height);
+          state = state.copyWith(txHash: txHash, confirmHeight: conf?.height);
         }
       }
     }
     return didWork;
   }
 
+  /// Polls a previously recorded vote tx and confirms it, with the
+  /// re-broadcast and commitment-tree reconciliation fallbacks. Returns the
+  /// confirmation, or null when the vote was reconciled from the tree (no tx
+  /// events exist).
+  Future<VoteChainTxConfirmation?> _pollVoteWithRecovery({
+    required List<String> chainUrls,
+    required VoteChainFailover failover,
+    required int bundleIndex,
+    required int proposalId,
+    required String txHash,
+  }) async {
+    final c = coinContext.coin;
+    try {
+      final conf = await _pollTxConfirmationWithFallback(
+        chainUrls: chainUrls,
+        failover: failover,
+        txHash: txHash,
+        wireJson: () => votingVoteWireJson(
+          roundId: roundId,
+          bundleIndex: bundleIndex,
+          proposalId: proposalId,
+          c: c,
+        ),
+        rebroadcast: () => failover.run(
+          baseUrls: chainUrls,
+          roundId: roundId,
+          call: (u) async {
+            final wire = await votingVoteWireJson(
+              roundId: roundId,
+              bundleIndex: bundleIndex,
+              proposalId: proposalId,
+              c: c,
+            );
+            if (wire.isEmpty) {
+              throw AnyhowException(
+                "No vote wire JSON to re-broadcast proposal $proposalId",
+              );
+            }
+            return votechainSubmitVote(
+              baseUrl: u,
+              submissionJson: wire,
+              c: c,
+            );
+          },
+        ),
+        markSubmitted: (h) => votingMarkVoteSubmitted(
+          roundId: roundId,
+          bundleIndex: bundleIndex,
+          proposalId: proposalId,
+          txHash: h,
+          c: c,
+        ),
+      );
+      await votingConfirm(
+        roundId: roundId,
+        bundleIndex: bundleIndex,
+        proposalId: proposalId,
+        txHash: txHash,
+        eventsJson: conf.eventsJson,
+        c: c,
+      );
+      return conf;
+    } on DuplicateNullifierOnResubmitException {
+      await _reconcileVote(
+        chainUrls: chainUrls,
+        bundleIndex: bundleIndex,
+        proposalId: proposalId,
+      );
+      return null;
+    }
+  }
+
   /// Broadcasts one committed vote and confirms it: rebuild the wire from
   /// the persisted commitment, submit to the vote chain, record the tx hash,
-  /// poll until included in a block, and record the confirmation.
+  /// poll until included in a block, and record the confirmation. Resubmits
+  /// are byte-identical (the wire is persisted) and confirmation polling has
+  /// the re-broadcast + commitment-tree reconciliation fallbacks.
   Future<void> _submitVote({
     required int bundleIndex,
     required int proposalId,
-    required String chainUrl,
+    required List<String> chainUrls,
+    required VoteChainFailover failover,
   }) async {
     final c = coinContext.coin;
     state = state.copyWith(stage: "voting", progress: 0);
@@ -2223,29 +2600,37 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       proposalId: proposalId,
       c: c,
     );
-    final res = await votechainSubmitVote(
-      baseUrl: chainUrl,
-      submissionJson: wireJson,
-      c: c,
+    final res = await failover.run(
+      baseUrls: chainUrls,
+      roundId: roundId,
+      call: (u) => votechainSubmitVote(
+        baseUrl: u,
+        submissionJson: wireJson,
+        c: c,
+      ),
     );
     if (res.statusCode == 422) {
       throw AnyhowException(
         "Vote rejected by the vote chain: ${res.body}",
       );
     }
+    final submittedHash = txHashFromVoteChainBody(res.body) ?? "";
+    final rejection = parseVoteChainRejection(res.body);
     if (res.statusCode < 200 || res.statusCode >= 300) {
+      // A 502 "broadcast outcome unknown" body carries the deterministic
+      // tx hash: the tx may have landed — record it and let confirmation
+      // polling learn the truth. Any other non-2xx without a hash fails.
+      if (submittedHash.isEmpty) {
+        throw AnyhowException(
+          "Vote chain submit failed (HTTP ${res.statusCode}): ${res.body}",
+        );
+      }
+    } else if (rejection.code > 0 || submittedHash.isEmpty) {
       throw AnyhowException(
-        "Vote chain submit failed (HTTP ${res.statusCode}): ${res.body}",
+        "Vote chain rejected the vote: ${rejection.log}",
       );
     }
-    final result = jsonDecode(res.body) as Map<String, dynamic>;
-    final txHash = result['tx_hash'] as String? ?? "";
-    final code = result['code'] as int? ?? -1;
-    if (code != 0 || txHash.isEmpty) {
-      throw AnyhowException(
-        "Vote chain rejected the vote: ${result['log'] ?? res.body}",
-      );
-    }
+    final txHash = submittedHash;
 
     await votingMarkVoteSubmitted(
       roundId: roundId,
@@ -2255,35 +2640,16 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       c: c,
     );
     state = state.copyWith(stage: "confirming");
-    final conf = await _pollTxConfirmation(chainUrl: chainUrl, txHash: txHash);
-    await votingConfirm(
-      roundId: roundId,
+    final conf = await _pollVoteWithRecovery(
+      chainUrls: chainUrls,
+      failover: failover,
       bundleIndex: bundleIndex,
       proposalId: proposalId,
       txHash: txHash,
-      eventsJson: conf.eventsJson,
-      c: c,
     );
     if (state.txHash == null) {
-      state = state.copyWith(txHash: txHash, confirmHeight: conf.height);
+      state = state.copyWith(txHash: txHash, confirmHeight: conf?.height);
     }
-  }
-
-  /// Delay until the next planned share submission (min positive
-  /// submitAt − now), capped at an hour; 60s when nothing is pending.
-  int _shareTrackingDelaySeconds(List<VotingSharePlanItem> plans, int now) {
-    final nowBig = BigInt.from(now);
-    var minDelta = BigInt.zero;
-    var found = false;
-    for (final p in plans) {
-      final delta = p.submitAt - nowBig;
-      if (delta > BigInt.zero && (!found || delta < minDelta)) {
-        minDelta = delta;
-        found = true;
-      }
-    }
-    if (!found) return 60;
-    return minDelta > BigInt.from(3600) ? 3600 : minDelta.toInt();
   }
 
   /// Converts UI drafts to the fork's DraftVote JSON for the commit step:
@@ -2336,13 +2702,14 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       // confirmations.
       final unconfirmed = await votingShareUnconfirmed(roundId: roundId, c: c);
       if (unconfirmed.isNotEmpty) {
-        _scheduleShareTracking(
-          delaySeconds: 60,
-          ceremonyStart: ceremonyStart,
-          voteEnd: voteEndValue,
-          shareServerUrls: shareServerUrls,
-          singleShare: singleShare,
-        );
+        ref.read(votingShareTrackerProvider.notifier).arm(
+              roundId: roundId,
+              delaySeconds: 60,
+              ceremonyStart: ceremonyStart,
+              voteEnd: voteEndValue,
+              shareServerUrls: shareServerUrls,
+              singleShare: singleShare,
+            );
       }
       return false;
     }
@@ -2369,6 +2736,7 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       );
       final body =
           jsonEncode({...jsonDecode(wireJson), "vote_round_id": roundId});
+      var failed = false;
       for (final server in plan.targetServers) {
         final res = await votechainSubmitShare(
           serverUrl: server,
@@ -2376,12 +2744,17 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
           c: c,
         );
         if (res.statusCode < 200 || res.statusCode >= 300) {
-          throw AnyhowException(
-            "Share submit to $server failed "
-            "(HTTP ${res.statusCode}): ${res.body}",
+          debugPrint(
+            "Voting: share submit to $server failed "
+            "(HTTP ${res.statusCode}) — the tracker will retry",
           );
+          failed = true;
         }
       }
+      // The vote itself is already confirmed on-chain; a helper outage must
+      // not fail the whole run. Unrecorded shares stay in the payload list
+      // and the tracker retries them while the round window is open.
+      if (failed) continue;
       await votingShareRecord(
         roundId: roundId,
         bundleIndex: payload.bundleIndex,
@@ -2394,9 +2767,13 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       submitted = true;
     }
 
-    // Background tracking until every share confirms (or the vote window ends).
-    _scheduleShareTracking(
-      delaySeconds: _shareTrackingDelaySeconds(plans, now),
+    // Background tracking until every share confirms (or the vote window
+    // ends). The tracker is session-independent: it survives client restarts
+    // via the polls page / splash re-arm hooks.
+    final tracker = ref.read(votingShareTrackerProvider.notifier);
+    tracker.arm(
+      roundId: roundId,
+      delaySeconds: voteChainShareTrackingDelay(plans, now),
       ceremonyStart: ceremonyStart,
       voteEnd: voteEndValue,
       shareServerUrls: shareServerUrls,
@@ -2404,34 +2781,86 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     );
     return submitted;
   }
+}
 
-  void _scheduleShareTracking({
+/// Delay until the next planned share submission (min positive
+/// submitAt − now), capped at an hour; 60s when nothing is pending.
+int voteChainShareTrackingDelay(List<VotingSharePlanItem> plans, int now) {
+  final nowBig = BigInt.from(now);
+  var minDelta = BigInt.zero;
+  var found = false;
+  for (final p in plans) {
+    final delta = p.submitAt - nowBig;
+    if (delta > BigInt.zero && (!found || delta < minDelta)) {
+      minDelta = delta;
+      found = true;
+    }
+  }
+  if (!found) return 60;
+  return minDelta > BigInt.from(3600) ? 3600 : minDelta.toInt();
+}
+
+/// Session-independent helper-share tracking for one round.
+///
+/// Armed by the submission job, the voting polls page, and the post-wallet-
+/// open hook, so a client restart does not strand share delivery while the
+/// round window is open. Each tick submits unrecorded share payloads
+/// (a helper outage during the foreground run leaves them unrecorded), polls
+/// helper status for sent shares, and resubmits overdue ones — best-effort,
+/// with the next tick retrying after any failure.
+@Riverpod(keepAlive: true)
+class VotingShareTracker extends _$VotingShareTracker {
+  final Map<String, Timer> _timers = {};
+
+  @override
+  bool build() {
+    ref.onDispose(() {
+      for (final timer in _timers.values) {
+        timer.cancel();
+      }
+      _timers.clear();
+    });
+    return false; // needsAttention flag
+  }
+
+  /// Sets the "share delivery pending" attention flag shown by the voting
+  /// page banner.
+  void markAttention(bool attention) {
+    state = attention;
+  }
+
+  /// Arms (or re-arms) the tracking timer for a round.
+  void arm({
+    required String roundId,
     required int delaySeconds,
     required int ceremonyStart,
     required int? voteEnd,
     required List<String> shareServerUrls,
     required bool singleShare,
   }) {
-    _shareTimer?.cancel();
-    _shareTimer = Timer(Duration(seconds: delaySeconds), () async {
-      if (state.stage == "done" || state.stage == "error") {
-        try {
-          await _trackShares(
-            ceremonyStart: ceremonyStart,
-            voteEnd: voteEnd,
-            shareServerUrls: shareServerUrls,
-            singleShare: singleShare,
-          );
-        } on Exception catch (_) {
-          // The next tick retries; share tracking is best-effort.
-        }
+    _timers[roundId]?.cancel();
+    _timers[roundId] = Timer(Duration(seconds: delaySeconds), () async {
+      _timers.remove(roundId);
+      try {
+        final pending = await tick(
+          roundId: roundId,
+          ceremonyStart: ceremonyStart,
+          voteEnd: voteEnd,
+          shareServerUrls: shareServerUrls,
+          singleShare: singleShare,
+        );
+        state = pending;
+      } on Exception {
+        // The next tick retries; share tracking is best-effort.
       }
     });
   }
 
-  /// One share-tracking tick: poll helper status for sent shares, resubmit
-  /// when the plan reports overdue shares, then re-arm if work remains.
-  Future<void> _trackShares({
+  /// One share-tracking tick: submit unrecorded payloads, poll helper status
+  /// for sent shares, resubmit overdue shares, then re-arm if work remains.
+  /// Returns whether work is still pending after the tick.
+  Future<bool> tick({
+    required String roundId,
     required int ceremonyStart,
     required int? voteEnd,
     required List<String> shareServerUrls,
@@ -2439,6 +2868,63 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
   }) async {
     final c = coinContext.coin;
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+    var pending = false;
+
+    // Submit shares whose rows were never recorded (all-target helper
+    // failure in the foreground run, or a client crash before recording).
+    // `votingSharePayloads` excludes recorded shares, so this never re-sends.
+    final payloads = await votingSharePayloads(roundId: roundId, c: c);
+    if (payloads.isNotEmpty && voteEnd != null) {
+      final plans = await votingSharePlans(
+        shareCount: payloads.length,
+        serverUrls: shareServerUrls,
+        now: BigInt.from(now),
+        voteEnd: BigInt.from(voteEnd),
+        ceremonyStart: BigInt.from(ceremonyStart),
+        singleShare: singleShare,
+        c: c,
+      );
+      for (var i = 0; i < payloads.length && i < plans.length; i++) {
+        final payload = payloads[i];
+        final plan = plans[i];
+        final wireJson = await votingShareWireJson(
+          roundId: roundId,
+          bundleIndex: payload.bundleIndex,
+          proposalId: payload.proposalId,
+          shareIndex: payload.shareIndex,
+          vcTreePosition: payload.vcTreePosition,
+          submitAt: plan.submitAt,
+          c: c,
+        );
+        final body =
+            jsonEncode({...jsonDecode(wireJson), "vote_round_id": roundId});
+        var failed = false;
+        for (final server in plan.targetServers) {
+          final res = await votechainSubmitShare(
+            serverUrl: server,
+            payloadJson: body,
+            c: c,
+          );
+          if (res.statusCode < 200 || res.statusCode >= 300) {
+            failed = true;
+          }
+        }
+        if (failed) {
+          pending = true;
+          continue;
+        }
+        await votingShareRecord(
+          roundId: roundId,
+          bundleIndex: payload.bundleIndex,
+          proposalId: payload.proposalId,
+          shareIndex: payload.shareIndex,
+          sentToUrls: plan.targetServers,
+          submitAt: plan.submitAt,
+          c: c,
+        );
+      }
+    }
+
     final plan = await votingSharePlan(
       roundId: roundId,
       now: BigInt.from(now),
@@ -2449,26 +2935,34 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       c: c,
     );
     final unconfirmed = await votingShareUnconfirmed(roundId: roundId, c: c);
-    if (unconfirmed.isEmpty) return;
+    if (unconfirmed.isEmpty && !pending) return false;
 
     for (final share in unconfirmed) {
       if (share.sentToUrls.isEmpty) continue;
       final shareId = hex.encode(share.nullifier);
-      final res = await votechainShareStatus(
-        serverUrl: share.sentToUrls.first,
-        roundId: roundId,
-        shareId: shareId,
-        c: c,
-      );
-      if (res.statusCode == 200) {
-        await votingShareConfirm(
+      // Try every helper the share was sent to, not just the first: a dead
+      // helper must not hide a confirmation another helper can report.
+      var confirmed = false;
+      for (final server in share.sentToUrls) {
+        final res = await votechainShareStatus(
+          serverUrl: server,
           roundId: roundId,
-          bundleIndex: share.bundleIndex,
-          proposalId: share.proposalId,
-          shareIndex: share.shareIndex,
+          shareId: shareId,
           c: c,
         );
+        if (res.statusCode == 200) {
+          await votingShareConfirm(
+            roundId: roundId,
+            bundleIndex: share.bundleIndex,
+            proposalId: share.proposalId,
+            shareIndex: share.shareIndex,
+            c: c,
+          );
+          confirmed = true;
+          break;
+        }
       }
+      if (!confirmed) pending = true;
     }
 
     if (plan.summary.overdue > BigInt.zero) {
@@ -2494,10 +2988,7 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
             c: c,
           );
           if (res.statusCode < 200 || res.statusCode >= 300) {
-            throw AnyhowException(
-              "Share resubmit to $server failed "
-              "(HTTP ${res.statusCode}): ${res.body}",
-            );
+            pending = true;
           }
         }
         await votingShareAddServers(
@@ -2512,7 +3003,8 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     }
 
     if (voteEnd != null && plan.nextTrackingDelaySecs != null) {
-      _scheduleShareTracking(
+      arm(
+        roundId: roundId,
         delaySeconds: plan.nextTrackingDelaySecs!.toInt(),
         ceremonyStart: ceremonyStart,
         voteEnd: voteEnd,
@@ -2523,5 +3015,69 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     // Reflect the confirmations in the plan so the round tile and status
     // screens update ("Resume" -> "View results" once every share confirms).
     await ref.read(votingSessionProvider(roundId).notifier).refresh();
+    return pending;
+  }
+}
+
+/// Re-arms share tracking for every local round whose plan still has share
+/// work (submissions or confirmations). Called when the voting page opens and
+/// after the wallet unlocks, so a client restart does not strand helper-share
+/// delivery while the round window is open.
+Future<void> armShareTrackingForPendingRounds(WidgetRef ref) async {
+  final c = coinContext.coin;
+  final Map<String, VotingSessionState> sessions;
+  try {
+    sessions = await ref.read(votingSessionsAllProvider.future);
+  } on Exception {
+    return; // wallet/rounds unavailable
+  }
+  List<String> serverUrls;
+  try {
+    final config = await ref.read(votingConfigProvider.future);
+    serverUrls = config?.voteServers.map((s) => s.url).toList() ?? const [];
+  } on Exception {
+    serverUrls = const [];
+  }
+  if (serverUrls.isEmpty) return;
+
+  var anyPending = false;
+  for (final entry in sessions.entries) {
+    final roundId = entry.key;
+    final steps = entry.value.plan?.nextSteps ?? const <VotingNextStep>[];
+    final hasShareWork =
+        steps.any((s) => s.kind == "submit_shares" || s.kind == "confirm_share");
+    if (!hasShareWork) continue;
+    // Resolve the round window from the chain so the share plan can schedule.
+    var ceremonyStart = 0;
+    int? voteEnd;
+    try {
+      final res = await votechainRoundStatus(
+        baseUrl: serverUrls.first,
+        roundId: roundId,
+        c: c,
+      );
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        final round = body['round'] as Map<String, dynamic>? ?? {};
+        final ceremony = round['ceremony_phase_start'];
+        final end = round['vote_end_time'];
+        if (ceremony is int) ceremonyStart = ceremony;
+        if (end is int) voteEnd = end;
+      }
+    } on Exception {
+      // Timing unavailable: arm anyway; the tick resolves it on retry.
+    }
+    ref.read(votingShareTrackerProvider.notifier).arm(
+          roundId: roundId,
+          delaySeconds: 60,
+          ceremonyStart: ceremonyStart,
+          voteEnd: voteEnd,
+          shareServerUrls: serverUrls,
+          singleShare: false,
+        );
+    anyPending = true;
+  }
+  if (anyPending) {
+    ref.read(votingShareTrackerProvider.notifier).markAttention(true);
   }
 }
