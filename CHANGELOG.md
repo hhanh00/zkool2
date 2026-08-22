@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.28.0-rc.11](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.10...zkool-v6.28.0-rc.11) (2026-08-22)
+
+
+### Bug Fixes
+
+* **voting:** recovery edge cases found in live testing ([1ea11a5](https://github.com/hhanh00/zkool2/commit/1ea11a5368b30572abef722a4be5f729d076239c))
+
 ## [6.28.0-rc.10](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0-rc.9...zkool-v6.28.0-rc.10) (2026-08-22)
 
 
