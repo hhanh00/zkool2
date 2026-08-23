@@ -1,5 +1,61 @@
 # Changelog
 
+## [6.28.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.27.0...zkool-v6.28.0) (2026-08-23)
+
+
+### Features
+
+* ballot page AppBar shows the round title ([ca86e2c](https://github.com/hhanh00/zkool2/commit/ca86e2cf6e8393349b270d3a1b0ffebded7f012e))
+* gate voting round actions on chain status; zero tally for voteless closed rounds ([8404323](https://github.com/hhanh00/zkool2/commit/8404323d6bd23bf18f0191827f2cc743bdf391e3))
+* results page title shows the round title ([fb449a8](https://github.com/hhanh00/zkool2/commit/fb449a8651db5e9fd901893274666900fb16ee2b))
+* shielded voting UI (ZIP 262) ([1e5564c](https://github.com/hhanh00/zkool2/commit/1e5564ca8808768b2b2959484e7372f76a2083d2))
+* show friendly round titles and option labels in the voting UI ([f991e8c](https://github.com/hhanh00/zkool2/commit/f991e8c3279b7dca6d2fe101e88622d279424600))
+* show per-vote on-chain evidence on the done and confirmation screens ([5db3025](https://github.com/hhanh00/zkool2/commit/5db3025a8e5558f043e0652268e64aaae21b1af3))
+* show proposal title and selection in the ballot evidence ([52f3c86](https://github.com/hhanh00/zkool2/commit/52f3c868aee603afae7148a1f5adaebeaec44068))
+* show proposal titles and option labels in the tally results ([e15bafc](https://github.com/hhanh00/zkool2/commit/e15bafc82998a9d16f52d1c365b20eee535a19bf))
+* show voting power on voting confirmation and status pages ([0a7472c](https://github.com/hhanh00/zkool2/commit/0a7472cb5913446cb6fe74a2e65b3fa0dd25d81a))
+* **voting:** resumable recovery across network, server, and client failures ([ad7ad08](https://github.com/hhanh00/zkool2/commit/ad7ad0889b135b5fd58b3790061caa4f6827c1d7))
+
+
+### Bug Fixes
+
+* **account:** derive sapling address on file import and fail fast on corrupt stored addresses ([e8e9f22](https://github.com/hhanh00/zkool2/commit/e8e9f22c196ec718c675484bc9ff31d125116eb0))
+* auto-create the voting hotkey at delegation time ([06ff09c](https://github.com/hhanh00/zkool2/commit/06ff09c9867477e91072800f3464bff3509f993e))
+* batch-load voting sessions on one pool connection; keep the pool free during delegation ([f056f50](https://github.com/hhanh00/zkool2/commit/f056f5024947fbac96bde464139d5fbae79f967c))
+* build with Flutter 3.47.0 ([aca790c](https://github.com/hhanh00/zkool2/commit/aca790cd1f018eb29197a692801f9feb219083cd))
+* bump Kotlin to 2.2.20 for Flutter 3.47.0 Android build ([891ff2d](https://github.com/hhanh00/zkool2/commit/891ff2dc3fdfe21e6227e0b8b964e1a283c47658))
+* bundle sapling params in desktop and graphql builds ([c48cf9e](https://github.com/hhanh00/zkool2/commit/c48cf9e2b7194c78ca746af70a60fe446dbef654))
+* cast one proposal at a time so the vote VAN chains ([7e2a4d6](https://github.com/hhanh00/zkool2/commit/7e2a4d657a87cc9513e22fd5a3e8026b0891cf7c))
+* decode trailing escaped spaces in OA1 records ([a58529d](https://github.com/hhanh00/zkool2/commit/a58529de91b122749cabf8a0ce43ee2bad0e48e5))
+* don't re-send recorded shares; refresh status after tracking ([ca013ad](https://github.com/hhanh00/zkool2/commit/ca013ad6d649a4458b022b61495e78e6863acff9))
+* drop redundant pool predicate from diversifier index backfill ([f22a316](https://github.com/hhanh00/zkool2/commit/f22a3162ca0ac459e842d1ee2fba1be2dacb1114))
+* exclude post-snapshot notes from delegation prepare ([c343a71](https://github.com/hhanh00/zkool2/commit/c343a71c9228d84fd7893f56463160a3b1b1ac45))
+* fall back to the configured vote servers for helper shares ([4ead4da](https://github.com/hhanh00/zkool2/commit/4ead4da1cd1d08b7eb768605659277d444627bf2))
+* honest done label when only time-scheduled steps remain ([1129f34](https://github.com/hhanh00/zkool2/commit/1129f34b931379054906df293b6565081f60c8de))
+* key ballot evidence proposals by id, not list position ([8811c97](https://github.com/hhanh00/zkool2/commit/8811c975ed46328637908cff4187de62a58e2029))
+* **ledger:** transparent-only signing + NU6.3 v5 workaround for hardware wallets ([#1208](https://github.com/hhanh00/zkool2/issues/1208)) ([3fdeea0](https://github.com/hhanh00/zkool2/commit/3fdeea0a161776e275545f183cea12e416dbba80))
+* make delegation confirmation real and recoverable ([80a073b](https://github.com/hhanh00/zkool2/commit/80a073bc815354e856acc6947be67c7b264a0ccc))
+* parse the chain's string block heights; prove with voting-circuits 0.10.0 ([57357ef](https://github.com/hhanh00/zkool2/commit/57357ef871f8865712c77bc7b8611d84fc626158))
+* parse vote-sdk tally entries per-entry decision and amount ([dfd5db0](https://github.com/hhanh00/zkool2/commit/dfd5db0fe9151f0bf0b0ae394b8108e75138fd33))
+* pass one connection through voting DB reads; stop pool stalls on voting page ([c791f7f](https://github.com/hhanh00/zkool2/commit/c791f7f80e8ca1b5c3647dcc6d7120d4ab5e3b7e))
+* persist ballot intents at cast time; parse option index ([2e6f796](https://github.com/hhanh00/zkool2/commit/2e6f79655e5496fa96d1ec678f7ae4f194e903f5))
+* render option labels with vote-sdk ids, not 1-based positions ([4fcaa22](https://github.com/hhanh00/zkool2/commit/4fcaa220f80391e38f907df6d259e610f8de2462))
+* resolve share-window timing from the chain round status ([87c6be3](https://github.com/hhanh00/zkool2/commit/87c6be3d23c1624b20a5766eb702764cd3f0aff7))
+* run fresh voting submissions end-to-end (delegate + vote) ([ed4b752](https://github.com/hhanh00/zkool2/commit/ed4b7520f57c12598f41583da189b6fcc8cc6770))
+* run the PIR connect inside the prove thread ([ab74456](https://github.com/hhanh00/zkool2/commit/ab74456746657a562bd148259909bccf1400c113))
+* save settings on nav away; resolve voting config from form value ([e2fb677](https://github.com/hhanh00/zkool2/commit/e2fb677fa3808930ac5e894e513ab617cc3de58c))
+* **settings:** keep transport selector within screen width (FittedBox + padding) ([bed8131](https://github.com/hhanh00/zkool2/commit/bed813138743371f1a99ebf07f5322eeaa8ead70))
+* stop ref use after unmount when closing Folders page (issue 1203) ([ba14db4](https://github.com/hhanh00/zkool2/commit/ba14db4370bb89601f84356c3ef8ee2c6251c8e7))
+* submit helper shares from the confirmed votes' payloads ([c61dd21](https://github.com/hhanh00/zkool2/commit/c61dd21e4371058e0b4c9a4414849b2ccab925af))
+* support flutter 3.47 (intl 0.20.3); fixed 6.2.0 rename scale→decimalDigits ([f46f650](https://github.com/hhanh00/zkool2/commit/f46f65061eed1762d9814dd96e27f90aa963f3f9))
+* surface voting config resolve errors instead of swallowing them ([6c8c98b](https://github.com/hhanh00/zkool2/commit/6c8c98be3d65cf1b2d9faf6c6a4d35b509a3a5ba))
+* tally entries without a decision key are decision 0, not a total ([7b97c6a](https://github.com/hhanh00/zkool2/commit/7b97c6a62b13da3f819f98303865610429205444))
+* use app lightwalletd URL for fresh delegation prepare ([63acacb](https://github.com/hhanh00/zkool2/commit/63acacbbc038671c896d472bd933b61d19469863))
+* use the async PIR client for delegation proving ([c497c05](https://github.com/hhanh00/zkool2/commit/c497c059354a0e82e65cd14f27cba025ba97558a))
+* **voting:** default vote node URL to the vote chain server when unset ([1a9bc99](https://github.com/hhanh00/zkool2/commit/1a9bc9978231e5fe1043165b76f45a7a86ae61d8))
+* **voting:** keep back navigation to account after vote submission ([f291d65](https://github.com/hhanh00/zkool2/commit/f291d65246f4b5df07fbc0f6d97fb798af576089))
+* **voting:** recovery edge cases found in live testing ([294e71f](https://github.com/hhanh00/zkool2/commit/294e71ff6bb263ce3a5456ffbcc1a72438aa9dfd))
+
 ## [6.27.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.26.1...zkool-v6.27.0) (2026-08-15)
 
 
