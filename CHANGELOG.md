@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.28.1-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0...zkool-v6.28.1-rc) (2026-08-26)
+
+
+### Bug Fixes
+
+* **nym:** make large syncs over the mixnet reliable ([#1219](https://github.com/hhanh00/zkool2/issues/1219)) ([b531b16](https://github.com/hhanh00/zkool2/commit/b531b1604040f8d8a3ca3b4f6d6e93da6a92c28b))
+* **voting:** remove sticky last-working server from share failover ([c0f68f5](https://github.com/hhanh00/zkool2/commit/c0f68f5ce295a2cbc2a0d0aad26908771a8ec8d7))
+
 ## [6.28.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.27.0...zkool-v6.28.0) (2026-08-23)
 
 
