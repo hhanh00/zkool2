@@ -24,8 +24,9 @@ use nym_sdk::mixnet::{
     IncludedSurbs, MixnetClient, MixnetClientBuilder, MixnetMessageSender, NymNetworkDetails,
     Recipient,
 };
-use nym_sdk::tcp_proxy::utils::{MessageBuffer, Payload, ProxiedMessage};
-use tokio::net::{TcpListener, TcpStream};
+use nym_sdk::tcp_proxy::utils::{Payload, ProxiedMessage};
+use tokio::io::AsyncWriteExt;
+use tokio::net::{tcp::OwnedWriteHalf, TcpListener, TcpStream};
 use tokio::sync::{oneshot, Mutex, OnceCell};
 use tokio_stream::StreamExt;
 use tokio_util::codec::{BytesCodec, FramedRead};
@@ -152,6 +153,60 @@ async fn get_client() -> Result<MixnetClient> {
     Ok(client)
 }
 
+/// Strictly ordered reassembly buffer for a session's incoming messages.
+///
+/// nym-sdk's `MessageBuffer` flushes any message that has waited longer than
+/// 6s even when earlier ids are still missing ("decay-based delivery"), which
+/// reorders bytes under mixnet retransmission delays and corrupts the h2
+/// stream (GOAWAY FRAME_SIZE_ERROR). gRPC needs exact byte order, so this
+/// buffer only ever writes consecutive message ids; a permanently missing id
+/// is handled by the session stall watchdog instead of by corrupting data.
+struct OrderedMessageBuffer {
+    next_id: u16,
+    pending: HashMap<u16, Payload>,
+    /// Set while writes are blocked on a missing id; cleared on progress.
+    blocked_since: Option<Instant>,
+}
+
+impl OrderedMessageBuffer {
+    fn new() -> Self {
+        OrderedMessageBuffer {
+            next_id: 0,
+            pending: HashMap::new(),
+            blocked_since: None,
+        }
+    }
+
+    fn push(&mut self, msg: ProxiedMessage) {
+        // Ignore duplicates of already-written ids (mixnet retransmissions).
+        if msg.message_id >= self.next_id {
+            self.pending.insert(msg.message_id, msg.message);
+        }
+    }
+
+    /// Write every consecutive payload to the local socket. Returns `true`
+    /// when the session's Close message has been reached.
+    async fn flush(&mut self, write: &mut OwnedWriteHalf) -> Result<bool> {
+        while let Some(payload) = self.pending.remove(&self.next_id) {
+            self.next_id += 1;
+            self.blocked_since = None;
+            match payload {
+                Payload::Data(data) => write.write_all(&data).await?,
+                Payload::Close => return Ok(true),
+            }
+        }
+        if !self.pending.is_empty() && self.blocked_since.is_none() {
+            self.blocked_since = Some(Instant::now());
+        }
+        Ok(false)
+    }
+
+    /// How long writes have been blocked on a missing message id.
+    fn blocked_for(&self) -> Option<Duration> {
+        self.blocked_since.map(|t| t.elapsed())
+    }
+}
+
 /// One ordered mixnet session per local TCP connection, mirroring nym-rpc's
 /// `TcpProxyClient::handle_incoming`.
 async fn run_session(stream: TcpStream, recipient: Recipient) -> Result<()> {
@@ -201,30 +256,39 @@ async fn run_session(stream: TcpStream, recipient: Recipient) -> Result<()> {
         Ok::<_, anyhow::Error>(())
     });
 
-    // Incoming: reorder mixnet messages and write them to the local socket;
-    // after local EOF keep draining for CLOSE_TIMEOUT.
-    let mut msg_buffer = MessageBuffer::new();
+    // Incoming: reorder mixnet messages and write them to the local socket
+    // in strict id order; after local EOF keep draining for CLOSE_TIMEOUT.
+    let mut msg_buffer = OrderedMessageBuffer::new();
     loop {
         tokio::select! {
             _ = &mut rx => break,
             Some(message) = client.next() => {
                 let message = bincode1::deserialize::<ProxiedMessage>(&message.message)?;
                 msg_buffer.push(message);
-                msg_buffer.tick(&mut write).await?;
+                if msg_buffer.flush(&mut write).await? {
+                    tracing::debug!("nym-rpc session {session_id}: Close received");
+                    client.disconnect().await;
+                    return Ok(());
+                }
                 last_in = started.elapsed().as_secs().max(1);
             },
             _ = tokio::time::sleep(Duration::from_millis(100)) => {
-                msg_buffer.tick(&mut write).await?;
                 // Stall: we sent a request after the last reply and the
-                // mixnet has returned nothing since. Drop the session so
-                // the caller gets an error instead of waiting forever.
+                // mixnet has returned nothing since, or replies keep
+                // arriving but a missing id has blocked writes for just as
+                // long. Drop the session so the caller gets an error
+                // instead of waiting forever.
                 let out = last_out.load(Ordering::Relaxed);
-                if out > last_in
+                let request_stalled = out > last_in
                     && started.elapsed().as_secs().saturating_sub(last_in.max(out))
-                        > STALL_TIMEOUT.as_secs()
-                {
+                        > STALL_TIMEOUT.as_secs();
+                let gap_stalled = msg_buffer
+                    .blocked_for()
+                    .is_some_and(|blocked| blocked > STALL_TIMEOUT);
+                if request_stalled || gap_stalled {
                     tracing::warn!(
-                        "nym-rpc session {session_id} stalled (no reply for {}s); closing",
+                        "nym-rpc session {session_id} stalled ({} for {}s); closing",
+                        if gap_stalled { "message gap unfilled" } else { "no reply" },
                         STALL_TIMEOUT.as_secs()
                     );
                     client.disconnect().await;
@@ -238,7 +302,11 @@ async fn run_session(stream: TcpStream, recipient: Recipient) -> Result<()> {
             Some(message) = client.next() => {
                 let message = bincode1::deserialize::<ProxiedMessage>(&message.message)?;
                 msg_buffer.push(message);
-                msg_buffer.tick(&mut write).await?;
+                if msg_buffer.flush(&mut write).await? {
+                    tracing::debug!("nym-rpc session {session_id}: Close received");
+                    client.disconnect().await;
+                    return Ok(());
+                }
             },
             _ = tokio::time::sleep(CLOSE_TIMEOUT) => {
                 tracing::debug!("nym-rpc session {session_id} closed");
