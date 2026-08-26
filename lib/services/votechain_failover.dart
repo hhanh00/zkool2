@@ -43,16 +43,15 @@ typedef VoteChainCall = Future<VotingChainResponse> Function(String baseUrl);
 ///   "broadcast outcome unknown; tx_hash=..." envelope); otherwise next;
 /// - any other 5xx → next candidate.
 ///
-/// The last URL that produced an answer is remembered per round and tried
-/// first on the next run, so a recovered server is found without replaying
-/// the outage. All candidates failing raises [TransientVoteChainException].
+/// Candidate order comes directly from the caller's `baseUrls` (already
+/// randomised per-share by the voting library's CSPRNG), followed by any
+/// remaining configured servers as fallback. All candidates failing raises
+/// [TransientVoteChainException].
 class VoteChainFailover {
   final List<String> allServers;
 
   /// Injectable sleep (tests pass a no-op).
   final Future<void> Function(Duration duration) delay;
-
-  final Map<String, String> _lastWorking = {};
 
   VoteChainFailover({
     this.allServers = const [],
@@ -63,12 +62,11 @@ class VoteChainFailover {
   /// first) plus [allServers].
   Future<VotingChainResponse> run({
     required List<String> baseUrls,
-    required String roundId,
     required VoteChainCall call,
     int max503Retries = 1,
   }) async {
     Object? lastError;
-    for (final url in orderedCandidates(baseUrls, roundId)) {
+    for (final url in orderedCandidates(baseUrls)) {
       var retries = 0;
       while (true) {
         final VotingChainResponse res;
@@ -80,17 +78,14 @@ class VoteChainFailover {
         }
         final status = res.statusCode;
         if (status >= 200 && status < 300) {
-          _lastWorking[roundId] = url;
           return res;
         }
         if (status >= 400 && status < 500) {
           // A definitive answer (404 not found, 422 rejected, 409 conflict).
-          _lastWorking[roundId] = url;
           return res;
         }
         if (status == 502) {
           if (txHashFromVoteChainBody(res.body) != null) {
-            _lastWorking[roundId] = url;
             return res;
           }
           lastError = Exception('vote chain 502 from $url: ${res.body}');
@@ -107,20 +102,19 @@ class VoteChainFailover {
       }
     }
     throw TransientVoteChainException(
-      'all vote chain servers failed (${orderedCandidates(baseUrls, roundId).length} tried): $lastError',
+      'all vote chain servers failed (${orderedCandidates(baseUrls).length} tried): $lastError',
     );
   }
 
-  /// Candidate order: the round's last-working URL (when configured), the
-  /// caller's list, then the remaining configured servers; deduplicated.
-  List<String> orderedCandidates(List<String> baseUrls, String roundId) {
+  /// Candidate order: the caller's list (CSPRNG-randomised by the voting
+  /// library per share), then the remaining configured servers; deduplicated.
+  List<String> orderedCandidates(List<String> baseUrls) {
     final ordered = <String>[];
     void add(String? url) {
       if (url == null || url.isEmpty || ordered.contains(url)) return;
       ordered.add(url);
     }
 
-    add(_lastWorking[roundId]);
     for (final url in baseUrls) {
       add(url);
     }

@@ -1869,7 +1869,6 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       state = state.copyWith(stage: "submitting");
       final res = await failover.run(
         baseUrls: chainUrls,
-        roundId: roundId,
         call: (u) => votechainSubmitDelegation(
           baseUrl: u,
           submissionJson: wireJson!,
@@ -1949,7 +1948,6 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
             "",
         rebroadcast: () => failover.run(
           baseUrls: chainUrls,
-          roundId: roundId,
           call: (u) async {
             final wire = await delegationWireJson(
               roundId: roundId,
@@ -2066,7 +2064,6 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     try {
       res = await failover.run(
         baseUrls: chainUrls,
-        roundId: roundId,
         call: (u) => votechainRoundStatus(
           baseUrl: u,
           roundId: roundId,
@@ -2199,7 +2196,6 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       for (var attempt = 0; attempt < 45; attempt++) {
         final res = await failover.run(
           baseUrls: chainUrls,
-          roundId: roundId,
           call: (u) => votechainTxConfirmation(
             baseUrl: u,
             txHash: txHash,
@@ -2567,7 +2563,6 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
         ),
         rebroadcast: () => failover.run(
           baseUrls: chainUrls,
-          roundId: roundId,
           call: (u) async {
             final wire = await votingVoteWireJson(
               roundId: roundId,
@@ -2635,7 +2630,6 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     );
     final res = await failover.run(
       baseUrls: chainUrls,
-      roundId: roundId,
       call: (u) => votechainSubmitVote(
         baseUrl: u,
         submissionJson: wireJson,
@@ -2779,7 +2773,6 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
       // retries them while the round window is open.
       final res = await failover.run(
         baseUrls: plan.targetServers,
-        roundId: roundId,
         call: (u) => votechainSubmitShare(
           serverUrl: u,
           payloadJson: body,
@@ -2948,7 +2941,6 @@ class VotingShareTracker extends _$VotingShareTracker {
           // is unreachable — the next tick retries.
           res = await failover.run(
             baseUrls: plan.targetServers,
-            roundId: roundId,
             call: (u) => votechainSubmitShare(
               serverUrl: u,
               payloadJson: body,
@@ -3035,7 +3027,6 @@ class VotingShareTracker extends _$VotingShareTracker {
         try {
           res = await failover.run(
             baseUrls: item.targetServers,
-            roundId: roundId,
             call: (u) => votechainResubmitShare(
               serverUrl: u,
               payloadJson: body,
