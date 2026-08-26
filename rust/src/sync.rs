@@ -237,6 +237,10 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
             )
             .await?;
 
+            // Over the mixnet, download blocks in small chunks so each
+            // GetBlockRange stream fits in one nym-rpc session; elsewhere a
+            // single stream for the whole range is cheaper.
+            let chunk_size = c.is_mixnet().then_some(MIXNET_SYNC_CHUNK);
             shielded_sync(
                 &network,
                 &pool,
@@ -245,6 +249,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
                 start_height,
                 end_height,
                 actions_per_sync,
+                chunk_size,
                 tx_progress.clone(),
                 tx_cancel.subscribe(),
             )
@@ -656,8 +661,69 @@ fn resolve_diversifier_index(
     }
 }
 
+/// Blocks per `GetBlockRange` request when syncing over the Nym mixnet.
+/// A single full-range stream starves the nym-rpc session of reply SURBs
+/// and trips its 120s stall watchdog; small chunks keep each stream within
+/// one session's budget and commit progress between chunks, so a dropped
+/// session only costs the current chunk.
+pub const MIXNET_SYNC_CHUNK: u32 = 1000;
+
 #[allow(clippy::too_many_arguments)]
 pub async fn shielded_sync(
+    network: &Network,
+    pool: &SqlitePool,
+    client: &mut Client,
+    accounts: &[(u32, bool)],
+    start: u32,
+    end: u32,
+    actions_per_sync: u32,
+    chunk_size: Option<u32>,
+    tx_progress: Sender<SyncProgress>,
+    mut rx_cancel: broadcast::Receiver<()>,
+) -> Result<()> {
+    let activation_height: u32 = network
+        .activation_height(NetworkUpgrade::Sapling)
+        .unwrap()
+        .into();
+    let start = start.max(activation_height);
+    let end = end.max(activation_height);
+
+    let chunk_size = chunk_size.unwrap_or(u32::MAX).max(1);
+    let mut chunk_start = start;
+    loop {
+        let chunk_end = chunk_start.saturating_add(chunk_size - 1).min(end);
+        shielded_sync_range(
+            network,
+            pool,
+            client,
+            accounts,
+            chunk_start,
+            chunk_end,
+            actions_per_sync,
+            tx_progress.clone(),
+            rx_cancel.resubscribe(),
+        )
+        .await?;
+        if chunk_end >= end {
+            break;
+        }
+        // A cancel delivered during the finished chunk was consumed by that
+        // chunk's resubscribed receiver; check ours before starting the next.
+        match rx_cancel.try_recv() {
+            Err(broadcast::error::TryRecvError::Empty)
+            | Err(broadcast::error::TryRecvError::Closed) => {}
+            _ => {
+                debug!("Sync cancelled between chunks");
+                break;
+            }
+        }
+        chunk_start = chunk_end + 1;
+    }
+    Ok(())
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn shielded_sync_range(
     network: &Network,
     pool: &SqlitePool,
     client: &mut Client,
@@ -668,13 +734,6 @@ pub async fn shielded_sync(
     tx_progress: Sender<SyncProgress>,
     rx_cancel: broadcast::Receiver<()>,
 ) -> Result<()> {
-    let activation_height: u32 = network
-        .activation_height(NetworkUpgrade::Sapling)
-        .unwrap()
-        .into();
-    let start = start.max(activation_height);
-    let end = end.max(activation_height);
-
     let accounts = accounts.to_vec();
     let db_writer_task = {
         let (s, o, i) = get_tree_state(network, client, start - 1).await?;

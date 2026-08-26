@@ -181,6 +181,12 @@ impl Coin {
         Ok(Coin { proxy, ..self })
     }
 
+    /// True when traffic to the server goes through the Nym mixnet, either
+    /// via a mixnet-native nym:// endpoint or the Nym transport.
+    pub(crate) fn is_mixnet(&self) -> bool {
+        crate::net::nym_service::parse_nym_url(&self.url).is_some() || self.transport == 2
+    }
+
     pub(crate) async fn client(&self) -> Result<Client> {
         // Mixnet-native endpoint (nym:// URL, a nym-rpc service): bypasses
         // the transport enum entirely — the mixnet IS the transport.
