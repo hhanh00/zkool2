@@ -17,20 +17,20 @@ void main() {
       delay: (_) async {},
     );
     expect(
-      failover.orderedCandidates(['c', 'd'], 'r1'),
+      failover.orderedCandidates(['c', 'd']),
       ['c', 'd', 'a', 'b'],
     );
   });
 
-  test('remembers the last working URL per round and tries it first', () async {
+  test('caller order is preserved across runs (no sticky last-working)', () async {
     final calls = <String>[];
     final failover = VoteChainFailover(
       allServers: const ['a', 'b'],
       delay: (_) async {},
     );
+    // First run: 'a' fails, 'b' succeeds.
     await failover.run(
       baseUrls: ['a', 'b'],
-      roundId: 'r1',
       call: (url) async {
         calls.add(url);
         if (url == 'a') throw Exception('down');
@@ -39,24 +39,22 @@ void main() {
     );
     expect(calls, ['a', 'b']);
 
-    final again = await failover.run(
+    // Second run with the same baseUrls: starts from 'a' again, not 'b'.
+    calls.clear();
+    await failover.run(
       baseUrls: ['a', 'b'],
-      roundId: 'r1',
       call: (url) async {
         calls.add(url);
         return response(200);
       },
     );
-    expect(again.statusCode, 200);
-    // The remembered URL (b) is tried first and answers immediately.
-    expect(calls, ['a', 'b', 'b']);
+    expect(calls, ['a']);
   });
 
   test('4xx is a final answer', () async {
     final failover = VoteChainFailover(delay: (_) async {});
     final res = await failover.run(
       baseUrls: ['a', 'b'],
-      roundId: 'r1',
       call: (url) async => url == 'a' ? response(422, body: 'rejected') : fail('b must not be tried'),
     );
     expect(res.statusCode, 422);
@@ -66,7 +64,6 @@ void main() {
     final failover = VoteChainFailover(delay: (_) async {});
     final res = await failover.run(
       baseUrls: ['a'],
-      roundId: 'r1',
       call: (_) async => response(404, body: '{"error":"tx not found"}'),
     );
     expect(res.statusCode, 404);
@@ -76,7 +73,6 @@ void main() {
     final failover = VoteChainFailover(delay: (_) async {});
     final res = await failover.run(
       baseUrls: ['a', 'b'],
-      roundId: 'r1',
       call: (url) async => url == 'a' ? response(500) : response(200),
     );
     expect(res.statusCode, 200);
@@ -88,7 +84,6 @@ void main() {
     final failover = VoteChainFailover(delay: (d) async => delays.add(d));
     final res = await failover.run(
       baseUrls: ['a'],
-      roundId: 'r1',
       call: (_) async {
         calls++;
         return calls == 1
@@ -104,7 +99,6 @@ void main() {
     final failover = VoteChainFailover(delay: (_) async {});
     final res = await failover.run(
       baseUrls: ['a'],
-      roundId: 'r1',
       call: (_) async =>
           response(502, body: 'broadcast outcome unknown after retries; tx_hash=ABCDEF'),
     );
@@ -116,7 +110,6 @@ void main() {
     final failover = VoteChainFailover(delay: (_) async {});
     final res = await failover.run(
       baseUrls: ['a', 'b'],
-      roundId: 'r1',
       call: (url) async => url == 'a' ? response(502, body: 'boom') : response(200),
     );
     expect(res.statusCode, 200);
@@ -127,7 +120,6 @@ void main() {
     expect(
       () => failover.run(
         baseUrls: ['a', 'b'],
-        roundId: 'r1',
         call: (_) async => throw Exception('down'),
       ),
       throwsA(isA<TransientVoteChainException>()),
