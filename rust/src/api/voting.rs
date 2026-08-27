@@ -1151,7 +1151,7 @@ pub async fn voting_share_plans(
     vote_end: u64,
     ceremony_start: u64,
     single_share: bool,
-    c: &Coin,
+    _c: &Coin,
 ) -> Result<Vec<VotingSharePlanItem>> {
     let buffer =
         zcash_voting::share_policy::last_moment_buffer_seconds(ceremony_start, vote_end);

@@ -414,18 +414,38 @@ pub(crate) async fn open_proxied_stream(
         _ => 8080,
     });
 
+    // Extract credentials from the authority (user:pass@host:port).
+    // http::Uri::host() already strips the userinfo, so phost/pport are fine;
+    // we only need the raw authority string to pull out the userinfo prefix.
+    let creds: Option<(String, String)> = puri
+        .authority()
+        .and_then(|a| a.as_str().rfind('@').map(|at| &a.as_str()[..at]))
+        .map(|userinfo| {
+            let (u, p) = userinfo.split_once(':').unwrap_or((userinfo, ""));
+            (u.to_string(), p.to_string())
+        });
+
     match scheme.as_str() {
         // socks5h => resolve the target hostname *at the proxy* (remote DNS).
         // This is what allows .onion addresses to work and prevents DNS leaks,
         // so it is the recommended scheme for Tor.
         "socks5h" => {
-            let stream = tokio_socks::tcp::Socks5Stream::connect(
-                (phost, pport),
-                // Passing a &str target makes tokio-socks send the hostname to
-                // the proxy as a SOCKS5 DOMAINNAME request (proxy-side DNS).
-                (target_host, target_port),
-            )
-            .await?;
+            let stream = match &creds {
+                Some((u, p)) => tokio_socks::tcp::Socks5Stream::connect_with_password(
+                    (phost, pport),
+                    // Passing a &str target makes tokio-socks send the hostname to
+                    // the proxy as a SOCKS5 DOMAINNAME request (proxy-side DNS).
+                    (target_host, target_port),
+                    u.as_str(),
+                    p.as_str(),
+                )
+                .await?,
+                None => tokio_socks::tcp::Socks5Stream::connect(
+                    (phost, pport),
+                    (target_host, target_port),
+                )
+                .await?,
+            };
             Ok(stream.into_inner())
         }
         // socks5 => resolve the target hostname locally and send the IP to the
@@ -436,8 +456,18 @@ pub(crate) async fn open_proxied_stream(
             let target_addr = addrs
                 .next()
                 .ok_or_else(|| anyhow::anyhow!("could not resolve {target_host}"))?;
-            let stream =
-                tokio_socks::tcp::Socks5Stream::connect((phost, pport), target_addr).await?;
+            let stream = match &creds {
+                Some((u, p)) => tokio_socks::tcp::Socks5Stream::connect_with_password(
+                    (phost, pport),
+                    target_addr,
+                    u.as_str(),
+                    p.as_str(),
+                )
+                .await?,
+                None => {
+                    tokio_socks::tcp::Socks5Stream::connect((phost, pport), target_addr).await?
+                }
+            };
             Ok(stream.into_inner())
         }
         "http" | "https" => http_connect_tunnel(phost, pport, target_host, target_port).await,
