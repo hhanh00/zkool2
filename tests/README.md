@@ -40,3 +40,36 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 pytest
 ```
+
+## Flutter UI DKG test
+
+`tests/test_dkg_ui.py` runs the same 3-of-3 FROST DKG as `test_dkg.py`, but
+participant #1 is the **real Flutter app** instead of a headless
+`zkool_graphql` instance: pytest starts the funding instance and participants
+#2/#3, then spawns
+
+```bash
+flutter test integration_test/dkg_ui_test.dart -d <macos|linux> \
+  --dart-define=ZKOOL_TEST_RENDEZVOUS=<dir>
+```
+
+and drives the app's `/dkg1 → /dkg2 → /dkg3` pages. Both sides exchange addresses through JSON
+files in the app's documents directory — on macOS
+`~/Library/Containers/cc.methyl.zkool/Data/Documents/dkg_ui_rendezvous`, since
+the sandboxed app cannot use `/tmp`; on Linux `~/Documents/dkg_ui_rendezvous`.
+
+```bash
+.venv/bin/uv run pytest tests/test_dkg_ui.py -v -s
+```
+
+Requirements beyond the usual regtest stack:
+- a desktop session — `flutter test -d macos|linux` opens a window (under CI on
+  Linux this needs `xvfb-run`)
+- the app's documents directory must exist; on macOS that means the app has
+  been launched at least once so its sandbox container is created
+- the first run builds the desktop app and the Rust staticlib in debug (slow)
+
+The test writes `regtest_dkg_ui.db` into the app's Documents directory and
+temporarily overrides the `pin_lock`, `offline` and `vault` preferences,
+restoring them when it finishes. It never touches the developer's own wallet
+database.
