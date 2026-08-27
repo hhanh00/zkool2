@@ -2136,7 +2136,7 @@ final class VotingSubmissionJobProvider
 }
 
 String _$votingSubmissionJobHash() =>
-    r'74833aa2e2d32c5e38e4b931309a4776a4cc3f57';
+    r'1940c354beed580d30ec097e8e6f29a9e1d202e0';
 
 /// Delegation execution job for one round. Runs the serialized chain:
 /// prepare (or resume) → setup → build submission (progress stream) →
@@ -2261,7 +2261,7 @@ final class VotingShareTrackerProvider
 }
 
 String _$votingShareTrackerHash() =>
-    r'fb64664f086a6d186faebbae65da843a83dec41e';
+    r'a6d5dc955f1b45c75b0504403743b569ca5d93b4';
 
 /// Session-independent helper-share tracking for one round.
 ///

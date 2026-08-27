@@ -352,6 +352,18 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
       final status = doDkg(c: c);
       status.listen(
         (s) {
+          if (s is DKGStatus_PublishRound0Pkg) {
+            setState(() {
+              message = "Broadcasting participant keys";
+              index = 0;
+            });
+          }
+          if (s is DKGStatus_WaitRound0Pkg) {
+            setState(() {
+              message = "Waiting for other participants to send their keys";
+              index = 0;
+            });
+          }
           if (s is DKGStatus_PublishRound1Pkg) {
             setState(() {
               message = "Broadcasting round 1 packages";
@@ -374,6 +386,12 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
             setState(() {
               message = "Waiting for other participants to send their round 2 packages";
               index = 2;
+            });
+          }
+          if (s is DKGStatus_Finalize) {
+            setState(() {
+              message = "Deriving the shared key";
+              index = 3;
             });
           }
           if (s is DKGStatus_SharedAddress) {
