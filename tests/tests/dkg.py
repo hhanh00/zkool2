@@ -207,6 +207,10 @@ class Rendezvous:
     def write_peers(self, peers: dict[int, str]):
         self._write(self.peers_path, {str(k): v for k, v in peers.items()})
 
+    def write_orchestrator(self, **payload):
+        """Publish values the Flutter side waits on, e.g. the PCZT to sign."""
+        self._write(os.path.join(self.dir, "orchestrator.json"), payload)
+
     def read_ui(self) -> dict:
         if not os.path.exists(self.ui_path):
             return {}
