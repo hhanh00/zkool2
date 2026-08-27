@@ -36,3 +36,6 @@ select = ["E", "F", "I", "N", "W"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+markers = [
+    "dkg_ui: DKG test driving the Flutter UI; needs a GUI session and a long macOS build",
+]

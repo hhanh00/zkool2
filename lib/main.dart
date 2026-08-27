@@ -1,6 +1,7 @@
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -33,8 +34,19 @@ Future<void> main() async {
 
   final r = router(disclaimerAccepted, recovery);
 
-  runApp(
-    ProviderScope(
+  runApp(ZkoolApp(router: r));
+}
+
+/// The application widget tree, extracted from [main] so that integration
+/// tests can pump the exact same tree with a router of their own.
+class ZkoolApp extends StatelessWidget {
+  final GoRouter router;
+
+  const ZkoolApp({super.key, required this.router});
+
+  @override
+  Widget build(BuildContext context) {
+    return ProviderScope(
       child: ToastificationConfigProvider(
         config: ToastificationConfig(
           marginBuilder: (c, a) => const EdgeInsets.only(top: 76),
@@ -54,7 +66,7 @@ Future<void> main() async {
             final darkTheme = FlexThemeData.dark(scheme: scheme).copyWith(useMaterial3: true);
             return MaterialApp.router(
               key: appKey,
-              routerConfig: r,
+              routerConfig: router,
               builder: (context, child) => SafeArea(
                 top: false,
                 left: false,
@@ -69,8 +81,8 @@ Future<void> main() async {
           }),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class PinLock extends ConsumerStatefulWidget {
