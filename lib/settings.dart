@@ -799,6 +799,14 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         if (mounted) await showException(context, "Passkey error: ${e.message}");
         return;
       }
+    } else {
+      // Vault is deactivating: sign out of Google so the next enable
+      // shows the account picker (allows switching to a different user).
+      try {
+        await ref.read(vaultProvider.notifier).signOut();
+      } catch (e) {
+        logger.w("[Vault] disable: signOut failed: $e");
+      }
     }
     setState(() {
       settings = settings.copyWith(vault: value);
