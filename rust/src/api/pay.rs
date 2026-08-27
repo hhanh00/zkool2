@@ -1,5 +1,5 @@
 use anyhow::Result;
-use bincode::{config::legacy, Decode, Encode};
+use bincode::{config::standard, Decode, Encode};
 
 use crate::{
     api::coin::Coin,
@@ -120,14 +120,20 @@ pub struct PcztPackage {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
+/// Serialize a PCZT for transport between participants.
+///
+/// Uses bincode's `standard()` config so the bytes are interchangeable with
+/// zkool_graphql, whose `prepareSend` / `frostSign` use the same config. The
+/// two used to disagree (`legacy()` here), which made it impossible for an app
+/// user and a zkool_graphql user to co-sign a FROST transaction.
 pub fn pack_transaction(pczt: &PcztPackage) -> Result<Vec<u8>> {
-    let pkg = bincode::encode_to_vec(pczt, legacy())?;
+    let pkg = bincode::encode_to_vec(pczt, standard())?;
     Ok(pkg)
 }
 
 #[cfg_attr(feature = "flutter", frb)]
 pub fn unpack_transaction(bytes: &[u8]) -> Result<PcztPackage> {
-    let (pkg, _) = bincode::decode_from_slice(bytes, legacy())?;
+    let (pkg, _) = bincode::decode_from_slice(bytes, standard())?;
     Ok(pkg)
 }
 
