@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.28.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0...zkool-v6.28.1) (2026-08-27)
+
+
+### Bug Fixes
+
+* **nym:** make large syncs over the mixnet reliable ([#1219](https://github.com/hhanh00/zkool2/issues/1219)) ([070ec89](https://github.com/hhanh00/zkool2/commit/070ec89b4368ff8c6241e1b19345abe04e680d89))
+* **proxy:** pass SOCKS5 credentials from proxy URL to tokio-socks ([1752e9d](https://github.com/hhanh00/zkool2/commit/1752e9de0cbb91d3e53d884ea8f536889e878291))
+* **voting:** remove sticky last-working server from share failover ([2b59628](https://github.com/hhanh00/zkool2/commit/2b59628f04f6fc46d9fc57494640af2670c3a77b))
+
 ## [6.28.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.27.0...zkool-v6.28.0) (2026-08-23)
 
 
