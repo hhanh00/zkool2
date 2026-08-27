@@ -25,7 +25,7 @@ use crate::api::account::{Account, Memo, Tx};
 use crate::api::coin::Network;
 use crate::api::sync::PoolBalance;
 use crate::sync::BlockHeader;
-use crate::{api::account::TxNote, tiu};
+use crate::api::account::TxNote;
 
 /// Schema version. Bump only when the export format changes (IOAccount or any
 /// embedded struct gains/removes/changes a field). Do NOT bump for runtime-only
