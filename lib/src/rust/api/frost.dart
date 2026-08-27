@@ -76,6 +76,11 @@ sealed class DKGStatus with _$DKGStatus {
   const factory DKGStatus.waitAddresses(
     List<String> field0,
   ) = DKGStatus_WaitAddresses;
+
+  /// Round 0 exchanges participant signing keys before the FROST rounds
+  /// proper; it needs its own status so the UI does not report it as round 1.
+  const factory DKGStatus.publishRound0Pkg() = DKGStatus_PublishRound0Pkg;
+  const factory DKGStatus.waitRound0Pkg() = DKGStatus_WaitRound0Pkg;
   const factory DKGStatus.publishRound1Pkg() = DKGStatus_PublishRound1Pkg;
   const factory DKGStatus.waitRound1Pkg() = DKGStatus_WaitRound1Pkg;
   const factory DKGStatus.publishRound2Pkg() = DKGStatus_PublishRound2Pkg;

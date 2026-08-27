@@ -142,6 +142,10 @@ pub struct DKGParams {
 pub enum DKGStatus {
     WaitParams,
     WaitAddresses(Vec<String>),
+    /// Round 0 exchanges participant signing keys before the FROST rounds
+    /// proper; it needs its own status so the UI does not report it as round 1.
+    PublishRound0Pkg,
+    WaitRound0Pkg,
     PublishRound1Pkg,
     WaitRound1Pkg,
     PublishRound2Pkg,

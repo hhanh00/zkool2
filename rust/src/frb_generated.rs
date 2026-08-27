@@ -8992,7 +8992,7 @@ fn wire__crate__api__voting__voting_share_plans_impl(
             let api_vote_end = <u64>::sse_decode(&mut deserializer);
             let api_ceremony_start = <u64>::sse_decode(&mut deserializer);
             let api_single_share = <bool>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api__c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
@@ -9004,7 +9004,7 @@ fn wire__crate__api__voting__voting_share_plans_impl(
                             api_vote_end,
                             api_ceremony_start,
                             api_single_share,
-                            &api_c,
+                            &api__c,
                         )
                         .await?;
                         Ok(output_ok)
@@ -9873,21 +9873,27 @@ impl SseDecode for crate::api::frost::DKGStatus {
                 return crate::api::frost::DKGStatus::WaitAddresses(var_field0);
             }
             2 => {
-                return crate::api::frost::DKGStatus::PublishRound1Pkg;
+                return crate::api::frost::DKGStatus::PublishRound0Pkg;
             }
             3 => {
-                return crate::api::frost::DKGStatus::WaitRound1Pkg;
+                return crate::api::frost::DKGStatus::WaitRound0Pkg;
             }
             4 => {
-                return crate::api::frost::DKGStatus::PublishRound2Pkg;
+                return crate::api::frost::DKGStatus::PublishRound1Pkg;
             }
             5 => {
-                return crate::api::frost::DKGStatus::WaitRound2Pkg;
+                return crate::api::frost::DKGStatus::WaitRound1Pkg;
             }
             6 => {
-                return crate::api::frost::DKGStatus::Finalize;
+                return crate::api::frost::DKGStatus::PublishRound2Pkg;
             }
             7 => {
+                return crate::api::frost::DKGStatus::WaitRound2Pkg;
+            }
+            8 => {
+                return crate::api::frost::DKGStatus::Finalize;
+            }
+            9 => {
                 let mut var_field0 = <String>::sse_decode(deserializer);
                 return crate::api::frost::DKGStatus::SharedAddress(var_field0);
             }
@@ -13246,13 +13252,15 @@ impl flutter_rust_bridge::IntoDart for crate::api::frost::DKGStatus {
             crate::api::frost::DKGStatus::WaitAddresses(field0) => {
                 [1.into_dart(), field0.into_into_dart().into_dart()].into_dart()
             }
-            crate::api::frost::DKGStatus::PublishRound1Pkg => [2.into_dart()].into_dart(),
-            crate::api::frost::DKGStatus::WaitRound1Pkg => [3.into_dart()].into_dart(),
-            crate::api::frost::DKGStatus::PublishRound2Pkg => [4.into_dart()].into_dart(),
-            crate::api::frost::DKGStatus::WaitRound2Pkg => [5.into_dart()].into_dart(),
-            crate::api::frost::DKGStatus::Finalize => [6.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::PublishRound0Pkg => [2.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::WaitRound0Pkg => [3.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::PublishRound1Pkg => [4.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::WaitRound1Pkg => [5.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::PublishRound2Pkg => [6.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::WaitRound2Pkg => [7.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::Finalize => [8.into_dart()].into_dart(),
             crate::api::frost::DKGStatus::SharedAddress(field0) => {
-                [7.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+                [9.into_dart(), field0.into_into_dart().into_dart()].into_dart()
             }
             _ => {
                 unimplemented!("");
@@ -15550,23 +15558,29 @@ impl SseEncode for crate::api::frost::DKGStatus {
                 <i32>::sse_encode(1, serializer);
                 <Vec<String>>::sse_encode(field0, serializer);
             }
-            crate::api::frost::DKGStatus::PublishRound1Pkg => {
+            crate::api::frost::DKGStatus::PublishRound0Pkg => {
                 <i32>::sse_encode(2, serializer);
             }
-            crate::api::frost::DKGStatus::WaitRound1Pkg => {
+            crate::api::frost::DKGStatus::WaitRound0Pkg => {
                 <i32>::sse_encode(3, serializer);
             }
-            crate::api::frost::DKGStatus::PublishRound2Pkg => {
+            crate::api::frost::DKGStatus::PublishRound1Pkg => {
                 <i32>::sse_encode(4, serializer);
             }
-            crate::api::frost::DKGStatus::WaitRound2Pkg => {
+            crate::api::frost::DKGStatus::WaitRound1Pkg => {
                 <i32>::sse_encode(5, serializer);
             }
-            crate::api::frost::DKGStatus::Finalize => {
+            crate::api::frost::DKGStatus::PublishRound2Pkg => {
                 <i32>::sse_encode(6, serializer);
             }
-            crate::api::frost::DKGStatus::SharedAddress(field0) => {
+            crate::api::frost::DKGStatus::WaitRound2Pkg => {
                 <i32>::sse_encode(7, serializer);
+            }
+            crate::api::frost::DKGStatus::Finalize => {
+                <i32>::sse_encode(8, serializer);
+            }
+            crate::api::frost::DKGStatus::SharedAddress(field0) => {
+                <i32>::sse_encode(9, serializer);
                 <String>::sse_encode(field0, serializer);
             }
             _ => {
