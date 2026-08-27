@@ -8699,16 +8699,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           dco_decode_list_String(raw[1]),
         );
       case 2:
-        return DKGStatus_PublishRound1Pkg();
+        return DKGStatus_PublishRound0Pkg();
       case 3:
-        return DKGStatus_WaitRound1Pkg();
+        return DKGStatus_WaitRound0Pkg();
       case 4:
-        return DKGStatus_PublishRound2Pkg();
+        return DKGStatus_PublishRound1Pkg();
       case 5:
-        return DKGStatus_WaitRound2Pkg();
+        return DKGStatus_WaitRound1Pkg();
       case 6:
-        return DKGStatus_Finalize();
+        return DKGStatus_PublishRound2Pkg();
       case 7:
+        return DKGStatus_WaitRound2Pkg();
+      case 8:
+        return DKGStatus_Finalize();
+      case 9:
         return DKGStatus_SharedAddress(
           dco_decode_String(raw[1]),
         );
@@ -11069,16 +11073,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         var var_field0 = sse_decode_list_String(deserializer);
         return DKGStatus_WaitAddresses(var_field0);
       case 2:
-        return DKGStatus_PublishRound1Pkg();
+        return DKGStatus_PublishRound0Pkg();
       case 3:
-        return DKGStatus_WaitRound1Pkg();
+        return DKGStatus_WaitRound0Pkg();
       case 4:
-        return DKGStatus_PublishRound2Pkg();
+        return DKGStatus_PublishRound1Pkg();
       case 5:
-        return DKGStatus_WaitRound2Pkg();
+        return DKGStatus_WaitRound1Pkg();
       case 6:
-        return DKGStatus_Finalize();
+        return DKGStatus_PublishRound2Pkg();
       case 7:
+        return DKGStatus_WaitRound2Pkg();
+      case 8:
+        return DKGStatus_Finalize();
+      case 9:
         var var_field0 = sse_decode_String(deserializer);
         return DKGStatus_SharedAddress(var_field0);
       default:
@@ -13913,18 +13921,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case DKGStatus_WaitAddresses(field0: final field0):
         sse_encode_i_32(1, serializer);
         sse_encode_list_String(field0, serializer);
-      case DKGStatus_PublishRound1Pkg():
+      case DKGStatus_PublishRound0Pkg():
         sse_encode_i_32(2, serializer);
-      case DKGStatus_WaitRound1Pkg():
+      case DKGStatus_WaitRound0Pkg():
         sse_encode_i_32(3, serializer);
-      case DKGStatus_PublishRound2Pkg():
+      case DKGStatus_PublishRound1Pkg():
         sse_encode_i_32(4, serializer);
-      case DKGStatus_WaitRound2Pkg():
+      case DKGStatus_WaitRound1Pkg():
         sse_encode_i_32(5, serializer);
-      case DKGStatus_Finalize():
+      case DKGStatus_PublishRound2Pkg():
         sse_encode_i_32(6, serializer);
-      case DKGStatus_SharedAddress(field0: final field0):
+      case DKGStatus_WaitRound2Pkg():
         sse_encode_i_32(7, serializer);
+      case DKGStatus_Finalize():
+        sse_encode_i_32(8, serializer);
+      case DKGStatus_SharedAddress(field0: final field0):
+        sse_encode_i_32(9, serializer);
         sse_encode_String(field0, serializer);
     }
   }

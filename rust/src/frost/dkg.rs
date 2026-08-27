@@ -676,7 +676,16 @@ pub async fn do_dkg_impl(
     };
 
     // ── Round 0: broadcast signing public keys ────────────────────────────────
+    // `run_round` publishes our own package only on the invocation where our
+    // secret does not exist yet, so checking for it first tells us whether this
+    // pass is a broadcast or just a poll for peer packages.
     let init = DkgInit { self_id, n, t };
+    if <DkgRound0 as Round>::load_secret(connection, account)
+        .await?
+        .is_none()
+    {
+        status.send(DKGStatus::PublishRound0Pkg).await;
+    }
     let Some(state0) = run_round::<DkgRound0>(
         connection,
         account,
@@ -693,7 +702,7 @@ pub async fn do_dkg_impl(
     )
     .await?
     else {
-        status.send(DKGStatus::WaitRound1Pkg).await; // TODO: add WaitRound0Pkg status
+        status.send(DKGStatus::WaitRound0Pkg).await;
         return Ok(());
     };
     info!(
@@ -702,6 +711,12 @@ pub async fn do_dkg_impl(
     );
 
     // ── Round 1: everyone broadcasts one package to the shared address ────────
+    if <DkgRound1 as Round>::load_secret(connection, account)
+        .await?
+        .is_none()
+    {
+        status.send(DKGStatus::PublishRound1Pkg).await;
+    }
     let Some(state1) = run_round::<DkgRound1>(
         connection,
         account,
@@ -724,6 +739,12 @@ pub async fn do_dkg_impl(
     info!("Round 1 complete");
 
     // ── Round 2: each sends a unique package to every peer's mailbox ──────────
+    if <DkgRound2 as Round>::load_secret(connection, account)
+        .await?
+        .is_none()
+    {
+        status.send(DKGStatus::PublishRound2Pkg).await;
+    }
     let Some(state2) = run_round::<DkgRound2>(
         connection,
         account,
@@ -746,6 +767,7 @@ pub async fn do_dkg_impl(
     info!("Round 2 complete");
 
     // ── Round 3: local only — derive the shared key ───────────────────────────
+    status.send(DKGStatus::Finalize).await;
     let key_pkg = sqlx::query_as::<_, (Vec<u8>,)>(
         "SELECT key_pkg FROM dkg_state WHERE account = ? AND key_pkg IS NOT NULL",
     )
