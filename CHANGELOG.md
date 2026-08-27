@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.29.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.29.0-rc...zkool-v6.29.0-rc.1) (2026-08-27)
+
+
+### Bug Fixes
+
+* **frost:** report DKG round 0 and broadcast statuses in the UI ([#1230](https://github.com/hhanh00/zkool2/issues/1230)) ([67a2b64](https://github.com/hhanh00/zkool2/commit/67a2b64a4bc41fad0563d0311cdfc50c8570a799))
+
 ## [6.29.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.1...zkool-v6.29.0-rc) (2026-08-27)
 
 
