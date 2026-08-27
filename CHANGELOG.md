@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.29.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.1...zkool-v6.29.0-rc) (2026-08-27)
+
+
+### Features
+
+* **vault:** sign out of Google when Cloud Vault is turned off ([277929a](https://github.com/hhanh00/zkool2/commit/277929a6cb55cc266a694d3b4aa157f23f3513df))
+
 ## [6.28.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0...zkool-v6.28.1) (2026-08-27)
 
 
