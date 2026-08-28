@@ -188,6 +188,7 @@ class FrostPage2 extends ConsumerStatefulWidget {
 
 class FrostPage2State extends ConsumerState<FrostPage2> {
   late final c = coinContext.coin;
+  late final SynchronizerNotifier _synchronizer;
   String message = "";
   Timer? timer;
   int currentIndex = 0;
@@ -196,6 +197,11 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
   @override
   void initState() {
     super.initState();
+    // doSign syncs the accounts it needs; keep autosync off the same database
+    // while the rounds run. The notifier is held in a field because `ref` is
+    // unsafe to use from dispose().
+    _synchronizer = ref.read(synchronizerProvider.notifier);
+    _synchronizer.frostInProgress = true;
     runFrost();
     timer = Timer.periodic(Duration(seconds: 30), (_) async {
       runFrost();
@@ -205,6 +211,7 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
   @override
   void dispose() {
     timer?.cancel();
+    _synchronizer.frostInProgress = false;
     super.dispose();
   }
 
@@ -223,11 +230,8 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
   void runFrost() async {
     try {
       await ref.read(currentHeightProvider.notifier).fetch();
-      final as = await ref.read(getAccountsProvider.future);
-      final accounts = as.where((e) => e.enabled).toList();
-      final synchronizer = ref.read(synchronizerProvider.notifier);
-      await synchronizer.startSynchronize(accounts);
 
+      // No startSynchronize here: doSign syncs the accounts it needs itself.
       final status = doSign(c: c);
       status.listen(
         (s) {

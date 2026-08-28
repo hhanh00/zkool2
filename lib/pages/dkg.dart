@@ -319,6 +319,7 @@ class DKGPage3 extends ConsumerStatefulWidget {
 
 class DKGPage3State extends ConsumerState<DKGPage3> {
   late final c = coinContext.coin;
+  late final SynchronizerNotifier _synchronizer;
   String message = "";
   int index = 0;
   Timer? runTimer;
@@ -327,6 +328,11 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
   @override
   void initState() {
     super.initState();
+    // doDkg syncs the DKG accounts itself; keep autosync off the same database
+    // while the rounds run. The notifier is held in a field because `ref` is
+    // unsafe to use from dispose().
+    _synchronizer = ref.read(synchronizerProvider.notifier);
+    _synchronizer.frostInProgress = true;
     runTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
       await runDkg();
     });
@@ -336,19 +342,16 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
   @override
   void dispose() {
     runTimer?.cancel();
+    _synchronizer.frostInProgress = false;
     super.dispose();
   }
 
   Future<void> runDkg() async {
     try {
       await ref.read(currentHeightProvider.notifier).fetch();
-      final as = await ref.read(getAccountsProvider.future);
-      final accounts = as.where((e) => e.enabled).toList();
-      final synchronizer = ref.read(synchronizerProvider.notifier);
-      await synchronizer.startSynchronize(
-        accounts,
-      );
 
+      // No startSynchronize here: doDkg syncs the accounts it needs itself, so
+      // the rounds cannot run on notes a separate sync has not caught up on.
       final status = doDkg(c: c);
       status.listen(
         (s) {
