@@ -68,8 +68,25 @@ pub async fn get_db_height(c: &Coin) -> Result<SyncHeight> {
     crate::sync::get_db_height(&mut *connection, c.account).await
 }
 
+/// Decrypt memos and store transaction details for `account`.
+///
+/// Takes SYNCING like the other writers (`crate::sync::synchronize`,
+/// `frost::dkg::do_dkg_impl`, `frost::sign::do_sign_impl`) because this writes
+/// on its own connection. `startSynchronize` kicks this off in an unawaited
+/// future once the sync stream ends, so it overlaps whatever runs next — on the
+/// DKG page that is `do_dkg`, and the two writers collided with
+/// `database is locked`.
+///
+/// Best-effort: if another writer holds the lock this is skipped rather than
+/// queued, so it can never block a sync or a FROST round. The next sync cycle
+/// picks the details up again.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn fetch_tx_details(account: u32, c: &Coin) -> Result<()> {
+    let Ok(_guard) = SYNCING.try_lock() else {
+        tracing::info!("fetch_tx_details: another writer is active, skipping");
+        return Ok(());
+    };
+
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
     crate::memo::fetch_tx_details(&c.network(), &mut *connection, &mut client, account).await?;
