@@ -4,11 +4,12 @@ use anyhow::{Ok, Result};
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 use serde::{Deserialize, Serialize};
-use sqlx::SqliteConnection;
+use sqlx::{query, sqlite::SqliteRow, Row, SqliteConnection};
 
 use crate::{
     api::coin::Coin,
     frost::dkg::{get_dkg_params, get_mailbox_account},
+    sync::{synchronize_impl, DEFAULT_ACTIONS_PER_SYNC},
 };
 use std::str::FromStr;
 
@@ -77,11 +78,38 @@ pub async fn has_dkg_addresses(c: &Coin) -> Result<bool> {
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
+/// Advance the DKG by one step, syncing first.
+///
+/// The sync is done here rather than by the caller so the rounds can never run
+/// on stale notes. The UI used to sync separately before calling this, and that
+/// sync spawned an unawaited `fetch_tx_details` which raced the rounds — see
+/// `api::sync::fetch_tx_details`. This mirrors the headless path, where
+/// `graphql::frost::new_block` syncs and then calls `do_dkg_impl`.
 pub async fn do_dkg(status: StreamSink<DKGStatus>, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
     let height = client.latest_height().await?;
     let account = get_funding_account(&mut connection).await?;
+
+    // The funding account pays for the memos; the internal frost-* accounts are
+    // the mailbox and broadcast addresses the packages arrive on.
+    let mut accounts =
+        query("SELECT id_account FROM accounts WHERE name LIKE 'frost-%' AND internal = 1")
+            .map(|r: SqliteRow| r.get::<u32, _>(0))
+            .fetch_all(&mut *connection)
+            .await?;
+    accounts.push(account);
+    let height = synchronize_impl(
+        (),
+        accounts,
+        height,
+        DEFAULT_ACTIONS_PER_SYNC,
+        1,
+        100,
+        false,
+        c,
+    )
+    .await?;
 
     let r = crate::frost::dkg::do_dkg(
         &c.network(),
@@ -186,10 +214,35 @@ pub async fn is_signing_in_progress(c: &Coin) -> Result<bool> {
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
+/// Advance the signing rounds by one step, syncing first.
+///
+/// Syncs here for the same reason as [`do_dkg`]: the rounds must not run on
+/// stale notes, and a caller-side sync spawns an unawaited `fetch_tx_details`
+/// that races them.
 pub async fn do_sign(status: StreamSink<SigningStatus>, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
     let height = client.latest_height().await?;
+
+    let account = get_funding_account(&mut connection).await?;
+    let mut accounts =
+        query("SELECT id_account FROM accounts WHERE name LIKE 'frost-%' AND internal = 1")
+            .map(|r: SqliteRow| r.get::<u32, _>(0))
+            .fetch_all(&mut *connection)
+            .await?;
+    accounts.push(account);
+    let height = synchronize_impl(
+        (),
+        accounts,
+        height,
+        DEFAULT_ACTIONS_PER_SYNC,
+        1,
+        100,
+        false,
+        c,
+    )
+    .await?;
+
     let r = crate::frost::sign::do_sign(
         &c.network(),
         &mut *connection,
