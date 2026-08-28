@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.29.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.29.0-rc.1...zkool-v6.29.0-rc.2) (2026-08-28)
+
+
+### Bug Fixes
+
+* **pay:** serialize PCZTs with bincode standard() for interop ([143e9c7](https://github.com/hhanh00/zkool2/commit/143e9c7a52738cf9d1dd06ad41ee5bfd110ee559))
+
 ## [6.29.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.29.0-rc...zkool-v6.29.0-rc.1) (2026-08-27)
 
 
