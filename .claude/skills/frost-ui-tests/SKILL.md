@@ -1,18 +1,30 @@
 ---
-name: dkg-ui-test
-description: "Run the Flutter-UI FROST DKG integration test (tests/test_dkg_ui.py) on a local zebra regtest chain, and optionally screen-record the app window. Use when asked to run, debug, or re-record the DKG UI test, or to bring up the local regtest + lightwalletd + zkool_graphql stack that it needs."
+name: frost-ui-tests
+description: "Run the Flutter-UI FROST integration tests (tests/test_dkg_ui.py for DKG, tests/test_frost_ui.py for signing) on a local zebra regtest chain, and optionally screen-record the app window. Use when asked to run, debug, or re-record either UI test, or to bring up the local regtest + lightwalletd + zkool_graphql stack they need."
 ---
 
-# Flutter UI DKG integration test
+# Flutter UI FROST integration tests
 
-`tests/tests/test_dkg_ui.py` runs a 3-of-3 FROST DKG where **participant #1 is the
-real Flutter app**, driven through `/dkg1 → /dkg2 → /dkg3`, while participants #2
-and #3 are headless `zkool_graphql` instances. pytest owns the chain and the
-peers and spawns `flutter test` as a subprocess; the two sides exchange addresses
-through JSON files in the app's documents directory.
+Two tests run the **real Flutter app** as one FROST participant while the others
+are headless `zkool_graphql` instances:
 
-Contrast with `tests/tests/test_dkg.py`, which is the same protocol with all three
-participants headless — run that first to prove the stack before blaming the UI test.
+| test | what it covers | runtime (warm) |
+|---|---|---|
+| `tests/tests/test_dkg_ui.py` | 3-of-3 DKG through `/dkg1 → /dkg2 → /dkg3` | ~3.5 min |
+| `tests/tests/test_frost_ui.py` | DKG, then signing through `/frost1 → /frost2`, asserting the receiver is actually paid | ~5.5 min |
+
+The Dart halves live in `integration_test/`, sharing `support.dart` (rendezvous,
+pumping helpers, wallet setup, and `driveDkg` — signing needs a shared key
+before it can start).
+
+`test_dkg.py` / `test_frost.py` are the all-headless equivalents; run those
+first to prove the stack before blaming the UI tests.
+
+In both, the app is participant #1 and pytest owns everything else: the chain,
+the funding wallet, and the peers. It spawns `flutter test` as a subprocess and
+the two sides exchange values through JSON files in the app's documents
+directory. In the signing test participant #2 coordinates, so the app exercises
+the plain-signer path.
 
 ## Prerequisites
 
@@ -46,6 +58,7 @@ export PATH="$HOME/projects/tools/bin:$PATH"
 pkill -9 zkool_graphql; pkill lightwalletd; pkill zebrad
 rm -rf ~/Library/Caches/zebra ./data ./regtest.db
 rm -f  ~/Library/Containers/cc.methyl.zkool/Data/Documents/regtest_dkg_ui.db
+rm -f  ~/Library/Containers/cc.methyl.zkool/Data/Documents/regtest_frost_ui.db
 rm -rf ~/Library/Containers/cc.methyl.zkool/Data/Documents/dkg_ui_rendezvous
 
 # zebra.toml needs a miner address (local edit, do not commit)
@@ -82,8 +95,9 @@ Seeds and the destination UA are inlined at the top of `example/sh/regtest_setup
 
 ```bash
 cd tests
-SEED="invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic" \
-  .venv/bin/python -m pytest tests/test_dkg_ui.py -v -s
+export SEED="invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
+.venv/bin/python -m pytest tests/test_dkg_ui.py -v -s     # DKG only
+.venv/bin/python -m pytest tests/test_frost_ui.py -v -s   # DKG + signing
 ```
 
 Expect ~3.5 min warm; the first run adds a macOS debug build of the app plus the
@@ -96,7 +110,7 @@ Watch progress without touching the app's database:
 sed 's/\x1b\[[0-9;]*m//g' /tmp/dkg_ui_flutter.log | grep -a "dkg-ui] status"
 ```
 
-Expected sequence:
+Expected DKG sequence:
 
 ```
 Broadcasting participant keys
@@ -106,6 +120,20 @@ Waiting for other participants to send their round 1 packages
 Broadcasting round 2 packages
 The shared address is: uregtest1...
 ```
+
+`test_frost_ui.py` continues past that into the signing rounds. Participant #2
+coordinates, so the app is a plain signer:
+
+```
+Sending our commitments to the coordinator
+Waiting for the signing package from the coordinator
+Sending our signature share to the coordinator
+Signing completed
+```
+
+It ends by polling the receiver's balance until it reads `0.05000000`, i.e. the
+multisig actually spent — not just UI states. The `flutter test` log for signing
+is `/tmp/frost_ui_flutter.log`.
 
 ## Things that will bite you
 
@@ -130,8 +158,25 @@ The shared address is: uregtest1...
   test waits up to `PEER_COMPLETION_TIMEOUT` (600s) for the peers to finish *after*
   the app is done — without that wait the test fails with "No FROST account for
   participant 2".
-- **Never use `pumpAndSettle`** on the DKG route; the 30s timer and the synchronizer
-  keep frames scheduled so it never settles. Use the `pumpUntil` / `pumpFor` helpers.
+- **Never use `pumpAndSettle`** on the DKG or signing routes; DKGPage3 and
+  FrostPage2 both run a 30s timer and the synchronizer keeps frames scheduled, so
+  the tree never settles. Use the `pumpUntil` / `pumpFor` helpers.
+- **Leave the DKG page with `go`, not `push`.** DKGPage3 cancels its timer only in
+  `dispose`, so a page left mounted keeps calling `doDkg` and throws
+  `get_funding_account: no rows` as soon as the selected account moves to the
+  FROST account. This is why the signing test does `appRouter.go("/accounts")`
+  after the DKG finishes.
+- **A PCZT must be byte-identical for every signer**, and it crosses the
+  app/zkool_graphql boundary in the signing test. That only works because both
+  now use bincode `standard()` — the app used `legacy()` until
+  `fix(pay): serialize PCZTs with bincode standard() for interop`. If a signing
+  test starts failing at `unpackTransaction`, check that first.
+- **FrostPage1 reads `frostParams` off the *current* account**, so the FROST
+  account has to be selected (`coinContext.setAccount` plus
+  `selectedAccountIdProvider`) before navigating to `/frost1`, and the PCZT is
+  passed as the route `extra`.
+- **FrostPage2 renders its status in a plain `Text`**, not the `CopyableText`
+  DKGPage3 uses, so the two tests read the status differently.
 
 ## Screen-recording the run (macOS)
 
@@ -169,7 +214,7 @@ git checkout misc/zebra.toml     # drops the local miner_address edit
 
 ## CI
 
-`.github/workflows/wallet.yml` runs on `ubuntu-latest` and does not include this
+`.github/workflows/wallet.yml` runs on `ubuntu-latest` and includes neither
 test. Porting it needs a desktop Flutter build plus a display (`-d linux` under
 `xvfb-run`, GTK dev packages) on top of the existing regtest stack.
 `app_documents_dir()` and `flutter_device()` in `tests/tests/dkg.py` are already
