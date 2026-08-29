@@ -1,5 +1,14 @@
 # Changelog
 
+## [6.29.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.29.0-rc.2...zkool-v6.29.0-rc.3) (2026-08-29)
+
+
+### Bug Fixes
+
+* **frost:** lock spent notes at broadcast to stop duplicate-nullifier double-spends ([e0a7d45](https://github.com/hhanh00/zkool2/commit/e0a7d4572d3f27bfd1770302dedcf05a17a3ccef))
+* **frost:** sync inside doDkg/doSign and hold off autosync ([4c63724](https://github.com/hhanh00/zkool2/commit/4c6372433a83593d77392aac22fd83d7eb0074fd))
+* **sync:** guard fetch_tx_details with the SYNCING lock ([03a73a8](https://github.com/hhanh00/zkool2/commit/03a73a86a901b13f9c10345307b0a7ba57e06d40))
+
 ## [6.29.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.29.0-rc.1...zkool-v6.29.0-rc.2) (2026-08-28)
 
 
