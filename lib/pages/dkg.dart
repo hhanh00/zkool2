@@ -14,7 +14,6 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
-import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/validators.dart';
 
 Widget buildDKGPage(
@@ -410,12 +409,13 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
         onError: (Object e) async {
           final exc = e as AnyhowException;
           if (!context.mounted) return;
-          await showException(context, exc.message);
+          // Transient: the 30s timer retries, so warn instead of a modal error.
+          showWarningSnackbar(exc.message);
         },
       );
     } on AnyhowException catch (e) {
       if (!context.mounted) return;
-      await showException(context, e.message);
+      showWarningSnackbar(e.message);
     }
   }
 

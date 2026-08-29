@@ -15,7 +15,6 @@ import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
-import 'package:zkool/widgets/error_display.dart';
 
 class FrostPage1 extends ConsumerStatefulWidget {
   final PcztPackage pczt;
@@ -292,12 +291,13 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
         onError: (e) async {
           final exc = e as AnyhowException;
           if (!context.mounted) return;
-          await showException(context, exc.message);
+          // Transient: the 30s timer retries, so warn instead of a modal error.
+          showWarningSnackbar(exc.message);
         },
       );
     } on AnyhowException catch (e) {
       if (!context.mounted) return;
-      await showException(context, e.message);
+      showWarningSnackbar(e.message);
     }
   }
 }

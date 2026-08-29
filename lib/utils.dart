@@ -301,6 +301,76 @@ void showSnackbar(String message) => ScaffoldMessenger.of(navigatorKey.currentCo
       ),
     );
 
+/// Condense an anyhow error's Debug output — what flutter_rust_bridge stores in
+/// [AnyhowException.message] — into a single informative line. anyhow formats as:
+///
+///     <top context>
+///
+///     Caused by:
+///         <cause>            // or "0: ..", "1: .." when there are several
+///
+///     Stack backtrace:       // dropped: too noisy for a warning
+///         0: ..
+///
+/// Returns the context chain joined by ": ", e.g.
+/// "plan_transaction in DKG publish: No feasible note selection found", so the
+/// warning shows both where it failed and why — without the backtrace frames.
+String compactAnyhowError(String message) {
+  final lines = message.split('\n');
+  final parts = <String>[];
+  if (lines.isNotEmpty && lines.first.trim().isNotEmpty) {
+    parts.add(lines.first.trim());
+  }
+  final numbered = RegExp(r'^\s*\d+:\s+(.*)$');
+  var inCauses = false;
+  for (final line in lines.skip(1)) {
+    final trimmed = line.trim();
+    if (trimmed.toLowerCase().startsWith('stack backtrace')) break;
+    if (trimmed.toLowerCase().startsWith('caused by')) {
+      inCauses = true;
+      continue;
+    }
+    if (trimmed.isEmpty) {
+      inCauses = false; // a blank line ends the "Caused by" block
+      continue;
+    }
+    if (inCauses) {
+      final m = numbered.firstMatch(line);
+      parts.add(m != null ? m.group(1)!.trim() : trimmed);
+    }
+  }
+  return parts.join(': ');
+}
+
+/// Show a transient warning in a snackbar. Used for errors we recover from
+/// automatically — e.g. a DKG or signing round that will retry on the next
+/// tick — so they should not interrupt with a modal error dialog. Shows the
+/// error's context chain (via [compactAnyhowError]), not the backtrace.
+void showWarningSnackbar(String message) {
+  final text = compactAnyhowError(message);
+  logger.i("[warn] $text");
+  final context = navigatorKey.currentContext!;
+  final scheme = Theme.of(context).colorScheme;
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(
+      behavior: SnackBarBehavior.floating,
+      backgroundColor: scheme.tertiaryContainer,
+      content: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, color: scheme.onTertiaryContainer),
+          const Gap(8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(color: scheme.onTertiaryContainer),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 Future<bool> confirmDialog(BuildContext context, {required String title, required String message, Widget? body}) async {
   final confirmed = await AwesomeDialog(
         context: context,
