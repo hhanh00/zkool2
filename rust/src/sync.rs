@@ -454,6 +454,12 @@ pub(crate) async fn transparent_sync(
                                     .bind(account)
                                     .execute(&mut *db_tx)
                                     .await?;
+                                    // Release any broadcast-time lock now that the
+                                    // spend is mined (noop if it was not locked).
+                                    sqlx::query("UPDATE notes SET locked = FALSE WHERE id_note = ?")
+                                        .bind(id)
+                                        .execute(&mut *db_tx)
+                                        .await?;
                                 }
                             }
 
@@ -983,6 +989,13 @@ async fn handle_message(
             .bind(&utxo.txid)
             .execute(&mut **db_tx)
             .await?;
+            // Release any broadcast-time lock now that the spend is mined
+            // (noop if it was not locked).
+            sqlx::query("UPDATE notes SET locked = FALSE WHERE account = ?1 AND cmx = ?2")
+                .bind(utxo.account)
+                .bind(&utxo.cmx)
+                .execute(&mut **db_tx)
+                .await?;
             debug!("Processing Spend: {:?}", &utxo);
             assert_eq!(r.rows_affected(), 1);
         }

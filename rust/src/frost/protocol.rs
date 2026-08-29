@@ -558,6 +558,9 @@ pub async fn publish(
     if hex::decode(&result).is_err() {
         anyhow::bail!(result);
     }
+    // Lock the funding notes this broadcast spent so the next round does not
+    // re-select them before the spend is mined and synced (duplicate nullifier).
+    crate::pay::lock_spent_notes(connection, account, &txb).await?;
     Ok(result)
 }
 

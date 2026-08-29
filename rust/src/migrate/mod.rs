@@ -340,6 +340,7 @@ pub async fn step(
             let pczt = sign_transaction(&mut *connection, account, network, &pczt).await?;
             let tx_bytes = extract_transaction(&pczt).await?;
             let _txid = send(client, height, &tx_bytes).await?;
+            crate::pay::lock_spent_notes(&mut *connection, account, &tx_bytes).await?;
 
             return Ok(MigrationEvent::SplitComplete { fee });
         }
@@ -432,6 +433,7 @@ pub async fn step(
         let pczt = sign_transaction(&mut *connection, account, network, &pczt).await?;
         let tx_bytes = extract_transaction(&pczt).await?;
         let _txid = send(client, height, &tx_bytes).await?;
+        crate::pay::lock_spent_notes(&mut *connection, account, &tx_bytes).await?;
 
         return Ok(MigrationEvent::MigrateComplete { fee });
     }
