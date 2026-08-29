@@ -740,6 +740,8 @@ pub async fn do_sign_impl(
         status.send(SigningStatus::SendingTransaction).await;
         let txid = send(client, height, &tx_bytes).await?;
         info!("Transaction sent: {}", txid);
+        // Lock the shared-account notes this spend consumed until it is mined.
+        crate::pay::lock_spent_notes(connection, account, &tx_bytes).await?;
         status.send(SigningStatus::TransactionSent(txid)).await;
     }
 

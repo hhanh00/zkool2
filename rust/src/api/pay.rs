@@ -142,6 +142,8 @@ pub async fn broadcast_transaction(height: u32, tx_bytes: &[u8], c: &Coin) -> Re
     let mut client = c.client().await?;
 
     let tx = crate::pay::send(&mut client, height, tx_bytes).await?;
+    let mut connection = c.get_connection().await?;
+    crate::pay::lock_spent_notes(&mut connection, c.account, tx_bytes).await?;
     Ok(tx)
 }
 
@@ -155,6 +157,8 @@ pub async fn send(height: u32, data: &[u8], c: &Coin) -> Result<String> {
     let mut client = c.client().await?;
 
     let tx = crate::pay::send(&mut client, height, data).await?;
+    let mut connection = c.get_connection().await?;
+    crate::pay::lock_spent_notes(&mut connection, c.account, data).await?;
     Ok(tx)
 }
 
