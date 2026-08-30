@@ -1,11 +1,12 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:zkool/main.dart' show logger;
+import 'package:zkool/main.dart' show appKey, logger;
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/migrate.dart';
 import 'package:zkool/store.dart';
@@ -118,9 +119,42 @@ class _MigratePageState extends State<MigratePage> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
   }
 
-  void _startMigration() {
+  /// Migration does not synchronize. It observes the checkpoint the wallet's
+  /// autosync advances, and can only build the Orchard→Ironwood transaction
+  /// once that checkpoint lands on a shared anchor block. With autosync off,
+  /// or the wallet offline, the checkpoint never moves and the migration would
+  /// wait indefinitely — so say why instead of starting.
+  Future<String?> _syncPrerequisiteError() async {
+    final scope = ProviderScope.containerOf(appKey.currentContext!);
+    final settings = await scope.read(appSettingsProvider.future);
+
+    if (settings.offline) {
+      return "Migration needs the wallet online. It waits for automatic "
+          "synchronization to reach a shared anchor block, and does not "
+          "synchronize by itself.\n\nTurn off Offline mode in Settings and "
+          "try again.";
+    }
+    if ((int.tryParse(settings.syncInterval) ?? 0) <= 0) {
+      return "Migration needs automatic synchronization enabled. It waits for "
+          "the wallet to sync to a shared anchor block, and does not "
+          "synchronize by itself.\n\nSet a sync interval in Settings and try "
+          "again.";
+    }
+    return null;
+  }
+
+  Future<void> _startMigration() async {
+    final prerequisite = await _syncPrerequisiteError();
+    if (prerequisite != null) {
+      if (!mounted) return;
+      setState(() => _started = false);
+      await showException(context, prerequisite);
+      return;
+    }
+    if (!mounted) return;
+
     try {
-      _sub?.cancel();
+      await _sub?.cancel();
       final meanDelayMs = BigInt.from(_speedMeanMs[_speedIndex.round()]);
       final stream = _runCancellableMigration(meanDelayMs: meanDelayMs);
       _sub = stream.listen(
@@ -168,7 +202,7 @@ class _MigratePageState extends State<MigratePage> with WidgetsBindingObserver {
         },
       );
     } on AnyhowException catch (e) {
-      if (!context.mounted) return;
+      if (!mounted) return;
       unawaited(showException(context, e.message));
     }
   }
@@ -380,7 +414,7 @@ class _MigratePageState extends State<MigratePage> with WidgetsBindingObserver {
                                   child: FilledButton.icon(
                                     onPressed: () {
                                       setState(() => _started = true);
-                                      _startMigration();
+                                      unawaited(_startMigration());
                                     },
                                     icon: const Icon(Icons.play_arrow),
                                     label: const Text("Start Migration"),
