@@ -25,7 +25,7 @@ use sapling_crypto::PaymentAddress;
 use secp256k1::{PublicKey, SecretKey};
 use sha2::{Digest as _, Sha256};
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
-use tracing::{event, info, span, Level};
+use tracing::{debug, event, info, span, Level};
 use zcash_address::{unified::Receiver, ConversionError, TryFromAddress, ZcashAddress};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_note_encryption::Domain;
@@ -1398,7 +1398,9 @@ pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
             tx.write(&mut tx_bytes).unwrap();
             info!("Tx Extracted");
             span.in_scope(|| {
-                info!("TX HEX: {}", hex::encode(&tx_bytes));
+                // Multi-kilobyte; only wanted when inspecting a specific
+                // transaction, and it drowns out everything else in a log.
+                debug!("TX HEX: {}", hex::encode(&tx_bytes));
                 info!("Tx Ready - {} bytes", tx_bytes.len());
             });
             return Ok(tx_bytes);
