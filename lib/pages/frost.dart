@@ -187,30 +187,47 @@ class FrostPage2 extends ConsumerStatefulWidget {
 
 class FrostPage2State extends ConsumerState<FrostPage2> {
   late final c = coinContext.coin;
-  late final SynchronizerNotifier _synchronizer;
+  // Held in a field because `ref` is unsafe to use once the widget is disposed.
+  late final SynchronizerNotifier _synchronizer =
+      ref.read(synchronizerProvider.notifier);
   String message = "";
-  Timer? timer;
+  StreamSubscription<int>? _heightSub;
+  int? _lastStepHeight;
+  // Guards against overlapping passes: a slow sync+step must finish before the
+  // next block starts another, or two `doSign` runs would each spend the same
+  // funding note and double-spend.
+  bool _stepping = false;
   int currentIndex = 0;
   bool finished = false;
 
   @override
   void initState() {
     super.initState();
-    // doSign syncs the accounts it needs; keep autosync off the same database
-    // while the rounds run. The notifier is held in a field because `ref` is
-    // unsafe to use from dispose().
-    _synchronizer = ref.read(synchronizerProvider.notifier);
-    _synchronizer.frostInProgress = true;
-    runFrost();
-    timer = Timer.periodic(Duration(seconds: 30), (_) async {
-      runFrost();
+    // `doSign` no longer syncs itself; it steps against what is already synced.
+    // Drive the wallet's synchronizer once per block and then step: the
+    // block-height stream delivers the current tip on subscribe (kicking off
+    // the first round) and then only on changes. A message waiting for its
+    // change to confirm defers to the next block, so `_lastStepHeight` guards
+    // against stepping the same height twice.
+    _heightSub = blockHeightService.heights.listen((height) async {
+      if (_stepping || _lastStepHeight == height) return;
+      _stepping = true;
+      _lastStepHeight = height;
+      try {
+        // Force a sync of the funding and internal frost accounts (which stores
+        // the incoming message memos), then step against the fresh state.
+        await _synchronizer.syncIfNeeded(height, now: true);
+        if (!mounted) return;
+        await runFrost();
+      } finally {
+        _stepping = false;
+      }
     });
   }
 
   @override
   void dispose() {
-    timer?.cancel();
-    _synchronizer.frostInProgress = false;
+    unawaited(_heightSub?.cancel());
     super.dispose();
   }
 
@@ -226,77 +243,80 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
     );
   }
 
-  void runFrost() async {
+  Future<void> runFrost() async {
     try {
       await ref.read(currentHeightProvider.notifier).fetch();
 
-      // No startSynchronize here: doSign syncs the accounts it needs itself.
-      final status = doSign(c: c);
-      status.listen(
-        (s) {
-          if (s is SigningStatus_WaitingForCommitments) {
-            setState(() {
-              message = "Waiting for other participants to send their commitments";
-              currentIndex = 1; // coordinator
-            });
-          } else if (s is SigningStatus_SendingCommitment) {
-            setState(() {
-              message = "Sending our commitments to the coordinator";
-              currentIndex = 1; // other
-            });
-          } else if (s is SigningStatus_SendingSigningPackage) {
-            setState(() {
-              message = "Broadcasting the signing package to all participants";
-              currentIndex = 2; // coordinator
-            });
-          } else if (s is SigningStatus_WaitingForSigningPackage) {
-            setState(() {
-              message = "Waiting for the signing package from the coordinator";
-              currentIndex = 2; // other
-            });
-          } else if (s is SigningStatus_SendingSignatureShare) {
-            setState(() {
-              message = "Sending our signature share to the coordinator";
-              currentIndex = 3; // other
-            });
-          } else if (s is SigningStatus_SigningCompleted) {
-            setState(() {
-              message = "Signing completed";
-              currentIndex = 3; // other
-              finished = true;
-            });
-          } else if (s is SigningStatus_WaitingForSignatureShares) {
-            setState(() {
-              message = "Waiting for the signature share from the other participants";
-              currentIndex = 2; // coordinator
-            });
-          } else if (s is SigningStatus_PreparingTransaction) {
-            setState(() {
-              message = "Assembling the transaction";
-              currentIndex = 3; // coordinator
-            });
-          } else if (s is SigningStatus_SendingTransaction) {
-            setState(() {
-              message = "Sending the transaction to the network";
-              currentIndex = 3; // coordinator
-            });
-          } else if (s is SigningStatus_TransactionSent) {
-            setState(() {
-              message = "TX ID: ${s.field0}";
-              currentIndex = 3; // coordinator
-              finished = true;
-            });
-          }
-        },
-        onError: (e) async {
-          final exc = e as AnyhowException;
-          if (!context.mounted) return;
-          // Transient: the 30s timer retries, so warn instead of a modal error.
-          showWarningSnackbar(exc.message);
-        },
-      );
+      // No startSynchronize here: the block-height handler syncs first, and
+      // doSign steps against what is already synced. Await the stream to
+      // completion so the handler serializes passes — overlapping doSign runs
+      // would each spend the same funding note and double-spend.
+      await for (final s in doSign(c: c)) {
+        if (!mounted) return;
+        if (s is SigningStatus_WaitingForCommitments) {
+          setState(() {
+            message = "Waiting for other participants to send their commitments";
+            currentIndex = 1; // coordinator
+          });
+        } else if (s is SigningStatus_SendingCommitment) {
+          setState(() {
+            message = "Sending our commitments to the coordinator";
+            currentIndex = 1; // other
+          });
+        } else if (s is SigningStatus_SendingSigningPackage) {
+          setState(() {
+            message = "Broadcasting the signing package to all participants";
+            currentIndex = 2; // coordinator
+          });
+        } else if (s is SigningStatus_WaitingForSigningPackage) {
+          setState(() {
+            message = "Waiting for the signing package from the coordinator";
+            currentIndex = 2; // other
+          });
+        } else if (s is SigningStatus_SendingSignatureShare) {
+          setState(() {
+            message = "Sending our signature share to the coordinator";
+            currentIndex = 3; // other
+          });
+        } else if (s is SigningStatus_SigningCompleted) {
+          setState(() {
+            message = "Signing completed";
+            currentIndex = 3; // other
+            finished = true;
+          });
+        } else if (s is SigningStatus_WaitingForSignatureShares) {
+          setState(() {
+            message = "Waiting for the signature share from the other participants";
+            currentIndex = 2; // coordinator
+          });
+        } else if (s is SigningStatus_PreparingTransaction) {
+          setState(() {
+            message = "Assembling the transaction";
+            currentIndex = 3; // coordinator
+          });
+        } else if (s is SigningStatus_SendingTransaction) {
+          setState(() {
+            message = "Sending the transaction to the network";
+            currentIndex = 3; // coordinator
+          });
+        } else if (s is SigningStatus_TransactionSent) {
+          setState(() {
+            message = "TX ID: ${s.field0}";
+            currentIndex = 3; // coordinator
+            finished = true;
+          });
+        } else if (s is SigningStatus_WaitingForFunds) {
+          // The previous message's change is not mined yet, so this one has
+          // nothing to spend. The next block retries; surface it as a warning
+          // rather than failing.
+          showWarningSnackbar(
+            "Waiting for the previous message's change to be confirmed…",
+          );
+        }
+      }
     } on AnyhowException catch (e) {
       if (!context.mounted) return;
+      // Transient: the next block retries, so warn instead of a modal error.
       showWarningSnackbar(e.message);
     }
   }

@@ -15,7 +15,7 @@ use reddsa::frost::redpallas::{
     keys::dkg::{round1, round2},
     Identifier, PallasBlake2b512, Randomizer,
 };
-use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
+use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::info;
 use zcash_keys::address::UnifiedAddress;
 use zcash_protocol::memo::Memo;
@@ -311,9 +311,6 @@ pub trait Round {
     /// 4-byte memo prefix that identifies messages for this round.
     const PREFIX: [u8; 4];
 
-    /// Minimum number of peer packages required to advance.
-    fn threshold(n: u8, t: u8) -> usize;
-
     /// Pure: given the previous round's output, compute our secret and
     /// the outgoing package(s).
     fn produce(input: &Self::Input) -> Result<(Self::Secret, Self::Outgoing)>;
@@ -355,11 +352,14 @@ pub trait Round {
     ) -> Result<Vec<(u8, Self::Public)>>;
 }
 
-// ── Generic round engine ─────────────────────────────────────────────────────
+// ── Memo ingest ──────────────────────────────────────────────────────────────
 
 /// Decode memos from `mailbox_account`, filter by `R::PREFIX`, deserialize
 /// each as a `FrostMessage`, and store the public package via `R::store_public`.
-async fn decode_dkg_memos<R: Round>(
+///
+/// Idempotent: `dkg_peers`' primary key `(account, round, from_id)` dedups,
+/// so re-ingesting the same memos is a no-op.
+pub async fn decode_dkg_memos<R: Round>(
     conn: &mut SqliteConnection,
     account: u32,
     mailbox_account: u32,
@@ -388,77 +388,6 @@ async fn decode_dkg_memos<R: Round>(
         }
     }
     Ok(())
-}
-
-/// Drive one round of a FROST protocol.
-///
-/// 1. Decodes incoming memos from `mailbox_account` and stores peer packages.
-/// 2. If our own secret is not yet produced, calls `R::produce`, stores the
-///    secret, and publishes outgoing packages to the network (in a DB tx).
-/// 3. Checks whether enough peer packages have arrived (`R::threshold`).
-/// 4. If ready, assembles and returns `R::Output` via `R::collect`.
-///    Returns `None` when still waiting for peer messages.
-#[allow(clippy::too_many_arguments)]
-pub async fn run_round<R: Round>(
-    conn: &mut SqliteConnection,
-    account: u32,
-    n: u8,
-    t: u8,
-    self_id: u8,
-    funding_account: u32,
-    mailbox_account: u32,
-    input: R::Input,
-    route_ctx: &RouteCtx,
-    network: &Network,
-    client: &mut Client,
-    height: u32,
-) -> Result<Option<R::Output>> {
-    // 1. Decode incoming peer packages from memos
-    decode_dkg_memos::<R>(conn, account, mailbox_account).await?;
-
-    // 2. Produce our own secret + outgoing packages if not yet done
-    if R::load_secret(conn, account).await?.is_none() {
-        let (secret, outgoing) =
-            R::produce(&input).context(format!("Round produce failed for account {}", account))?;
-        let recipients_raw = outgoing.into_recipients(route_ctx)?;
-
-        let mut tx = conn.begin().await?;
-        R::store_secret(&mut *tx, account, &secret).await?;
-        if !recipients_raw.is_empty() {
-            let recipients: Vec<(String, Vec<u8>)> = recipients_raw
-                .into_iter()
-                .map(|(addr, data)| {
-                    let msg = FrostMessage {
-                        from_id: self_id,
-                        data,
-                    };
-                    let bytes = msg.encode_with_prefix(&R::PREFIX)?;
-                    Ok((addr, bytes))
-                })
-                .collect::<Result<_>>()?;
-            let refs: Vec<(&str, Vec<u8>)> = recipients
-                .iter()
-                .map(|(a, d)| (a.as_str(), d.clone()))
-                .collect();
-            publish(network, &mut *tx, funding_account, client, height, &refs).await?;
-        }
-        tx.commit().await?;
-    }
-
-    // 3. Check if enough peer packages have arrived
-    let peers = R::load_publics(conn, account).await?;
-    // Filter out our own package, then check threshold (accounting that we have our own package)
-    let peer_count = peers.iter().filter(|(id, _)| *id != self_id).count();
-    if peer_count + 1 < R::threshold(n, t) {
-        // +1 for our own package
-        return Ok(None);
-    }
-
-    // 4. Collect and advance to the next round
-    let secret = R::load_secret(conn, account).await?.unwrap();
-    R::collect(input, secret, peers)
-        .context(format!("Round collect failed for account {}", account))
-        .map(Some)
 }
 
 /// Wire message used during DKG rounds.
@@ -660,6 +589,61 @@ pub async fn get_mailbox_account(
     Ok((account, mailbox_address))
 }
 
+/// Seed of the shared broadcast account: a deterministic function of the
+/// participant addresses, so every participant derives the same account.
+fn broadcast_seed(addresses: &[String]) -> String {
+    let mut state = blake2b_simd::Params::new()
+        .hash_length(32)
+        .personal(b"Zcash__FROST_DKG")
+        .to_state();
+    for a in addresses.iter() {
+        state.update(a.as_bytes());
+    }
+    let hash = state.finalize();
+    let m = Mnemonic::from_entropy(hash.as_ref()).expect("Failed to create mnemonic from hash");
+    m.to_string()
+}
+
+/// Look up the shared broadcast account without creating it. Returns the
+/// account id and its encoded unified address, or `None` when the account
+/// does not exist or any participant address is still missing.
+pub async fn lookup_broadcast_account(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Option<(u32, String)>> {
+    let addresses = sqlx::query_as::<_, (String,)>(
+        "SELECT address FROM dkg_addresses WHERE account = ?1 ORDER BY from_id",
+    )
+    .bind(account)
+    .fetch_all(&mut *connection)
+    .await?;
+    let addresses = addresses.into_iter().map(|row| row.0).collect::<Vec<_>>();
+    if addresses.iter().any(|a| a.is_empty()) {
+        return Ok(None);
+    }
+    let seed = broadcast_seed(&addresses);
+
+    let r = sqlx::query_as::<_, (u32, Vec<u8>)>(
+        "SELECT a.id_account, o.xvk FROM accounts a
+        JOIN orchard_accounts o ON a.id_account = o.account
+        WHERE seed = ?1",
+    )
+    .bind(&seed)
+    .fetch_optional(&mut *connection)
+    .await?;
+    match r {
+        None => Ok(None),
+        Some((account, xvk)) => {
+            let fvk = FullViewingKey::from_bytes(&xvk.try_into().unwrap())
+                .expect("Failed to create shared FVK");
+            let address = fvk.address_at(0u64, Scope::External);
+            let ua = UnifiedAddress::from_receivers(Some(address), None, None).unwrap();
+            Ok(Some((account, ua.encode(network))))
+        }
+    }
+}
+
 /// Get (and create if needed) the shared broadcast address for
 /// communication between all participants in the group.
 /// It is derived from the hash of the participant private mailbox addresses.
@@ -677,17 +661,7 @@ pub async fn get_coordinator_broadcast_account(
     .fetch_all(&mut *connection)
     .await?;
     let addresses = addresses.into_iter().map(|row| row.0).collect::<Vec<_>>();
-
-    let mut state = blake2b_simd::Params::new()
-        .hash_length(32)
-        .personal(b"Zcash__FROST_DKG")
-        .to_state();
-    for a in addresses.iter() {
-        state.update(a.as_bytes());
-    }
-    let hash = state.finalize();
-    let m = Mnemonic::from_entropy(hash.as_ref()).expect("Failed to create mnemonic from hash");
-    let seed = m.to_string();
+    let seed = broadcast_seed(&addresses);
 
     let (account, broadcast_address) = loop {
         // Check if the account already exists

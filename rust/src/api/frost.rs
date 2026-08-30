@@ -8,8 +8,11 @@ use sqlx::{query, sqlite::SqliteRow, Row, SqliteConnection};
 
 use crate::{
     api::coin::Coin,
-    frost::dkg::{get_dkg_params, get_mailbox_account},
+    frost::dkg::{
+        get_dkg_params, get_mailbox_account, task::DkgTask,
+    },
     sync::{synchronize_impl, DEFAULT_ACTIONS_PER_SYNC},
+    Sink,
 };
 use std::str::FromStr;
 
@@ -78,28 +81,87 @@ pub async fn has_dkg_addresses(c: &Coin) -> Result<bool> {
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
-/// Advance the DKG by one step, syncing first.
+/// Advance the DKG by one pass. Does **not** synchronize.
 ///
-/// The sync is done here rather than by the caller so the rounds can never run
-/// on stale notes. The UI used to sync separately before calling this, and that
-/// sync spawned an unawaited `fetch_tx_details` which raced the rounds — see
-/// `api::sync::fetch_tx_details`. This mirrors the headless path, where
-/// `graphql::frost::new_block` syncs and then calls `do_dkg_impl`.
+/// Like the note migration, the DKG depends on the wallet's autosync to advance
+/// the funding and internal frost accounts; the step runs against whatever is
+/// already synced. Syncing was moved out because it must not race the rounds and
+/// autosync already drives the chain forward — the caller retries this on each
+/// new block (`lib/pages/dkg.dart`), and the headless server steps from
+/// `graphql::frost::new_block`, which syncs first.
+///
+/// Each pass executes every effect the planner names until it hits a wait —
+/// one precondition-checked effect at a time. Statuses arrive after the pass,
+/// one per executed task plus the wait it stopped on. A publish that cannot be
+/// funded yet (previous round's change not mined) ends the pass with a
+/// [`DKGStatus::WaitingForFunds`] warning rather than an error.
 pub async fn do_dkg(status: StreamSink<DKGStatus>, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
+    // A completed or cancelled DKG must stay silent: the retry keeps firing
+    // after SharedAddress until the page is closed.
+    if !crate::frost::dkg::in_dkg(&mut connection).await? {
+        return Ok(());
+    }
     let mut client = c.client().await?;
     let height = client.latest_height().await?;
     let account = get_funding_account(&mut connection).await?;
 
-    // The funding account pays for the memos; the internal frost-* accounts are
-    // the mailbox and broadcast addresses the packages arrive on.
+    let outcome =
+        crate::frost::dkg::step::dkg_step(&c.network(), &mut connection, &mut client, height, account)
+            .await?;
+    for task in &outcome.executed {
+        if let Some(s) = dkg_status_for(task) {
+            status.send(s).await;
+        }
+    }
+    if outcome.waiting_for_funds {
+        status.send(DKGStatus::WaitingForFunds).await;
+    }
+    if let Some(shared_address) = outcome.shared_address {
+        status.send(DKGStatus::SharedAddress(shared_address)).await;
+    }
+    Ok(())
+}
+
+/// Map a task to the UI status it corresponds to. Publishes and waits map to
+/// their round's variants; the three finalize stages all share `Finalize`.
+fn dkg_status_for(task: &DkgTask) -> Option<DKGStatus> {
+    match task {
+        DkgTask::PublishRound { round: 0 } => Some(DKGStatus::PublishRound0Pkg),
+        DkgTask::PublishRound { round: 1 } => Some(DKGStatus::PublishRound1Pkg),
+        DkgTask::PublishRound { round: 2 } => Some(DKGStatus::PublishRound2Pkg),
+        DkgTask::WaitRound { round: 0 } => Some(DKGStatus::WaitRound0Pkg),
+        DkgTask::WaitRound { round: 1 } => Some(DKGStatus::WaitRound1Pkg),
+        DkgTask::WaitRound { round: 2 } => Some(DKGStatus::WaitRound2Pkg),
+        DkgTask::FinalizeKey | DkgTask::CreateFrostAccount | DkgTask::CompleteFinalize => {
+            Some(DKGStatus::Finalize)
+        }
+        _ => None,
+    }
+}
+
+/// Sync the funding account plus the internal frost-* accounts — the mailbox
+/// and broadcast addresses the protocol messages arrive on. The funding
+/// account pays for the memos. Returns the post-sync height.
+///
+/// `pub(crate)`, not `pub`: it takes a `&mut SqliteConnection` that cannot cross
+/// the flutter_rust_bridge boundary, and only the headless GraphQL server
+/// (`graphql::frost`) drives it — the app relies on its autosync instead. Hence
+/// it is unused (dead) in a flutter-only build.
+#[cfg_attr(not(feature = "graphql"), allow(dead_code))]
+pub(crate) async fn sync_frost_accounts(
+    c: &Coin,
+    connection: &mut SqliteConnection,
+    account: u32,
+    height: u32,
+) -> Result<u32> {
     let mut accounts =
         query("SELECT id_account FROM accounts WHERE name LIKE 'frost-%' AND internal = 1")
             .map(|r: SqliteRow| r.get::<u32, _>(0))
             .fetch_all(&mut *connection)
             .await?;
     accounts.push(account);
-    let height = synchronize_impl(
+    synchronize_impl(
         (),
         accounts,
         height,
@@ -109,21 +171,7 @@ pub async fn do_dkg(status: StreamSink<DKGStatus>, c: &Coin) -> Result<()> {
         false,
         c,
     )
-    .await?;
-
-    let r = crate::frost::dkg::do_dkg(
-        &c.network(),
-        &mut connection,
-        account,
-        &mut client,
-        height,
-        status.clone(),
-    )
-    .await;
-    if let Err(e) = r {
-        let _ = status.add_error(e);
-    }
-    Ok(())
+    .await
 }
 
 pub async fn get_dkg_addresses(c: &Coin) -> Result<Vec<String>> {
@@ -178,6 +226,10 @@ pub enum DKGStatus {
     WaitRound1Pkg,
     PublishRound2Pkg,
     WaitRound2Pkg,
+    /// A round's package could not be funded yet: the note spent for the
+    /// previous round is locked and its change is not mined. Transient — the
+    /// next block retries. Shown as an info/warning, not an error.
+    WaitingForFunds,
     Finalize,
     SharedAddress(String),
 }
@@ -214,34 +266,17 @@ pub async fn is_signing_in_progress(c: &Coin) -> Result<bool> {
 
 #[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
-/// Advance the signing rounds by one step, syncing first.
+/// Advance the signing rounds by one step. Does **not** synchronize.
 ///
-/// Syncs here for the same reason as [`do_dkg`]: the rounds must not run on
-/// stale notes, and a caller-side sync spawns an unawaited `fetch_tx_details`
-/// that races them.
+/// Like [`do_dkg`], signing depends on the wallet's autosync to advance the
+/// funding and internal frost accounts; the step runs against what is already
+/// synced and the caller retries on each new block. A signing message that
+/// cannot be funded yet ends the step with a [`SigningStatus::WaitingForFunds`]
+/// warning rather than an error.
 pub async fn do_sign(status: StreamSink<SigningStatus>, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
     let height = client.latest_height().await?;
-
-    let account = get_funding_account(&mut connection).await?;
-    let mut accounts =
-        query("SELECT id_account FROM accounts WHERE name LIKE 'frost-%' AND internal = 1")
-            .map(|r: SqliteRow| r.get::<u32, _>(0))
-            .fetch_all(&mut *connection)
-            .await?;
-    accounts.push(account);
-    let height = synchronize_impl(
-        (),
-        accounts,
-        height,
-        DEFAULT_ACTIONS_PER_SYNC,
-        1,
-        100,
-        false,
-        c,
-    )
-    .await?;
 
     let r = crate::frost::sign::do_sign(
         &c.network(),
@@ -274,6 +309,9 @@ pub enum SigningStatus {
     SendingSignatureShare,
     SigningCompleted,
     WaitingForSignatureShares,
+    /// A signing message could not be funded yet (previous broadcast's change
+    /// not mined). Transient — the next block retries. Info/warning, not error.
+    WaitingForFunds,
     PreparingTransaction,
     SendingTransaction,
     TransactionSent(String),

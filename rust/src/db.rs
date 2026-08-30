@@ -568,6 +568,14 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .execute(&mut *connection)
     .await?;
 
+    // DKG publish intent: the outgoing package(s) of the round being
+    // published, staged before the broadcast and cleared after it. NULL means
+    // nothing pending (or already sent under an older build). Added without a
+    // DB_VERSION bump: nullable, only read by new code, older builds ignore it.
+    let _ = sqlx::query("ALTER TABLE dkg_state ADD COLUMN pending_publish BLOB")
+        .execute(&mut *connection)
+        .await;
+
     let version = get_prop(connection, "version").await?;
     match version {
         Some(version) if version.parse::<u16>()? > DB_VERSION => {

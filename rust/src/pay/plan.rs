@@ -232,6 +232,20 @@ fn decompose_address(
     anyhow::bail!("Unrecognized address pool");
 }
 
+/// Whether `e` (anywhere in its cause chain) is the transient
+/// [`Error::NoFeasibleSelection`] raised by [`plan_transaction`]. The FROST
+/// rounds use this to treat "the change we just spent is not mined yet" as a
+/// wait instead of a hard error; the chain is walked so wrapping the error in
+/// `.context(..)` does not hide it.
+pub fn is_no_feasible_selection(e: &anyhow::Error) -> bool {
+    e.chain().any(|c| {
+        matches!(
+            c.downcast_ref::<crate::pay::error::Error>(),
+            Some(crate::pay::error::Error::NoFeasibleSelection)
+        )
+    })
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn plan_transaction(
     network: &Network,
@@ -493,7 +507,7 @@ pub async fn plan_transaction(
         recipient_pays_fee,
         recipients.first().map(|r| r.amount).unwrap_or(0),
     )
-    .ok_or_else(|| anyhow!("No feasible note selection found"))?;
+    .ok_or_else(|| anyhow::Error::new(crate::pay::error::Error::NoFeasibleSelection))?;
 
     info!(
         "plan: select_notes succeeded — fee={}, change_pool={}, selected_inputs={}",

@@ -2,32 +2,29 @@ use std::collections::BTreeMap;
 
 use anyhow::{Context, Result};
 use ed25519_dalek::{SigningKey, VerifyingKey, SECRET_KEY_LENGTH};
-use orchard::keys::{FullViewingKey, Scope};
 use rand_core::OsRng;
 use reddsa::frost::redpallas::{
-    frost::keys::{KeyPackage, PublicKeyPackage},
     keys::dkg::{self, round1, round2},
-    keys::EvenY,
     Identifier,
 };
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::info;
-use zcash_keys::address::UnifiedAddress;
 
 use crate::{
-    account::{get_account_seed, get_orchard_vk},
-    api::{
-        coin::Network,
-        frost::{get_funding_account, DKGParams, DKGStatus},
-        sync::SYNCING,
-    },
-    db::{delete_account, init_account_orchard, store_account_metadata, store_account_orchard_vk},
-    frost::{Broadcast, FrostBytes, PerPeer, Round, RouteCtx},
-    Client, Sink,
+    api::{coin::Network, frost::{get_funding_account, DKGParams}},
+    db::delete_account,
+    frost::{Broadcast, FrostBytes, PerPeer, Round},
+    Client,
 };
 
+pub mod exec;
+pub mod plan;
+pub mod state;
+pub mod step;
+pub mod task;
+
 pub use super::protocol::{
-    get_addresses, get_coordinator_broadcast_account, get_mailbox_account, publish, run_round,
+    get_addresses, get_coordinator_broadcast_account, get_mailbox_account, publish,
 };
 
 // ── FrostBytes for ed25519 types ─────────────────────────────────────────────
@@ -74,6 +71,7 @@ impl FrostBytes for VerifyingKey {
 // ── State types ──────────────────────────────────────────────────────────────
 
 /// Seed data for the first DKG round.
+#[derive(Clone, Copy, Debug)]
 pub struct DkgInit {
     pub self_id: u8,
     pub n: u8,
@@ -81,6 +79,7 @@ pub struct DkgInit {
 }
 
 /// State after round 0 completes: our signing keypair + all peers' public keys.
+#[derive(Clone)]
 pub struct DkgState0 {
     pub init: DkgInit,
     pub signing_key: SigningKey,
@@ -89,6 +88,7 @@ pub struct DkgState0 {
 }
 
 /// State after round 1 completes: our secret + all peers' round-1 packages.
+#[derive(Clone)]
 pub struct DkgState1 {
     pub state0: DkgState0,
     pub spkg1: round1::SecretPackage,
@@ -96,6 +96,7 @@ pub struct DkgState1 {
 }
 
 /// State after round 2 completes: carries forward everything needed for part3.
+#[derive(Clone)]
 pub struct DkgState2 {
     pub state1: DkgState1,
     pub spkg2: round2::SecretPackage,
@@ -114,11 +115,6 @@ impl Round for DkgRound0 {
     type Public = VerifyingKey;
 
     const PREFIX: [u8; 4] = *b"DK00";
-
-    /// Need all other participants' public keys.
-    fn threshold(_n: u8, t: u8) -> usize {
-        t as usize
-    }
 
     fn produce(input: &DkgInit) -> Result<(SigningKey, Broadcast<VerifyingKey>)> {
         info!(
@@ -258,11 +254,6 @@ impl Round for DkgRound1 {
 
     const PREFIX: [u8; 4] = *b"DK11";
 
-    /// Need all other participants' packages.
-    fn threshold(_n: u8, t: u8) -> usize {
-        t as usize
-    }
-
     fn produce(input: &DkgState0) -> Result<(round1::SecretPackage, Broadcast<round1::Package>)> {
         info!(
             "DKG: calling dkg::part1 (self_id={}, n={}, t={})",
@@ -370,11 +361,6 @@ impl Round for DkgRound2 {
     type Public = round2::Package;
 
     const PREFIX: [u8; 4] = *b"DK21";
-
-    /// Need all other participants' packages.
-    fn threshold(_n: u8, t: u8) -> usize {
-        t as usize
-    }
 
     fn produce(input: &DkgState1) -> Result<(round2::SecretPackage, PerPeer<round2::Package>)> {
         // part2 takes spkg1 by value — clone since input is borrowed
@@ -624,278 +610,3 @@ pub async fn delete_frost_state(connection: &mut SqliteConnection) -> Result<()>
     Ok(())
 }
 
-// ── Main orchestrator ────────────────────────────────────────────────────────
-
-#[cfg(feature = "flutter")]
-use crate::frb_generated::StreamSink;
-
-#[cfg(feature = "flutter")]
-pub async fn do_dkg(
-    network: &Network,
-    connection: &mut SqliteConnection,
-    account: u32,
-    client: &mut Client,
-    height: u32,
-    status: StreamSink<DKGStatus>,
-) -> Result<()> {
-    do_dkg_impl(network, connection, account, client, height, status).await
-}
-
-pub async fn do_dkg_impl(
-    network: &Network,
-    connection: &mut SqliteConnection,
-    account: u32,
-    client: &mut Client,
-    height: u32,
-    status: impl Sink<DKGStatus>,
-) -> Result<()> {
-    info!("dkg: {account}");
-
-    let guard = SYNCING.try_lock();
-    if guard.is_err() {
-        return Ok(());
-    }
-
-    let DKGParams {
-        id: self_id,
-        n,
-        t,
-        birth_height,
-    } = get_dkg_params(connection, account).await?;
-
-    let (mailbox_account, _) =
-        get_mailbox_account(network, connection, account, self_id, birth_height).await?;
-    let (broadcast_account, broadcast_address) =
-        get_coordinator_broadcast_account(network, connection, account, birth_height).await?;
-
-    let addresses = get_addresses(connection, account, n).await?;
-    let route_ctx = RouteCtx {
-        broadcast_address: broadcast_address.clone(),
-        coordinator_address: broadcast_address.clone(), // unused in DKG
-        peer_addresses: addresses,
-    };
-
-    // ── Round 0: broadcast signing public keys ────────────────────────────────
-    // `run_round` publishes our own package only on the invocation where our
-    // secret does not exist yet, so checking for it first tells us whether this
-    // pass is a broadcast or just a poll for peer packages.
-    let init = DkgInit { self_id, n, t };
-    if <DkgRound0 as Round>::load_secret(connection, account)
-        .await?
-        .is_none()
-    {
-        status.send(DKGStatus::PublishRound0Pkg).await;
-    }
-    let Some(state0) = run_round::<DkgRound0>(
-        connection,
-        account,
-        n,
-        t,
-        self_id,
-        account,           // funding_account
-        broadcast_account, // incoming memos arrive at broadcast
-        init,
-        &route_ctx,
-        network,
-        client,
-        height,
-    )
-    .await?
-    else {
-        status.send(DKGStatus::WaitRound0Pkg).await;
-        return Ok(());
-    };
-    info!(
-        "Round 0 complete - collected {} peer signing keys",
-        state0.peer_verifying_keys.len()
-    );
-
-    // ── Round 1: everyone broadcasts one package to the shared address ────────
-    if <DkgRound1 as Round>::load_secret(connection, account)
-        .await?
-        .is_none()
-    {
-        status.send(DKGStatus::PublishRound1Pkg).await;
-    }
-    let Some(state1) = run_round::<DkgRound1>(
-        connection,
-        account,
-        n,
-        t,
-        self_id,
-        account,           // funding_account
-        broadcast_account, // incoming memos arrive at broadcast
-        state0,
-        &route_ctx,
-        network,
-        client,
-        height,
-    )
-    .await?
-    else {
-        status.send(DKGStatus::WaitRound1Pkg).await;
-        return Ok(());
-    };
-    info!("Round 1 complete");
-
-    // ── Round 2: each sends a unique package to every peer's mailbox ──────────
-    if <DkgRound2 as Round>::load_secret(connection, account)
-        .await?
-        .is_none()
-    {
-        status.send(DKGStatus::PublishRound2Pkg).await;
-    }
-    let Some(state2) = run_round::<DkgRound2>(
-        connection,
-        account,
-        n,
-        t,
-        self_id,
-        account,         // funding_account
-        mailbox_account, // incoming memos arrive at our private mailbox
-        state1,
-        &route_ctx,
-        network,
-        client,
-        height,
-    )
-    .await?
-    else {
-        status.send(DKGStatus::WaitRound2Pkg).await;
-        return Ok(());
-    };
-    info!("Round 2 complete");
-
-    // ── Round 3: local only — derive the shared key ───────────────────────────
-    status.send(DKGStatus::Finalize).await;
-    let key_pkg = sqlx::query_as::<_, (Vec<u8>,)>(
-        "SELECT key_pkg FROM dkg_state WHERE account = ? AND key_pkg IS NOT NULL",
-    )
-    .bind(account)
-    .fetch_optional(&mut *connection)
-    .await?;
-
-    let (key_pkg, pub_key_pkg) = if let Some((data,)) = key_pkg {
-        // Already computed on a previous block — reload from DB
-        let kp = KeyPackage::<_>::from_bytes(&data)?;
-        let (pp_data,) = sqlx::query_as::<_, (Vec<u8>,)>(
-            "SELECT data FROM dkg_peers WHERE account = ? AND round = 3 LIMIT 1",
-        )
-        .bind(account)
-        .fetch_one(&mut *connection)
-        .await?;
-        (kp, PublicKeyPackage::from_bytes(&pp_data)?)
-    } else {
-        info!(
-            "DKG: calling dkg::part3 (self_id={}, n={}, t={})",
-            self_id, n, t
-        );
-        let (kp, pp) = dkg::part3(&state2.spkg2, &state2.state1.ppkg1s, &state2.ppkg2s)?;
-        info!("DKG: dkg::part3 completed successfully");
-        sqlx::query("UPDATE dkg_state SET key_pkg = ?1 WHERE account = ?2")
-            .bind(kp.to_bytes()?)
-            .bind(account)
-            .execute(&mut *connection)
-            .await?;
-        sqlx::query(
-            "INSERT INTO dkg_peers(account, round, from_id, data) VALUES(?1, 3, ?2, ?3)
-            ON CONFLICT DO NOTHING",
-        )
-        .bind(account)
-        .bind(self_id)
-        .bind(pp.to_bytes()?)
-        .execute(&mut *connection)
-        .await?;
-        (kp, pp)
-    };
-
-    // Build the shared Orchard address by replacing the spend-auth key in the
-    // broadcast account's FVK with the FROST group public key.
-    let fvk = get_orchard_vk(connection, broadcast_account)
-        .await?
-        .expect("broadcast account vk not found");
-    let mut fvkb = fvk.to_bytes();
-    let pub_key_pkg = pub_key_pkg.into_even_y(None);
-    let vk = pub_key_pkg.verifying_key();
-    let pkb = vk.serialize().expect("pk serialize");
-    fvkb[0..32].copy_from_slice(&pkb);
-    let shared_fvk = FullViewingKey::from_bytes(&fvkb).expect("Failed to create shared FVK");
-    let address = shared_fvk.address_at(0u64, Scope::External);
-    let ua = UnifiedAddress::from_receivers(Some(address), None, None).unwrap();
-    let sua = ua.encode(network);
-    info!("Shared address: {sua}");
-
-    let (name,) = sqlx::query_as::<_, (String,)>("SELECT name FROM dkg_params WHERE account = ?")
-        .bind(account)
-        .fetch_one(&mut *connection)
-        .await?;
-    let frost_account =
-        store_account_metadata(connection, &name, &None, &None, height, false, false).await?;
-    init_account_orchard(network, connection, frost_account, height).await?;
-    store_account_orchard_vk(connection, frost_account, &shared_fvk).await?;
-
-    dkg_finalize(
-        connection,
-        account,
-        frost_account,
-        mailbox_account,
-        broadcast_account,
-    )
-    .await?;
-
-    // Store key material under the frost account
-    sqlx::query("UPDATE dkg_state SET key_pkg = ?1 WHERE account = ?2")
-        .bind(key_pkg.to_bytes()?)
-        .bind(frost_account)
-        .execute(&mut *connection)
-        .await?;
-
-    status.send(DKGStatus::SharedAddress(sua)).await;
-
-    cancel_dkg(connection, account).await?;
-    Ok(())
-}
-
-async fn dkg_finalize(
-    connection: &mut SqliteConnection,
-    account: u32,
-    frost_account: u32,
-    mailbox_account: u32,
-    broadcast_account: u32,
-) -> Result<()> {
-    sqlx::query("UPDATE dkg_params SET account = ?1 WHERE account = ?2")
-        .bind(frost_account)
-        .bind(account)
-        .execute(&mut *connection)
-        .await?;
-    sqlx::query("UPDATE dkg_state SET account = ?1 WHERE account = ?2")
-        .bind(frost_account)
-        .bind(account)
-        .execute(&mut *connection)
-        .await?;
-    sqlx::query("UPDATE dkg_peers SET account = ?1 WHERE account = ?2")
-        .bind(frost_account)
-        .bind(account)
-        .execute(&mut *connection)
-        .await?;
-    sqlx::query("UPDATE dkg_addresses SET account = ?1 WHERE account = ?2")
-        .bind(frost_account)
-        .bind(account)
-        .execute(&mut *connection)
-        .await?;
-    sqlx::query("DELETE FROM props WHERE key LIKE 'dkg_%'")
-        .execute(&mut *connection)
-        .await?;
-    let seed = get_account_seed(&mut *connection, mailbox_account)
-        .await?
-        .expect("mailbox seed not found")
-        .mnemonic;
-    sqlx::query("UPDATE dkg_params SET seed = ?1 WHERE account = ?2")
-        .bind(seed)
-        .bind(frost_account)
-        .execute(&mut *connection)
-        .await?;
-    delete_account(&mut *connection, mailbox_account).await?;
-    delete_account(&mut *connection, broadcast_account).await?;
-    Ok(())
-}
