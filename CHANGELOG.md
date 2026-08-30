@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.29.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.29.0-rc.3...zkool-v6.29.0-rc.4) (2026-08-30)
+
+
+### Bug Fixes
+
+* **migrate:** stop migration stalling on Orchard totals of 0.005-0.0062 ZEC ([11d3c78](https://github.com/hhanh00/zkool2/commit/11d3c78e1b8076c046c2cd12e7cf8d4f72d3b2e9))
+
 ## [6.29.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.29.0-rc.2...zkool-v6.29.0-rc.3) (2026-08-29)
 
 
