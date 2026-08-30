@@ -1,0 +1,85 @@
+name: Migration Tests
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  migration:
+    if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install RUST
+        uses: dtolnay/rust-toolchain@stable
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      # Same path and key as .github/actions/zebra, so this job shares the
+      # cache that the wallet tests populate rather than building its own.
+      - name: Cache zebra
+        id: cache-zebra
+        uses: actions/cache@v5
+        with:
+          path: |
+            ./tools/bin
+          key: ${{ runner.os }}-zebra-lwd-6.2.1
+
+      - name: Install zebra & lightwalletd
+        if: steps.cache-zebra.outputs.cache-hit != 'true'
+        run: |
+          sudo apt update && sudo apt install -y libclang-dev clang
+          rm -rf ./tools
+          cargo install --git https://github.com/ZcashFoundation/zebra --tag v6.2.1 --features=internal-miner --root ./tools zebrad
+          git clone https://github.com/zecrocks/lightwalletd.git
+          cd lightwalletd
+          git checkout 9b69519c57785e04e92a16365483f869dd878700
+          go build -o ../tools/bin/lightwalletd .
+
+      - name: Save cache
+        if: steps.cache-zebra.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ./tools/bin
+          key: ${{ runner.os }}-zebra-lwd-6.2.1
+
+      - name: Build zkool_graphql
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pkg-config libudev-dev
+          cd rust
+          cargo build --release --bin zkool_graphql --features=graphql,bundled-sapling-params
+
+      # target/release first, so the chain is brought up with the binary built
+      # from this PR rather than the released one cached in tools/bin.
+      - name: Add tools to PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/target/release" >> $GITHUB_PATH
+          echo "$GITHUB_WORKSPACE/tools/bin" >> $GITHUB_PATH
+
+      # Stops below the Ironwood (NU6.3) activation height of 250 and funds
+      # nothing: the test needs to create legacy Orchard notes, which is only
+      # possible before activation, and it funds its own accounts.
+      - name: Start regtest below Ironwood activation
+        run: |
+          rm -rf "$HOME/.cache/zebra" data regtest.db
+          ./example/sh/mine.sh
+        env:
+          BLOCKS: 150
+          FUND: 0
+          MINER_ADDRESS: "tmQ1BiNRfsvT6eMkJ5n7nMZsbz1PGwCs1Zs"
+
+      - name: Run migration test
+        run: |
+          cd tests
+          pip install uv
+          uv sync --all-groups
+          uv run pytest tests/test_migration.py -v -s
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          tail -100 zebrad.log || true
+          tail -100 lightwalletd.log || true
+          tail -200 /tmp/graphql_migration.log || true

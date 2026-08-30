@@ -2,6 +2,19 @@
 set -euo pipefail
 set -x
 
+# Number of blocks to mine. The note-migration tests need a chain that stops
+# below the Ironwood (NU6.3) activation height in misc/zebra.toml, because
+# after activation there is no pool-restricted address — addressByAccount
+# returns the same string for orchard and ironwood — so a payment lands in
+# Ironwood and legacy Orchard notes can no longer be created. They pass 150:
+# above coinbase maturity (100), below activation (250).
+BLOCKS=${BLOCKS:-300}
+
+# Whether to shield the miner's coinbase to DESTINATION_ADDRESS afterwards.
+# Set to 0 for callers that fund their own accounts; the shielding step below
+# requires Ironwood to be active and so cannot run on a pre-activation chain.
+FUND=${FUND:-1}
+
 sed -i -e "s#miner_address = \"\"#miner_address = \"${MINER_ADDRESS}\"#" misc/zebra.toml
 nohup zebrad -c misc/zebra.toml start > zebrad.log 2>&1 & disown
 sleep 60
@@ -10,7 +23,7 @@ nohup lightwalletd --no-tls-very-insecure --data-dir=./data/regtest --grpc-bind-
 nohup zkool_graphql -d regtest.db -l http://localhost:8137 -n &
 sleep 60
 
-curl --data-binary '{"jsonrpc": "1.0", "id":"curltest", "method": "generate", "params": [300] }' -H 'Content-type: application/json' http://127.0.0.1:18232/
+curl --data-binary "{\"jsonrpc\": \"1.0\", \"id\":\"curltest\", \"method\": \"generate\", \"params\": [${BLOCKS}] }" -H 'Content-type: application/json' http://127.0.0.1:18232/
 
 GRAPHQL_URL="http://localhost:8000/graphql"
 MATURITY_THRESHOLD=100
@@ -37,9 +50,26 @@ wait_zaino() {
   done
 }
 
+# Wait for lightwalletd to ingest what was just mined. currentHeight is
+# served through it, so this also confirms the whole stack is answering.
+for _ in $(seq 1 120); do
+  H=$(height || true)
+  case "$H" in '' | null) H=0 ;; esac
+  if [ "$H" -ge "$BLOCKS" ]; then
+    break
+  fi
+  sleep 2
+done
+
 # Get current height
 HEIGHT=$(height)
 echo "Height: $HEIGHT"
+
+if [ "$FUND" != "1" ]; then
+  echo "FUND=0: leaving the chain unfunded at height $HEIGHT"
+  pkill zkool_graphql
+  exit 0
+fi
 
 # Create miner account
 MINER=$(gql 'mutation CreateAccount($account: NewAccount!) {
