@@ -324,34 +324,29 @@ impl Mutation {
     /// Complete.
     async fn step_migration(id_account: i32, context: &Context) -> FieldResult<MigrationEvent> {
         check_auth(context, id_account, true)?;
-        let event = crate::api::migrate::step_migration(&context.coin)
+        let event = crate::migrate::step::step_once(&context.coin, id_account as u32)
             .await
             .map_err(|e| format!("Migration error: {e}"))?;
         Ok(match event {
-            crate::api::migrate::MigrationEvent::SplitComplete { fee } => MigrationEvent {
+            crate::migrate::step::StepOutcome::Split { fee } => MigrationEvent {
                 event: "SplitComplete".to_string(),
                 fee: Some(fee as i32),
                 message: None,
             },
-            crate::api::migrate::MigrationEvent::MigrateComplete { fee } => MigrationEvent {
+            crate::migrate::step::StepOutcome::Migrated { fee } => MigrationEvent {
                 event: "MigrateComplete".to_string(),
                 fee: Some(fee as i32),
                 message: None,
             },
-            crate::api::migrate::MigrationEvent::Complete => MigrationEvent {
+            crate::migrate::step::StepOutcome::Complete => MigrationEvent {
                 event: "Complete".to_string(),
                 fee: None,
                 message: None,
             },
-            crate::api::migrate::MigrationEvent::NothingToDo => MigrationEvent {
+            crate::migrate::step::StepOutcome::NothingToDo => MigrationEvent {
                 event: "NothingToDo".to_string(),
                 fee: None,
                 message: None,
-            },
-            crate::api::migrate::MigrationEvent::Error { message } => MigrationEvent {
-                event: "Error".to_string(),
-                fee: None,
-                message: Some(message),
             },
         })
     }
