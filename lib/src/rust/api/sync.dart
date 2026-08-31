@@ -40,6 +40,14 @@ Future<void> rewindSync(
 Future<SyncHeight> getDbHeight({required Coin c}) =>
     RustLib.instance.api.crateApiSyncGetDbHeight(c: c);
 
+/// Decrypt memos and store transaction details for `account`.
+///
+/// Deliberately does NOT take SYNCING. It did briefly, to stop it colliding
+/// with `do_dkg` — but holding the lock here let it starve the next sync, and
+/// `synchronize_impl` reports a skipped sync as success, so the DKG went on to
+/// build a transaction from stale notes and double-spent. Detail fetching is
+/// best effort and its `database is locked` failures are self-healing; a
+/// starved sync is not.
 Future<void> fetchTxDetails({required int account, required Coin c}) =>
     RustLib.instance.api.crateApiSyncFetchTxDetails(account: account, c: c);
 

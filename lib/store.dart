@@ -757,11 +757,6 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
   StreamSubscription<int>? _autoSyncSubscription;
   bool _handlingAutoSyncHeight = false;
   bool _forceNextAutoSync = false;
-  /// While a FROST round is running, autosync must not fire: doDkg/doSign sync
-  /// the accounts they need themselves, and a background sync racing them
-  /// spawns an unawaited fetchTxDetails that writes while the rounds are
-  /// building a transaction — which produced double-spends from stale notes.
-  bool frostInProgress = false;
   int? _pendingAutoSyncHeight;
   StreamSubscription<SyncProgress>? syncProgressSubscription;
   int retryCount = 0;
@@ -938,7 +933,6 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
   }
 
   void _queueAutoSync(int height, {required bool force}) {
-    if (frostInProgress) return;
     _pendingAutoSyncHeight = max(_pendingAutoSyncHeight ?? height, height);
     _forceNextAutoSync |= force;
     if (_handlingAutoSyncHeight) return;
