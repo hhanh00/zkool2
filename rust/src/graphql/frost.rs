@@ -1,12 +1,10 @@
 use bincode::config;
 use juniper::{FieldError, FieldResult};
-use sqlx::{query, sqlite::SqliteRow, Row};
 
 use crate::{
     api::{coin::Coin, frost::get_funding_account},
     frost::{dkg::in_dkg, sign::in_sign},
     graphql::Context,
-    sync::{synchronize_impl, DEFAULT_ACTIONS_PER_SYNC},
 };
 
 pub async fn dkg_start(
@@ -67,32 +65,16 @@ pub async fn new_block(coin: Coin) -> anyhow::Result<()> {
 
     let account = get_funding_account(&mut connection).await?;
     tracing::info!("funding: {account}");
-    let mut frost_accounts =
-        query("SELECT id_account FROM accounts WHERE name LIKE 'frost-%' AND internal = 1")
-            .map(|r: SqliteRow| r.get::<u32, _>(0))
-            .fetch_all(&mut *connection)
-            .await?;
-    frost_accounts.push(account);
-    let height = synchronize_impl(
-        (),
-        frost_accounts,
-        height,
-        DEFAULT_ACTIONS_PER_SYNC,
-        1,
-        100,
-        false,
-        &coin,
-    )
-    .await?;
+    let height =
+        crate::api::frost::sync_frost_accounts(&coin, &mut connection, account, height).await?;
 
     if in_dkg {
-        crate::frost::dkg::do_dkg_impl(
+        crate::frost::dkg::step::dkg_step(
             &coin.network(),
             &mut connection,
-            account,
             &mut client,
             height,
-            (),
+            account,
         )
         .await?;
     }
@@ -110,13 +92,14 @@ pub async fn do_dkg(context: &Context) -> FieldResult<bool> {
     let mut client = coin.client().await?;
     let height = client.latest_height().await?;
     let account = get_funding_account(&mut connection).await?;
-    crate::frost::dkg::do_dkg_impl(
+    let height =
+        crate::api::frost::sync_frost_accounts(coin, &mut connection, account, height).await?;
+    crate::frost::dkg::step::dkg_step(
         &coin.network(),
         &mut connection,
-        account,
         &mut client,
         height,
-        (),
+        account,
     )
     .await?;
     Ok(true)

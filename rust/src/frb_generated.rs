@@ -9891,9 +9891,12 @@ impl SseDecode for crate::api::frost::DKGStatus {
                 return crate::api::frost::DKGStatus::WaitRound2Pkg;
             }
             8 => {
-                return crate::api::frost::DKGStatus::Finalize;
+                return crate::api::frost::DKGStatus::WaitingForFunds;
             }
             9 => {
+                return crate::api::frost::DKGStatus::Finalize;
+            }
+            10 => {
                 let mut var_field0 = <String>::sse_decode(deserializer);
                 return crate::api::frost::DKGStatus::SharedAddress(var_field0);
             }
@@ -11334,12 +11337,15 @@ impl SseDecode for crate::api::frost::SigningStatus {
                 return crate::api::frost::SigningStatus::WaitingForSignatureShares;
             }
             7 => {
-                return crate::api::frost::SigningStatus::PreparingTransaction;
+                return crate::api::frost::SigningStatus::WaitingForFunds;
             }
             8 => {
-                return crate::api::frost::SigningStatus::SendingTransaction;
+                return crate::api::frost::SigningStatus::PreparingTransaction;
             }
             9 => {
+                return crate::api::frost::SigningStatus::SendingTransaction;
+            }
+            10 => {
                 let mut var_field0 = <String>::sse_decode(deserializer);
                 return crate::api::frost::SigningStatus::TransactionSent(var_field0);
             }
@@ -13258,9 +13264,10 @@ impl flutter_rust_bridge::IntoDart for crate::api::frost::DKGStatus {
             crate::api::frost::DKGStatus::WaitRound1Pkg => [5.into_dart()].into_dart(),
             crate::api::frost::DKGStatus::PublishRound2Pkg => [6.into_dart()].into_dart(),
             crate::api::frost::DKGStatus::WaitRound2Pkg => [7.into_dart()].into_dart(),
-            crate::api::frost::DKGStatus::Finalize => [8.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::WaitingForFunds => [8.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::Finalize => [9.into_dart()].into_dart(),
             crate::api::frost::DKGStatus::SharedAddress(field0) => {
-                [9.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+                [10.into_dart(), field0.into_into_dart().into_dart()].into_dart()
             }
             _ => {
                 unimplemented!("");
@@ -13970,10 +13977,11 @@ impl flutter_rust_bridge::IntoDart for crate::api::frost::SigningStatus {
             crate::api::frost::SigningStatus::WaitingForSignatureShares => {
                 [6.into_dart()].into_dart()
             }
-            crate::api::frost::SigningStatus::PreparingTransaction => [7.into_dart()].into_dart(),
-            crate::api::frost::SigningStatus::SendingTransaction => [8.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::WaitingForFunds => [7.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::PreparingTransaction => [8.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::SendingTransaction => [9.into_dart()].into_dart(),
             crate::api::frost::SigningStatus::TransactionSent(field0) => {
-                [9.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+                [10.into_dart(), field0.into_into_dart().into_dart()].into_dart()
             }
             _ => {
                 unimplemented!("");
@@ -15576,11 +15584,14 @@ impl SseEncode for crate::api::frost::DKGStatus {
             crate::api::frost::DKGStatus::WaitRound2Pkg => {
                 <i32>::sse_encode(7, serializer);
             }
-            crate::api::frost::DKGStatus::Finalize => {
+            crate::api::frost::DKGStatus::WaitingForFunds => {
                 <i32>::sse_encode(8, serializer);
             }
-            crate::api::frost::DKGStatus::SharedAddress(field0) => {
+            crate::api::frost::DKGStatus::Finalize => {
                 <i32>::sse_encode(9, serializer);
+            }
+            crate::api::frost::DKGStatus::SharedAddress(field0) => {
+                <i32>::sse_encode(10, serializer);
                 <String>::sse_encode(field0, serializer);
             }
             _ => {
@@ -16680,14 +16691,17 @@ impl SseEncode for crate::api::frost::SigningStatus {
             crate::api::frost::SigningStatus::WaitingForSignatureShares => {
                 <i32>::sse_encode(6, serializer);
             }
-            crate::api::frost::SigningStatus::PreparingTransaction => {
+            crate::api::frost::SigningStatus::WaitingForFunds => {
                 <i32>::sse_encode(7, serializer);
             }
-            crate::api::frost::SigningStatus::SendingTransaction => {
+            crate::api::frost::SigningStatus::PreparingTransaction => {
                 <i32>::sse_encode(8, serializer);
             }
-            crate::api::frost::SigningStatus::TransactionSent(field0) => {
+            crate::api::frost::SigningStatus::SendingTransaction => {
                 <i32>::sse_encode(9, serializer);
+            }
+            crate::api::frost::SigningStatus::TransactionSent(field0) => {
+                <i32>::sse_encode(10, serializer);
                 <String>::sse_encode(field0, serializer);
             }
             _ => {
