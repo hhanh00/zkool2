@@ -9,7 +9,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'migrate.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `current_migration_status`, `do_step`, `run_migration`, `synchronize_to`, `wait_for_anchor_boundary`, `wallet_height`
+// These functions are ignored because they are not marked as `pub`: `execute`, `observe_state`, `run_migration`, `sample_delay`, `status_from`, `wait_for_next_height`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `Executed`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
 /// Single-shot step (kept for FRB generated-code compatibility).

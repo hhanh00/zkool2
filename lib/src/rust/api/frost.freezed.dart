@@ -58,6 +58,7 @@ extension DKGStatusPatterns on DKGStatus {
     TResult Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
     TResult Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult Function(DKGStatus_WaitingForFunds value)? waitingForFunds,
     TResult Function(DKGStatus_Finalize value)? finalize,
     TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
     required TResult orElse(),
@@ -80,6 +81,8 @@ extension DKGStatusPatterns on DKGStatus {
         return publishRound2Pkg(_that);
       case DKGStatus_WaitRound2Pkg() when waitRound2Pkg != null:
         return waitRound2Pkg(_that);
+      case DKGStatus_WaitingForFunds() when waitingForFunds != null:
+        return waitingForFunds(_that);
       case DKGStatus_Finalize() when finalize != null:
         return finalize(_that);
       case DKGStatus_SharedAddress() when sharedAddress != null:
@@ -115,6 +118,7 @@ extension DKGStatusPatterns on DKGStatus {
     required TResult Function(DKGStatus_PublishRound2Pkg value)
         publishRound2Pkg,
     required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
+    required TResult Function(DKGStatus_WaitingForFunds value) waitingForFunds,
     required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
   }) {
@@ -136,6 +140,8 @@ extension DKGStatusPatterns on DKGStatus {
         return publishRound2Pkg(_that);
       case DKGStatus_WaitRound2Pkg():
         return waitRound2Pkg(_that);
+      case DKGStatus_WaitingForFunds():
+        return waitingForFunds(_that);
       case DKGStatus_Finalize():
         return finalize(_that);
       case DKGStatus_SharedAddress():
@@ -165,6 +171,7 @@ extension DKGStatusPatterns on DKGStatus {
     TResult? Function(DKGStatus_WaitRound1Pkg value)? waitRound1Pkg,
     TResult? Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
+    TResult? Function(DKGStatus_WaitingForFunds value)? waitingForFunds,
     TResult? Function(DKGStatus_Finalize value)? finalize,
     TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
   }) {
@@ -186,6 +193,8 @@ extension DKGStatusPatterns on DKGStatus {
         return publishRound2Pkg(_that);
       case DKGStatus_WaitRound2Pkg() when waitRound2Pkg != null:
         return waitRound2Pkg(_that);
+      case DKGStatus_WaitingForFunds() when waitingForFunds != null:
+        return waitingForFunds(_that);
       case DKGStatus_Finalize() when finalize != null:
         return finalize(_that);
       case DKGStatus_SharedAddress() when sharedAddress != null:
@@ -217,6 +226,7 @@ extension DKGStatusPatterns on DKGStatus {
     TResult Function()? waitRound1Pkg,
     TResult Function()? publishRound2Pkg,
     TResult Function()? waitRound2Pkg,
+    TResult Function()? waitingForFunds,
     TResult Function()? finalize,
     TResult Function(String field0)? sharedAddress,
     required TResult orElse(),
@@ -239,6 +249,8 @@ extension DKGStatusPatterns on DKGStatus {
         return publishRound2Pkg();
       case DKGStatus_WaitRound2Pkg() when waitRound2Pkg != null:
         return waitRound2Pkg();
+      case DKGStatus_WaitingForFunds() when waitingForFunds != null:
+        return waitingForFunds();
       case DKGStatus_Finalize() when finalize != null:
         return finalize();
       case DKGStatus_SharedAddress() when sharedAddress != null:
@@ -271,6 +283,7 @@ extension DKGStatusPatterns on DKGStatus {
     required TResult Function() waitRound1Pkg,
     required TResult Function() publishRound2Pkg,
     required TResult Function() waitRound2Pkg,
+    required TResult Function() waitingForFunds,
     required TResult Function() finalize,
     required TResult Function(String field0) sharedAddress,
   }) {
@@ -292,6 +305,8 @@ extension DKGStatusPatterns on DKGStatus {
         return publishRound2Pkg();
       case DKGStatus_WaitRound2Pkg():
         return waitRound2Pkg();
+      case DKGStatus_WaitingForFunds():
+        return waitingForFunds();
       case DKGStatus_Finalize():
         return finalize();
       case DKGStatus_SharedAddress():
@@ -321,6 +336,7 @@ extension DKGStatusPatterns on DKGStatus {
     TResult? Function()? waitRound1Pkg,
     TResult? Function()? publishRound2Pkg,
     TResult? Function()? waitRound2Pkg,
+    TResult? Function()? waitingForFunds,
     TResult? Function()? finalize,
     TResult? Function(String field0)? sharedAddress,
   }) {
@@ -342,6 +358,8 @@ extension DKGStatusPatterns on DKGStatus {
         return publishRound2Pkg();
       case DKGStatus_WaitRound2Pkg() when waitRound2Pkg != null:
         return waitRound2Pkg();
+      case DKGStatus_WaitingForFunds() when waitingForFunds != null:
+        return waitingForFunds();
       case DKGStatus_Finalize() when finalize != null:
         return finalize();
       case DKGStatus_SharedAddress() when sharedAddress != null:
@@ -565,6 +583,27 @@ class DKGStatus_WaitRound2Pkg extends DKGStatus {
   @override
   String toString() {
     return 'DKGStatus.waitRound2Pkg()';
+  }
+}
+
+/// @nodoc
+
+class DKGStatus_WaitingForFunds extends DKGStatus {
+  const DKGStatus_WaitingForFunds() : super._();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is DKGStatus_WaitingForFunds);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'DKGStatus.waitingForFunds()';
   }
 }
 
@@ -1028,6 +1067,7 @@ extension SigningStatusPatterns on SigningStatus {
     TResult Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
+    TResult Function(SigningStatus_WaitingForFunds value)? waitingForFunds,
     TResult Function(SigningStatus_PreparingTransaction value)?
         preparingTransaction,
     TResult Function(SigningStatus_SendingTransaction value)?
@@ -1056,6 +1096,8 @@ extension SigningStatusPatterns on SigningStatus {
       case SigningStatus_WaitingForSignatureShares()
           when waitingForSignatureShares != null:
         return waitingForSignatureShares(_that);
+      case SigningStatus_WaitingForFunds() when waitingForFunds != null:
+        return waitingForFunds(_that);
       case SigningStatus_PreparingTransaction()
           when preparingTransaction != null:
         return preparingTransaction(_that);
@@ -1097,6 +1139,8 @@ extension SigningStatusPatterns on SigningStatus {
         signingCompleted,
     required TResult Function(SigningStatus_WaitingForSignatureShares value)
         waitingForSignatureShares,
+    required TResult Function(SigningStatus_WaitingForFunds value)
+        waitingForFunds,
     required TResult Function(SigningStatus_PreparingTransaction value)
         preparingTransaction,
     required TResult Function(SigningStatus_SendingTransaction value)
@@ -1120,6 +1164,8 @@ extension SigningStatusPatterns on SigningStatus {
         return signingCompleted(_that);
       case SigningStatus_WaitingForSignatureShares():
         return waitingForSignatureShares(_that);
+      case SigningStatus_WaitingForFunds():
+        return waitingForFunds(_that);
       case SigningStatus_PreparingTransaction():
         return preparingTransaction(_that);
       case SigningStatus_SendingTransaction():
@@ -1155,6 +1201,7 @@ extension SigningStatusPatterns on SigningStatus {
     TResult? Function(SigningStatus_SigningCompleted value)? signingCompleted,
     TResult? Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
+    TResult? Function(SigningStatus_WaitingForFunds value)? waitingForFunds,
     TResult? Function(SigningStatus_PreparingTransaction value)?
         preparingTransaction,
     TResult? Function(SigningStatus_SendingTransaction value)?
@@ -1182,6 +1229,8 @@ extension SigningStatusPatterns on SigningStatus {
       case SigningStatus_WaitingForSignatureShares()
           when waitingForSignatureShares != null:
         return waitingForSignatureShares(_that);
+      case SigningStatus_WaitingForFunds() when waitingForFunds != null:
+        return waitingForFunds(_that);
       case SigningStatus_PreparingTransaction()
           when preparingTransaction != null:
         return preparingTransaction(_that);
@@ -1215,6 +1264,7 @@ extension SigningStatusPatterns on SigningStatus {
     TResult Function()? sendingSignatureShare,
     TResult Function()? signingCompleted,
     TResult Function()? waitingForSignatureShares,
+    TResult Function()? waitingForFunds,
     TResult Function()? preparingTransaction,
     TResult Function()? sendingTransaction,
     TResult Function(String field0)? transactionSent,
@@ -1241,6 +1291,8 @@ extension SigningStatusPatterns on SigningStatus {
       case SigningStatus_WaitingForSignatureShares()
           when waitingForSignatureShares != null:
         return waitingForSignatureShares();
+      case SigningStatus_WaitingForFunds() when waitingForFunds != null:
+        return waitingForFunds();
       case SigningStatus_PreparingTransaction()
           when preparingTransaction != null:
         return preparingTransaction();
@@ -1275,6 +1327,7 @@ extension SigningStatusPatterns on SigningStatus {
     required TResult Function() sendingSignatureShare,
     required TResult Function() signingCompleted,
     required TResult Function() waitingForSignatureShares,
+    required TResult Function() waitingForFunds,
     required TResult Function() preparingTransaction,
     required TResult Function() sendingTransaction,
     required TResult Function(String field0) transactionSent,
@@ -1295,6 +1348,8 @@ extension SigningStatusPatterns on SigningStatus {
         return signingCompleted();
       case SigningStatus_WaitingForSignatureShares():
         return waitingForSignatureShares();
+      case SigningStatus_WaitingForFunds():
+        return waitingForFunds();
       case SigningStatus_PreparingTransaction():
         return preparingTransaction();
       case SigningStatus_SendingTransaction():
@@ -1325,6 +1380,7 @@ extension SigningStatusPatterns on SigningStatus {
     TResult? Function()? sendingSignatureShare,
     TResult? Function()? signingCompleted,
     TResult? Function()? waitingForSignatureShares,
+    TResult? Function()? waitingForFunds,
     TResult? Function()? preparingTransaction,
     TResult? Function()? sendingTransaction,
     TResult? Function(String field0)? transactionSent,
@@ -1350,6 +1406,8 @@ extension SigningStatusPatterns on SigningStatus {
       case SigningStatus_WaitingForSignatureShares()
           when waitingForSignatureShares != null:
         return waitingForSignatureShares();
+      case SigningStatus_WaitingForFunds() when waitingForFunds != null:
+        return waitingForFunds();
       case SigningStatus_PreparingTransaction()
           when preparingTransaction != null:
         return preparingTransaction();
@@ -1507,6 +1565,27 @@ class SigningStatus_WaitingForSignatureShares extends SigningStatus {
   @override
   String toString() {
     return 'SigningStatus.waitingForSignatureShares()';
+  }
+}
+
+/// @nodoc
+
+class SigningStatus_WaitingForFunds extends SigningStatus {
+  const SigningStatus_WaitingForFunds() : super._();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is SigningStatus_WaitingForFunds);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'SigningStatus.waitingForFunds()';
   }
 }
 

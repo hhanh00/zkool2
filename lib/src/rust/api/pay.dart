@@ -39,6 +39,12 @@ Future<PcztPackage> signTransaction(
 Future<Uint8List> extractTransaction({required PcztPackage package}) =>
     RustLib.instance.api.crateApiPayExtractTransaction(package: package);
 
+/// Serialize a PCZT for transport between participants.
+///
+/// Uses bincode's `standard()` config so the bytes are interchangeable with
+/// zkool_graphql, whose `prepareSend` / `frostSign` use the same config. The
+/// two used to disagree (`legacy()` here), which made it impossible for an app
+/// user and a zkool_graphql user to co-sign a FROST transaction.
 Future<Uint8List> packTransaction({required PcztPackage pczt}) =>
     RustLib.instance.api.crateApiPayPackTransaction(pczt: pczt);
 
