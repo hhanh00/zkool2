@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.29.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.29.0-rc.4...zkool-v6.29.0-rc.5) (2026-08-31)
+
+
+### Features
+
+* **frost:** drive DKG and signing from autosync instead of self-syncing ([#1236](https://github.com/hhanh00/zkool2/issues/1236)) ([fe263de](https://github.com/hhanh00/zkool2/commit/fe263de89159d7ccc112f558031ed21be644b255))
+
 ## [6.29.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.29.0-rc.3...zkool-v6.29.0-rc.4) (2026-08-30)
 
 
