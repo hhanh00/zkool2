@@ -39,7 +39,6 @@ use crate::{
         coin::Network,
         frost::{FrostSignParams, SigningStatus},
         pay::PcztPackage,
-        sync::SYNCING,
     },
     frost::dkg::{
         delete_frost_state, get_coordinator_broadcast_account, get_dkg_params, get_mailbox_account,
@@ -236,12 +235,6 @@ pub async fn do_sign_impl(
     };
     info!("sign: found PCZT, signing is in progress");
 
-    let guard = SYNCING.try_lock();
-    if guard.is_err() {
-        info!("sign: sync already in progress, skipping");
-        return Ok(());
-    }
-
     let birth_height = height.saturating_sub(10000) + 1;
     let params = get_sign_params(&mut *connection).await?;
     info!(
@@ -382,7 +375,7 @@ pub async fn do_sign_impl(
                 recipients.len()
             );
             status.send(SigningStatus::SendingCommitment).await;
-            let txid = publish(
+            let txid = match publish(
                 network,
                 &mut tx,
                 params.funding_account,
@@ -390,7 +383,18 @@ pub async fn do_sign_impl(
                 height,
                 &recipients,
             )
-            .await?;
+            .await
+            {
+                core::result::Result::Ok(txid) => txid,
+                // Funding note locked and its change not mined yet: drop the tx
+                // (nothing persisted) and wait for the next block.
+                Err(e) if crate::pay::plan::is_no_feasible_selection(&e) => {
+                    info!("sign: commitment publish deferred; retry next block");
+                    status.send(SigningStatus::WaitingForFunds).await;
+                    return Ok(());
+                }
+                Err(e) => return Err(e),
+            };
             info!("Published commitment transaction: {}", txid);
         }
         tx.commit().await?;
@@ -521,7 +525,7 @@ pub async fn do_sign_impl(
         // we send all the sigpackages in one zcash transaction
         // with one output/memo per input/signature needed
         status.send(SigningStatus::SendingSigningPackage).await;
-        let txid = publish(
+        let txid = match publish(
             network,
             &mut tx,
             params.funding_account,
@@ -529,7 +533,16 @@ pub async fn do_sign_impl(
             height,
             &recipients,
         )
-        .await?;
+        .await
+        {
+            core::result::Result::Ok(txid) => txid,
+            Err(e) if crate::pay::plan::is_no_feasible_selection(&e) => {
+                info!("sign: sigpackage publish deferred; retry next block");
+                status.send(SigningStatus::WaitingForFunds).await;
+                return Ok(());
+            }
+            Err(e) => return Err(e),
+        };
         info!("Published sigpackages transaction: {}", txid);
         // we got all the sigshares, commit them
         tx.commit().await?;
@@ -590,7 +603,7 @@ pub async fn do_sign_impl(
 
         if dkg_params.id as u8 != params.coordinator {
             status.send(SigningStatus::SendingSignatureShare).await;
-            let txid = publish(
+            let txid = match publish(
                 network,
                 &mut tx,
                 params.funding_account,
@@ -598,7 +611,16 @@ pub async fn do_sign_impl(
                 height,
                 &recipients,
             )
-            .await?;
+            .await
+            {
+                core::result::Result::Ok(txid) => txid,
+                Err(e) if crate::pay::plan::is_no_feasible_selection(&e) => {
+                    info!("sign: sigshare publish deferred; retry next block");
+                    status.send(SigningStatus::WaitingForFunds).await;
+                    return Ok(());
+                }
+                Err(e) => return Err(e),
+            };
 
             status.send(SigningStatus::SigningCompleted).await;
             info!("Published sigshares transaction: {}", txid);

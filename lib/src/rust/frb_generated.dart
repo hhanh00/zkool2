@@ -8711,8 +8711,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 7:
         return DKGStatus_WaitRound2Pkg();
       case 8:
-        return DKGStatus_Finalize();
+        return DKGStatus_WaitingForFunds();
       case 9:
+        return DKGStatus_Finalize();
+      case 10:
         return DKGStatus_SharedAddress(
           dco_decode_String(raw[1]),
         );
@@ -9691,10 +9693,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 6:
         return SigningStatus_WaitingForSignatureShares();
       case 7:
-        return SigningStatus_PreparingTransaction();
+        return SigningStatus_WaitingForFunds();
       case 8:
-        return SigningStatus_SendingTransaction();
+        return SigningStatus_PreparingTransaction();
       case 9:
+        return SigningStatus_SendingTransaction();
+      case 10:
         return SigningStatus_TransactionSent(
           dco_decode_String(raw[1]),
         );
@@ -11085,8 +11089,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 7:
         return DKGStatus_WaitRound2Pkg();
       case 8:
-        return DKGStatus_Finalize();
+        return DKGStatus_WaitingForFunds();
       case 9:
+        return DKGStatus_Finalize();
+      case 10:
         var var_field0 = sse_decode_String(deserializer);
         return DKGStatus_SharedAddress(var_field0);
       default:
@@ -12409,10 +12415,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 6:
         return SigningStatus_WaitingForSignatureShares();
       case 7:
-        return SigningStatus_PreparingTransaction();
+        return SigningStatus_WaitingForFunds();
       case 8:
-        return SigningStatus_SendingTransaction();
+        return SigningStatus_PreparingTransaction();
       case 9:
+        return SigningStatus_SendingTransaction();
+      case 10:
         var var_field0 = sse_decode_String(deserializer);
         return SigningStatus_TransactionSent(var_field0);
       default:
@@ -13933,10 +13941,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_32(6, serializer);
       case DKGStatus_WaitRound2Pkg():
         sse_encode_i_32(7, serializer);
-      case DKGStatus_Finalize():
+      case DKGStatus_WaitingForFunds():
         sse_encode_i_32(8, serializer);
-      case DKGStatus_SharedAddress(field0: final field0):
+      case DKGStatus_Finalize():
         sse_encode_i_32(9, serializer);
+      case DKGStatus_SharedAddress(field0: final field0):
+        sse_encode_i_32(10, serializer);
         sse_encode_String(field0, serializer);
     }
   }
@@ -14984,12 +14994,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_32(5, serializer);
       case SigningStatus_WaitingForSignatureShares():
         sse_encode_i_32(6, serializer);
-      case SigningStatus_PreparingTransaction():
+      case SigningStatus_WaitingForFunds():
         sse_encode_i_32(7, serializer);
-      case SigningStatus_SendingTransaction():
+      case SigningStatus_PreparingTransaction():
         sse_encode_i_32(8, serializer);
-      case SigningStatus_TransactionSent(field0: final field0):
+      case SigningStatus_SendingTransaction():
         sse_encode_i_32(9, serializer);
+      case SigningStatus_TransactionSent(field0: final field0):
+        sse_encode_i_32(10, serializer);
         sse_encode_String(field0, serializer);
     }
   }
