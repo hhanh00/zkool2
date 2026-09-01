@@ -1183,4 +1183,105 @@ mod tests {
         assert!(is_better_solution(100, 10, 100, 20));
         assert!(!is_better_solution(101, 5, 100, 20));
     }
+
+    #[test]
+    fn test_source_restriction_only_uses_supplied_pool() {
+        // Caller has already masked out every pool except Orchard (pool 2), so
+        // the solver only ever sees Orchard candidates and must fund from them.
+        let notes = vec![
+            Note {
+                pool: 2,
+                amount: 400_000,
+                pool_index: 0,
+                asset_index: 0,
+            },
+            Note {
+                pool: 2,
+                amount: 300_000,
+                pool_index: 1,
+                asset_index: 0,
+            },
+        ];
+        let outputs = vec![Output {
+            pool: 1,
+            amount: 250_000,
+            asset_index: 0,
+        }];
+
+        let sel = select_notes(&notes, &outputs, 5_000, false, false, 0)
+            .expect("Orchard-only inputs should fund a Sapling output");
+
+        assert!(
+            sel.inputs.iter().all(|n| n.pool == 2),
+            "every selected note must come from the supplied Orchard pool",
+        );
+        let total_input: u64 = sel.inputs.iter().map(|n| n.amount).sum();
+        assert!(total_input >= 250_000 + sel.fee);
+    }
+
+    #[test]
+    fn test_multi_output_multi_pool_selection() {
+        // Outputs land in two different pools; a single large Orchard note must
+        // cover both plus the fee, with change assigned to some pool.
+        let notes = vec![
+            Note {
+                pool: 2,
+                amount: 5_000_000,
+                pool_index: 0,
+                asset_index: 0,
+            },
+            Note {
+                pool: 1,
+                amount: 50_000,
+                pool_index: 0,
+                asset_index: 0,
+            },
+        ];
+        let outputs = vec![
+            Output {
+                pool: 1,
+                amount: 700_000,
+                asset_index: 0,
+            },
+            Output {
+                pool: 2,
+                amount: 300_000,
+                asset_index: 0,
+            },
+        ];
+
+        let sel = select_notes(&notes, &outputs, 5_000, false, false, 0)
+            .expect("should fund both outputs");
+
+        let total_input: u64 = sel.inputs.iter().map(|n| n.amount).sum();
+        let total_output: u64 = outputs.iter().map(|o| o.amount).sum();
+        assert!(total_input >= total_output + sel.fee);
+        assert!((0..N_POOLS as u8).contains(&sel.change_pool));
+    }
+
+    #[test]
+    fn test_all_notes_still_insufficient_returns_none() {
+        // Even spending every note cannot reach the target: no solution exists.
+        let notes = vec![
+            Note {
+                pool: 2,
+                amount: 100_000,
+                pool_index: 0,
+                asset_index: 0,
+            },
+            Note {
+                pool: 1,
+                amount: 100_000,
+                pool_index: 0,
+                asset_index: 0,
+            },
+        ];
+        let outputs = vec![Output {
+            pool: 2,
+            amount: 1_000_000,
+            asset_index: 0,
+        }];
+
+        assert!(select_notes(&notes, &outputs, 5_000, false, false, 0).is_none());
+    }
 }
