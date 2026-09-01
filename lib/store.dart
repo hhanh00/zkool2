@@ -398,6 +398,8 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final paletteName = await prefs.getString("palette_name") ?? 'blue';
     final darkMode = await prefs.getBool("dark_mode") ?? true;
     final txTableMode = await prefs.getBool("tx_table_mode") ?? false;
+    final collapsePoolBalances =
+        (hasDb ? await getProp(key: "collapse_pool_balances", c: c) : null) == "true";
     final currency = (hasDb ? await getProp(key: "currency", c: c) : null) ?? "usd";
     final price = ref.watch(priceProvider.notifier);
     price.setAutoFetchFx(getFx, coingecko, currency);
@@ -426,6 +428,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       votingConfigUrl: votingConfigUrl,
       voteNodeUrl: voteNodeUrl,
       transactionTableMode: txTableMode,
+      collapsePoolBalances: collapsePoolBalances,
       currency: currency,
     );
   }
@@ -451,6 +454,13 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     await prefs.setBool("tx_table_mode", tableMode);
     state = state.whenData((s) => s.copyWith(
           transactionTableMode: tableMode,
+        ));
+  }
+
+  Future<void> setCollapsePoolBalances(bool collapsed) async {
+    await putProp(key: "collapse_pool_balances", value: collapsed.toString(), c: coinContext.coin);
+    state = state.whenData((s) => s.copyWith(
+          collapsePoolBalances: collapsed,
         ));
   }
 
@@ -495,6 +505,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     await prefs.setString("palette_name", settings.paletteName);
     await prefs.setBool("dark_mode", settings.darkMode);
     await putProp(key: "currency", value: settings.currency, c: c);
+    await putProp(key: "collapse_pool_balances", value: settings.collapsePoolBalances.toString(), c: c);
     await putProp(key: "voting_config_url", value: settings.votingConfigUrl, c: c);
     await putProp(key: "vote_node_url", value: settings.voteNodeUrl, c: c);
     coinContext.set(
@@ -583,6 +594,7 @@ sealed class AppSettings with _$AppSettings {
     required String paletteName,
     required bool darkMode,
     required bool transactionTableMode,
+    required bool collapsePoolBalances,
     required String currency,
     required String votingConfigUrl,
     required String voteNodeUrl,

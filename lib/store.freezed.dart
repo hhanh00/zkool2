@@ -1346,6 +1346,7 @@ mixin _$AppSettings {
   String get paletteName;
   bool get darkMode;
   bool get transactionTableMode;
+  bool get collapsePoolBalances;
   String get currency;
   String get votingConfigUrl;
   String get voteNodeUrl;
@@ -1396,6 +1397,8 @@ mixin _$AppSettings {
                 other.darkMode == darkMode) &&
             (identical(other.transactionTableMode, transactionTableMode) ||
                 other.transactionTableMode == transactionTableMode) &&
+            (identical(other.collapsePoolBalances, collapsePoolBalances) ||
+                other.collapsePoolBalances == collapsePoolBalances) &&
             (identical(other.currency, currency) ||
                 other.currency == currency) &&
             (identical(other.votingConfigUrl, votingConfigUrl) ||
@@ -1428,6 +1431,7 @@ mixin _$AppSettings {
         paletteName,
         darkMode,
         transactionTableMode,
+        collapsePoolBalances,
         currency,
         votingConfigUrl,
         voteNodeUrl
@@ -1435,7 +1439,7 @@ mixin _$AppSettings {
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, transport: $transport, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, transactionTableMode: $transactionTableMode, currency: $currency, votingConfigUrl: $votingConfigUrl, voteNodeUrl: $voteNodeUrl)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, transport: $transport, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, transactionTableMode: $transactionTableMode, collapsePoolBalances: $collapsePoolBalances, currency: $currency, votingConfigUrl: $votingConfigUrl, voteNodeUrl: $voteNodeUrl)';
   }
 }
 
@@ -1467,6 +1471,7 @@ abstract mixin class $AppSettingsCopyWith<$Res> {
       String paletteName,
       bool darkMode,
       bool transactionTableMode,
+      bool collapsePoolBalances,
       String currency,
       String votingConfigUrl,
       String voteNodeUrl});
@@ -1507,6 +1512,7 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
     Object? paletteName = null,
     Object? darkMode = null,
     Object? transactionTableMode = null,
+    Object? collapsePoolBalances = null,
     Object? currency = null,
     Object? votingConfigUrl = null,
     Object? voteNodeUrl = null,
@@ -1595,6 +1601,10 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
       transactionTableMode: null == transactionTableMode
           ? _self.transactionTableMode
           : transactionTableMode // ignore: cast_nullable_to_non_nullable
+              as bool,
+      collapsePoolBalances: null == collapsePoolBalances
+          ? _self.collapsePoolBalances
+          : collapsePoolBalances // ignore: cast_nullable_to_non_nullable
               as bool,
       currency: null == currency
           ? _self.currency
@@ -1735,6 +1745,7 @@ extension AppSettingsPatterns on AppSettings {
             String paletteName,
             bool darkMode,
             bool transactionTableMode,
+            bool collapsePoolBalances,
             String currency,
             String votingConfigUrl,
             String voteNodeUrl)?
@@ -1766,6 +1777,7 @@ extension AppSettingsPatterns on AppSettings {
             _that.paletteName,
             _that.darkMode,
             _that.transactionTableMode,
+            _that.collapsePoolBalances,
             _that.currency,
             _that.votingConfigUrl,
             _that.voteNodeUrl);
@@ -1811,6 +1823,7 @@ extension AppSettingsPatterns on AppSettings {
             String paletteName,
             bool darkMode,
             bool transactionTableMode,
+            bool collapsePoolBalances,
             String currency,
             String votingConfigUrl,
             String voteNodeUrl)
@@ -1841,6 +1854,7 @@ extension AppSettingsPatterns on AppSettings {
             _that.paletteName,
             _that.darkMode,
             _that.transactionTableMode,
+            _that.collapsePoolBalances,
             _that.currency,
             _that.votingConfigUrl,
             _that.voteNodeUrl);
@@ -1883,6 +1897,7 @@ extension AppSettingsPatterns on AppSettings {
             String paletteName,
             bool darkMode,
             bool transactionTableMode,
+            bool collapsePoolBalances,
             String currency,
             String votingConfigUrl,
             String voteNodeUrl)?
@@ -1913,6 +1928,7 @@ extension AppSettingsPatterns on AppSettings {
             _that.paletteName,
             _that.darkMode,
             _that.transactionTableMode,
+            _that.collapsePoolBalances,
             _that.currency,
             _that.votingConfigUrl,
             _that.voteNodeUrl);
@@ -1947,6 +1963,7 @@ class _AppSettings implements AppSettings {
       required this.paletteName,
       required this.darkMode,
       required this.transactionTableMode,
+      required this.collapsePoolBalances,
       required this.currency,
       required this.votingConfigUrl,
       required this.voteNodeUrl});
@@ -1994,6 +2011,8 @@ class _AppSettings implements AppSettings {
   final bool darkMode;
   @override
   final bool transactionTableMode;
+  @override
+  final bool collapsePoolBalances;
   @override
   final String currency;
   @override
@@ -2048,6 +2067,8 @@ class _AppSettings implements AppSettings {
                 other.darkMode == darkMode) &&
             (identical(other.transactionTableMode, transactionTableMode) ||
                 other.transactionTableMode == transactionTableMode) &&
+            (identical(other.collapsePoolBalances, collapsePoolBalances) ||
+                other.collapsePoolBalances == collapsePoolBalances) &&
             (identical(other.currency, currency) ||
                 other.currency == currency) &&
             (identical(other.votingConfigUrl, votingConfigUrl) ||
@@ -2080,6 +2101,7 @@ class _AppSettings implements AppSettings {
         paletteName,
         darkMode,
         transactionTableMode,
+        collapsePoolBalances,
         currency,
         votingConfigUrl,
         voteNodeUrl
@@ -2087,7 +2109,7 @@ class _AppSettings implements AppSettings {
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, transport: $transport, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, transactionTableMode: $transactionTableMode, currency: $currency, votingConfigUrl: $votingConfigUrl, voteNodeUrl: $voteNodeUrl)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, transport: $transport, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, transactionTableMode: $transactionTableMode, collapsePoolBalances: $collapsePoolBalances, currency: $currency, votingConfigUrl: $votingConfigUrl, voteNodeUrl: $voteNodeUrl)';
   }
 }
 
@@ -2121,6 +2143,7 @@ abstract mixin class _$AppSettingsCopyWith<$Res>
       String paletteName,
       bool darkMode,
       bool transactionTableMode,
+      bool collapsePoolBalances,
       String currency,
       String votingConfigUrl,
       String voteNodeUrl});
@@ -2162,6 +2185,7 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
     Object? paletteName = null,
     Object? darkMode = null,
     Object? transactionTableMode = null,
+    Object? collapsePoolBalances = null,
     Object? currency = null,
     Object? votingConfigUrl = null,
     Object? voteNodeUrl = null,
@@ -2250,6 +2274,10 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
       transactionTableMode: null == transactionTableMode
           ? _self.transactionTableMode
           : transactionTableMode // ignore: cast_nullable_to_non_nullable
+              as bool,
+      collapsePoolBalances: null == collapsePoolBalances
+          ? _self.collapsePoolBalances
+          : collapsePoolBalances // ignore: cast_nullable_to_non_nullable
               as bool,
       currency: null == currency
           ? _self.currency
