@@ -1,5 +1,23 @@
 # Changelog
 
+## [6.29.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.1...zkool-v6.29.0) (2026-09-01)
+
+
+### Features
+
+* **frost:** drive DKG and signing from autosync instead of self-syncing ([#1236](https://github.com/hhanh00/zkool2/issues/1236)) ([623ded0](https://github.com/hhanh00/zkool2/commit/623ded005f7eb6b8aa448ff1247ad5b4c3a41103))
+* **vault:** sign out of Google when Cloud Vault is turned off ([277929a](https://github.com/hhanh00/zkool2/commit/277929a6cb55cc266a694d3b4aa157f23f3513df))
+
+
+### Bug Fixes
+
+* **frost:** lock spent notes at broadcast to stop duplicate-nullifier double-spends ([f80f27a](https://github.com/hhanh00/zkool2/commit/f80f27a7e248456e9e1e1a04e50e3483192e5839))
+* **frost:** report DKG round 0 and broadcast statuses in the UI ([#1230](https://github.com/hhanh00/zkool2/issues/1230)) ([deff307](https://github.com/hhanh00/zkool2/commit/deff307ce6312f26287d672111f7de5df8ea7fba))
+* **frost:** sync inside doDkg/doSign and hold off autosync ([0d0bbe3](https://github.com/hhanh00/zkool2/commit/0d0bbe3875417099e9e3d0755bade5dbf81a37c5))
+* **migrate:** stop migration stalling on Orchard totals of 0.005-0.0062 ZEC ([ef4db48](https://github.com/hhanh00/zkool2/commit/ef4db48157d545420936a9ee1903a3ff5972d3f5))
+* **pay:** serialize PCZTs with bincode standard() for interop ([381bb1d](https://github.com/hhanh00/zkool2/commit/381bb1d8a4d367518da5aabd8a569dd94a22c2b2))
+* **sync:** guard fetch_tx_details with the SYNCING lock ([f44c220](https://github.com/hhanh00/zkool2/commit/f44c220406f190ae6789f337b61653f179bf73a5))
+
 ## [6.28.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.0...zkool-v6.28.1) (2026-08-27)
 
 
