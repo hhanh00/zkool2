@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.30.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.29.0...zkool-v6.30.0-rc) (2026-09-01)
+
+
+### Features
+
+* **account:** collapse pool balances on tap, persisted in DB settings ([d52911e](https://github.com/hhanh00/zkool2/commit/d52911eb78a87c421ee70cd5836efbc59ddea57f))
+
 ## [6.29.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.1...zkool-v6.29.0) (2026-09-01)
 
 
