@@ -246,26 +246,69 @@ pub fn is_no_feasible_selection(e: &anyhow::Error) -> bool {
     })
 }
 
-#[allow(clippy::too_many_arguments)]
-pub async fn plan_transaction(
-    network: &Network,
-    connection: &mut SqliteConnection,
-    client: &mut Client,
-    account: u32,
-    src_pools: u8,
-    recipients: &[Recipient],
-    recipient_pays_fee: bool,
-    confirmations: Option<u32>,
-    smart_transparent: bool,
-    category: Option<u32>,
-    issuance: Option<&IssuanceInfo>,
-    migration: bool,
-    preselected: Option<&[u32]>,
-    anchor_height: Option<u32>,
-) -> Result<PcztPackage> {
-    let mut input_pools = fetch_unspent_notes_by_pool(connection, account).await?;
-    let height = client.latest_height().await?;
-    let confirmations = confirmations.unwrap_or_default();
+/// Inputs to the pure planning core [`plan_outputs`].
+///
+/// Carries everything the note-selection and output-planning logic needs
+/// without touching the DB, the network client, or the prover. `input_pools`
+/// and `height` are the only values [`plan_transaction`] must fetch first;
+/// everything else is passed straight through from its arguments. Isolating
+/// this state is what lets the selection logic be unit-tested deterministically.
+pub(crate) struct PlanInputs<'a> {
+    pub network: &'a Network,
+    pub height: u32,
+    pub input_pools: Vec<Vec<InputNote>>,
+    pub recipients: Vec<Recipient>,
+    pub src_pools: u8,
+    pub recipient_pays_fee: bool,
+    pub confirmations: u32,
+    pub smart_transparent: bool,
+    pub migration: bool,
+    pub issuance: Option<&'a IssuanceInfo>,
+    pub preselected: Option<&'a [u32]>,
+}
+
+/// Result of the pure planning core: the selected inputs (with `remaining`
+/// stamped on consumed notes), the recipient/change outputs, and the derived
+/// quantities the builder half of [`plan_transaction`] still needs.
+pub(crate) struct PlanOutputs {
+    pub input_pools: Vec<Vec<InputNote>>,
+    pub recipient_states: Vec<RecipientState>,
+    pub change: u64,
+    pub change_pool: u8,
+    /// Planned ZIP-317 fee. The builder recomputes the on-chain fee from its
+    /// own `FeeRule`, so this is not consumed by `plan_transaction`; it is
+    /// exposed for tests and callers that want to inspect the plan.
+    #[allow(dead_code)]
+    pub fee: u64,
+    pub has_pool: [bool; NUM_POOLS],
+    pub ironwood_active: bool,
+    pub orchard_note_version: orchard::NoteVersion,
+    pub price: Option<f64>,
+}
+
+/// Pure note-selection and output-planning core of [`plan_transaction`].
+///
+/// Runs everything between "notes have been fetched" and "fetch tree states and
+/// build the PCZT": source-pool masking, the smart-transparent / max-amount
+/// transform, address decomposition, dust filtering, the [`solve::select_notes`]
+/// coin-selection call, and the recipient/change/fee accounting. It performs no
+/// I/O, so its behaviour is fully determined by [`PlanInputs`] and can be tested
+/// without a database, network client, or proving keys.
+pub(crate) fn plan_outputs(inp: PlanInputs) -> Result<PlanOutputs> {
+    let PlanInputs {
+        network,
+        height,
+        mut input_pools,
+        recipients,
+        src_pools,
+        recipient_pays_fee,
+        confirmations,
+        smart_transparent,
+        migration,
+        issuance,
+        preselected,
+    } = inp;
+
     let max_height = height.saturating_sub(confirmations);
     for pool in 0..NUM_POOLS {
         if src_pools & (1 << pool) == 0 {
@@ -282,7 +325,6 @@ pub async fn plan_transaction(
         }
     }
 
-    let recipients = recipients.to_vec();
     let (mut input_pools, recipients, recipient_pays_fee) = if smart_transparent {
         let mut notes = std::mem::take(&mut input_pools[0]);
         // Group by taddress, pick one random address to shield
@@ -359,10 +401,6 @@ pub async fn plan_transaction(
         .filter_map(|b| b.try_into().ok())
         .collect();
 
-    // ── Compute additional context ───────────────────────────────────────
-    let dindex = get_account_dindex(connection, account).await?;
-    let hw = get_account_hw(&mut *connection, account).await?;
-
     // Compute weighted average price from recipients that have a price set
     let mut total_amount = 0;
     let mut total_fiat = 0.0;
@@ -377,12 +415,6 @@ pub async fn plan_transaction(
     } else {
         None
     };
-
-    let (use_internal,): (bool,) =
-        sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
-            .bind(account)
-            .fetch_one(&mut *connection)
-            .await?;
 
     // Remove ZEC dust notes (too small to pay for a single logical action).
     // ZSA amounts are denominated in their own asset and cannot pay fees, so
@@ -627,6 +659,92 @@ pub async fn plan_transaction(
         );
     }
 
+    // Determine which pools are active in this transaction
+    let mut has_pool = [false; NUM_POOLS as usize];
+    for pool in 1..NUM_POOLS {
+        let p = pool as u8;
+        has_pool[pool] = input_pools[pool].iter().any(|inp| inp.is_used())
+            || recipient_states
+                .iter()
+                .any(|r| r.pool_mask.to_best_pool() == Some(p))
+            || change_pool == p;
+    }
+    has_pool[3] &= ironwood_active;
+    // ZSA assets only exist in Orchard pool; ensure pool 2 is active
+    // when ZSA is present (covers issuance-only case with no ZSA notes).
+    has_pool[2] |= has_zsa;
+
+    Ok(PlanOutputs {
+        input_pools,
+        recipient_states,
+        change,
+        change_pool,
+        fee,
+        has_pool,
+        ironwood_active,
+        orchard_note_version,
+        price,
+    })
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn plan_transaction(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    client: &mut Client,
+    account: u32,
+    src_pools: u8,
+    recipients: &[Recipient],
+    recipient_pays_fee: bool,
+    confirmations: Option<u32>,
+    smart_transparent: bool,
+    category: Option<u32>,
+    issuance: Option<&IssuanceInfo>,
+    migration: bool,
+    preselected: Option<&[u32]>,
+    anchor_height: Option<u32>,
+) -> Result<PcztPackage> {
+    let input_pools = fetch_unspent_notes_by_pool(connection, account).await?;
+    let height = client.latest_height().await?;
+    let confirmations = confirmations.unwrap_or_default();
+
+    // DB-sourced context needed only by the builder half below (change address
+    // and keys); the pure planning core does not touch the database.
+    let dindex = get_account_dindex(connection, account).await?;
+    let hw = get_account_hw(&mut *connection, account).await?;
+    let (use_internal,): (bool,) =
+        sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
+            .bind(account)
+            .fetch_one(&mut *connection)
+            .await?;
+
+    // ── Note selection and output planning (pure; unit-tested) ────────────
+    let PlanOutputs {
+        input_pools,
+        mut recipient_states,
+        change,
+        change_pool,
+        has_pool,
+        ironwood_active,
+        orchard_note_version,
+        price,
+        ..
+    } = plan_outputs(PlanInputs {
+        network,
+        height,
+        input_pools,
+        recipients: recipients.to_vec(),
+        src_pools,
+        recipient_pays_fee,
+        confirmations,
+        smart_transparent,
+        migration,
+        issuance,
+        preselected,
+    })?;
+
+    let zec_key = [0u8; 32];
+
     // ── Fetch tree states and anchors ────────────────────────────────────
     let h = crate::sync::get_db_height(connection, account).await?;
     let anchor_height = anchor_height.unwrap_or(h.height);
@@ -647,21 +765,6 @@ pub async fn plan_transaction(
     let sapling_anchor = es.root(&SaplingHasher::default());
     let orchard_anchor = eo.root(&OrchardHasher::default());
     let ironwood_anchor = ei.root(&OrchardHasher::default());
-
-    // Determine which pools are active in this transaction
-    let mut has_pool = [false; NUM_POOLS as usize];
-    for pool in 1..NUM_POOLS {
-        let p = pool as u8;
-        has_pool[pool] = input_pools[pool].iter().any(|inp| inp.is_used())
-            || recipient_states
-                .iter()
-                .any(|r| r.pool_mask.to_best_pool() == Some(p))
-            || change_pool == p;
-    }
-    has_pool[3] &= ironwood_active;
-    // ZSA assets only exist in Orchard pool; ensure pool 2 is active
-    // when ZSA is present (covers issuance-only case with no ZSA notes).
-    has_pool[2] |= has_zsa;
 
     // ── Fetch change address ─────────────────────────────────────────────
     let change_scope = if use_internal { 1 } else { 0 };
@@ -1679,5 +1782,503 @@ mod tests {
         )
         .unwrap());
         assert!(!is_tex(&Network::Test, "tm9ofD7kHR7AF8MsJomEzLqGcrLCBkD9gDj").unwrap());
+    }
+
+    // ------------------------------------------------------------------
+    // Fixtures and helpers for the pure planning-core tests below.
+    // These exercise `plan_outputs` — the note-selection and output-planning
+    // logic lifted out of `plan_transaction` — with no DB, client, or prover.
+    // ------------------------------------------------------------------
+    mod planning {
+        use super::super::*;
+        use crate::api::coin::Network;
+        use crate::pay::pool::ALL_POOLS;
+        use zcash_keys::address::UnifiedAddress;
+
+        // Mainnet single-pool address fixtures.
+        const T_ADDR: &str = "t1VmmGiyjVNeCjxDZzg7vZmd99WyzVby9yC";
+        const S_ADDR: &str =
+            "zs157m24pkqcq09edxz9p0p653xcsfpdpcspcad5wkkp3pq29hvc7h2uvs7wncakwqtl6jqkxn939p";
+        const TEX_ADDR: &str = "tex1s2rt77ggv6q989lr49rkgzmh5slsksa9khdgte";
+
+        fn net() -> Network {
+            Network::Main
+        }
+
+        /// A deterministic Orchard address derived from a fixed spending key.
+        fn orchard_addr() -> orchard::Address {
+            let sk = orchard::keys::SpendingKey::from_bytes([7u8; 32])
+                .into_option()
+                .expect("valid orchard spending key");
+            let fvk = orchard::keys::FullViewingKey::from(&sk);
+            fvk.address_at(0u32, orchard::keys::Scope::External)
+        }
+
+        fn sapling_addr() -> sapling_crypto::PaymentAddress {
+            sapling_crypto::PaymentAddress::decode(&net(), S_ADDR).expect("valid sapling address")
+        }
+
+        /// Orchard-only unified address.
+        fn ua_orchard() -> String {
+            UnifiedAddress::from_receivers(Some(orchard_addr()), None, None)
+                .unwrap()
+                .encode(&net())
+        }
+
+        /// Sapling-only unified address (still a UA container).
+        fn ua_sapling() -> String {
+            UnifiedAddress::from_receivers(None, Some(sapling_addr()), None)
+                .unwrap()
+                .encode(&net())
+        }
+
+        /// Mixed unified address carrying Orchard + Sapling receivers.
+        fn ua_mixed() -> String {
+            UnifiedAddress::from_receivers(Some(orchard_addr()), Some(sapling_addr()), None)
+                .unwrap()
+                .encode(&net())
+        }
+
+        fn note(id: u32, pool: u8, amount: u64, height: u32) -> InputNote {
+            InputNote {
+                id,
+                height,
+                amount,
+                remaining: amount,
+                pool,
+                id_asset: None,
+                asset_base: vec![],
+                taddress: (pool == 0).then_some(0),
+            }
+        }
+
+        /// Wrap flat notes into the per-pool layout `plan_outputs` expects.
+        fn pools(notes: Vec<InputNote>) -> Vec<Vec<InputNote>> {
+            let mut p = vec![vec![]; NUM_POOLS];
+            for n in notes {
+                p[n.pool as usize].push(n);
+            }
+            p
+        }
+
+        fn recipient(address: &str, amount: u64) -> Recipient {
+            Recipient {
+                address: address.to_string(),
+                amount,
+                ..Recipient::default()
+            }
+        }
+
+        /// Default `PlanInputs` for a plain (non-ZSA, non-migration) send at a
+        /// mainnet height where neither Ironwood nor NU7 is active.
+        fn plan_inputs<'a>(
+            network: &'a Network,
+            input_pools: Vec<Vec<InputNote>>,
+            recipients: Vec<Recipient>,
+        ) -> PlanInputs<'a> {
+            PlanInputs {
+                network,
+                height: 1_000_000,
+                input_pools,
+                recipients,
+                src_pools: ALL_POOLS,
+                recipient_pays_fee: false,
+                confirmations: 0,
+                smart_transparent: false,
+                migration: false,
+                issuance: None,
+                preselected: None,
+            }
+        }
+
+        fn selected_ids(out: &PlanOutputs) -> Vec<u32> {
+            out.input_pools
+                .iter()
+                .flatten()
+                .filter(|n| n.is_used())
+                .map(|n| n.id)
+                .collect()
+        }
+
+        fn total_selected(out: &PlanOutputs) -> u64 {
+            out.input_pools
+                .iter()
+                .flatten()
+                .filter(|n| n.is_used())
+                .map(|n| n.amount)
+                .sum()
+        }
+
+        // Broad invariants every feasible plan must satisfy — the cheapest way
+        // to catch the "subtle" over/under-spend bugs.
+        fn assert_plan_balances(out: &PlanOutputs) {
+            let total_output: u64 = out.recipient_states.iter().map(|r| r.recipient.amount).sum();
+            let total_input = total_selected(out);
+            assert!(
+                total_input >= total_output + out.fee,
+                "inputs {total_input} must cover outputs {total_output} + fee {}",
+                out.fee
+            );
+            assert_eq!(
+                out.change,
+                total_input - total_output - out.fee,
+                "change must reconcile inputs, outputs and fee",
+            );
+            // No selected ZEC note may sit below the per-action dust threshold.
+            for n in out.input_pools.iter().flatten().filter(|n| n.is_used()) {
+                let is_zec = n.asset_base.is_empty() || n.asset_base.iter().all(|&b| b == 0);
+                if is_zec {
+                    assert!(n.amount >= COST_PER_ACTION, "dust note {} selected", n.id);
+                }
+            }
+        }
+
+        // ---- Address decomposition: pool selection, UA single & mixed, TEX ----
+
+        #[test]
+        fn decompose_transparent_and_tex_target_pool_zero() {
+            let n = net();
+            assert_eq!(decompose_address(T_ADDR, &n, false).unwrap().pool, 0);
+            let tex = decompose_address(TEX_ADDR, &n, false).unwrap();
+            assert_eq!(tex.pool, 0);
+            assert!(matches!(tex.receiver, Receiver::P2pkh(_)));
+        }
+
+        #[test]
+        fn decompose_sapling_targets_pool_one() {
+            assert_eq!(decompose_address(S_ADDR, &net(), false).unwrap().pool, 1);
+        }
+
+        #[test]
+        fn decompose_ua_single_orchard_and_sapling() {
+            let n = net();
+            assert_eq!(decompose_address(&ua_orchard(), &n, false).unwrap().pool, 2);
+            assert_eq!(decompose_address(&ua_sapling(), &n, false).unwrap().pool, 1);
+        }
+
+        #[test]
+        fn decompose_ua_mixed_prefers_orchard() {
+            let n = net();
+            // Mixed O+S UA prefers the Orchard receiver.
+            assert_eq!(decompose_address(&ua_mixed(), &n, false).unwrap().pool, 2);
+            // When Ironwood is active the same receiver routes to pool 3.
+            assert_eq!(decompose_address(&ua_mixed(), &n, true).unwrap().pool, 3);
+        }
+
+        #[test]
+        fn ua_orchard_routes_output_through_orchard_pool() {
+            let n = net();
+            let ua = ua_orchard();
+            let input = plan_inputs(
+                &n,
+                pools(vec![note(1, 2, 1_000_000, 100)]),
+                vec![recipient(&ua, 100_000)],
+            );
+            let out = plan_outputs(input).unwrap();
+            assert_eq!(out.recipient_states.len(), 1);
+            assert_eq!(out.recipient_states[0].pool_mask.to_best_pool(), Some(2));
+            assert_plan_balances(&out);
+        }
+
+        #[test]
+        fn explicit_pool_hint_overrides_address_pool() {
+            let n = net();
+            // Mixed UA would default to Orchard, but an explicit Sapling hint
+            // (bit 1) forces the output into the Sapling pool.
+            let mut r = recipient(&ua_mixed(), 100_000);
+            r.pools = Some(0b0010);
+            let input = plan_inputs(
+                &n,
+                pools(vec![note(1, 2, 1_000_000, 100)]),
+                vec![r],
+            );
+            let out = plan_outputs(input).unwrap();
+            assert_eq!(out.recipient_states[0].pool_mask.to_best_pool(), Some(1));
+        }
+
+        // ---- Source pool selection ----
+
+        #[test]
+        fn src_pools_mask_restricts_candidate_notes() {
+            let n = net();
+            // Notes in every pool, but only Orchard (bit 2) is allowed.
+            let mut input = plan_inputs(
+                &n,
+                pools(vec![
+                    note(1, 0, 1_000_000, 100),
+                    note(2, 1, 1_000_000, 100),
+                    note(3, 2, 1_000_000, 100),
+                    note(4, 3, 1_000_000, 100),
+                ]),
+                vec![recipient(S_ADDR, 100_000)],
+            );
+            input.src_pools = 0b0100; // Orchard only
+            let out = plan_outputs(input).unwrap();
+            // Every selected note must come from the Orchard pool.
+            for id in selected_ids(&out) {
+                assert_eq!(id, 3, "only the Orchard note may be selected");
+            }
+            assert!(!selected_ids(&out).is_empty());
+            assert_plan_balances(&out);
+        }
+
+        #[test]
+        fn confirmations_filter_excludes_unconfirmed_notes() {
+            let n = net();
+            // The only funding note is above max_height (height - confirmations),
+            // so no feasible selection exists.
+            let mut input = plan_inputs(
+                &n,
+                pools(vec![note(1, 2, 1_000_000, 999_999)]),
+                vec![recipient(S_ADDR, 100_000)],
+            );
+            input.height = 1_000_000;
+            input.confirmations = 10; // max_height = 999_990 < note height
+            assert!(plan_outputs(input).is_err());
+        }
+
+        #[test]
+        fn preselected_restricts_to_given_note_ids() {
+            let n = net();
+            let ids = [2u32];
+            let mut input = plan_inputs(
+                &n,
+                pools(vec![
+                    note(1, 2, 1_000_000, 100),
+                    note(2, 2, 1_000_000, 100),
+                ]),
+                vec![recipient(S_ADDR, 100_000)],
+            );
+            input.preselected = Some(&ids);
+            let out = plan_outputs(input).unwrap();
+            // Note 1 was filtered out entirely; only note 2 survives as a candidate.
+            let remaining: Vec<u32> = out.input_pools.iter().flatten().map(|n| n.id).collect();
+            assert_eq!(remaining, vec![2]);
+        }
+
+        // ---- Max amount (send-all) ----
+
+        #[test]
+        fn smart_transparent_sends_full_taddress_balance() {
+            let n = net();
+            // Two t-notes on the same taddress form a single shielding group.
+            let mut input = plan_inputs(
+                &n,
+                pools(vec![note(1, 0, 300_000, 100), note(2, 0, 200_000, 100)]),
+                vec![recipient(S_ADDR, 0)],
+            );
+            input.smart_transparent = true;
+            let out = plan_outputs(input).unwrap();
+            // Everything is swept: the whole 500_000 becomes input, the recipient
+            // absorbs the fee, and no change is left behind.
+            assert_eq!(total_selected(&out), 500_000);
+            assert_eq!(out.recipient_states.len(), 1);
+            assert_eq!(out.recipient_states[0].recipient.amount, 500_000 - out.fee);
+            assert_eq!(out.change, 0);
+            assert_plan_balances(&out);
+        }
+
+        #[test]
+        fn recipient_pays_fee_send_all_leaves_no_change() {
+            let n = net();
+            // Send the entire single-note balance with the recipient paying the fee.
+            let mut input = plan_inputs(
+                &n,
+                pools(vec![note(1, 2, 1_000_000, 100)]),
+                vec![recipient(&ua_orchard(), 1_000_000)],
+            );
+            input.recipient_pays_fee = true;
+            let out = plan_outputs(input).unwrap();
+            assert_eq!(total_selected(&out), 1_000_000);
+            assert_eq!(out.recipient_states[0].recipient.amount, 1_000_000 - out.fee);
+            assert_eq!(out.change, 0);
+            assert_plan_balances(&out);
+        }
+
+        // ---- Memos ----
+
+        #[test]
+        fn encode_memo_prefers_text_then_bytes() {
+            // Text memo wins.
+            let mut r = Recipient::default();
+            r.user_memo = Some("hello".to_string());
+            r.memo_bytes = Some(vec![1, 2, 3]);
+            assert!(encode_memo(&r).unwrap().is_some());
+
+            // Bytes memo used when no text.
+            let mut r = Recipient::default();
+            r.memo_bytes = Some(vec![0xf6]); // canonical empty-memo byte
+            assert!(encode_memo(&r).unwrap().is_some());
+
+            // Nothing set → no memo.
+            assert!(encode_memo(&Recipient::default()).unwrap().is_none());
+        }
+
+        #[test]
+        fn memos_are_routed_to_the_right_recipient() {
+            let n = net();
+            let mut r0 = recipient(S_ADDR, 100_000);
+            r0.user_memo = Some("first".to_string());
+            let mut r1 = recipient(&ua_orchard(), 100_000);
+            r1.user_memo = Some("second".to_string());
+            let input = plan_inputs(&n, pools(vec![note(1, 2, 2_000_000, 100)]), vec![r0, r1]);
+            let out = plan_outputs(input).unwrap();
+            assert_eq!(
+                out.recipient_states[0].recipient.user_memo.as_deref(),
+                Some("first")
+            );
+            assert_eq!(
+                out.recipient_states[1].recipient.user_memo.as_deref(),
+                Some("second")
+            );
+        }
+
+        // ---- Multiple recipients ----
+
+        #[test]
+        fn multi_recipient_across_pools_builds_one_output_each() {
+            let n = net();
+            let input = plan_inputs(
+                &n,
+                pools(vec![note(1, 2, 5_000_000, 100)]),
+                vec![
+                    recipient(S_ADDR, 700_000),        // Sapling output
+                    recipient(&ua_orchard(), 300_000), // Orchard output
+                    recipient(T_ADDR, 200_000),        // transparent output
+                ],
+            );
+            let out = plan_outputs(input).unwrap();
+            assert_eq!(out.recipient_states.len(), 3);
+            assert_eq!(out.recipient_states[0].pool_mask.to_best_pool(), Some(1));
+            assert_eq!(out.recipient_states[1].pool_mask.to_best_pool(), Some(2));
+            assert_eq!(out.recipient_states[2].pool_mask.to_best_pool(), Some(0));
+            assert_plan_balances(&out);
+        }
+
+        #[test]
+        fn recipient_pays_fee_deducts_from_first_recipient_only() {
+            let n = net();
+            let input = {
+                let mut i = plan_inputs(
+                    &n,
+                    pools(vec![note(1, 2, 5_000_000, 100)]),
+                    vec![recipient(S_ADDR, 1_000_000), recipient(&ua_orchard(), 500_000)],
+                );
+                i.recipient_pays_fee = true;
+                i
+            };
+            let out = plan_outputs(input).unwrap();
+            assert_eq!(
+                out.recipient_states[0].recipient.amount,
+                1_000_000 - out.fee,
+                "fee comes out of the first recipient",
+            );
+            assert_eq!(
+                out.recipient_states[1].recipient.amount, 500_000,
+                "later recipients are untouched",
+            );
+            assert_plan_balances(&out);
+        }
+
+        // ---- Failure path ----
+
+        #[test]
+        fn insufficient_funds_returns_no_feasible_selection() {
+            let n = net();
+            let input = plan_inputs(
+                &n,
+                pools(vec![note(1, 2, 50_000, 100)]),
+                vec![recipient(S_ADDR, 10_000_000)],
+            );
+            let err = match plan_outputs(input) {
+                Ok(_) => panic!("expected NoFeasibleSelection"),
+                Err(e) => e,
+            };
+            assert!(is_no_feasible_selection(&err));
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // DB-backed test: the `locked = 0` / unspent filter in
+    // `fetch_unspent_notes_by_pool` — the one place the locked-note guard is
+    // actually exercised. Uses an in-memory SQLite so it stays fast.
+    // ------------------------------------------------------------------
+    mod db {
+        use super::super::fetch_unspent_notes_by_pool;
+        use sqlx::{Connection, SqliteConnection};
+
+        async fn insert_note(
+            conn: &mut SqliteConnection,
+            id: u32,
+            account: u32,
+            pool: u8,
+            value: i64,
+            locked: bool,
+            id_asset: Option<i64>,
+        ) {
+            sqlx::query(
+                "INSERT INTO notes (id_note, height, account, pool, nullifier, tx, value, locked, id_asset)
+                 VALUES (?, 100, ?, ?, ?, 0, ?, ?, ?)",
+            )
+            .bind(id)
+            .bind(account)
+            .bind(pool)
+            .bind(vec![id as u8; 32]) // distinct, non-empty nullifier
+            .bind(value)
+            .bind(locked)
+            .bind(id_asset)
+            .execute(&mut *conn)
+            .await
+            .unwrap();
+        }
+
+        #[tokio::test]
+        async fn fetch_excludes_locked_spent_and_other_accounts() {
+            let mut conn = SqliteConnection::connect(":memory:").await.unwrap();
+            crate::db::create_schema(&mut conn).await.unwrap();
+
+            // A ZSA asset so we can check the asset_base COALESCE branch.
+            let asset_base = vec![0xABu8; 32];
+            sqlx::query(
+                "INSERT INTO assets (id_asset, asset_desc_hash, ik, asset_base, first_seen_height)
+                 VALUES (1, X'00', X'00', ?, 1)",
+            )
+            .bind(asset_base.clone())
+            .execute(&mut conn)
+            .await
+            .unwrap();
+
+            insert_note(&mut conn, 1, 1, 1, 100_000, false, None).await; // included (Sapling)
+            insert_note(&mut conn, 2, 1, 2, 100_000, true, None).await; // excluded: locked
+            insert_note(&mut conn, 3, 1, 2, 100_000, false, None).await; // excluded: spent
+            insert_note(&mut conn, 4, 1, 0, 100_000, false, None).await; // included (transparent)
+            insert_note(&mut conn, 5, 2, 1, 100_000, false, None).await; // excluded: other account
+            insert_note(&mut conn, 6, 1, 2, 100_000, false, Some(1)).await; // included, ZSA asset
+
+            // Note 3 has been spent.
+            sqlx::query(
+                "INSERT INTO spends (id_note, height, account, pool, tx, value)
+                 VALUES (3, 101, 1, 2, 0, 100000)",
+            )
+            .execute(&mut conn)
+            .await
+            .unwrap();
+
+            let pools = fetch_unspent_notes_by_pool(&mut conn, 1).await.unwrap();
+
+            let ids: Vec<u32> = pools.iter().flatten().map(|n| n.id).collect();
+            assert_eq!(ids, vec![4, 1, 6], "only unspent, unlocked, own-account notes");
+
+            // Grouped by pool.
+            assert_eq!(pools[0].iter().map(|n| n.id).collect::<Vec<_>>(), vec![4]);
+            assert_eq!(pools[1].iter().map(|n| n.id).collect::<Vec<_>>(), vec![1]);
+            assert_eq!(pools[2].iter().map(|n| n.id).collect::<Vec<_>>(), vec![6]);
+
+            // asset_base COALESCE: no id_asset → 32-zero ZEC sentinel; id_asset → real base.
+            let zec = &pools[1][0];
+            assert_eq!(zec.asset_base, vec![0u8; 32]);
+            let zsa = &pools[2][0];
+            assert_eq!(zsa.asset_base, vec![0xABu8; 32]);
+        }
     }
 }
