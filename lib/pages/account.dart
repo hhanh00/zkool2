@@ -341,7 +341,25 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                                   const Gap(4),
                                   const ExchangeRateButton(),
                                   Gap(8),
-                                  BalanceWidget(account.balance),
+                                  GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: () => ref
+                                        .read(appSettingsProvider.notifier)
+                                        .setCollapsePoolBalances(!settings.collapsePoolBalances),
+                                    child: SizedBox(
+                                      width: double.infinity,
+                                      child: settings.collapsePoolBalances
+                                          ? Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(Icons.expand_more, size: 18),
+                                                const Gap(4),
+                                                Text("Pool Balances", style: tt.bodySmall),
+                                              ],
+                                            )
+                                          : BalanceWidget(account.balance),
+                                    ),
+                                  ),
                                 ]),
                               ),
                               Gap(8),
