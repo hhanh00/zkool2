@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -52,6 +53,7 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
   List<_Proposal> _proposals = [];
   Map<int, int> _choices = {}; // proposal id -> option id
   final Set<int> _skipped = {};
+  bool _loading = true;
   String? _error;
   String? _roundParamsJson;
   String? _roundName;
@@ -77,6 +79,9 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
   }
 
   Future<void> _load() async {
+    // Phase 1: fetch + parse the round status — the ballot content itself.
+    // Show it as soon as it parses; the slow best-effort work below must not
+    // delay the proposals.
     try {
       final c = coinContext.coin;
       final res = await votechainRoundStatus(
@@ -97,69 +102,95 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
           .whereType<_Proposal>()
           .toList();
 
-      // Derive the authenticated round params for delegation_prepare from the
-      // cached config + the chain-reported snapshot fields.
+      // Snapshot fields and the round title come from the same response, so
+      // they can be shown immediately too.
       final snapshotHeight = _find(round, "snapshot_height");
       final ncRoot = _find(round, "nc_root");
       final nullifierImtRoot = _find(round, "nullifier_imt_root");
       if (snapshotHeight is int && ncRoot is String && nullifierImtRoot is String) {
         _snapshotHeight = snapshotHeight;
-        _votingPower =
-            await votingEligibleWeight(snapshotHeight: snapshotHeight, c: c);
         _roundName = (_find(round, "title") ??
                     _find(round, "round_name") ??
                     _find(round, "name"))
                 ?.toString() ??
             widget.roundId;
+      }
+      _loading = false;
+      if (mounted) setState(() {});
+
+      // Phase 2: enrichment that must not block or blank the ballot.
+      // Failures surface as a dialog; the ballot stays usable.
+      try {
         final settings = await ref.read(appSettingsProvider.future);
-        if (settings.votingConfigUrl.isNotEmpty) {
-          _roundParamsJson = await votingRoundParamsJson(
-            source: settings.votingConfigUrl,
-            roundId: widget.roundId,
-            snapshotHeight: BigInt.from(snapshotHeight),
-            ncRoot: base64Decode(ncRoot),
-            nullifierImtRoot: base64Decode(nullifierImtRoot),
-            c: c,
-          );
+        // Derive the authenticated round params for delegation_prepare from
+        // the cached config + the chain-reported snapshot fields.
+        if (snapshotHeight is int && ncRoot is String && nullifierImtRoot is String) {
+          _votingPower =
+              await votingEligibleWeight(snapshotHeight: snapshotHeight, c: c);
+          if (settings.votingConfigUrl.isNotEmpty) {
+            _roundParamsJson = await votingRoundParamsJson(
+              source: settings.votingConfigUrl,
+              roundId: widget.roundId,
+              snapshotHeight: BigInt.from(snapshotHeight),
+              ncRoot: base64Decode(ncRoot),
+              nullifierImtRoot: base64Decode(nullifierImtRoot),
+              c: c,
+            );
+          }
+          if (mounted) setState(() {});
         }
-      }
 
-      // Best-effort vote-tree pre-sync so the commit step doesn't wait on it.
-      // An unset Vote Node URL falls back to the vote chain server: the same
-      // REST API serves the commitment tree the sync pulls from.
-      final settings = await ref.read(appSettingsProvider.future);
-      final voteNodeUrl =
-          settings.voteNodeUrl.isNotEmpty ? settings.voteNodeUrl : widget.chainUrl;
-      if (voteNodeUrl.isNotEmpty) {
-        try {
-          await votingSyncTree(
-            roundId: widget.roundId,
-            voteNodeUrl: voteNodeUrl,
-            c: c,
-          );
-        } on AnyhowException catch (_) {
-          // The round may not exist locally yet; the commit step syncs anyway.
+        // Best-effort vote-tree pre-sync so the commit step doesn't wait on
+        // it. An unset Vote Node URL falls back to the vote chain server: the
+        // same REST API serves the commitment tree the sync pulls from. Runs
+        // unawaited — the sync only warms the process-local tree, and the
+        // commit step syncs again if needed.
+        final voteNodeUrl = settings.voteNodeUrl.isNotEmpty
+            ? settings.voteNodeUrl
+            : widget.chainUrl;
+        if (voteNodeUrl.isNotEmpty) {
+          unawaited(() async {
+            try {
+              await votingSyncTree(
+                roundId: widget.roundId,
+                voteNodeUrl: voteNodeUrl,
+                c: c,
+              );
+            } on AnyhowException catch (_) {
+              // The round may not exist locally yet; the commit step syncs
+              // anyway.
+            }
+          }());
         }
-      }
 
-      final drafts = await votingDraftsLoad(roundId: widget.roundId, c: c);
-      if (drafts != null && drafts.isNotEmpty) {
-        final list = jsonDecode(drafts) as List<dynamic>;
-        for (final d in list) {
-          final map = d as Map<String, dynamic>;
-          final pid = map['proposal_id'] as int? ?? 0;
-          final choice = map['choice'] as int? ?? 0;
-          final numOptions = map['num_options'] as int? ?? 2;
-          if (choice == numOptions) {
-            _skipped.add(pid);
-          } else {
-            _choices[pid] = choice;
+        final drafts = await votingDraftsLoad(roundId: widget.roundId, c: c);
+        if (drafts != null && drafts.isNotEmpty) {
+          final list = jsonDecode(drafts) as List<dynamic>;
+          for (final d in list) {
+            final map = d as Map<String, dynamic>;
+            final pid = map['proposal_id'] as int? ?? 0;
+            final choice = map['choice'] as int? ?? 0;
+            final numOptions = map['num_options'] as int? ?? 2;
+            if (choice == numOptions) {
+              _skipped.add(pid);
+            } else {
+              _choices[pid] = choice;
+            }
           }
         }
+        if (mounted) setState(() {});
+      } on AnyhowException catch (e) {
+        if (mounted) await showException(context, e.message);
+      } catch (e) {
+        if (mounted) await showException(context, "$e");
       }
-      if (mounted) setState(() {});
     } on AnyhowException catch (e) {
+      _loading = false;
       if (mounted) setState(() => _error = e.message);
+    } catch (e) {
+      // Decode/shape errors must not leave the page silently empty.
+      _loading = false;
+      if (mounted) setState(() => _error = "$e");
     }
   }
 
@@ -239,9 +270,31 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
     return Scaffold(
       appBar: AppBar(title: Text(_roundName ?? widget.roundId)),
       body: _error != null
-          ? Center(child: Text(_error!))
+          ? Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(_error!),
+                  ),
+                  FilledButton.tonal(
+                    onPressed: () {
+                      setState(() {
+                        _error = null;
+                        _loading = true;
+                      });
+                      Future(_load);
+                    },
+                    child: const Text("Retry"),
+                  ),
+                ],
+              ),
+            )
           : _proposals.isEmpty
-              ? const Center(child: Text("No proposals found for this round"))
+              ? (_loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : const Center(child: Text("No proposals found for this round")))
               : ListView.builder(
                   itemCount: _proposals.length,
                   itemBuilder: (context, i) {
@@ -287,7 +340,9 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
                     );
                   },
                 ),
-      bottomNavigationBar: SafeArea(
+      bottomNavigationBar: _loading || _error != null
+          ? null
+          : SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Column(
