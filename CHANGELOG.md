@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.30.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.30.0-rc...zkool-v6.30.0-rc.1) (2026-09-03)
+
+
+### Bug Fixes
+
+* scope witness consistency check to synced accounts ([7f3877e](https://github.com/hhanh00/zkool2/commit/7f3877e0b2f2fc90e9a4bcdaf16ff763bb36c3be))
+* **vote:** show ballot proposals immediately instead of after the vote-tree pre-sync ([47e5d38](https://github.com/hhanh00/zkool2/commit/47e5d388c10c9b5c5b6c05e4a338c624f7773749))
+
 ## [6.30.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.29.0...zkool-v6.30.0-rc) (2026-09-01)
 
 
