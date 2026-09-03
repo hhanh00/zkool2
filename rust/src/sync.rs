@@ -741,6 +741,7 @@ async fn shielded_sync_range(
     rx_cancel: broadcast::Receiver<()>,
 ) -> Result<()> {
     let accounts = accounts.to_vec();
+    let account_ids: Vec<u32> = accounts.iter().map(|(a, _)| *a).collect();
     let db_writer_task = {
         let (s, o, i) = get_tree_state(network, client, start - 1).await?;
 
@@ -801,7 +802,7 @@ async fn shielded_sync_range(
             db_tx.commit().await.unwrap();
 
             debug!("[db handler] stopped");
-            check_witness_consistency(&mut writer_connection).await?;
+            check_witness_consistency(&mut writer_connection, &account_ids).await?;
 
             Ok::<_, anyhow::Error>(())
         });
@@ -1129,24 +1130,37 @@ pub async fn trim_sync_data(
 }
 
 #[cfg(debug_assertions)]
-pub async fn check_witness_consistency(connection: &mut SqliteConnection) -> Result<()> {
-    let notes = sqlx::query(
-    "WITH utxo AS (SELECT * FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note WHERE s.id_note IS NULL),
+pub async fn check_witness_consistency(
+    connection: &mut SqliteConnection,
+    accounts: &[u32],
+) -> Result<()> {
+    if accounts.is_empty() {
+        return Ok(());
+    }
+    let placeholders = vec!["?"; accounts.len()].join(", ");
+    let query = format!(
+        "WITH utxo AS (SELECT * FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note WHERE s.id_note IS NULL),
     db_height AS (SELECT * FROM sync_heights)
     SELECT u.account, u.pool, u.height, u.value, d.height FROM utxo u
     JOIN db_height d ON d.account = u.account AND d.pool = u.pool
     LEFT JOIN witnesses w ON u.id_note = w.note AND w.account = u.account
     AND w.height = d.height
-    WHERE w.id_witness IS NULL AND u.pool <> 0 AND u.id_asset IS NULL")
-    .map(|r: SqliteRow| {
-        let account: u32 = r.get(0);
-        let pool: u8 = r.get(1);
-        let height: u32 = r.get(2);
-        let value: u64 = r.get(3);
-        let db_height: u32 = r.get(4);
-        (account, pool, height, value, db_height)
-    })
-    .fetch_all(connection).await?;
+    WHERE w.id_witness IS NULL AND u.pool <> 0 AND u.id_asset IS NULL
+    AND u.account IN ({placeholders})");
+    let mut q = sqlx::query(&query);
+    for account in accounts {
+        q = q.bind(account);
+    }
+    let notes = q
+        .map(|r: SqliteRow| {
+            let account: u32 = r.get(0);
+            let pool: u8 = r.get(1);
+            let height: u32 = r.get(2);
+            let value: u64 = r.get(3);
+            let db_height: u32 = r.get(4);
+            (account, pool, height, value, db_height)
+        })
+        .fetch_all(connection).await?;
 
     for (account, pool, height, value, db_height) in notes.iter() {
         debug!("Missing witness for note {pool} {height} {value} of account {account} at height {db_height}");
@@ -1159,7 +1173,10 @@ pub async fn check_witness_consistency(connection: &mut SqliteConnection) -> Res
 }
 
 #[cfg(not(debug_assertions))]
-pub async fn check_witness_consistency(_connection: &mut SqliteConnection) -> Result<()> {
+pub async fn check_witness_consistency(
+    _connection: &mut SqliteConnection,
+    _accounts: &[u32],
+) -> Result<()> {
     Ok(())
 }
 
