@@ -56,6 +56,7 @@ docs/
 ios/build/
 
 *.sh
+!misc/ledger/*.sh
 .env
 /certs/
 node_modules/
