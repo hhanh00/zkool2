@@ -260,7 +260,12 @@ pub static LEDGER_ZEMU: LazyLock<tokio::sync::Mutex<Option<LedgerDeviceZEMU>>> =
         {
             use std::sync::Arc;
 
-            let device = ledger_transport_zemu::TransportZemuHttp::new("192.168.18.13", 9999);
+            let host = std::env::var("ZEMU_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+            let port: u16 = std::env::var("ZEMU_PORT")
+                .ok()
+                .and_then(|p| p.parse().ok())
+                .unwrap_or(9999);
+            let device = ledger_transport_zemu::TransportZemuHttp::new(&host, port);
             let ledger = LedgerDeviceZEMU {
                 device: Arc::new(device),
             };
