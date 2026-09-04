@@ -10876,7 +10876,7 @@ impl SseDecode for crate::api::account::NewAccount {
         let mut var_pools = <Option<u8>>::sse_decode(deserializer);
         let mut var_useInternal = <bool>::sse_decode(deserializer);
         let mut var_internal = <bool>::sse_decode(deserializer);
-        let mut var_ledger = <bool>::sse_decode(deserializer);
+        let mut var_hw = <u8>::sse_decode(deserializer);
         return crate::api::account::NewAccount {
             icon: var_icon,
             name: var_name,
@@ -10890,7 +10890,7 @@ impl SseDecode for crate::api::account::NewAccount {
             pools: var_pools,
             use_internal: var_useInternal,
             internal: var_internal,
-            ledger: var_ledger,
+            hw: var_hw,
         };
     }
 }
@@ -13665,7 +13665,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::NewAccount {
             self.pools.into_into_dart().into_dart(),
             self.use_internal.into_into_dart().into_dart(),
             self.internal.into_into_dart().into_dart(),
-            self.ledger.into_into_dart().into_dart(),
+            self.hw.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -16343,7 +16343,7 @@ impl SseEncode for crate::api::account::NewAccount {
         <Option<u8>>::sse_encode(self.pools, serializer);
         <bool>::sse_encode(self.use_internal, serializer);
         <bool>::sse_encode(self.internal, serializer);
-        <bool>::sse_encode(self.ledger, serializer);
+        <u8>::sse_encode(self.hw, serializer);
     }
 }
 

@@ -30,6 +30,22 @@ speaks CLA `0xE0` (Bitcoin-app style) with Zcash extensions (INS `0x50` VK,
 protocol and needs migration; only the version smoke test speaks `0xE0` today.
 The transport layer is protocol-agnostic and unchanged.
 
+## Account types (`accounts.hw`)
+
+| hw | App | Pools | Device protocol |
+| --- | --- | --- | --- |
+| 0 | software | all | n/a |
+| 1 | Zondax | transparent + sapling | CLA `0x85` |
+| 2 | Official | transparent + ironwood | CLA `0xE0` (not implemented yet) |
+
+v1 Official behavior: accounts are created from the recovery seed with
+standard ZIP-32 derivation (no device needed); device operations return clear
+errors via `ledger::mock::StubLedger`. Ironwood shares its keys with Orchard
+(see `api::account::get_account_pools`), so Official accounts are initialized
+with the Orchard key set. Pool masks are validated at creation
+(`account.rs`). Selection UI lives in the New Account form
+(`lib/pages/new_account.dart`).
+
 ## Prerequisites
 
 - Docker Desktop installed and running (`docker info` succeeds).

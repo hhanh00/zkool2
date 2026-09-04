@@ -888,7 +888,7 @@ pub const LEDGER_CODE: u32 = 1;
 pub async fn store_account_hw(
     connection: &mut SqliteConnection,
     account: u32,
-    hw_code: u32,
+    hw_code: u8,
     aindex: u32,
 ) -> Result<()> {
     sqlx::query("UPDATE accounts SET hw = ?2, aindex = ?3 WHERE id_account = ?1")

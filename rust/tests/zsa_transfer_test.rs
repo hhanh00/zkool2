@@ -59,7 +59,7 @@ async fn test_orchard_transfer() {
         pools: Some(ALL_POOLS),
         use_internal: false,
         internal: false,
-        ledger: false,
+        hw: 0,
     };
     let sender_id = new_account(&na, &coin)
         .await
@@ -168,7 +168,7 @@ async fn test_orchard_transfer() {
         pools: Some(ALL_POOLS),
         use_internal: false,
         internal: false,
-        ledger: false,
+        hw: 0,
     };
     let recipient_id = new_account(&na2, &coin).await.expect("restore recipient");
     println!("Recipient account restored: id={recipient_id}");
@@ -358,7 +358,7 @@ async fn test_zsa_issuance() {
         pools: Some(ALL_POOLS),
         use_internal: false,
         internal: false,
-        ledger: false,
+        hw: 0,
     };
     let account_id = new_account(&na, &coin)
         .await
@@ -530,7 +530,7 @@ async fn test_zsa_transfer() {
         pools: Some(ALL_POOLS),
         use_internal: false,
         internal: false,
-        ledger: false,
+        hw: 0,
     };
     let sender_id = new_account(&na, &coin)
         .await
@@ -664,7 +664,7 @@ async fn test_zsa_transfer() {
         pools: Some(ALL_POOLS),
         use_internal: false,
         internal: false,
-        ledger: false,
+        hw: 0,
     };
     let recipient_id = new_account(&na2, &coin).await.expect("restore recipient");
     let recipient = coin

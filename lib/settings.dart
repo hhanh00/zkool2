@@ -931,7 +931,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
               folder: "",
               useInternal: ra.useInternal,
               internal: false,
-              ledger: false,
+              hw: 0,
             ),
             c: coin,
           );
@@ -1091,7 +1091,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
             folder: "",
             useInternal: ra.useInternal,
             internal: false,
-            ledger: false,
+            hw: 0,
           ),
           c: coin,
         );
