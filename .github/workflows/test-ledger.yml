@@ -20,6 +20,8 @@ jobs:
         with:
           workspaces: rust
       - name: Setup emulator
+        env:
+          SEED: ${{ secrets.SEED }}
         run: |
           misc/ledger/setup.sh
           misc/ledger/build.sh
