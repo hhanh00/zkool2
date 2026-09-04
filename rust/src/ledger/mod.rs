@@ -44,6 +44,7 @@ cfg_if::cfg_if! {
         pub mod hashers;
         pub mod nano;
         pub mod official;
+        pub mod official_sign;
 
         #[cfg(test)]
         mod tests;

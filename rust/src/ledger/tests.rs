@@ -69,15 +69,23 @@ fn screen_text() -> String {
         .unwrap_or_default()
 }
 
-/// Drive the NBGL review: advance pages with the right button and confirm
-/// the export with a both-button press on the Confirm choice. Loops until
-/// the deadline so stale reviews from earlier failed runs are approved too.
+/// Drive the NBGL review: advance pages with the right button. The post-review
+/// "Address verified" status and the "Sign transaction" approval page need a
+/// both-button press; "Reject transaction" means the approval page was
+/// overshot, so step back with left. Loops until the deadline so stale reviews
+/// from earlier failed runs are approved too.
 fn spawn_approval_driver() {
     std::thread::spawn(|| {
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(120);
         while std::time::Instant::now() < deadline {
             let text = screen_text();
-            if text.contains("Confirm") {
+            if text.contains("Reject transaction") {
+                eprintln!("driver: left (screen: {text:?})");
+                ui_post("/button/left", r#"{"action": "press-and-release"}"#);
+            } else if text.contains("Sign transaction")
+                || text.contains("Confirm")
+                || text.contains("verified")
+            {
                 eprintln!("driver: both (screen: {text:?})");
                 press_both();
             } else {
@@ -259,5 +267,246 @@ pub async fn ledger_app_version() -> LedgerResult<()> {
         hex::encode(&res.data)
     );
     println!("app version response: {}", hex::encode(&res.data));
+    Ok(())
+}
+
+/// Sign an ironwood-to-ironwood v6 transaction with the Official Ledger PCZT
+/// protocol against the emulator. The transaction is planned locally from the
+/// emulator seed (one ironwood note spend, one recipient output, one hidden
+/// internal change note), so the device must derive the same ask and produce
+/// spend authorization signatures that verify against zkool's own v6 digest —
+/// which is exactly what the PCZT signer checks when they are applied.
+/// Needs the emulator up, seeded with EMULATOR_SEED:
+/// `cargo test --features zemu -- --ignored --nocapture ledger_official_sign`
+#[tokio::test]
+#[ignore]
+pub async fn ledger_official_sign() -> LedgerResult<()> {
+    use std::str::FromStr as _;
+
+    use orchard::{
+        note::AssetBase,
+        tree::MerkleHashOrchard,
+    };
+    use pczt::roles::{creator::Creator, io_finalizer::IoFinalizer};
+    use rand_core::OsRng;
+    use sqlx::Connection as _;
+    use zcash_keys::{
+        encoding::AddressCodec as _,
+        keys::UnifiedSpendingKey,
+    };
+    use zcash_primitives::transaction::{
+        builder::{BuildConfig, Builder, BundlePadding},
+        fees::zip317::FeeRule,
+    };
+    use zcash_protocol::{
+        consensus::{BlockHeight, BranchId},
+        memo::MemoBytes,
+        value::Zatoshis,
+    };
+    use zip32::AccountId;
+
+    const EMULATOR_SEED: &str = "display accident enable raw glimpse engine know fog bubble price bunker minimum entry tuna joy motor rate tennis evolve october verb jelly indoor dance";
+
+    let network = Network::Main;
+    let ledger = LEDGER_ZEMU.lock().await.clone().unwrap();
+
+    // ── keys from the emulator seed ───────────────────────────────────────
+    let mnemonic = bip39::Mnemonic::from_str(EMULATOR_SEED)
+        .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("bad seed: {e}")))?;
+    let seed = mnemonic.to_seed("");
+    let usk = UnifiedSpendingKey::from_seed(&network, &seed, AccountId::try_from(0).unwrap())
+        .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("usk derivation failed: {e}")))?;
+    let tsk = usk.transparent();
+    let tvk = tsk.to_account_pubkey();
+    let (tpk, taddr) = crate::account::derive_transparent_address(&tvk, 0, 0, false)
+        .map_err(|e| LedgerError::Anyhow(e))?;
+    let address_string = taddr.encode(&network);
+
+    // ── plan an ironwood-to-ironwood v6 tx (spend → recipient + change) ───
+    let height = BlockHeight::from_u32(3_500_000);
+    assert_eq!(
+        BranchId::for_height(&network, height),
+        BranchId::Nu6_3,
+        "test height must be past NU6.3"
+    );
+
+    // Synthetic ironwood note owned by the account (external scope), with a
+    // witness at position 0 of an otherwise-empty tree: the siblings are the
+    // empty subtrees of each height.
+    use incrementalmerkletree::Hashable as _;
+    let fvk = orchard::keys::FullViewingKey::from(usk.orchard());
+    let spend_recipient = fvk.address_at(zip32::DiversifierIndex::from(0u32), orchard::keys::Scope::External);
+    let change_recipient = fvk.address_at(zip32::DiversifierIndex::from(0u32), orchard::keys::Scope::Internal);
+    let rho = orchard::note::Rho::from_bytes(&[9u8; 32])
+        .into_option()
+        .ok_or_else(|| LedgerError::Protocol("bad rho".into()))?;
+    let rseed = orchard::note::RandomSeed::from_bytes([7u8; 32], &rho)
+        .into_option()
+        .ok_or_else(|| LedgerError::Protocol("bad rseed".into()))?;
+    let note = orchard::note::Note::from_parts(
+        spend_recipient,
+        orchard::value::NoteValue::from_raw(100_000),
+        AssetBase::zatoshi(),
+        rho,
+        rseed,
+        orchard::note::NoteVersion::V3,
+    )
+    .into_option()
+    .ok_or_else(|| LedgerError::Protocol("bad note".into()))?;
+    let cmx = orchard::note::ExtractedNoteCommitment::from(note.commitment());
+    let mut auth_path = [MerkleHashOrchard::empty_leaf(); 32];
+    let mut state = MerkleHashOrchard::empty_leaf();
+    for (l, sibling) in auth_path.iter_mut().enumerate() {
+        *sibling = state;
+        state = MerkleHashOrchard::combine(
+            incrementalmerkletree::Level::from(l as u8),
+            &state,
+            &state,
+        );
+    }
+    let merkle_path = orchard::tree::MerklePath::from_parts(0, auth_path);
+    let anchor = merkle_path.root(cmx);
+
+    let config = BuildConfig::Standard {
+        sapling_anchor: None,
+        orchard_anchor: None,
+        ironwood_anchor: Some(anchor),
+        orchard_padding: BundlePadding::DEFAULT,
+        ironwood_padding: BundlePadding::DEFAULT,
+    };
+    let mut builder = Builder::new(&network, height, config);
+    builder
+        .add_ironwood_spend::<std::convert::Infallible>(fvk.clone(), note, merkle_path)
+        .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("add spend: {e:?}")))?;
+    builder
+        .add_ironwood_output::<std::convert::Infallible>(
+            Some(fvk.to_ovk(orchard::keys::Scope::External)),
+            spend_recipient,
+            Zatoshis::const_from_u64(40_000),
+            MemoBytes::empty(),
+        )
+        .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("add output: {e:?}")))?;
+    builder
+        .add_ironwood_output::<std::convert::Infallible>(
+            Some(fvk.to_ovk(orchard::keys::Scope::External)),
+            change_recipient,
+            Zatoshis::const_from_u64(50_000),
+            MemoBytes::empty(),
+        )
+        .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("add change: {e:?}")))?;
+
+    let r = builder
+        .build_for_pczt(OsRng, &FeeRule::standard(), |_: &AssetBase| false)
+        .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("build_for_pczt: {e:?}")))?;
+    let pczt = Creator::build_from_parts(r.pczt_parts)
+        .ok_or_else(|| LedgerError::Protocol("creator returned no pczt".into()))?;
+
+    let (pczt, _) = IoFinalizer::new(pczt)
+        .finalize_io()
+        .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("io finalizer: {e:?}")))?;
+
+    let ironwood_index = r.ironwood_meta.spend_action_index(0).unwrap();
+    let package = crate::api::pay::PcztPackage {
+        pczt: pczt
+            .serialize()
+            .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("serialize: {e:?}")))?,
+        n_spends: [0, 0, 0, 1],
+        sapling_indices: vec![],
+        orchard_indices: vec![],
+        ironwood_indices: vec![ironwood_index],
+        can_sign: true,
+        can_broadcast: false,
+        price: None,
+        category: None,
+        is_issuance: false,
+    };
+
+    // ── sign on the emulator ──────────────────────────────────────────────
+    let mut db = std::env::temp_dir();
+    db.push(format!("zkool_ol_sign_{}.db", std::process::id()));
+    let mut connection = sqlx::sqlite::SqliteConnection::connect_with(
+        &sqlx::sqlite::SqliteConnectOptions::new()
+            .filename(&db)
+            .create_if_missing(true),
+    )
+    .await
+    .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("{e}")))?;
+    crate::db::create_schema(&mut connection)
+        .await
+        .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("{e}")))?;
+
+    // Seed the OL account directly in the DB instead of importing it from the
+    // device: after a GET_VK review the emulator wedges in its home menu and
+    // stops answering APDUs, so the device interaction must come last.
+    let account = crate::db::store_account_metadata(
+        &mut connection,
+        "ol-sign",
+        &None,
+        &None,
+        u32::from(height),
+        false,
+        false,
+    )
+    .await
+    .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("{e}")))?;
+    crate::db::store_account_hw(&mut connection, account, HwKind::Official as u8, 0)
+        .await
+        .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("{e}")))?;
+    crate::db::init_account_transparent(&mut connection, account, u32::from(height))
+        .await
+        .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("{e}")))?;
+    crate::db::store_account_transparent_vk(&mut connection, account, &tvk)
+        .await
+        .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("{e}")))?;
+    crate::db::store_account_transparent_addr(
+        &mut connection,
+        account,
+        0,
+        0,
+        None,
+        &tpk,
+        &address_string,
+        false,
+    )
+    .await
+    .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("{e}")))?;
+    crate::db::init_account_orchard(&network, &mut connection, account, u32::from(height))
+        .await
+        .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("{e}")))?;
+    crate::db::store_account_orchard_vk(
+        &mut connection,
+        account,
+        &orchard::keys::FullViewingKey::from(usk.orchard()),
+    )
+        .await
+        .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("{e}")))?;
+    crate::db::update_dindex(&mut connection, account, 0, true)
+        .await
+        .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("{e}")))?;
+
+    // The device review runs on the last ironwood packet; the driver approves it.
+    spawn_approval_driver();
+
+    let signed = tokio::time::timeout(
+        std::time::Duration::from_secs(120),
+        crate::ledger::official_sign::sign_transaction(
+            &network,
+            &mut connection,
+            account,
+            &package,
+            None,
+            &ledger,
+        ),
+    )
+    .await
+    .map_err(|_| LedgerError::Protocol("timeout signing on the device".into()))
+    .and_then(|r| r.map_err(LedgerError::Anyhow))?;
+
+    // Reaching this point means the device-derived signature verified against
+    // zkool's ZIP-244 sighash for the declared derivation path.
+    let _signed = pczt::Pczt::parse(&signed.pczt)
+        .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("reparse: {e:?}")))?;
+    std::fs::remove_file(&db).ok();
+    println!("official ledger signing OK");
     Ok(())
 }
