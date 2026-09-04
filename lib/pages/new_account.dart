@@ -34,7 +34,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
   var key = "";
   var isSeed = false;
   var ledger = false;
-  var ledgerApp = 0; // 0 = Zondax (Sapling), 1 = Official (Ironwood)
+  var ledgerApp = 1; // 0 = Zondax (Sapling), 1 = Official (Ironwood)
 
   int getPools() => ledger
       ? (ledgerApp == 0
@@ -404,7 +404,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       AwesomeDialog? dialog;
       try {
         String message = "Please wait while we create the account";
-        if (ledger && ledgerApp == 0 && !isSeed) message += "\nConfirm on your Ledger device";
+        if (ledger && !isSeed) message += "\nConfirm on your Ledger device";
         dialog = showLoadingDialog(context, message);
         final account = await newAccount(
             na: NewAccount(

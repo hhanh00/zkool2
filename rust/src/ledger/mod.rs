@@ -43,6 +43,7 @@ cfg_if::cfg_if! {
         pub mod fvk;
         pub mod hashers;
         pub mod nano;
+        pub mod official;
 
         #[cfg(test)]
         mod tests;
@@ -90,6 +91,10 @@ pub trait LedgerApp: Send + Sync {
     }
 
     async fn get_sapling_address(&self, _network: &Network, _aindex: u32) -> Result<String> {
+        anyhow::bail!("not supported by this Ledger app")
+    }
+
+    async fn get_ufvk(&self, _network: &Network, _aindex: u32) -> Result<String> {
         anyhow::bail!("not supported by this Ledger app")
     }
 
