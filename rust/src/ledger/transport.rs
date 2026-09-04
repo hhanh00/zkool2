@@ -16,8 +16,10 @@ use crate::{
 pub fn open_ledger(api: &HidApi) -> LedgerResult<HidDevice> {
     for devinfo in api.device_list() {
         let vendor_id = devinfo.vendor_id();
-        if vendor_id == 0x2C97 {
-            // Ledger
+        // Ledger devices expose two HID interfaces: the APDU one (usage page
+        // 0xFFA0) and a console one (0xFF00) that accepts writes but never
+        // answers, which would hang the wallet.
+        if vendor_id == 0x2C97 && devinfo.usage_page() == 0xFFA0 {
             let device = devinfo.open_device(api)?;
             let _ = device.set_blocking_mode(true);
             return Ok(device);
