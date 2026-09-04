@@ -238,7 +238,17 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                                 ),
                           ),
                           Gap(12),
-                          if (!ledger && (isSeed || key.isEmpty))
+                          if (ledger && ledgerApp == 1 && key.isEmpty)
+                            Tooltip(
+                              message:
+                                  "Official Ledger accounts always use an internal address for the change",
+                              child: SwitchListTile(
+                                value: true,
+                                onChanged: null,
+                                title: const Text("Use Internal Change"),
+                              ),
+                            )
+                          else if (!ledger && (isSeed || key.isEmpty))
                             Tooltip(
                               message: "Check if you want this account to use an internal address for the change like Zashi (ZIP 316)",
                               child: FormBuilderSwitch(
@@ -385,7 +395,10 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       final String? passphrase = formData?["passphrase"];
       final String? aindex = formData?["aindex"];
       final String? birth = formData?["birth"];
-      final bool? useInternal = formData?["useInternal"];
+      final bool useInternal =
+          (ledger && ledgerApp == 1 && key.isEmpty)
+              ? true
+              : formData?["useInternal"] ?? false;
       final int? pools = formData!["pools"];
 
       final icon = iconBytes;
@@ -417,7 +430,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
               birth: bh,
               folder: "",
               pools: pools,
-              useInternal: useInternal ?? false,
+              useInternal: useInternal,
               internal: false,
               hw: hw,
             ),
@@ -444,7 +457,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                 name: name ?? "",
                 seed: seed.mnemonic,
                 aindex: int.parse(aindex ?? "0"),
-                useInternal: useInternal ?? false,
+                useInternal: useInternal,
                 birthHeight: bh,
               );
         }

@@ -78,19 +78,28 @@ pub async fn new_account(
             .into()
     });
 
+    let ledger_kind = HwKind::from_hw(na.hw);
+    // Official Ledger accounts always use an internal change address, so the
+    // transparent change output can carry the derivation path the Ledger app
+    // requires to verify it as change.
+    let use_internal = if ledger_kind == HwKind::Official {
+        true
+    } else {
+        na.use_internal
+    };
+
     let account = store_account_metadata(
         &mut db_tx,
         &na.name,
         &na.icon,
         &na.fingerprint,
         birth,
-        na.use_internal,
+        use_internal,
         na.internal,
     )
     .await?;
 
     let mut key = na.key.clone();
-    let ledger_kind = HwKind::from_hw(na.hw);
     if key.is_empty() && !ledger_kind.is_ledger() {
         key = generate_seed()?;
     }
