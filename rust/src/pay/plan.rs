@@ -58,6 +58,7 @@ use crate::{
     api::{coin::Network, issuance::IssuanceInfo, pay::PcztPackage},
     db::{get_account_dindex, get_account_hw, select_account_transparent},
     keys::{sapling_pgk_for_scope, sapling_ssk_for_scope, SaplingFullViewingKey},
+    ledger::HwKind,
     pay::{
         error::Error,
         fee::COST_PER_ACTION,
@@ -819,8 +820,10 @@ pub async fn plan_transaction(
     // The Zondax "Zcash Shielded" app predates NU6.3 and cannot sign v6/Ironwood
     // transactions, so force a v5 tx while keeping consensus_branch_id = Nu6_3
     // (V5 is valid in Nu6_3 per TxVersion::valid_in_branch). A v5 tx carrying the
-    // current Nu6_3 branch id is valid on the network.
-    if hw != 0 {
+    // current Nu6_3 branch id is valid on the network. The official Ledger app
+    // supports v6/Ironwood signing and must not be forced to v5, otherwise any
+    // tx carrying Ironwood spends fails to build.
+    if hw == HwKind::Zondax as u8 {
         builder
             .propose_version::<()>(TxVersion::V5)
             .map_err(|e| anyhow!("failed to force v5 for hardware signing: {e:?}"))?;
