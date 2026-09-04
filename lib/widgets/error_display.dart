@@ -116,13 +116,13 @@ class _ErrorDisplayState extends State<ErrorDisplay> {
                         ),
                       ),
                       const Gap(4),
-                      Text(
+                      SelectableText(
                         _errorMessage,
                         style: textTheme.bodyMedium?.copyWith(
                           color: colorScheme.onErrorContainer,
                         ),
                         maxLines: _isExpanded ? null : 2,
-                        overflow: _isExpanded ? null : TextOverflow.ellipsis,
+                        textAlign: TextAlign.center,
                       ),
                     ],
                   ),
@@ -289,7 +289,7 @@ class ErrorDialog extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
+            child: SelectableText(
               errorMessage,
               style: textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurface,
@@ -333,7 +333,7 @@ class ErrorDialog extends StatelessWidget {
                         onTap: () {
                           Clipboard.setData(ClipboardData(
                             text: '$error\n\n$stackTrace',
-                          ));
+                          ),);
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Error details copied to clipboard'),
