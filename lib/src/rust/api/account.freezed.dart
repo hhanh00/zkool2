@@ -2729,7 +2729,7 @@ mixin _$NewAccount {
   int? get pools;
   bool get useInternal;
   bool get internal;
-  bool get ledger;
+  int get hw;
 
   /// Create a copy of NewAccount
   /// with the given fields replaced by the non-null parameter values.
@@ -2759,7 +2759,7 @@ mixin _$NewAccount {
                 other.useInternal == useInternal) &&
             (identical(other.internal, internal) ||
                 other.internal == internal) &&
-            (identical(other.ledger, ledger) || other.ledger == ledger));
+            (identical(other.hw, hw) || other.hw == hw));
   }
 
   @override
@@ -2777,11 +2777,11 @@ mixin _$NewAccount {
       pools,
       useInternal,
       internal,
-      ledger);
+      hw);
 
   @override
   String toString() {
-    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, folder: $folder, pools: $pools, useInternal: $useInternal, internal: $internal, ledger: $ledger)';
+    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, folder: $folder, pools: $pools, useInternal: $useInternal, internal: $internal, hw: $hw)';
   }
 }
 
@@ -2804,7 +2804,7 @@ abstract mixin class $NewAccountCopyWith<$Res> {
       int? pools,
       bool useInternal,
       bool internal,
-      bool ledger});
+      int hw});
 }
 
 /// @nodoc
@@ -2831,7 +2831,7 @@ class _$NewAccountCopyWithImpl<$Res> implements $NewAccountCopyWith<$Res> {
     Object? pools = freezed,
     Object? useInternal = null,
     Object? internal = null,
-    Object? ledger = null,
+    Object? hw = null,
   }) {
     return _then(_self.copyWith(
       icon: freezed == icon
@@ -2882,10 +2882,10 @@ class _$NewAccountCopyWithImpl<$Res> implements $NewAccountCopyWith<$Res> {
           ? _self.internal
           : internal // ignore: cast_nullable_to_non_nullable
               as bool,
-      ledger: null == ledger
-          ? _self.ledger
-          : ledger // ignore: cast_nullable_to_non_nullable
-              as bool,
+      hw: null == hw
+          ? _self.hw
+          : hw // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
@@ -2994,7 +2994,7 @@ extension NewAccountPatterns on NewAccount {
             int? pools,
             bool useInternal,
             bool internal,
-            bool ledger)?
+            int hw)?
         $default, {
     required TResult orElse(),
   }) {
@@ -3014,7 +3014,7 @@ extension NewAccountPatterns on NewAccount {
             _that.pools,
             _that.useInternal,
             _that.internal,
-            _that.ledger);
+            _that.hw);
       case _:
         return orElse();
     }
@@ -3048,7 +3048,7 @@ extension NewAccountPatterns on NewAccount {
             int? pools,
             bool useInternal,
             bool internal,
-            bool ledger)
+            int hw)
         $default,
   ) {
     final _that = this;
@@ -3067,7 +3067,7 @@ extension NewAccountPatterns on NewAccount {
             _that.pools,
             _that.useInternal,
             _that.internal,
-            _that.ledger);
+            _that.hw);
     }
   }
 
@@ -3098,7 +3098,7 @@ extension NewAccountPatterns on NewAccount {
             int? pools,
             bool useInternal,
             bool internal,
-            bool ledger)?
+            int hw)?
         $default,
   ) {
     final _that = this;
@@ -3117,7 +3117,7 @@ extension NewAccountPatterns on NewAccount {
             _that.pools,
             _that.useInternal,
             _that.internal,
-            _that.ledger);
+            _that.hw);
       case _:
         return null;
     }
@@ -3140,7 +3140,7 @@ class _NewAccount implements NewAccount {
       this.pools,
       required this.useInternal,
       required this.internal,
-      required this.ledger});
+      required this.hw});
 
   @override
   final Uint8List? icon;
@@ -3167,7 +3167,7 @@ class _NewAccount implements NewAccount {
   @override
   final bool internal;
   @override
-  final bool ledger;
+  final int hw;
 
   /// Create a copy of NewAccount
   /// with the given fields replaced by the non-null parameter values.
@@ -3198,7 +3198,7 @@ class _NewAccount implements NewAccount {
                 other.useInternal == useInternal) &&
             (identical(other.internal, internal) ||
                 other.internal == internal) &&
-            (identical(other.ledger, ledger) || other.ledger == ledger));
+            (identical(other.hw, hw) || other.hw == hw));
   }
 
   @override
@@ -3216,11 +3216,11 @@ class _NewAccount implements NewAccount {
       pools,
       useInternal,
       internal,
-      ledger);
+      hw);
 
   @override
   String toString() {
-    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, folder: $folder, pools: $pools, useInternal: $useInternal, internal: $internal, ledger: $ledger)';
+    return 'NewAccount(icon: $icon, name: $name, restore: $restore, key: $key, passphrase: $passphrase, fingerprint: $fingerprint, aindex: $aindex, birth: $birth, folder: $folder, pools: $pools, useInternal: $useInternal, internal: $internal, hw: $hw)';
   }
 }
 
@@ -3245,7 +3245,7 @@ abstract mixin class _$NewAccountCopyWith<$Res>
       int? pools,
       bool useInternal,
       bool internal,
-      bool ledger});
+      int hw});
 }
 
 /// @nodoc
@@ -3272,7 +3272,7 @@ class __$NewAccountCopyWithImpl<$Res> implements _$NewAccountCopyWith<$Res> {
     Object? pools = freezed,
     Object? useInternal = null,
     Object? internal = null,
-    Object? ledger = null,
+    Object? hw = null,
   }) {
     return _then(_NewAccount(
       icon: freezed == icon
@@ -3323,10 +3323,10 @@ class __$NewAccountCopyWithImpl<$Res> implements _$NewAccountCopyWith<$Res> {
           ? _self.internal
           : internal // ignore: cast_nullable_to_non_nullable
               as bool,
-      ledger: null == ledger
-          ? _self.ledger
-          : ledger // ignore: cast_nullable_to_non_nullable
-              as bool,
+      hw: null == hw
+          ? _self.hw
+          : hw // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }

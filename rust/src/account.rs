@@ -13,6 +13,7 @@ use crate::{
         store_account_transparent_sk, store_account_transparent_vk, update_dindex,
     },
     key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
+    ledger::HwKind,
     keys::{sapling_dfvk_to_fvk, ScopeExt},
     tiu,
 };
@@ -24,7 +25,9 @@ use crate::{
         key::generate_seed,
     },
     db::{get_account_hw, select_account_transparent, store_account_hw, store_account_metadata},
-    pay::pool::ALL_POOLS,
+    pay::pool::{
+        ALL_POOLS, POOL_IRONWOOD, POOL_ORCHARD, POOL_SAPLING, POOL_TRANSPARENT,
+    },
 };
 use secp256k1::{PublicKey, SecretKey};
 use zcash_keys::keys::{sapling::ExtendedSpendingKey, UnifiedFullViewingKey, UnifiedSpendingKey};
@@ -87,16 +90,43 @@ pub async fn new_account(
     .await?;
 
     let mut key = na.key.clone();
-    if key.is_empty() && !na.ledger {
+    let ledger_kind = HwKind::from_hw(na.hw);
+    if key.is_empty() && !ledger_kind.is_ledger() {
         key = generate_seed()?;
     }
 
     let pools = na.pools.unwrap_or(ALL_POOLS);
 
-    if na.ledger {
+    let ledger_kind = if ledger_kind.is_ledger() {
+        match ledger_kind {
+            HwKind::Official => {
+                if pools & !(POOL_TRANSPARENT | POOL_IRONWOOD) != 0 {
+                    anyhow::bail!(
+                        "Official Ledger accounts support transparent and ironwood pools only"
+                    );
+                }
+                if !is_valid_phrase(&key) {
+                    anyhow::bail!(
+                        "Official Ledger accounts require the recovery seed phrase. Importing the viewing key from the device is not supported yet"
+                    );
+                }
+            }
+            HwKind::Zondax => {
+                if pools & !(POOL_TRANSPARENT | POOL_SAPLING) != 0 {
+                    anyhow::bail!("Zondax Ledger accounts support transparent and sapling pools only");
+                }
+            }
+            _ => anyhow::bail!("unknown Ledger app"),
+        }
+        Some(ledger_kind)
+    } else {
+        None
+    };
+
+    if ledger_kind == Some(HwKind::Zondax) {
         let has_seed = !key.is_empty();
         if !has_seed {
-            store_account_hw(&mut db_tx, account, 1, na.aindex).await?;
+            store_account_hw(&mut db_tx, account, HwKind::Zondax as u8, na.aindex).await?;
         }
 
         let ledger = get_ledger(&mut db_tx, account).await?;
@@ -104,7 +134,7 @@ pub async fn new_account(
         // we must do sapling derivation first to know a valid dindex
         // because in sapling some indices are invalid
         let mut dindex = 0;
-        if pools & 2 != 0 {
+        if pools & POOL_SAPLING != 0 {
             init_account_sapling(network, &mut db_tx, account, birth).await?;
             if has_seed {
                 let sxsk = crate::recover::recover_ledger_seed(&key, na.aindex).await?;
@@ -116,7 +146,7 @@ pub async fn new_account(
                 let address = derive_sapling_address(network, &sxvk, dindex);
                 store_account_sapling_vk(&mut db_tx, account, &sxvk, &address).await?;
             } else {
-                let fvk = ledger.get_hw_fvk(network, na.aindex).await?;
+                let fvk = ledger.import_sapling_fvk(network, na.aindex).await?;
                 let mut dfvk = fvk.to_bytes().to_vec();
                 dfvk.extend_from_slice(&[0u8; 32]); // add a dummy dk because we cannot get the one from the Ledger
                 let xvk = DiversifiableFullViewingKey::from_bytes(&tiu!(dfvk)).unwrap();
@@ -124,14 +154,14 @@ pub async fn new_account(
                 // api but it is currently not working
                 // instead, we "assume" the dindex = 0 is the default sapling address
                 // let (dindex, address) = get_hw_next_diversifier_address(&network, na.aindex, 0).await?;
-                let address = ledger.get_hw_sapling_address(network, na.aindex).await?;
+                let address = ledger.get_sapling_address(network, na.aindex).await?;
                 store_account_sapling_vk(&mut db_tx, account, &xvk, &address).await?;
             }
         }
-        if pools & 1 != 0 && !has_seed {
+        if pools & POOL_TRANSPARENT != 0 && !has_seed {
             init_account_transparent(&mut db_tx, account, birth).await?;
             let (pk, taddr) = ledger
-                .get_hw_transparent_address(network, na.aindex, 0, dindex)
+                .get_transparent_pubkey(network, na.aindex, 0, dindex)
                 .await?;
             store_account_transparent_addr(
                 &mut db_tx,
@@ -171,7 +201,7 @@ pub async fn new_account(
         let (_, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
         let dindex: u32 = di.try_into()?;
 
-        if pools & 1 != 0 {
+        if pools & POOL_TRANSPARENT != 0 {
             init_account_transparent(&mut db_tx, account, birth).await?;
             let tsk = usk.transparent();
             store_account_transparent_sk(&mut db_tx, account, tsk).await?;
@@ -198,7 +228,7 @@ pub async fn new_account(
             }
         }
 
-        if pools & 2 != 0 {
+        if pools & POOL_SAPLING != 0 {
             init_account_sapling(network, &mut db_tx, account, birth).await?;
             let sxsk = usk.sapling();
             store_account_sapling_sk(&mut db_tx, account, sxsk).await?;
@@ -207,7 +237,7 @@ pub async fn new_account(
             store_account_sapling_vk(&mut db_tx, account, &sxvk, &address).await?;
         }
 
-        if pools & 4 != 0 {
+        if pools & (POOL_ORCHARD | POOL_IRONWOOD) != 0 {
             init_account_orchard(network, &mut db_tx, account, birth).await?;
             let oxsk = usk.orchard();
             store_account_orchard_sk(&mut db_tx, account, oxsk).await?;
@@ -342,7 +372,7 @@ pub async fn new_account(
         let dindex: u32 = di.try_into()?;
 
         match uvk.transparent() {
-            Some(tvk) if pools & 1 != 0 => {
+            Some(tvk) if pools & POOL_TRANSPARENT != 0 => {
                 init_account_transparent(&mut db_tx, account, birth).await?;
                 store_account_transparent_vk(&mut db_tx, account, tvk).await?;
                 let (pk, address) = derive_transparent_address(tvk, 0, dindex, false)?;
@@ -361,7 +391,7 @@ pub async fn new_account(
             _ => {}
         }
         match uvk.sapling() {
-            Some(sxvk) if pools & 2 != 0 => {
+            Some(sxvk) if pools & POOL_SAPLING != 0 => {
                 init_account_sapling(network, &mut db_tx, account, birth).await?;
                 let address = ua.sapling().unwrap();
                 let address = address.encode(&network);
@@ -370,7 +400,7 @@ pub async fn new_account(
             _ => {}
         }
         match uvk.orchard() {
-            Some(ovk) if pools & 4 != 0 => {
+            Some(ovk) if pools & POOL_ORCHARD != 0 => {
                 init_account_orchard(network, &mut db_tx, account, birth).await?;
                 store_account_orchard_vk(&mut db_tx, account, ovk).await?;
             }
@@ -752,7 +782,7 @@ pub async fn generate_next_dindex(
         dindex += 1;
         let address = if hw != 0 {
             let (di, address) = ledger
-                .get_hw_next_diversifier_address(network, aindex, dindex)
+                .next_diversifier_address(network, aindex, dindex)
                 .await?;
             dindex = di;
             address
@@ -789,7 +819,7 @@ pub async fn generate_next_dindex(
         }
         None if hw != 0 => {
             let (pk, address) = ledger
-                .get_hw_transparent_address(network, aindex, 0, dindex)
+                .get_transparent_pubkey(network, aindex, 0, dindex)
                 .await?;
             (None, pk, Some(address))
         }
@@ -909,9 +939,9 @@ pub async fn get_addresses(
     let ua_orchard = UnifiedAddress::from_receivers(oaddr, None, None);
 
     let ua = UnifiedAddress::from_receivers(
-        if ua_pools & 4 != 0 { oaddr } else { None },
-        if ua_pools & 2 != 0 { saddr } else { None },
-        if ua_pools & 1 != 0 { taddr } else { None },
+        if ua_pools & POOL_ORCHARD != 0 { oaddr } else { None },
+        if ua_pools & POOL_SAPLING != 0 { saddr } else { None },
+        if ua_pools & POOL_TRANSPARENT != 0 { taddr } else { None },
     );
 
     // final fallback if we have a transparent address from a BIP 38 secret key

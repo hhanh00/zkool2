@@ -1,5 +1,4 @@
 use anyhow::Result;
-use sapling_crypto::keys::FullViewingKey;
 use sqlx::SqliteConnection;
 use tonic::async_trait;
 use zcash_transparent::address::TransparentAddress;
@@ -10,56 +9,84 @@ use crate::{
         pay::{PcztPackage, SigningEvent},
     },
     frb_generated::StreamSink,
-    ledger::HWAPI,
+    ledger::{HwKind, LedgerApp},
 };
 
+/// Placeholder device for accounts that cannot perform device operations:
+/// software accounts, builds without the `ledger` feature, and the Official
+/// Ledger app whose device protocol is not implemented yet.
+pub struct StubLedger {
+    kind: HwKind,
+    error: &'static str,
+}
+
+impl StubLedger {
+    pub fn software() -> Self {
+        Self {
+            kind: HwKind::Software,
+            error: "account is not a hardware wallet",
+        }
+    }
+
+    pub fn no_support() -> Self {
+        Self {
+            kind: HwKind::Software,
+            error: "this build has no Ledger support",
+        }
+    }
+
+    pub fn official() -> Self {
+        Self {
+            kind: HwKind::Official,
+            error: "not implemented yet for the Official Ledger app",
+        }
+    }
+}
+
 #[async_trait]
-impl HWAPI for () {
-    async fn get_hw_fvk(&self, _network: &Network, _aindex: u32) -> Result<FullViewingKey> {
-        unimplemented!()
+impl LedgerApp for StubLedger {
+    fn kind(&self) -> HwKind {
+        self.kind
     }
-    async fn get_hw_sapling_address(&self, _network: &Network, _aindex: u32) -> Result<String> {
-        unimplemented!()
-    }
-    async fn get_hw_transparent_address(
+
+    async fn get_transparent_pubkey(
         &self,
         _network: &Network,
         _aindex: u32,
         _scope: u32,
         _dindex: u32,
     ) -> Result<(Vec<u8>, TransparentAddress)> {
-        unimplemented!()
+        anyhow::bail!("{}", self.error)
     }
-    async fn get_hw_next_diversifier_address(
+
+    async fn next_diversifier_address(
         &self,
         _network: &Network,
         _aindex: u32,
         _dindex: u32,
     ) -> Result<(u32, String)> {
-        unimplemented!()
+        anyhow::bail!("{}", self.error)
     }
-    async fn show_sapling_address(
-        &self,
-        _network: &Network,
-        _connection: &mut SqliteConnection,
-        _account: u32,
-    ) -> Result<String> {
-        unimplemented!()
-    }
+
     async fn show_transparent_address(
         &self,
         _network: &Network,
         _connection: &mut SqliteConnection,
         _account: u32,
     ) -> Result<String> {
-        unimplemented!()
+        anyhow::bail!("{}", self.error)
     }
-    async fn sign_ledger_transaction(
+
+    async fn show_sapling_address(
         &self,
-        _sink: StreamSink<SigningEvent>,
-        _package: PcztPackage,
-        _c: &Coin,
-    ) -> Result<()> {
-        unimplemented!()
+        _network: &Network,
+        _connection: &mut SqliteConnection,
+        _account: u32,
+    ) -> Result<String> {
+        anyhow::bail!("{}", self.error)
+    }
+
+    async fn sign_pczt(&self, _sink: StreamSink<SigningEvent>, _package: PcztPackage, _c: &Coin) -> Result<()> {
+        anyhow::bail!("{}", self.error)
     }
 }

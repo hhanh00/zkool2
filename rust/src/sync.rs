@@ -1290,7 +1290,7 @@ pub async fn transparent_sweep(
                     Some(xvk) => derive_transparent_address(xvk, scope, dindex, false)?,
                     None if hw != 0 => {
                         ledger
-                            .get_hw_transparent_address(&network, aindex, scope, dindex)
+                            .get_transparent_pubkey(&network, aindex, scope, dindex)
                             .await?
                     }
                     _ => anyhow::bail!("Sweep needs an xpub key"),
