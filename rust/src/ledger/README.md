@@ -26,9 +26,8 @@ The app under emulation is the Rust rewrite of
 [LedgerHQ/app-zcash](https://github.com/LedgerHQ/app-zcash) (v3.9.3+). It
 speaks CLA `0xE0` (Bitcoin-app style) with Zcash extensions (INS `0x50` VK,
 `0x51` shielded address, `0x52`-`0x59` PCZT/Ironwood). zkool's app-layer code
-(`builder.rs`, `fvk.rs`, ...) still speaks the legacy Zondax CLA `0x85`
-protocol and needs migration; only the version smoke test speaks `0xE0` today.
-The transport layer is protocol-agnostic and unchanged.
+speaks `0xE0` for GET_VK (`official.rs`, used by hw=2 accounts); the Zondax
+`0x85` protocol remains for hw=1. The transport layer is protocol-agnostic.
 
 ## Account types (`accounts.hw`)
 
@@ -36,15 +35,17 @@ The transport layer is protocol-agnostic and unchanged.
 | --- | --- | --- | --- |
 | 0 | software | all | n/a |
 | 1 | Zondax | transparent + sapling | CLA `0x85` |
-| 2 | Official | transparent + ironwood | CLA `0xE0` (not implemented yet) |
+| 2 | Official | transparent + ironwood | CLA `0xE0`: GET_VK (`0x50`) implemented, PCZT signing not yet |
 
-v1 Official behavior: accounts are created from the recovery seed with
-standard ZIP-32 derivation (no device needed); device operations return clear
-errors via `ledger::mock::StubLedger`. Ironwood shares its keys with Orchard
-(see `api::account::get_account_pools`), so Official accounts are initialized
-with the Orchard key set. Pool masks are validated at creation
-(`account.rs`). Selection UI lives in the New Account form
-(`lib/pages/new_account.dart`).
+Official accounts (hw=2): `new_account` accepts an empty key, in which case
+the UFVK is imported from the device (GET_VK, user-approved on screen) and
+the per-pool keys are stored from it — this is the v2 device-import flow
+(`account.rs`). A seed phrase is still accepted and derived like a regular
+account (v1). Ironwood shares its keys with Orchard (see
+`api::account::get_account_pools`). The diversifier index is 0 for imported
+accounts (the device UFVK carries no sapling `dk`, so there is no derived
+default index). Pool masks are validated at creation (`account.rs`).
+Selection UI lives in the New Account form (`lib/pages/new_account.dart`).
 
 ## Prerequisites
 
@@ -127,6 +128,22 @@ test ledger::tests::ledger_app_version ... ok
 
 The test lives in `rust/src/ledger/tests.rs` and is `#[ignore]`-gated so
 regular `cargo test` runs do not require the emulator.
+
+`ledger_get_ufvk` additionally needs:
+
+- The emulator seeded with the `EMULATOR_SEED` constant from the test:
+  `SEED="..." misc/ledger/run-emulator.sh`
+- The REST API port: `ZEMU_UI_PORT` (default 5000; the script's `UI_PORT`
+  knob must match — use 5001 on macOS, where AirPlay Receiver squats on
+  5000).
+- The `ledger-transport-zemu` `[patch]` (workspace root `Cargo.toml`): it
+  raises the crate's 5s per-APDU HTTP timeout to 120s (`ZEMU_TIMEOUT_SECS`),
+  since GET_VK blocks on the on-device review.
+
+The test drives the NBGL review itself (right button pages, both buttons
+confirms) via the speculos REST API and compares the device UFVK against
+the key derived locally from the same seed. Failed runs can leave a pending
+review on the emulator; restart it before re-running.
 
 - `ZEMU_HOST` / `ZEMU_PORT` env vars override the endpoint (defaults
   `127.0.0.1:9999`), e.g. to point at an emulator on another machine.

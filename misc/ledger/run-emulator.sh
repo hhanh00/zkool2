@@ -6,6 +6,8 @@ set -euo pipefail
 # MODEL:       speculos model (nanox | nanosp | stax | flex | apex_p), default nanosp
 # BUILD_MODEL: build model directory under target/ (default nanosplus for nanosp)
 # SEED:        device seed (deterministic test seed by default)
+# UI_PORT:     host port for the screen/REST API (default 5000; macOS AirPlay
+#              Receiver squats on 5000, in which case use e.g. 5001)
 #
 # Endpoints:
 #   http://localhost:9999  JSON APDU (POST {"apduHex": "<hex>"}) - what zkool speaks
@@ -15,6 +17,7 @@ APP_DIR="${APP_DIR:-$HOME/projects/ledger-dev/app-zcash}"
 MODEL="${MODEL:-nanosp}"
 BUILD_MODEL="${BUILD_MODEL:-nanosplus}"
 SEED="${SEED:-glory promote mansion idle axis finger extra february uncover one trip resource lawn turtle enact monster seven myth punch hobby comfort wild raise skin}"
+UI_PORT="${UI_PORT:-5000}"
 ELF="$APP_DIR/target/$BUILD_MODEL/release/zcash"
 
 if [ ! -f "$ELF" ]; then
@@ -25,7 +28,7 @@ fi
 docker rm -f speculos-zcash >/dev/null 2>&1 || true
 
 docker run -d --name speculos-zcash \
-  -p 9999:9998 -p 5000:5000 \
+  -p 9999:9998 -p "$UI_PORT":5000 \
   -v "$APP_DIR/target":/app/target \
   -w /speculos \
   --entrypoint bash \
@@ -38,5 +41,5 @@ sleep 5
 docker logs speculos-zcash 2>&1 | tail -5
 echo
 echo "APDU endpoint : http://localhost:9999"
-echo "Screen UI     : http://localhost:5000"
+echo "Screen UI     : http://localhost:$UI_PORT"
 echo "Stop          : docker rm -f speculos-zcash"
