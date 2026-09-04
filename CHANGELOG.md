@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.30.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.30.0-rc.1...zkool-v6.30.0-rc.2) (2026-09-04)
+
+
+### Features
+
+* import Official Ledger UFVK from the device ([7fc0c40](https://github.com/hhanh00/zkool2/commit/7fc0c401ad5daf6cc6e3a1e89f9a2dde979f7673))
+* support multiple Ledger app types (Official, Zondax) ([#1242](https://github.com/hhanh00/zkool2/issues/1242)) ([cff4760](https://github.com/hhanh00/zkool2/commit/cff47606b9c089b7a538c248ebd76fb4a75fb470))
+
 ## [6.30.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.30.0-rc...zkool-v6.30.0-rc.1) (2026-09-03)
 
 
