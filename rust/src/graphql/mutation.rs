@@ -90,7 +90,7 @@ impl Mutation {
             use_internal: new_account.use_internal,
             folder: String::new(),
             internal: false,
-            ledger: false,
+            hw: 0,
         };
         let id_account = crate::api::account::new_account(&na, &context.coin).await?;
         Ok(id_account as i32)

@@ -9356,7 +9356,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       pools: dco_decode_opt_box_autoadd_u_8(arr[9]),
       useInternal: dco_decode_bool(arr[10]),
       internal: dco_decode_bool(arr[11]),
-      ledger: dco_decode_bool(arr[12]),
+      hw: dco_decode_u_8(arr[12]),
     );
   }
 
@@ -11995,7 +11995,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_pools = sse_decode_opt_box_autoadd_u_8(deserializer);
     var var_useInternal = sse_decode_bool(deserializer);
     var var_internal = sse_decode_bool(deserializer);
-    var var_ledger = sse_decode_bool(deserializer);
+    var var_hw = sse_decode_u_8(deserializer);
     return NewAccount(
         icon: var_icon,
         name: var_name,
@@ -12009,7 +12009,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         pools: var_pools,
         useInternal: var_useInternal,
         internal: var_internal,
-        ledger: var_ledger);
+        hw: var_hw);
   }
 
   @protected
@@ -14658,7 +14658,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_box_autoadd_u_8(self.pools, serializer);
     sse_encode_bool(self.useInternal, serializer);
     sse_encode_bool(self.internal, serializer);
-    sse_encode_bool(self.ledger, serializer);
+    sse_encode_u_8(self.hw, serializer);
   }
 
   @protected
