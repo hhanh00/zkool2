@@ -1,8 +1,9 @@
 //! Ledger account creation tests.
 //!
-//! No device or emulator is needed: the Official app derives everything
-//! locally from the seed (standard ZIP-32), and the Zondax restore path
-//! replicates the device derivation in software (`recover::recover_ledger_seed`).
+//! No device or emulator is needed: whenever a seed is provided the account
+//! is software (the Official derivation is identical to a regular account,
+//! and the Zondax restore path replicates the device derivation in software
+//! via `recover::recover_ledger_seed`).
 
 use rlz::api::account::{get_account_pools, list_accounts, new_account, NewAccount};
 use rlz::api::coin::Coin;
@@ -48,13 +49,15 @@ async fn created_hw(coin: &Coin, name: &str) -> u8 {
 }
 
 #[tokio::test]
-async fn official_ledger_with_seed_is_created_locally() {
+async fn official_ledger_with_seed_stays_software() {
     let coin = temp_coin("official_seed").await;
     let id = new_account(&na("official", SEED_PHRASE, HwKind::Official as u8, Some(9)), &coin)
         .await
-        .expect("create Official Ledger account from seed");
+        .expect("create account from seed with Official Ledger selected");
 
-    assert_eq!(created_hw(&coin, "official").await, HwKind::Official as u8);
+    // The Official Ledger derivation is identical to a regular account, so
+    // with a seed the hardware flag is discarded.
+    assert_eq!(created_hw(&coin, "official").await, HwKind::Software as u8);
     let pools = get_account_pools(id, &coin).await.unwrap();
     assert_ne!(pools & 8, 0, "ironwood must be present");
     assert_eq!(pools & 2, 0, "sapling must be absent");

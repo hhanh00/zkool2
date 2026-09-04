@@ -334,6 +334,21 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                                   formKey.currentState?.fields["pools"]?.didChange(getPools());
                                 },
                               ),
+                              if (isSeed && ledgerApp == 1) ...[
+                                Gap(8),
+                                Row(
+                                  children: [
+                                    Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange),
+                                    Gap(4),
+                                    Expanded(
+                                      child: Text(
+                                        "Official Ledger is discarded: its derivation is identical to a regular account, so this account will be created as a regular seed phrase account",
+                                        style: TextStyle(color: Colors.orange, fontSize: 12),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ],
                           ],
                         ],
@@ -389,7 +404,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       AwesomeDialog? dialog;
       try {
         String message = "Please wait while we create the account";
-        if (ledger && ledgerApp == 0) message += "\nConfirm on your Ledger device";
+        if (ledger && ledgerApp == 0 && !isSeed) message += "\nConfirm on your Ledger device";
         dialog = showLoadingDialog(context, message);
         final account = await newAccount(
             na: NewAccount(

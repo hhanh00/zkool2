@@ -177,9 +177,6 @@ pub async fn new_account(
         }
         update_dindex(&mut db_tx, account, dindex, true).await?;
     } else if is_valid_phrase(&key) {
-        if ledger_kind == Some(HwKind::Official) {
-            store_account_hw(&mut db_tx, account, HwKind::Official as u8, na.aindex).await?;
-        }
         let seed_phrase = bip39::Mnemonic::from_str(&key)?;
         let passphrase = na.passphrase.clone().unwrap_or_default();
         let seed = seed_phrase.to_seed(&passphrase);
