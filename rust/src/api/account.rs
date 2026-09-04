@@ -939,7 +939,16 @@ pub(crate) async fn get_ledger(
                 Box::new(crate::ledger::mock::StubLedger::no_support())
             }
         }
-        HwKind::Official => Box::new(crate::ledger::mock::StubLedger::official()),
+        HwKind::Official => {
+            #[cfg(feature = "ledger")]
+            {
+                Box::new(crate::ledger::official::OfficialApp {})
+            }
+            #[cfg(not(feature = "ledger"))]
+            {
+                Box::new(crate::ledger::mock::StubLedger::official())
+            }
+        }
         HwKind::Software => Box::new(crate::ledger::mock::StubLedger::software()),
     })
 }
