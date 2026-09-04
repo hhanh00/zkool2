@@ -5218,8 +5218,7 @@ dependencies = [
 [[package]]
 name = "ledger-transport-zemu"
 version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47437f746d26ec42e7d51d9bf239ed40d12e83da03a1b687796842d7369e0f9a"
+source = "git+https://github.com/hhanh00/ledger-rs?rev=75cec634d11c29f110d098a34d13e1c22eab895e#75cec634d11c29f110d098a34d13e1c22eab895e"
 dependencies = [
  "glob",
  "grpc",

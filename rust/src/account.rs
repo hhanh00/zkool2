@@ -96,6 +96,9 @@ pub async fn new_account(
     }
 
     let pools = na.pools.unwrap_or(ALL_POOLS);
+    if pools == 0 {
+        anyhow::bail!("an account must support at least one pool");
+    }
 
     let ledger_kind = if ledger_kind.is_ledger() {
         match ledger_kind {
@@ -105,9 +108,9 @@ pub async fn new_account(
                         "Official Ledger accounts support transparent and ironwood pools only"
                     );
                 }
-                if !is_valid_phrase(&key) {
+                if !key.is_empty() && !is_valid_phrase(&key) {
                     anyhow::bail!(
-                        "Official Ledger accounts require the recovery seed phrase. Importing the viewing key from the device is not supported yet"
+                        "Official Ledger accounts accept a seed phrase or no key to import the viewing key from the device"
                     );
                 }
             }
@@ -174,6 +177,44 @@ pub async fn new_account(
                 false,
             )
             .await?;
+        }
+        update_dindex(&mut db_tx, account, dindex, true).await?;
+    } else if ledger_kind == Some(HwKind::Official) && key.is_empty() {
+        // import the viewing key from the Official Ledger device
+        store_account_hw(&mut db_tx, account, HwKind::Official as u8, na.aindex).await?;
+        let ledger = get_ledger(&mut db_tx, account).await?;
+        let ufvk = ledger.get_ufvk(network, na.aindex).await?;
+        let uvk = UnifiedFullViewingKey::decode(network, &ufvk)
+            .map_err(|_| anyhow!("Invalid viewing key from the device"))?;
+
+        // no sapling key on the device, so there is no derived default
+        // diversifier index; use 0
+        let dindex: u32 = 0;
+        if pools & POOL_TRANSPARENT != 0 {
+            let tvk = uvk
+                .transparent()
+                .ok_or_else(|| anyhow!("device viewing key has no transparent key"))?;
+            init_account_transparent(&mut db_tx, account, birth).await?;
+            store_account_transparent_vk(&mut db_tx, account, tvk).await?;
+            let (pk, address) = derive_transparent_address(tvk, 0, dindex, false)?;
+            store_account_transparent_addr(
+                &mut db_tx,
+                account,
+                0,
+                dindex,
+                None,
+                &pk,
+                &address.encode(&network),
+                false,
+            )
+            .await?;
+        }
+        if pools & (POOL_ORCHARD | POOL_IRONWOOD) != 0 {
+            let ovk = uvk
+                .orchard()
+                .ok_or_else(|| anyhow!("device viewing key has no orchard key"))?;
+            init_account_orchard(network, &mut db_tx, account, birth).await?;
+            store_account_orchard_vk(&mut db_tx, account, ovk).await?;
         }
         update_dindex(&mut db_tx, account, dindex, true).await?;
     } else if is_valid_phrase(&key) {

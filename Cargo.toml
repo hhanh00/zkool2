@@ -57,4 +57,11 @@ voting-circuits = { git = "https://github.com/hhanh00/voting-circuits.git", rev 
 # workspace root manifest.
 pir-client = { git = "https://github.com/hhanh00/vote-nullifier-pir.git", rev = "b704640df339a98330a5b8e4582144fde67d0b0c" }
 
+# -- Ledger emulator transport --
+# Branch feat/zemu-timeout off 8e3e28f (last commit carrying the crate,
+# 0.10.0; removed upstream right after). Raises the 5s per-APDU HTTP
+# timeout to 120s (env ZEMU_TIMEOUT_SECS): GET_VK blocks on the
+# on-device review, which always exceeds 5s.
+ledger-transport-zemu = { git = "https://github.com/hhanh00/ledger-rs", rev = "75cec634d11c29f110d098a34d13e1c22eab895e" }
+
 
