@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 use crate::keys::{SaplingAddressDerivation, ScopeExt};
-use crate::pay::pool::PoolMask;
+use crate::pay::pool::{PoolMask, POOL_IRONWOOD, POOL_ORCHARD, POOL_SAPLING, POOL_TRANSPARENT};
 use anyhow::{anyhow, Result};
 use bip39::Mnemonic;
 use csv_async::AsyncWriter;
@@ -25,7 +25,7 @@ use crate::{
     api::{coin::Coin, pay::SigningEvent},
     db::{get_account_dindex, get_account_hw},
     io::{decrypt, encrypt},
-    ledger::HWAPI,
+    ledger::{HwKind, LedgerApp},
 };
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -39,15 +39,15 @@ pub async fn get_account_pools(account: u32, c: &Coin) -> Result<u8> {
 
     let mut pools = 0;
     if tkeys.xvk.is_some() || tkeys.address.is_some() {
-        pools |= 1;
+        pools |= POOL_TRANSPARENT;
     }
     if skeys.xvk.is_some() {
-        pools |= 2;
+        pools |= POOL_SAPLING;
     }
     if okeys.xvk.is_some() {
-        pools |= 4;
+        pools |= POOL_ORCHARD;
         // Ironwood uses the same keys as Orchard
-        pools |= 8;
+        pools |= POOL_IRONWOOD;
     }
     Ok(pools)
 }
@@ -311,7 +311,7 @@ pub struct NewAccount {
     pub pools: Option<u8>,
     pub use_internal: bool,
     pub internal: bool,
-    pub ledger: bool,
+    pub hw: u8,
 }
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
@@ -858,7 +858,7 @@ pub async fn sign_ledger_transaction(
 ) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let ledger = get_ledger(&mut connection, c.account).await?;
-    ledger.sign_ledger_transaction(sink, package, c).await?;
+    ledger.sign_pczt(sink, package, c).await?;
     Ok(())
 }
 
@@ -926,20 +926,22 @@ pub struct TxMemo {
 pub(crate) async fn get_ledger(
     connection: &mut SqliteConnection,
     account: u32,
-) -> Result<Box<dyn HWAPI + Send + Sync>> {
+) -> Result<Box<dyn LedgerApp + Send + Sync>> {
     let hw = get_account_hw(connection, account).await?;
-    let r: Box<dyn HWAPI + Send + Sync> = if hw == 1 {
-        #[cfg(feature = "ledger")]
-        let d = Box::new(crate::ledger::nano::NanoLedger {});
-
-        #[cfg(not(feature = "ledger"))]
-        let d = Box::new(());
-
-        d
-    } else {
-        Box::new(())
-    };
-    Ok(r)
+    Ok(match HwKind::from_hw(hw) {
+        HwKind::Zondax => {
+            #[cfg(feature = "ledger")]
+            {
+                Box::new(crate::ledger::nano::ZondaxApp {})
+            }
+            #[cfg(not(feature = "ledger"))]
+            {
+                Box::new(crate::ledger::mock::StubLedger::no_support())
+            }
+        }
+        HwKind::Official => Box::new(crate::ledger::mock::StubLedger::official()),
+        HwKind::Software => Box::new(crate::ledger::mock::StubLedger::software()),
+    })
 }
 
 #[frb]

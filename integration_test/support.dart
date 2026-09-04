@@ -151,7 +151,7 @@ Future<int> setUpTestWallet({
       folder: "",
       useInternal: false,
       internal: false,
-      ledger: false,
+      hw: 0,
     ),
     c: coinContext.coin,
   );

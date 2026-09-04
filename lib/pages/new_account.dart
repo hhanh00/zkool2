@@ -34,6 +34,13 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
   var key = "";
   var isSeed = false;
   var ledger = false;
+  var ledgerApp = 0; // 0 = Zondax (Sapling), 1 = Official (Ironwood)
+
+  int getPools() => ledger
+      ? (ledgerApp == 0
+          ? Pool.transparent.bit | Pool.sapling.bit // T+S
+          : Pool.transparent.bit | Pool.ironwood.bit) // T+I
+      : getKeyPools(key: key, c: c);
   var isFvk = false;
   var _showAdvanced = false;
   Uint8List? iconBytes;
@@ -47,7 +54,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
     final ib = iconBytes;
     isSeed = isValidPhrase(phrase: key);
     isFvk = isValidFvk(fvk: key, c: c);
-    final keyPools = ledger ? 3 : getKeyPools(key: key, c: c); // 3 is T+S
+    final keyPools = getPools(); // 3 is T+S, 9 is T+Ironwood
 
     return Scaffold(
       appBar: AppBar(
@@ -299,8 +306,50 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                                 ],
                               ),
                               initialValue: ledger,
-                              onChanged: (v) => setState(() => ledger = v ?? false),
+                              onChanged: (v) {
+                                setState(() {
+                                  ledger = v ?? false;
+                                });
+                                formKey.currentState?.fields["pools"]?.didChange(getPools());
+                              },
                             ),
+                            if (ledger) ...[
+                              Gap(8),
+                              SegmentedButton<int>(
+                                segments: const [
+                                  ButtonSegment(
+                                    value: 1,
+                                    label: Text("Official (Ironwood)"),
+                                  ),
+                                  ButtonSegment(
+                                    value: 0,
+                                    label: Text("Zondax (Sapling)"),
+                                  ),
+                                ],
+                                selected: {ledgerApp},
+                                onSelectionChanged: (s) {
+                                  setState(() {
+                                    ledgerApp = s.first;
+                                  });
+                                  formKey.currentState?.fields["pools"]?.didChange(getPools());
+                                },
+                              ),
+                              if (isSeed && ledgerApp == 1) ...[
+                                Gap(8),
+                                Row(
+                                  children: [
+                                    Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange),
+                                    Gap(4),
+                                    Expanded(
+                                      child: Text(
+                                        "Official Ledger is discarded: its derivation is identical to a regular account, so this account will be created as a regular seed phrase account",
+                                        style: TextStyle(color: Colors.orange, fontSize: 12),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
                           ],
                         ],
                       ],
@@ -332,6 +381,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       final String? name = formData?["name"];
       final bool? restore = formData?["restore"];
       final bool ledger = formData?["ledger"] as bool? ?? false;
+      final hw = ledger ? ledgerApp + 1 : 0;
       final String? passphrase = formData?["passphrase"];
       final String? aindex = formData?["aindex"];
       final String? birth = formData?["birth"];
@@ -354,7 +404,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       AwesomeDialog? dialog;
       try {
         String message = "Please wait while we create the account";
-        if (ledger) message += "\nConfirm on your Ledger device";
+        if (ledger && ledgerApp == 0 && !isSeed) message += "\nConfirm on your Ledger device";
         dialog = showLoadingDialog(context, message);
         final account = await newAccount(
             na: NewAccount(
@@ -369,9 +419,10 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
               pools: pools,
               useInternal: useInternal ?? false,
               internal: false,
-              ledger: ledger,
+              hw: hw,
             ),
-            c: c);
+            c: c,
+          );
         dialog.dismiss();
         dialog = null;
         final settings = ref.read(appSettingsProvider).requireValue;
