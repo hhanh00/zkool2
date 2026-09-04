@@ -238,17 +238,19 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                                 ),
                           ),
                           Gap(12),
-                          if (ledger && ledgerApp == 1 && key.isEmpty)
+                          if (ledger)
                             Tooltip(
-                              message:
-                                  "Official Ledger accounts always use an internal address for the change",
+                              message: ledgerApp == 1
+                                  ? "Official Ledger accounts always use an internal address for the change"
+                                  : "Zondax Ledger accounts never use an internal address for the change",
                               child: SwitchListTile(
-                                value: true,
+                                value: ledgerApp == 1,
                                 onChanged: null,
+                                contentPadding: EdgeInsets.zero,
                                 title: const Text("Use Internal Change"),
                               ),
                             )
-                          else if (!ledger && (isSeed || key.isEmpty))
+                          else if (isSeed || key.isEmpty)
                             Tooltip(
                               message: "Check if you want this account to use an internal address for the change like Zashi (ZIP 316)",
                               child: FormBuilderSwitch(
@@ -320,7 +322,10 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                                 setState(() {
                                   ledger = v ?? false;
                                 });
-                                formKey.currentState?.fields["pools"]?.didChange(getPools());
+                                final pools = getPools();
+                                if (pools != 0) {
+                                  formKey.currentState?.fields["pools"]?.didChange(pools);
+                                }
                               },
                             ),
                             if (ledger) ...[
@@ -395,10 +400,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       final String? passphrase = formData?["passphrase"];
       final String? aindex = formData?["aindex"];
       final String? birth = formData?["birth"];
-      final bool useInternal =
-          (ledger && ledgerApp == 1 && key.isEmpty)
-              ? true
-              : formData?["useInternal"] ?? false;
+      final bool useInternal = ledger ? ledgerApp == 1 : formData?["useInternal"] ?? false;
       final int? pools = formData!["pools"];
 
       final icon = iconBytes;
