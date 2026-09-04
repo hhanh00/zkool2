@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.30.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.30.0-rc.2...zkool-v6.30.0-rc.3) (2026-09-04)
+
+
+### Features
+
+* sign v6 transactions with the Official Ledger app ([22cd4e4](https://github.com/hhanh00/zkool2/commit/22cd4e45dc500cb9799a0036f5ee70e7aa5e093d))
+
+
+### Bug Fixes
+
+* build v6 for Official Ledger accounts and open the APDU HID interface ([5607dc2](https://github.com/hhanh00/zkool2/commit/5607dc28b8e6e6b8aef114596d4418b2dfb9cf3f))
+* derive shielded output addresses in the transaction plan ([6e40e5a](https://github.com/hhanh00/zkool2/commit/6e40e5a979250748dbafa7e88a687e4db5fb4b84))
+* force internal change for Official Ledger accounts ([7c3808b](https://github.com/hhanh00/zkool2/commit/7c3808bf6667b971d33cec3464c8f57d91c4e258))
+* make app error messages selectable ([e1c3303](https://github.com/hhanh00/zkool2/commit/e1c33032a85e07e3c352a9a76e8553a5022c4730))
+
 ## [6.30.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.30.0-rc.1...zkool-v6.30.0-rc.2) (2026-09-04)
 
 
