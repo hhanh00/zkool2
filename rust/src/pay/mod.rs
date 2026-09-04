@@ -10,7 +10,10 @@ use pool::PoolMask;
 use serde::{Deserialize, Serialize};
 use sqlx::SqliteConnection;
 use tracing::{info, span, Level};
-use zcash_keys::encoding::AddressCodec as _;
+use zcash_keys::{
+    address::UnifiedAddress,
+    encoding::AddressCodec as _,
+};
 use zcash_note_encryption::Domain;
 use zcash_primitives::transaction::{OrchardBundle, Transaction};
 use zcash_protocol::consensus::BranchId;
@@ -143,7 +146,24 @@ fn orchard_asset_name(proprietary: &BTreeMap<String, Vec<u8>>, asset: Option<Ass
         })
 }
 
+/// The user-facing address of a shielded PCZT output: the user address set by
+/// the planner when present, otherwise the raw recipient encoded on its own
+/// (an orchard-only unified address, or the sapling payment address).
+fn shielded_output_address(
+    network: &Network,
+    user_address: Option<&String>,
+    recipient: Option<UnifiedAddress>,
+) -> Result<String> {
+    if let Some(address) = user_address.filter(|address| !address.is_empty()) {
+        return Ok(address.clone());
+    }
+    recipient
+        .map(|address| address.encode(network))
+        .ok_or_else(|| anyhow::anyhow!("shielded PCZT output has no recipient"))
+}
+
 fn append_orchard_plan<D: Domain>(
+    network: &Network,
     bundle: &orchard::pczt::Bundle<D>,
     inputs: &mut Vec<TxPlanIn>,
     outputs: &mut Vec<TxPlanOut>,
@@ -172,12 +192,17 @@ fn append_orchard_plan<D: Domain>(
                 .value()
                 .ok_or_else(|| anyhow::anyhow!("Orchard PCZT output is missing its value"))?
                 .inner(),
-            address: action
-                .output()
-                .user_address()
-                .as_ref()
-                .cloned()
-                .unwrap_or_default(),
+            address: shielded_output_address(
+                network,
+                action.output().user_address().as_ref(),
+                action
+                    .output()
+                    .recipient()
+                    .as_ref()
+                    .and_then(|recipient| {
+                        UnifiedAddress::from_receivers(Some(*recipient), None, None)
+                    }),
+            )?,
             asset_name: output_asset_name,
         });
     }
@@ -240,7 +265,13 @@ impl TxPlan {
                     outputs.push(TxPlanOut {
                         pool: 1,
                         amount: o.value().unwrap().inner(),
-                        address: o.user_address().as_ref().cloned().unwrap_or_default(),
+                        address: match o.user_address().as_ref() {
+                            Some(address) if !address.is_empty() => address.clone(),
+                            _ => o
+                                .recipient()
+                                .map(|recipient| recipient.encode(network))
+                                .unwrap_or_default(),
+                        },
                         asset_name: "ZEC".to_string(),
                     });
                 }
@@ -251,12 +282,12 @@ impl TxPlan {
 
         let verifier = if is_zsa {
             verifier.with_orchard_zsa(|bundle| {
-                append_orchard_plan(bundle, &mut inputs, &mut outputs, &mut fee)
+                append_orchard_plan(network, bundle, &mut inputs, &mut outputs, &mut fee)
                     .map_err(pczt::roles::verifier::OrchardError::Custom)
             })
         } else {
             verifier.with_orchard(|bundle| {
-                append_orchard_plan(bundle, &mut inputs, &mut outputs, &mut fee)
+                append_orchard_plan(network, bundle, &mut inputs, &mut outputs, &mut fee)
                     .map_err(pczt::roles::verifier::OrchardError::Custom)
             })
         }
@@ -274,18 +305,20 @@ impl TxPlan {
                     outputs.push(TxPlanOut {
                         pool: 3,
                         amount: a.output().value().expect("value").inner(),
-                        address: a
-                            .output()
-                            .user_address()
-                            .as_ref()
-                            .cloned()
-                            .unwrap_or_default(),
+                        address: shielded_output_address(
+                            network,
+                            a.output().user_address().as_ref(),
+                            a.output().recipient().as_ref().and_then(|recipient| {
+                                UnifiedAddress::from_receivers(Some(*recipient), None, None)
+                            }),
+                        )
+                        .map_err(pczt::roles::verifier::OrchardError::Custom)?,
                         asset_name: "ZEC".to_string(),
                     });
                 }
                 let f: i64 = (*bundle.value_sum()).try_into().unwrap();
                 fee += f;
-                Ok::<_, pczt::roles::verifier::OrchardError<()>>(())
+                Ok::<_, pczt::roles::verifier::OrchardError<anyhow::Error>>(())
             })
             .unwrap();
 
