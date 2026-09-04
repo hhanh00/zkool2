@@ -17,16 +17,18 @@ class PoolSelect extends StatefulWidget {
 
 enum Pool { transparent, sapling, orchard, ironwood }
 
+extension PoolBit on Pool {
+  int get bit => 1 << index;
+}
+
+int poolMask(Iterable<Pool> pools) =>
+    pools.fold(0, (mask, pool) => mask | pool.bit);
+
 class _PoolSelectState extends State<PoolSelect> {
   late Set<Pool> pools;
 
   Set<Pool> _valueToPools(int value) {
-    return {
-      if (value & 1 != 0) Pool.transparent,
-      if (value & 2 != 0) Pool.sapling,
-      if (value & 4 != 0) Pool.orchard,
-      if (value & 8 != 0) Pool.ironwood,
-    };
+    return Pool.values.where((p) => value & p.bit != 0).toSet();
   }
 
   @override
@@ -63,22 +65,22 @@ class _PoolSelectState extends State<PoolSelect> {
             ButtonSegment<Pool>(
               value: Pool.transparent,
               label: Text('Trp'),
-              enabled: widget.enabled & 1 != 0,
+              enabled: widget.enabled & Pool.transparent.bit != 0,
             ),
             ButtonSegment<Pool>(
               value: Pool.sapling,
               label: Text('Sap'),
-              enabled: widget.enabled & 2 != 0,
+              enabled: widget.enabled & Pool.sapling.bit != 0,
             ),
             ButtonSegment<Pool>(
               value: Pool.orchard,
               label: Text('Orc'),
-              enabled: widget.enabled & 4 != 0,
+              enabled: widget.enabled & Pool.orchard.bit != 0,
             ),
             ButtonSegment<Pool>(
               value: Pool.ironwood,
               label: Text('Iwd'),
-              enabled: widget.enabled & 8 != 0,
+              enabled: widget.enabled & Pool.ironwood.bit != 0,
             ),
           ],
           selected: pools,
@@ -86,20 +88,7 @@ class _PoolSelectState extends State<PoolSelect> {
               ? (Set<Pool> newSelection) {
                   setState(() {
                     pools = newSelection;
-                    onChanged(
-                      newSelection.fold(0, (previousValue, element) {
-                        switch (element) {
-                          case Pool.transparent:
-                            return previousValue | 1;
-                          case Pool.sapling:
-                            return previousValue | 2;
-                          case Pool.orchard:
-                            return previousValue | 4;
-                          case Pool.ironwood:
-                            return previousValue | 8;
-                        }
-                      }),
-                    );
+                    onChanged(poolMask(newSelection));
                   });
                 }
               : null,
