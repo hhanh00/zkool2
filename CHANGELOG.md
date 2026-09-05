@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.30.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.30.0-rc.4...zkool-v6.30.0-rc.5) (2026-09-05)
+
+
+### Features
+
+* gate the Nym transport behind a cargo feature ([5a7f8d3](https://github.com/hhanh00/zkool2/commit/5a7f8d3ee44595ee157c3bca8c7aa2d84561f164))
+
 ## [6.30.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.30.0-rc.3...zkool-v6.30.0-rc.4) (2026-09-05)
 
 
