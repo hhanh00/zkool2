@@ -49,7 +49,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y pkg-config libudev-dev
           cd rust
-          cargo build --release --bin zkool_graphql --features=graphql,bundled-sapling-params
+          cargo build --release --bin zkool_graphql --no-default-features --features=graphql,bundled-sapling-params
 
       # target/release first, so the chain is brought up with the binary built
       # from this PR rather than the released one cached in tools/bin.
