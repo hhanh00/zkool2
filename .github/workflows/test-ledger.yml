@@ -32,8 +32,8 @@ jobs:
             -H 'Content-Type: application/json' -d '{"apduHex": "e0c4000000"}')
           echo "$response"
           echo "$response" | grep -qE '"data": "3830[0-9a-f]*9000", "error": null'
-      # Signing runs before the GET_VK tests: its review wedges the emulator
-      # (see ledger/tests.rs), so the device interaction must come last.
+      # Each test returns only once the app is back on its home screen, so
+      # the emulator needs no restart between them.
       - name: Run ledger tests
         run: |
           cd rust
