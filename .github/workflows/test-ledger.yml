@@ -6,6 +6,8 @@ on:
 jobs:
   emulator:
     runs-on: ubuntu-latest
+    env:
+      SEED: ${{ secrets.SEED }}
     steps:
       - name: Install RUST
         uses: dtolnay/rust-toolchain@stable
@@ -20,8 +22,6 @@ jobs:
         with:
           workspaces: rust
       - name: Setup emulator
-        env:
-          SEED: ${{ secrets.SEED }}
         run: |
           misc/ledger/setup.sh
           misc/ledger/build.sh
@@ -32,7 +32,12 @@ jobs:
             -H 'Content-Type: application/json' -d '{"apduHex": "e0c4000000"}')
           echo "$response"
           echo "$response" | grep -qE '"data": "3830[0-9a-f]*9000", "error": null'
+      # Signing runs before the GET_VK tests: its review wedges the emulator
+      # (see ledger/tests.rs), so the device interaction must come last.
       - name: Run ledger tests
         run: |
           cd rust
           cargo test --features zemu -- --ignored --nocapture ledger_app_version
+          cargo test --features zemu -- --ignored --nocapture ledger_official_sign
+          cargo test --features zemu -- --ignored --nocapture ledger_get_ufvk
+          cargo test --features zemu -- --ignored --nocapture ledger_account_import
