@@ -326,7 +326,7 @@ class SendPageState extends ConsumerState<SendPage> {
     try {
       final pczt = await transferAllBetweenPools(
         c: c,
-        sourcePools: 6,
+        sourcePools: 14, // Sapling | Orchard | Ironwood
         destinationAddress: addresses?.taddr ?? "",
       );
 
