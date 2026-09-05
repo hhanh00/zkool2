@@ -286,9 +286,13 @@ impl Query {
         let (pczt, _) =
             bincode::decode_from_slice::<PcztPackage, _>(&pczt, bincode::config::standard())?;
         let network = context.coin.network();
-        let signed =
+        let hw = crate::db::get_account_hw(&mut connection, id_account as u32).await?;
+        let signed = if crate::ledger::HwKind::from_hw(hw).is_ledger() {
+            crate::api::account::sign_ledger_pczt(&(), pczt, &context.coin).await?
+        } else {
             crate::pay::plan::sign_transaction(&mut connection, id_account as u32, &network, &pczt)
-                .await?;
+                .await?
+        };
         let tx_bin = crate::pay::plan::extract_transaction(&signed).await?;
         let tx = hex::encode(&tx_bin);
         Ok(tx)

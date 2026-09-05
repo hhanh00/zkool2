@@ -29,6 +29,7 @@ pub struct NewAccount {
     pub birth: Option<i32>,
     pub pools: Option<i32>,
     pub use_internal: bool,
+    pub hw: Option<i32>,
 }
 
 #[derive(GraphQLInputObject)]
@@ -90,7 +91,7 @@ impl Mutation {
             use_internal: new_account.use_internal,
             folder: String::new(),
             internal: false,
-            hw: 0,
+            hw: new_account.hw.unwrap_or(0) as u8,
         };
         let id_account = crate::api::account::new_account(&na, &context.coin).await?;
         Ok(id_account as i32)
@@ -189,8 +190,12 @@ impl Mutation {
         let mut client = coin.client().await?;
         let height = client.latest_height().await?;
         let network = coin.network();
-        let signed_pczt =
-            sign_transaction(&mut connection, id_account as u32, &network, &pczt).await?;
+        let hw = crate::db::get_account_hw(&mut connection, id_account as u32).await?;
+        let signed_pczt = if crate::ledger::HwKind::from_hw(hw).is_ledger() {
+            crate::api::account::sign_ledger_pczt(&(), pczt, coin).await?
+        } else {
+            sign_transaction(&mut connection, id_account as u32, &network, &pczt).await?
+        };
         let tx_bytes = extract_transaction(&signed_pczt).await?;
         let txid = crate::pay::send(&mut client, height, &tx_bytes).await?;
         Ok(txid)

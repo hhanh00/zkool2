@@ -4,11 +4,7 @@ use tonic::async_trait;
 use zcash_transparent::address::TransparentAddress;
 
 use crate::{
-    api::{
-        coin::{Coin, Network},
-        pay::{PcztPackage, SigningEvent},
-    },
-    frb_generated::StreamSink,
+    api::coin::Network,
     ledger::{HwKind, LedgerApp},
 };
 
@@ -83,10 +79,6 @@ impl LedgerApp for StubLedger {
         _connection: &mut SqliteConnection,
         _account: u32,
     ) -> Result<String> {
-        anyhow::bail!("{}", self.error)
-    }
-
-    async fn sign_pczt(&self, _sink: StreamSink<SigningEvent>, _package: PcztPackage, _c: &Coin) -> Result<()> {
         anyhow::bail!("{}", self.error)
     }
 }

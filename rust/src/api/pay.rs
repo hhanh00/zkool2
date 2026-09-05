@@ -94,6 +94,7 @@ pub async fn sign_transaction(pczt: &PcztPackage, c: &Coin) -> Result<PcztPackag
 }
 
 #[cfg_attr(feature = "flutter", frb)]
+#[derive(Debug, Clone)]
 pub enum SigningEvent {
     Progress(String),
     Result(PcztPackage),
@@ -105,7 +106,7 @@ pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
 }
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
-#[derive(Encode, Decode)]
+#[derive(Debug, Clone, Encode, Decode)]
 pub struct PcztPackage {
     pub pczt: Vec<u8>,
     pub n_spends: [usize; 4],

@@ -5,15 +5,14 @@ use tokio_util::sync::CancellationToken;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 
-use crate::{
-    api::coin::Coin,
-    frb_generated::StreamSink,
-    migrate::{
-        plan::next_task,
-        state::MigrationState,
-        step::StepOutcome,
-        task::{MigrationTask, Pacing, TaskKind},
-    },
+use crate::api::coin::Coin;
+#[cfg(feature = "flutter")]
+use crate::frb_generated::StreamSink;
+use crate::migrate::{
+    plan::next_task,
+    state::MigrationState,
+    step::StepOutcome,
+    task::{MigrationTask, Pacing, TaskKind},
 };
 
 /// Current migration status — streamed to Flutter by run_migration().

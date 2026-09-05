@@ -14,7 +14,7 @@ use ff::PrimeField as _;
 use orchard::pczt::Action;
 use orchard::primitives::redpallas;
 use pczt::roles::{prover::Prover, signer::Signer, spend_finalizer::SpendFinalizer};
-use sqlx::{pool::PoolConnection, Row, Sqlite, SqliteConnection};
+use sqlx::{Row, SqliteConnection};
 use zcash_note_encryption::Domain;
 use zcash_protocol::consensus::NetworkConstants as _;
 
@@ -25,12 +25,12 @@ use crate::{
         pay::{PcztPackage, SigningEvent},
     },
     db::{get_account_aindex, get_account_dindex},
-    frb_generated::StreamSink,
     ledger::{
         transport::{APDUCommand, Device},
         LedgerError,
     },
     pay::plan::{get_orchard_pk, IRONWOOD_PK},
+    Sink,
 };
 
 const CLA: u8 = 0xE0;
@@ -350,24 +350,27 @@ fn frame_shielded_bundle<D: Domain>(
     Ok((packets, displayed))
 }
 
-pub async fn sign_transaction<D: Device + Sync>(
+pub async fn sign_transaction<D: Device + Sync, S>(
     network: &Network,
     connection: &mut SqliteConnection,
     account: u32,
     package: &PcztPackage,
-    sink: Option<&StreamSink<SigningEvent>>,
+    sink: Option<&S>,
     ledger: &D,
-) -> Result<PcztPackage> {
+) -> Result<PcztPackage>
+where
+    S: Sink<SigningEvent> + Sync,
+{
     use pczt::Pczt;
     use pczt::roles::updater::Updater;
 
-    let progress = |msg: String| {
+    let progress = |msg: String| async move {
         if let Some(sink) = sink {
-            let _ = sink.add(SigningEvent::Progress(msg));
+            sink.send(SigningEvent::Progress(msg)).await;
         }
     };
 
-    progress("Preparing transaction".to_string());
+    progress("Preparing transaction".to_string()).await;
 
     if package.is_issuance {
         anyhow::bail!("ZSA issuance is not supported on Official Ledger accounts");
@@ -530,7 +533,7 @@ pub async fn sign_transaction<D: Device + Sync>(
     }
 
     // ── Send to the device ────────────────────────────────────────────────
-    progress("Confirm on your Ledger".to_string());
+    progress("Confirm on your Ledger".to_string()).await;
 
     let header = {
         let g = pczt.global();
@@ -556,7 +559,7 @@ pub async fn sign_transaction<D: Device + Sync>(
     send_command(ledger, INS_PCZT_IRONWOOD_ACTION, ironwood_packets, true).await?;
 
     // ── Collect signatures ────────────────────────────────────────────────
-    progress("Signing on Ledger".to_string());
+    progress("Signing on Ledger".to_string()).await;
 
     let ctin = pczt.transparent().inputs().len();
 
@@ -566,24 +569,24 @@ pub async fn sign_transaction<D: Device + Sync>(
             "Signing transparent input {}/{}",
             index + 1,
             ctin
-        ));
+        )).await;
         tsigs.push(sign_transparent_input(ledger, index as u32).await?);
     }
 
     let mut orchard_sigs = Vec::with_capacity(package.orchard_indices.len());
     for index in &package.orchard_indices {
-        progress("Signing orchard spend".to_string());
+        progress("Signing orchard spend".to_string()).await;
         orchard_sigs.push(sign_one(ledger, INS_PCZT_SIGN_ORCHARD, *index as u32).await?);
     }
 
     let mut ironwood_sigs = Vec::with_capacity(package.ironwood_indices.len());
     for index in &package.ironwood_indices {
-        progress("Signing ironwood spend".to_string());
+        progress("Signing ironwood spend".to_string()).await;
         ironwood_sigs.push(sign_one(ledger, INS_PCZT_SIGN_IRONWOOD, *index as u32).await?);
     }
 
     // ── Apply signatures, proofs, binding signature ───────────────────────
-    progress("Finalizing transaction".to_string());
+    progress("Finalizing transaction".to_string()).await;
 
     let mut signer = Signer::new(pczt).map_err(|error| anyhow!("signer: {error:?}"))?;
     for (index, sig) in tsigs.iter().enumerate() {
@@ -646,36 +649,16 @@ pub async fn sign_transaction<D: Device + Sync>(
     })
 }
 
-pub fn sign_official_transaction(
+pub async fn sign_official_transaction<S>(
     network: Network,
-    sink: StreamSink<SigningEvent>,
-    mut connection: PoolConnection<Sqlite>,
+    sink: &S,
+    connection: &mut SqliteConnection,
     account: u32,
     package: PcztPackage,
-) -> Result<()> {
-    tokio::spawn(async move {
-        let run = async {
-            let ledger = crate::ledger::transport::connect_ledger().await?;
-            sign_transaction(
-                &network,
-                &mut connection,
-                account,
-                &package,
-                Some(&sink),
-                &ledger,
-            )
-            .await
-        }
-        .await;
-        match run {
-            Ok(new_package) => {
-                let _ = sink.add(SigningEvent::Result(new_package));
-            }
-            Err(error) => {
-                let _ = sink.add_error(error);
-            }
-        }
-        Ok::<_, anyhow::Error>(())
-    });
-    Ok(())
+) -> Result<PcztPackage>
+where
+    S: Sink<SigningEvent> + Sync,
+{
+    let ledger = crate::ledger::transport::connect_ledger().await?;
+    sign_transaction(&network, connection, account, &package, Some(sink), &ledger).await
 }
