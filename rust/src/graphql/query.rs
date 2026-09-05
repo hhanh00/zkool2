@@ -288,7 +288,8 @@ impl Query {
         let network = context.coin.network();
         let hw = crate::db::get_account_hw(&mut connection, id_account as u32).await?;
         let signed = if crate::ledger::HwKind::from_hw(hw).is_ledger() {
-            crate::api::account::sign_ledger_pczt(&(), pczt, &context.coin).await?
+            crate::api::account::sign_ledger_pczt(&(), pczt, id_account as u32, &context.coin)
+                .await?
         } else {
             crate::pay::plan::sign_transaction(&mut connection, id_account as u32, &network, &pczt)
                 .await?
