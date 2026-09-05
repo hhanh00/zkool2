@@ -15,8 +15,11 @@ use orchard::pczt::Action;
 use orchard::primitives::redpallas;
 use pczt::roles::{prover::Prover, signer::Signer, spend_finalizer::SpendFinalizer};
 use sqlx::{Row, SqliteConnection};
+use zcash_keys::encoding::AddressCodec as _;
 use zcash_note_encryption::Domain;
 use zcash_protocol::consensus::NetworkConstants as _;
+use zcash_script::script::Evaluable as _;
+use zcash_transparent::address::TransparentAddress;
 
 use crate::{
     account::get_orchard_vk,
@@ -391,15 +394,33 @@ where
     let dindex = get_account_dindex(connection, account).await?;
 
     // Compressed pubkeys by address, for the transparent input derivation packets.
-    let pks: HashMap<String, Vec<u8>> = sqlx::query(
-        "SELECT address, pk FROM transparent_address_accounts WHERE account = ?",
+    let taddrs: Vec<(String, Vec<u8>, u32, u32)> = sqlx::query(
+        "SELECT address, pk, scope, dindex FROM transparent_address_accounts WHERE account = ?",
     )
     .bind(account)
-    .map(|row: sqlx::sqlite::SqliteRow| (row.get::<String, _>(0), row.get::<Vec<u8>, _>(1)))
+    .map(|row: sqlx::sqlite::SqliteRow| {
+        (
+            row.get::<String, _>(0),
+            row.get::<Vec<u8>, _>(1),
+            row.get::<u32, _>(2),
+            row.get::<u32, _>(3),
+        )
+    })
     .fetch_all(&mut *connection)
-    .await?
-    .into_iter()
-    .collect();
+    .await?;
+
+    let pks: HashMap<String, Vec<u8>> = taddrs
+        .iter()
+        .map(|(address, pk, _, _)| (address.clone(), pk.clone()))
+        .collect();
+    let mut change_scripts: HashMap<Vec<u8>, (Vec<u8>, u32)> = HashMap::new();
+    for (address, pk, scope, dindex) in &taddrs {
+        if *scope == 1 {
+            if let Ok(taddr) = TransparentAddress::decode(network, address) {
+                change_scripts.insert(taddr.script().to_bytes(), (pk.clone(), *dindex));
+            }
+        }
+    }
 
     // The internal change address is hidden from the device review; every other
     // positive shielded output counts against the device display budget.
@@ -493,10 +514,24 @@ where
             script_packet.write_all(script)?;
             output_packets.push(script_packet);
 
-            // No derivation on transparent outputs: they are displayed rather
-            // than hidden as change (the app requires an internal-scope path
-            // whose on-device derivation matches the output key).
-            output_packets.push(vec![0x00]);
+            let mut derivation = vec![0x00];
+            if let Some((pk, dindex)) = change_scripts.get(script) {
+                derivation.clear();
+                write_compact_size(&mut derivation, 1)?;
+                derivation.write_all(pk)?;
+                derivation.write_all(&[0u8; 32])?;
+                write_bip32_path(
+                    &mut derivation,
+                    &[
+                        44 | HARDENED,
+                        coin_type | HARDENED,
+                        aindex | HARDENED,
+                        1,
+                        *dindex,
+                    ],
+                )?;
+            }
+            output_packets.push(derivation);
         }
     }
 
