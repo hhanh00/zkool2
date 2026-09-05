@@ -861,8 +861,9 @@ pub async fn sign_ledger_transaction(
     c: &Coin,
 ) -> Result<()> {
     let c = c.clone();
+    let account = c.account;
     tokio::spawn(async move {
-        match sign_ledger_pczt(&sink, package, &c).await {
+        match sign_ledger_pczt(&sink, package, account, &c).await {
             Ok(pkg) => sink.send(SigningEvent::Result(pkg)).await,
             Err(e) => sink.send_error(e).await,
         }
@@ -874,20 +875,21 @@ pub async fn sign_ledger_transaction(
 pub(crate) async fn sign_ledger_pczt<S>(
     sink: &S,
     package: PcztPackage,
+    account: u32,
     c: &Coin,
 ) -> Result<PcztPackage>
 where
     S: Sink<SigningEvent> + Sync,
 {
     let mut connection = c.get_connection().await?;
-    let hw = get_account_hw(&mut connection, c.account).await?;
+    let hw = get_account_hw(&mut connection, account).await?;
     match HwKind::from_hw(hw) {
         HwKind::Zondax => {
             crate::ledger::builder::sign_ledger_transaction(
                 c.network(),
                 sink,
                 connection,
-                c.account,
+                account,
                 package,
             )
             .await
@@ -897,7 +899,7 @@ where
                 c.network(),
                 sink,
                 &mut connection,
-                c.account,
+                account,
                 package,
             )
             .await
@@ -910,6 +912,7 @@ where
 pub(crate) async fn sign_ledger_pczt<S>(
     sink: &S,
     package: PcztPackage,
+    account: u32,
     c: &Coin,
 ) -> Result<PcztPackage>
 where
@@ -917,7 +920,7 @@ where
 {
     let _ = (sink, package);
     let mut connection = c.get_connection().await?;
-    let hw = get_account_hw(&mut connection, c.account).await?;
+    let hw = get_account_hw(&mut connection, account).await?;
     if HwKind::from_hw(hw).is_ledger() {
         anyhow::bail!("this build has no Ledger support")
     } else {

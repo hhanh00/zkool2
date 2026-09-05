@@ -192,7 +192,7 @@ impl Mutation {
         let network = coin.network();
         let hw = crate::db::get_account_hw(&mut connection, id_account as u32).await?;
         let signed_pczt = if crate::ledger::HwKind::from_hw(hw).is_ledger() {
-            crate::api::account::sign_ledger_pczt(&(), pczt, coin).await?
+            crate::api::account::sign_ledger_pczt(&(), pczt, id_account as u32, coin).await?
         } else {
             sign_transaction(&mut connection, id_account as u32, &network, &pczt).await?
         };
