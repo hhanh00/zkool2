@@ -460,6 +460,18 @@ pub async fn new_account(
     } else {
         anyhow::bail!("Unsupported key");
     }
+
+    let external_indexes: Vec<u32> = sqlx::query(
+        "SELECT dindex FROM transparent_address_accounts WHERE account = ? AND scope = 0",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| row.get(0))
+    .fetch_all(&mut *db_tx)
+    .await?;
+    for di in external_indexes {
+        ensure_internal_change_address(network, &mut *db_tx, account, di).await?;
+    }
+
     db_tx.commit().await?;
     Ok(account)
 }
@@ -888,6 +900,7 @@ pub async fn generate_next_dindex(
             false,
         )
         .await?;
+        ensure_internal_change_address(network, &mut db_tx, account, dindex).await?;
     }
     db_tx.commit().await?;
 
@@ -959,6 +972,150 @@ async fn get_transparent_keys(
         None => (None, None),
     };
     Ok((xsk, xvk))
+}
+
+/// The stored transparent address that receives a transaction's transparent
+/// change: the account's change-scope address at the current dindex. Pairs are
+/// materialized together when addresses are derived, so a missing row is a
+/// pairing-invariant violation and is surfaced as an error rather than derived.
+pub async fn transparent_change_address(
+    connection: &mut SqliteConnection,
+    account: u32,
+    use_internal: bool,
+    dindex: u32,
+) -> Result<String> {
+    let scope: u32 = if use_internal { 1 } else { 0 };
+    let kind = if use_internal { "change" } else { "external" };
+    let address: Option<String> = sqlx::query(
+        "SELECT address FROM transparent_address_accounts
+        WHERE account = ?1 AND scope = ?2 AND dindex = ?3",
+    )
+    .bind(account)
+    .bind(scope)
+    .bind(dindex)
+    .map(|row: SqliteRow| row.get(0))
+    .fetch_optional(&mut *connection)
+    .await?;
+    address.ok_or_else(|| {
+        anyhow!(
+            "no stored {kind} transparent address at dindex {dindex} for account {account}; \
+             generate a new address set or resync to materialize the change-address pair"
+        )
+    })
+}
+
+/// Derive and store the transparent address at (scope, dindex) when missing.
+async fn derive_and_store_transparent(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+    scope: u32,
+    dindex: u32,
+) -> Result<bool> {
+    let exists: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM transparent_address_accounts
+        WHERE account = ?1 AND scope = ?2 AND dindex = ?3",
+    )
+    .bind(account)
+    .bind(scope)
+    .bind(dindex)
+    .fetch_one(&mut *connection)
+    .await?;
+    if exists.0 > 0 {
+        return Ok(false);
+    }
+
+    let hw = get_account_hw(connection, account).await?;
+    let (xsk, xvk) = get_transparent_keys(connection, account).await?;
+    let (sk, pk, address) = match xvk {
+        Some(xvk) => {
+            let sk = match xsk.as_ref() {
+                Some(xsk) => Some(derive_transparent_sk(xsk, scope, dindex)?),
+                None => None,
+            };
+            let (pk, address) = derive_transparent_address(&xvk, scope, dindex, false)?;
+            (sk, pk, address)
+        }
+        None if hw != 0 => {
+            let (aindex,): (u32,) =
+                sqlx::query_as("SELECT aindex FROM accounts WHERE id_account = ?")
+                    .bind(account)
+                    .fetch_one(&mut *connection)
+                    .await?;
+            let ledger = get_ledger(connection, account).await?;
+            let (pk, address) = ledger
+                .get_transparent_pubkey(network, aindex, scope, dindex)
+                .await?;
+            (None, pk, address)
+        }
+        _ => {
+            anyhow::bail!(
+                "cannot derive transparent address scope {scope} at dindex {dindex} \
+                 for account {account}: no account key"
+            )
+        }
+    };
+    let encoded = address.encode(network);
+    store_account_transparent_addr(connection, account, scope, dindex, sk, &pk, &encoded, false)
+        .await
+}
+
+/// Ensure the internal (scope 1) change counterpart of external index `dindex`
+/// exists for accounts that use internal change. Returns whether a new row was
+/// inserted.
+pub async fn ensure_internal_change_address(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+    dindex: u32,
+) -> Result<bool> {
+    let (use_internal,): (bool,) =
+        sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
+            .bind(account)
+            .fetch_one(&mut *connection)
+            .await?;
+    if !use_internal {
+        return Ok(false);
+    }
+    derive_and_store_transparent(network, connection, account, 1, dindex).await
+}
+
+/// Materialize the internal (change) counterpart of every stored external
+/// transparent address for accounts that use internal change. Idempotent; run
+/// at database open to reconcile databases that predate change-address pairing.
+pub async fn backfill_transparent_change_addresses(
+    network: &Network,
+    connection: &mut SqliteConnection,
+) -> Result<usize> {
+    let mut added = 0;
+    let accounts: Vec<u32> = sqlx::query(
+        "SELECT a.id_account FROM accounts a
+        WHERE a.use_internal = 1 AND EXISTS (
+            SELECT 1 FROM transparent_address_accounts ta
+            WHERE ta.account = a.id_account AND ta.scope = 0)",
+    )
+    .map(|row: SqliteRow| row.get(0))
+    .fetch_all(&mut *connection)
+    .await?;
+    for account in accounts {
+        let (xsk, xvk) = get_transparent_keys(connection, account).await?;
+        if xvk.is_none() && xsk.is_none() {
+            continue;
+        }
+        let indexes: Vec<u32> = sqlx::query(
+            "SELECT dindex FROM transparent_address_accounts WHERE account = ? AND scope = 0",
+        )
+        .bind(account)
+        .map(|row: SqliteRow| row.get(0))
+        .fetch_all(&mut *connection)
+        .await?;
+        for dindex in indexes {
+            if derive_and_store_transparent(network, connection, account, 1, dindex).await? {
+                added += 1;
+            }
+        }
+    }
+    Ok(added)
 }
 
 pub async fn get_addresses(

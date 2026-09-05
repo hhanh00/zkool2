@@ -1276,6 +1276,11 @@ pub async fn transparent_sweep(
     let hw = get_account_hw(&mut connection, account).await?;
     let aindex = get_account_aindex(&mut connection, account).await?;
     let dindex = get_account_dindex(&mut connection, account).await?;
+    let (use_internal,): (bool,) =
+        sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
+            .bind(account)
+            .fetch_one(&mut *connection)
+            .await?;
     tokio::spawn(async move {
         let ledger = get_ledger(&mut connection, account).await?;
         let mut n_added = 0;
@@ -1309,17 +1314,79 @@ pub async fn transparent_sweep(
                         let mut txids = txids?;
                         if txids.next().await.is_some() {
                             let sk = if let Some(tsk) = tk.xsk.as_ref() {
-                                let sk = derive_transparent_sk(tsk, scope, dindex)?;
-                                Some(sk)
+                                Some(derive_transparent_sk(tsk, scope, dindex)?)
                             } else {
                                 None
                             };
-                            if store_account_transparent_addr(
+                            let added = store_account_transparent_addr(
                                 &mut connection, account, scope, dindex, sk, &pk, &taddr, false,
                             )
-                            .await?
-                            {
+                            .await?;
+                            if added {
                                 n_added += 1;
+                            }
+
+                            let want_counterpart = if scope == 0 {
+                                use_internal
+                            } else {
+                                true
+                            };
+                            if want_counterpart {
+                                let counterpart_scope = 1 - scope;
+                                let existing: (i64,) = sqlx::query_as(
+                                    "SELECT COUNT(*) FROM transparent_address_accounts
+                                    WHERE account = ?1 AND scope = ?2 AND dindex = ?3",
+                                )
+                                .bind(account)
+                                .bind(counterpart_scope)
+                                .bind(dindex)
+                                .fetch_one(&mut *connection)
+                                .await?;
+                                if existing.0 == 0 {
+                                    let (csk, cpk, ctaddr) = match xvk.as_ref() {
+                                        Some(xvk) => {
+                                            let sk = if let Some(tsk) = tk.xsk.as_ref() {
+                                                Some(derive_transparent_sk(
+                                                    tsk,
+                                                    counterpart_scope,
+                                                    dindex,
+                                                )?)
+                                            } else {
+                                                None
+                                            };
+                                            let (pk, address) = derive_transparent_address(
+                                                xvk,
+                                                counterpart_scope,
+                                                dindex,
+                                                false,
+                                            )?;
+                                            (sk, pk, address)
+                                        }
+                                        None if hw != 0 => {
+                                            let (pk, address) = ledger
+                                                .get_transparent_pubkey(
+                                                    &network,
+                                                    aindex,
+                                                    counterpart_scope,
+                                                    dindex,
+                                                )
+                                                .await?;
+                                            (None, pk, address)
+                                        }
+                                        _ => anyhow::bail!("Sweep needs an xpub key"),
+                                    };
+                                    store_account_transparent_addr(
+                                        &mut connection,
+                                        account,
+                                        counterpart_scope,
+                                        dindex,
+                                        csk,
+                                        &cpk,
+                                        &ctaddr.encode(&network),
+                                        false,
+                                    )
+                                    .await?;
+                                }
                             }
                         } else {
                             gap += 1;
