@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.30.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.30.0-rc.3...zkool-v6.30.0-rc.4) (2026-09-05)
+
+
+### Features
+
+* create Ledger accounts and sign via zkool_graphql ([e3e8be8](https://github.com/hhanh00/zkool2/commit/e3e8be8eacae5232346f1c703dfd8b1600f59c26))
+
+
+### Bug Fixes
+
+* keep transparent change addresses paired with external addresses ([d232583](https://github.com/hhanh00/zkool2/commit/d232583656bd52b513a66d2ec7afcbafde3dd04a))
+* lock Use Internal Change per Ledger app and avoid empty pools selection ([56b6866](https://github.com/hhanh00/zkool2/commit/56b6866cb32a6b2e81fcb23820bcdfe8a414e4b2))
+* pass the account id explicitly when signing on the server ([7846710](https://github.com/hhanh00/zkool2/commit/78467105ee0ad18327a986a05ee371b3c2676bac))
+* tag the transparent change output with its derivation ([6e71f10](https://github.com/hhanh00/zkool2/commit/6e71f10b36004e2d8e14f3cc3db76aba6550873f))
+
 ## [6.30.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.30.0-rc.2...zkool-v6.30.0-rc.3) (2026-09-04)
 
 
