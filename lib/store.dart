@@ -916,11 +916,11 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     }
   }
 
-  Future<void> autoSync({bool now = false}) async {
+  Future<void> autoSync({bool now = false, int? interval}) async {
     final settings = await ref.read(appSettingsProvider.future);
-    final interval = int.tryParse(settings.syncInterval) ?? 0;
+    final effectiveInterval = interval ?? (int.tryParse(settings.syncInterval) ?? 0);
 
-    if (settings.offline || interval <= 0) {
+    if (settings.offline || effectiveInterval <= 0) {
       await _autoSyncSubscription?.cancel();
       _autoSyncSubscription = null;
       return;
