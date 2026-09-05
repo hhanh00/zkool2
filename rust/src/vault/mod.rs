@@ -2,6 +2,7 @@ use anyhow::Result;
 
 // #[cfg(flutter)]
 pub mod crypto;
+#[cfg(feature = "flutter")]
 mod dart;
 
 #[async_trait]
@@ -85,5 +86,6 @@ impl<IO: VaultIO> Vault<IO> {
     }
 }
 
+#[cfg(feature = "flutter")]
 pub use dart::DartVaultIO;
 use tonic::async_trait;

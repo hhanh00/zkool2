@@ -5,9 +5,7 @@ use zcash_transparent::address::TransparentAddress;
 
 use tonic::async_trait;
 
-use crate::api::coin::{Coin, Network};
-use crate::api::pay::{PcztPackage, SigningEvent};
-use crate::frb_generated::StreamSink;
+use crate::api::coin::Network;
 
 pub mod error;
 pub type LedgerError = error::Error;
@@ -105,15 +103,6 @@ pub trait LedgerApp: Send + Sync {
         _connection: &mut SqliteConnection,
         _account: u32,
     ) -> Result<String> {
-        anyhow::bail!("not supported by this Ledger app")
-    }
-
-    async fn sign_pczt(
-        &self,
-        _sink: StreamSink<SigningEvent>,
-        _package: PcztPackage,
-        _c: &Coin,
-    ) -> Result<()> {
         anyhow::bail!("not supported by this Ledger app")
     }
 }

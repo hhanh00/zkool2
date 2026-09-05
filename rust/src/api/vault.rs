@@ -1,9 +1,13 @@
+#[cfg(feature = "flutter")]
 use anyhow::Result;
 
+#[cfg(feature = "flutter")]
 use flutter_rust_bridge::{frb, DartFnFuture};
 
+#[cfg(feature = "flutter")]
 use crate::vault::{DartVaultIO, Vault};
 
+#[cfg(feature = "flutter")]
 #[frb]
 pub fn init_vault(
     append: impl Fn(Vec<u8>) -> DartFnFuture<Result<()>> + Send + Sync + 'static,
@@ -13,9 +17,11 @@ pub fn init_vault(
     Ok(DartVault(vault))
 }
 
+#[cfg(feature = "flutter")]
 #[frb(opaque)]
 pub struct DartVault(Vault<DartVaultIO>);
 
+#[cfg(feature = "flutter")]
 #[frb]
 impl DartVault {
     #[frb]
