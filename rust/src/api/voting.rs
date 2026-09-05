@@ -5,15 +5,17 @@
 //! transitions follow the plan: prepare → setup → sign/prove/submit → confirm,
 //! then van witness → commit → payloads → record execution → confirm.
 
+#[cfg(feature = "flutter")]
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
 use rand_core::{OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use zcash_voting::prelude::{
-    BundlePolicy, DelegationProgress, DelegationProgressBridge, DraftVote, NoopProgressReporter,
-    ShareTimingPolicy, TxEvent, VoteCommitStageBridge,
+    BundlePolicy, DelegationProgress, NoopProgressReporter, ShareTimingPolicy, TxEvent,
 };
+#[cfg(feature = "flutter")]
+use zcash_voting::prelude::{DelegationProgressBridge, DraftVote, VoteCommitStageBridge};
 use zcash_voting::recovery::{
     DelegationRecovery as ForkDelegationRecovery, RoundRecoverySnapshot as ForkRoundRecovery,
     ShareWorkflow as ForkShareWorkflow, VoteRecovery as ForkVoteRecovery,
@@ -25,7 +27,10 @@ use zcash_voting::{Network as VotingNetwork, VotingRoundParams};
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 
-use crate::{api::coin::Coin, frb_generated::StreamSink, voting};
+use crate::api::coin::Coin;
+#[cfg(feature = "flutter")]
+use crate::frb_generated::StreamSink;
+use crate::voting;
 
 // ---------------------------------------------------------------------------
 // Mirror types
@@ -580,6 +585,7 @@ pub async fn delegation_confirm(
 /// `pir_layout` is persisted on first use; pass `None` after a restart to
 /// resume with the saved layout. Returns the submission together with its
 /// vote-chain wire JSON body (ready for `votechain_submit_delegation`).
+#[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
 #[allow(clippy::too_many_arguments)]
 pub async fn delegation_build_submission(
@@ -820,6 +826,7 @@ pub async fn voting_drafts_load(round_id: &str, c: &Coin) -> Result<Option<Strin
 /// Commits one bundle's votes with live stage events. Draft votes are
 /// JSON-serialized fork `DraftVote`s; the VAN witness is derived internally
 /// after syncing the vote tree.
+#[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn voting_commit_with_progress(
     sink: StreamSink<VotingVoteCommitStage>,

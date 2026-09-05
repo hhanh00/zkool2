@@ -7,11 +7,7 @@ use zcash_keys::keys::UnifiedFullViewingKey;
 use zcash_protocol::consensus::NetworkConstants as _;
 
 use crate::{
-    api::{
-        coin::{Coin, Network},
-        pay::{PcztPackage, SigningEvent},
-    },
-    frb_generated::StreamSink,
+    api::coin::Network,
     ledger::{
         transport::{connect_ledger, APDUCommand, Device},
         HwKind, LedgerApp, LedgerError, LedgerResult,
@@ -115,22 +111,5 @@ impl LedgerApp for OfficialApp {
     async fn get_ufvk(&self, network: &Network, aindex: u32) -> Result<String> {
         let ledger = connect_ledger().await?;
         Ok(get_ufvk(&ledger, network, aindex).await?)
-    }
-
-    async fn sign_pczt(
-        &self,
-        sink: StreamSink<SigningEvent>,
-        package: PcztPackage,
-        c: &Coin,
-    ) -> Result<()> {
-        let connection = c.get_connection().await?;
-        crate::ledger::official_sign::sign_official_transaction(
-            c.network(),
-            sink,
-            connection,
-            c.account,
-            package,
-        )?;
-        Ok(())
     }
 }
