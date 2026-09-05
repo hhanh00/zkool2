@@ -1313,6 +1313,9 @@ pub async fn transparent_sweep(
                         => {
                         let mut txids = txids?;
                         if txids.next().await.is_some() {
+                            // A used address resets the gap count: only
+                            // consecutive unused addresses end the scan.
+                            gap = 0;
                             let sk = if let Some(tsk) = tk.xsk.as_ref() {
                                 Some(derive_transparent_sk(tsk, scope, dindex)?)
                             } else {
