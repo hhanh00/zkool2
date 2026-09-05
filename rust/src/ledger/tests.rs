@@ -69,16 +69,40 @@ fn screen_text() -> String {
         .unwrap_or_default()
 }
 
+/// Block until the app is back on its home screen. A device operation is not
+/// really finished when the host gets its answer: the app needs a moment to
+/// return to ready, and APDUs sent in that window are dropped.
+fn wait_until_ready(timeout: std::time::Duration) -> bool {
+    let deadline = std::time::Instant::now() + timeout;
+    while std::time::Instant::now() < deadline {
+        if screen_text().to_lowercase().contains("app is ready") {
+            return true;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(200));
+    }
+    false
+}
+
 /// Drive the NBGL review: advance pages with the right button. The post-review
 /// "Address verified" status and the "Sign transaction" approval page need a
 /// both-button press; "Reject transaction" means the approval page was
-/// overshot, so step back with left. Loops until the deadline so stale reviews
-/// from earlier failed runs are approved too.
+/// overshot, so step back with left. The driver waits for the review to start,
+/// and retires as soon as the app is back on the home screen, so it never
+/// outlives the interaction it was spawned for.
 fn spawn_approval_driver() {
     std::thread::spawn(|| {
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(120);
         while std::time::Instant::now() < deadline {
+            if !screen_text().to_lowercase().contains("app is ready") {
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(100));
+        }
+        while std::time::Instant::now() < deadline {
             let text = screen_text();
+            if text.to_lowercase().contains("app is ready") {
+                return;
+            }
             if text.contains("Reject transaction") {
                 eprintln!("driver: left (screen: {text:?})");
                 ui_post("/button/left", r#"{"action": "press-and-release"}"#);
@@ -146,6 +170,11 @@ pub async fn ledger_get_ufvk() -> LedgerResult<()> {
     println!("device   : {ufvk}");
     println!("expected : {expected}");
     assert_eq!(ufvk, expected, "device UFVK does not match the seed-derived key");
+    if !wait_until_ready(std::time::Duration::from_secs(30)) {
+        return Err(LedgerError::Protocol(
+            "device did not return to the home screen".into(),
+        ));
+    }
     Ok(())
 }
 
@@ -238,6 +267,11 @@ pub async fn ledger_account_import() -> LedgerResult<()> {
     println!("db ufvk  : {ufvk}");
     println!("expected : {expected}");
     assert_eq!(ufvk, expected, "stored keys do not match the device UFVK");
+    if !wait_until_ready(std::time::Duration::from_secs(30)) {
+        return Err(LedgerError::Protocol(
+            "device did not return to the home screen".into(),
+        ));
+    }
     std::fs::remove_file(&db).ok();
     Ok(())
 }
@@ -436,8 +470,8 @@ pub async fn ledger_official_sign() -> LedgerResult<()> {
         .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("{e}")))?;
 
     // Seed the OL account directly in the DB instead of importing it from the
-    // device: after a GET_VK review the emulator wedges in its home menu and
-    // stops answering APDUs, so the device interaction must come last.
+    // device: the import flow is covered by ledger_account_import, and this
+    // test only needs the signing protocol against the emulator.
     let account = crate::db::store_account_metadata(
         &mut connection,
         "ol-sign",
@@ -506,6 +540,11 @@ pub async fn ledger_official_sign() -> LedgerResult<()> {
     // zkool's ZIP-244 sighash for the declared derivation path.
     let _signed = pczt::Pczt::parse(&signed.pczt)
         .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("reparse: {e:?}")))?;
+    if !wait_until_ready(std::time::Duration::from_secs(30)) {
+        return Err(LedgerError::Protocol(
+            "device did not return to the home screen".into(),
+        ));
+    }
     std::fs::remove_file(&db).ok();
     println!("official ledger signing OK");
     Ok(())
