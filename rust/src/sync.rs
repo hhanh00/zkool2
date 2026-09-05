@@ -1399,6 +1399,23 @@ pub async fn transparent_sweep(
                 }
             }
         }
+        // Advance the account dindex to the greatest stored external (scope 0)
+        // used index, never backwards. The scan only stores used addresses and
+        // address generation keeps accounts.dindex at the newest row, so the
+        // table's max external dindex is the receiving frontier.
+        sqlx::query(
+            "UPDATE accounts
+            SET dindex = max(
+                dindex,
+                COALESCE(
+                    (SELECT max(dindex) FROM transparent_address_accounts
+                     WHERE account = accounts.id_account AND scope = 0),
+                    0))
+            WHERE id_account = ?",
+        )
+        .bind(account)
+        .execute(&mut *connection)
+        .await?;
         Ok(n_added)
     });
     Ok(())
