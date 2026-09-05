@@ -23,7 +23,6 @@ use flutter_rust_bridge::frb;
 /// (after `default_layer` but before `frb_layer`).
 type FilterSub = Layered<BoxedLayer<Registry>, Registry>;
 
-#[cfg(feature = "flutter")]
 static FILTER_HANDLE: OnceLock<reload::Handle<EnvFilter, FilterSub>> = OnceLock::new();
 
 #[cfg(feature = "flutter")]

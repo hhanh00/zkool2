@@ -494,7 +494,7 @@ pub async fn ledger_official_sign() -> LedgerResult<()> {
             &mut connection,
             account,
             &package,
-            None,
+            None::<&()>,
             &ledger,
         ),
     )

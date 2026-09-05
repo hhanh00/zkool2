@@ -20,12 +20,15 @@ use zcash_protocol::consensus::Parameters as ZkParams;
 use zcash_transparent::address::TransparentAddress;
 use zip32::AccountId;
 
-use crate::{api::pay::PcztPackage, frb_generated::StreamSink};
+use crate::api::pay::PcztPackage;
+#[cfg(feature = "flutter")]
+use crate::frb_generated::StreamSink;
 use crate::{
     api::{coin::Coin, pay::SigningEvent},
     db::{get_account_dindex, get_account_hw},
     io::{decrypt, encrypt},
     ledger::{HwKind, LedgerApp},
+    Sink,
 };
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -850,16 +853,76 @@ pub async fn show_ledger_transparent_address(c: &Coin) -> Result<String> {
     Ok(r)
 }
 
+#[cfg(feature = "flutter")]
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn sign_ledger_transaction(
     sink: StreamSink<SigningEvent>,
     package: PcztPackage,
     c: &Coin,
 ) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-    let ledger = get_ledger(&mut connection, c.account).await?;
-    ledger.sign_pczt(sink, package, c).await?;
+    let c = c.clone();
+    tokio::spawn(async move {
+        match sign_ledger_pczt(&sink, package, &c).await {
+            Ok(pkg) => sink.send(SigningEvent::Result(pkg)).await,
+            Err(e) => sink.send_error(e).await,
+        }
+    });
     Ok(())
+}
+
+#[cfg(feature = "ledger")]
+pub(crate) async fn sign_ledger_pczt<S>(
+    sink: &S,
+    package: PcztPackage,
+    c: &Coin,
+) -> Result<PcztPackage>
+where
+    S: Sink<SigningEvent> + Sync,
+{
+    let mut connection = c.get_connection().await?;
+    let hw = get_account_hw(&mut connection, c.account).await?;
+    match HwKind::from_hw(hw) {
+        HwKind::Zondax => {
+            crate::ledger::builder::sign_ledger_transaction(
+                c.network(),
+                sink,
+                connection,
+                c.account,
+                package,
+            )
+            .await
+        }
+        HwKind::Official => {
+            crate::ledger::official_sign::sign_official_transaction(
+                c.network(),
+                sink,
+                &mut connection,
+                c.account,
+                package,
+            )
+            .await
+        }
+        HwKind::Software => anyhow::bail!("account is not a hardware wallet"),
+    }
+}
+
+#[cfg(not(feature = "ledger"))]
+pub(crate) async fn sign_ledger_pczt<S>(
+    sink: &S,
+    package: PcztPackage,
+    c: &Coin,
+) -> Result<PcztPackage>
+where
+    S: Sink<SigningEvent> + Sync,
+{
+    let _ = (sink, package);
+    let mut connection = c.get_connection().await?;
+    let hw = get_account_hw(&mut connection, c.account).await?;
+    if HwKind::from_hw(hw).is_ledger() {
+        anyhow::bail!("this build has no Ledger support")
+    } else {
+        anyhow::bail!("account is not a hardware wallet")
+    }
 }
 
 #[derive(Default, Debug)]
@@ -953,5 +1016,6 @@ pub(crate) async fn get_ledger(
     })
 }
 
+#[cfg(feature = "flutter")]
 #[frb]
 pub fn dummy_export(_a: SigningEvent) {}

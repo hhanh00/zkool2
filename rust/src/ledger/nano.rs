@@ -5,11 +5,7 @@ use tonic::async_trait;
 use zcash_transparent::address::TransparentAddress;
 
 use crate::{
-    api::{
-        coin::{Coin, Network},
-        pay::{PcztPackage, SigningEvent},
-    },
-    frb_generated::StreamSink,
+    api::coin::Network,
     ledger::{HwKind, LedgerApp},
 };
 
@@ -80,18 +76,5 @@ impl LedgerApp for ZondaxApp {
         let address =
             crate::ledger::fvk::show_transparent_address(network, connection, account).await?;
         Ok(address)
-    }
-
-    async fn sign_pczt(&self, sink: StreamSink<SigningEvent>, package: PcztPackage, c: &Coin) -> Result<()> {
-        let connection = c.get_connection().await?;
-        crate::ledger::builder::sign_ledger_transaction(
-            c.network(),
-            sink,
-            connection,
-            c.account,
-            package,
-        )
-        .await?;
-        Ok(())
     }
 }
