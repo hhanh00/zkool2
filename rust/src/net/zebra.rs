@@ -123,10 +123,13 @@ impl ZebraClient {
                 drop(tor_client);
                 self.post_stream(Box::pin(stream), req).await?
             }
+            #[cfg(feature = "nym")]
             2 => {
                 let stream = crate::net::nym::nym_connect(&self.host, self.port).await?;
                 self.post_stream(Box::pin(stream), req).await?
             }
+            #[cfg(not(feature = "nym"))]
+            2 => anyhow::bail!("Nym transport is not enabled in this build"),
             _ => {
                 let body: Value = self
                     .client

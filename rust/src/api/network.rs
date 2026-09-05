@@ -109,6 +109,7 @@ pub async fn query_lwd_list(coin: u8) -> Result<Vec<LWDInfo>> {
 
 /// True when `url` is a mixnet-native server address
 /// (`nym://<identity>.<encryption>@<gateway>`).
+#[cfg(feature = "nym")]
 #[cfg_attr(feature = "flutter", frb(sync))]
 pub fn is_valid_nym_url(url: String) -> bool {
     crate::net::nym_service::parse_nym_url(&url).is_some()
