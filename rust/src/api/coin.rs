@@ -183,21 +183,35 @@ impl Coin {
     }
 
     /// True when traffic to the server goes through the Nym mixnet, either
-    /// via a mixnet-native nym:// endpoint or the Nym transport.
+    /// via a mixnet-native nym:// endpoint or the Nym transport. Always
+    /// false when this build has no `nym` feature.
     pub(crate) fn is_mixnet(&self) -> bool {
-        crate::net::nym_service::parse_nym_url(&self.url).is_some() || self.transport == 2
+        cfg_if::cfg_if! {
+            if #[cfg(feature = "nym")] {
+                crate::net::nym_service::parse_nym_url(&self.url).is_some() || self.transport == 2
+            } else {
+                false
+            }
+        }
     }
 
     pub(crate) async fn client(&self) -> Result<Client> {
-        // Mixnet-native endpoint (nym:// URL, a nym-rpc service): bypasses
-        // the transport enum entirely — the mixnet IS the transport.
-        if let Some(recipient) = crate::net::nym_service::parse_nym_url(&self.url) {
-            if self.server_type != 0 {
-                anyhow::bail!("Nym service addresses only support lightwalletd (gRPC) servers");
+        #[cfg(feature = "nym")]
+        {
+            // Mixnet-native endpoint (nym:// URL, a nym-rpc service): bypasses
+            // the transport enum entirely — the mixnet IS the transport.
+            if let Some(recipient) = crate::net::nym_service::parse_nym_url(&self.url) {
+                if self.server_type != 0 {
+                    anyhow::bail!("Nym service addresses only support lightwalletd (gRPC) servers");
+                }
+                let channel = crate::net::nym_service::grpc_channel(recipient).await?;
+                let client = CompactTxStreamerClient::new(channel);
+                return Ok(Box::new(client) as Client);
             }
-            let channel = crate::net::nym_service::grpc_channel(recipient).await?;
-            let client = CompactTxStreamerClient::new(channel);
-            return Ok(Box::new(client) as Client);
+        }
+        #[cfg(not(feature = "nym"))]
+        if self.url.starts_with("nym://") {
+            anyhow::bail!("Nym mixnet support is not enabled in this build");
         }
 
         match self.server_type {
@@ -205,7 +219,10 @@ impl Coin {
             0 => {
                 let channel = match self.transport {
                     1 => connect_over_tor(&self.url).await?,
+                    #[cfg(feature = "nym")]
                     2 => connect_over_nym(&self.url).await?,
+                    #[cfg(not(feature = "nym"))]
+                    2 => anyhow::bail!("Nym transport is not enabled in this build"),
                     3 if !self.proxy.is_empty() => {
                         connect_over_proxy(&self.url, &self.proxy).await?
                     }
@@ -327,6 +344,7 @@ async fn connect_over_tor(url: &str) -> anyhow::Result<Channel> {
     Ok(endpoint.connect_with_connector(connector).await?)
 }
 
+#[cfg(feature = "nym")]
 async fn connect_over_nym(url: &str) -> anyhow::Result<Channel> {
     let uri = url.parse::<Uri>()?;
 
