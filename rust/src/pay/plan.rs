@@ -51,9 +51,9 @@ use zip321::{Payment, TransactionRequest};
 
 use crate::{
     account::{
-        derive_transparent_sk, generate_next_change_address, get_account_full_address,
-        get_orchard_note, get_orchard_sk, get_orchard_vk, get_sapling_note, get_sapling_sk,
-        get_sapling_vk,
+        derive_transparent_sk, get_account_full_address, get_orchard_note, get_orchard_sk,
+        get_orchard_vk, get_sapling_note, get_sapling_sk, get_sapling_vk,
+        transparent_change_address,
     },
     api::{coin::Network, issuance::IssuanceInfo, pay::PcztPackage},
     db::{get_account_dindex, get_account_hw, select_account_transparent},
@@ -769,14 +769,9 @@ pub async fn plan_transaction(
 
     // ── Fetch change address ─────────────────────────────────────────────
     let change_scope = if use_internal { 1 } else { 0 };
-    let mut change_address =
+    let change_address =
         get_account_full_address(network, connection, account, change_scope, hw).await?;
     let tkeys = select_account_transparent(connection, account, dindex).await?;
-    if change_pool == 0 && tkeys.xvk.is_some() {
-        change_address = generate_next_change_address(network, connection, account)
-            .await?
-            .unwrap();
-    }
 
     // Fill in ZSA change output addresses
     for rs in &mut recipient_states {
@@ -1052,9 +1047,7 @@ pub async fn plan_transaction(
     // ── Add change output ────────────────────────────────────────────────
     if change > 0 {
         let change_addr = if change_pool == 0 && tkeys.xvk.is_some() {
-            generate_next_change_address(network, connection, account)
-                .await?
-                .unwrap()
+            transparent_change_address(connection, account, use_internal, dindex).await?
         } else {
             change_address.clone()
         };
