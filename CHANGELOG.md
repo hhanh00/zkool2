@@ -1,5 +1,15 @@
 # Changelog
 
+## [6.30.0-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.30.0-rc.5...zkool-v6.30.0-rc.6) (2026-09-05)
+
+
+### Bug Fixes
+
+* advance account dindex after the transparent scan ([b575055](https://github.com/hhanh00/zkool2/commit/b5750551580a1ba835f8d35c2ed44b09a1cc38c3))
+* include Ironwood in Unshield All ([92d177e](https://github.com/hhanh00/zkool2/commit/92d177e1734ff9d0e0fcc01c8e2861d542030eea))
+* restart autoSync immediately when the interval becomes positive ([b1702d3](https://github.com/hhanh00/zkool2/commit/b1702d3adf17c51f3b282534a4578fe1fb2e32be))
+* stop the transparent scan only after consecutive unused addresses ([a314879](https://github.com/hhanh00/zkool2/commit/a3148791033a0797023bf54391cdc468ffd407be))
+
 ## [6.30.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.30.0-rc.4...zkool-v6.30.0-rc.5) (2026-09-05)
 
 
