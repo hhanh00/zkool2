@@ -446,7 +446,13 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
           if (!settings.offline) await cacheBlockTime(height: bh, c: c);
         } on AnyhowException catch (_) {}
 
+        // Refresh the account list before switching selection, so the provider
+        // graph never sees a selected id that the (stale) list can't resolve.
+        ref.invalidate(getAccountsProvider);
+        await ref.read(getAccountsProvider.future);
+
         await coinContext.setAccount(account: account);
+        ref.read(selectedAccountIdProvider.notifier).set(account);
         c = coinContext.coin;
 
         if ((key.isNotEmpty && await hasTransparentPubKey(c: c)) || ledger) {
@@ -466,6 +472,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         if (mounted && key.isEmpty && seed != null) {
           await showSeed(context, seed.mnemonic);
         }
+        ref.invalidate(getAccountsProvider);
         if (mounted && r && currentHeight != null) {
           final shouldSync = await confirmDialog(
             context,
@@ -473,10 +480,10 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
             message: "Account imported successfully. Would you like to synchronize it now?",
           );
           if (shouldSync && mounted) {
+            await ref.read(getAccountsProvider.future);
             unawaited(ref.read(synchronizerProvider.notifier).syncIfNeeded(currentHeight, now: true));
           }
         }
-        ref.invalidate(getAccountsProvider);
         if (mounted) GoRouter.of(context).pop();
       } on AnyhowException catch (e) {
         await showException(context, e.message);
