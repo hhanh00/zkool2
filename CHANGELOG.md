@@ -1,5 +1,36 @@
 # Changelog
 
+## [6.30.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.29.0...zkool-v6.30.0) (2026-09-12)
+
+
+### Features
+
+* **account:** collapse pool balances on tap, persisted in DB settings ([7639054](https://github.com/hhanh00/zkool2/commit/7639054bcc6f542e90a961d853ed610dfc786d22))
+* create Ledger accounts and sign via zkool_graphql ([f792285](https://github.com/hhanh00/zkool2/commit/f7922853aeec099a4331416ebfa7e37401e07aee))
+* gate the Nym transport behind a cargo feature ([ad51493](https://github.com/hhanh00/zkool2/commit/ad51493d61f8f42834bdb7f93474c748e70f930a))
+* import Official Ledger UFVK from the device ([ae6de55](https://github.com/hhanh00/zkool2/commit/ae6de55f60bbeac1d7b749b81e34f544efcbff91))
+* sign v6 transactions with the Official Ledger app ([e6e462c](https://github.com/hhanh00/zkool2/commit/e6e462c6a71b7c3add7f823a280da9a69f525b84))
+* support multiple Ledger app types (Official, Zondax) ([#1242](https://github.com/hhanh00/zkool2/issues/1242)) ([1588b96](https://github.com/hhanh00/zkool2/commit/1588b96b43df840e640d0c8c3ff3b612b58a5602))
+
+
+### Bug Fixes
+
+* advance account dindex after the transparent scan ([1749b86](https://github.com/hhanh00/zkool2/commit/1749b86e67801ac239b1d1cb1a1b983a62e49e51))
+* build v6 for Official Ledger accounts and open the APDU HID interface ([121b51d](https://github.com/hhanh00/zkool2/commit/121b51d9737e7c3a5be8d99144578713582b4177))
+* derive shielded output addresses in the transaction plan ([1e03b2f](https://github.com/hhanh00/zkool2/commit/1e03b2f328f6eacce4c83626412a1a00c6b981dc))
+* force internal change for Official Ledger accounts ([cd79c02](https://github.com/hhanh00/zkool2/commit/cd79c02cfdde2407ddbd89b27495225aea6cf537))
+* include Ironwood in Unshield All ([c6572f3](https://github.com/hhanh00/zkool2/commit/c6572f365fefe55767b28994733bbd8d990b86f6))
+* keep transparent change addresses paired with external addresses ([cc51e2f](https://github.com/hhanh00/zkool2/commit/cc51e2ffb7c766b3d0172e65ef5acac14f3a87d6))
+* lock Use Internal Change per Ledger app and avoid empty pools selection ([f37e1b6](https://github.com/hhanh00/zkool2/commit/f37e1b62a8641220d6798290071703743fe50298))
+* make app error messages selectable ([599c223](https://github.com/hhanh00/zkool2/commit/599c223e84b8100b38576e99cf52d687c0853e5f))
+* pass the account id explicitly when signing on the server ([6e757f8](https://github.com/hhanh00/zkool2/commit/6e757f85580c5ae24371aab137604b7ecd7b726d))
+* restart autoSync immediately when the interval becomes positive ([0fefa11](https://github.com/hhanh00/zkool2/commit/0fefa11a40d657cbcd4d73bb27c6b507738d9df3))
+* scope witness consistency check to synced accounts ([059e980](https://github.com/hhanh00/zkool2/commit/059e980588554626add21ebb5da79acf9fc66cd2))
+* select and sync a newly restored account ([f2005e9](https://github.com/hhanh00/zkool2/commit/f2005e91ba55496791050083edbe6ff3ce8dd873))
+* stop the transparent scan only after consecutive unused addresses ([b09842e](https://github.com/hhanh00/zkool2/commit/b09842ee6eca09d8e4620882f4f0837cb59a88fe))
+* tag the transparent change output with its derivation ([eb3d89d](https://github.com/hhanh00/zkool2/commit/eb3d89d502a61422441c17b5c117a9d3ce2b9720))
+* **vote:** show ballot proposals immediately instead of after the vote-tree pre-sync ([694a5c2](https://github.com/hhanh00/zkool2/commit/694a5c20de8ac0eec8b24f027885636d589f723d))
+
 ## [6.29.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.28.1...zkool-v6.29.0) (2026-09-01)
 
 
