@@ -1271,9 +1271,9 @@ pub async fn voting_share_plan(
 ///
 /// The wallet owns transport: it fetches the static bytes, learns the dynamic
 /// URL, fetches the dynamic bytes, then Rust authenticates both and classifies
-/// the config switch against the previously resolved summary. The result is
-/// cached in the props table so [`voting_config_cached`] can serve as a
-/// last-good fallback.
+/// the config switch against the previously resolved summary. The resolved
+/// config is cached in the props table (under `voting_config:{source}`) so
+/// [`voting_config_cached`] can serve as a last-good fallback.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn voting_config_resolve(source: &str, c: &Coin) -> Result<VotingConfig> {
     let source = source.to_string();
@@ -1313,13 +1313,6 @@ pub async fn voting_config_resolve(source: &str, c: &Coin) -> Result<VotingConfi
     let fork_json = serde_json::to_string(&resolved)?;
     crate::db::put_prop(&mut connection, &format!("voting_config:{source}"), &fork_json)
         .await?;
-    let mirror_json = serde_json::to_string(&config)?;
-    crate::db::put_prop(
-        &mut connection,
-        &format!("voting_config_mirror:{source}"),
-        &mirror_json,
-    )
-    .await?;
     let prev_json = serde_json::to_string(
         &zcash_voting::config::ResolvedVotingConfigSummary::from(&resolved),
     )?;
@@ -1333,16 +1326,26 @@ pub async fn voting_config_resolve(source: &str, c: &Coin) -> Result<VotingConfi
 }
 
 /// Returns the last cached resolved config for a source URL, if any.
+///
+/// Reads the canonical `voting_config:{source}` prop written by
+/// [`voting_config_resolve`] and rebuilds the Dart-facing config from it.
+/// The switch kind is only meaningful for a fresh resolve, so cached reads
+/// report `unchanged`.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn voting_config_cached(source: &str, c: &Coin) -> Result<Option<VotingConfig>> {
     let source = source.to_string();
     let mut connection = c.get_connection().await?;
     let Some(json) =
-        crate::db::get_prop(&mut connection, &format!("voting_config_mirror:{source}")).await?
+        crate::db::get_prop(&mut connection, &format!("voting_config:{source}")).await?
     else {
         return Ok(None);
     };
-    Ok(Some(serde_json::from_str(&json)?))
+    let resolved: zcash_voting::config::ResolvedVotingConfig = serde_json::from_str(&json)?;
+    Ok(Some(VotingConfig::from_resolved(
+        source,
+        &resolved,
+        zcash_voting::config::ConfigSwitchKind::Unchanged,
+    )))
 }
 
 /// Builds the round params JSON for `delegation_prepare` from the cached
@@ -1374,11 +1377,13 @@ pub async fn voting_round_params_json(
     Ok(serde_json::to_string(&params)?)
 }
 
-/// Clears the cached resolved configs (all sources).
+/// Clears the cached resolved configs (all sources), including the obsolete
+/// `voting_config_mirror:` props written by older versions.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn voting_config_clear_cache(c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     crate::db::delete_prop_prefix(&mut connection, "voting_config:").await?;
+    crate::db::delete_prop_prefix(&mut connection, "voting_config_mirror:").await?;
     Ok(())
 }
 
