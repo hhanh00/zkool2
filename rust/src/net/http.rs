@@ -26,6 +26,16 @@ impl Default for RetryPolicy {
     }
 }
 
+/// Resolves the external proxy URL for the selected transport.
+/// Transport 3 uses the configured proxy; other transports return an empty URL.
+pub fn proxy_url(transport: u8, proxy: &str) -> &str {
+    if transport == 3 {
+        proxy
+    } else {
+        ""
+    }
+}
+
 /// Builds the wallet's reqwest client: user agent, per-request timeout, and
 /// an optional proxy URL ("http://…", "socks5h://…"; empty = direct).
 pub fn client(proxy: &str, timeout: Duration) -> Result<reqwest::Client> {
@@ -65,4 +75,21 @@ pub async fn http_get(
         }
     }
     Err(last_err.expect("attempts is at least 1"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::proxy_url;
+
+    #[test]
+    fn external_proxy_only_for_transport_three() {
+        assert_eq!(
+            proxy_url(3, "socks5://127.0.0.1:1080"),
+            "socks5://127.0.0.1:1080"
+        );
+        assert_eq!(proxy_url(3, ""), "");
+        for transport in 0..3 {
+            assert_eq!(proxy_url(transport, "socks5://x"), "");
+        }
+    }
 }

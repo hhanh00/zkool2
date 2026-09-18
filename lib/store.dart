@@ -552,7 +552,7 @@ class PriceNotifier extends _$PriceNotifier {
 
   Future<double?> fetch(String api, String currency) async {
     try {
-      final p = await getCoingeckoPrice(api: api, currency: currency);
+      final p = await getCoingeckoPrice(api: api, currency: currency, c: coinContext.coin);
       setPrice(p);
       return p;
     } catch (_) {
@@ -566,7 +566,7 @@ class SupportedCurrenciesNotifier extends _$SupportedCurrenciesNotifier {
   @override
   Future<List<String>> build() async {
     final settings = await ref.watch(appSettingsProvider.future);
-    return await getSupportedVsCurrencies(api: settings.coingecko);
+    return await getSupportedVsCurrencies(api: settings.coingecko, c: coinContext.coin);
   }
 }
 
@@ -1523,48 +1523,15 @@ Future<List<VotingProposalInfo>> votingRoundProposals(
 }
 
 /// Resolved and authenticated voting config for the configured source URL.
-/// `build()` returns the last cached resolved config without touching the
-/// network (so merely reading the provider never triggers a fetch); call
-/// `resolve()` to fetch fresh, falling back to cached on failure.
 @Riverpod(keepAlive: true)
 class VotingConfigNotifier extends _$VotingConfigNotifier {
   @override
-  Future<VotingConfig?> build() async {
-    final settings = await ref.watch(appSettingsProvider.future);
-    final source = settings.votingConfigUrl;
-    if (source.isEmpty) return null;
-    return votingConfigCached(source: source, c: coinContext.coin);
-  }
+  Future<VotingConfig?> build() => votingConfigResolve(c: coinContext.coin);
 
-  Future<VotingConfig?> _resolve(String source) async {
-    final c = coinContext.coin;
-    try {
-      return await votingConfigResolve(source: source, c: c);
-    } on AnyhowException catch (e) {
-      logger.e("Voting config resolve failed for $source: ${e.message}");
-      final cached = await votingConfigCached(source: source, c: c);
-      if (cached != null) {
-        logger.w("Serving cached voting config for $source");
-        return cached;
-      }
-      rethrow;
-    }
-  }
-
-  /// Resolve the voting config, using [source] when provided or the
-  /// configured URL from app settings otherwise.
-  /// Throws when resolution fails and no cached config exists.
-  Future<VotingConfig?> resolve({String? source}) async {
-    source ??= (await ref.read(appSettingsProvider.future)).votingConfigUrl;
-    state = const AsyncValue.loading();
-    try {
-      final result = source.isEmpty ? null : await _resolve(source);
-      state = AsyncValue.data(result);
-      return result;
-    } catch (e, stackTrace) {
-      state = AsyncValue.error(e, stackTrace);
-      rethrow;
-    }
+  /// Fetch and authenticate the configured voting config.
+  Future<VotingConfig?> resolve() {
+    ref.invalidateSelf();
+    return future;
   }
 }
 

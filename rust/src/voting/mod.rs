@@ -9,6 +9,8 @@
 //! network); `zcash_voting::confirmation` turns chain events back into voting
 //! DB state before votes can be cast.
 
+pub mod net;
+
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex, OnceLock};
