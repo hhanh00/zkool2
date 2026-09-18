@@ -11,7 +11,7 @@ pub async fn voting_config_resolve(
 ) -> Result<zcash_voting::config::ResolvedVotingConfig> {
     let source = source.to_string();
 
-    let static_bytes = http::http_get(client, &source, http::RetryPolicy::default())
+    let static_bytes = http::http_get(client, &[&source], http::RetryPolicy::default())
         .await?
         .bytes()
         .await?;
@@ -19,7 +19,7 @@ pub async fn voting_config_resolve(
         zcash_voting::config::resolve_static_voting_config(&source, &static_bytes)?;
     let dynamic_bytes = http::http_get(
         client,
-        &resolved_static.dynamic_config_url,
+        &[&resolved_static.dynamic_config_url],
         http::RetryPolicy::default(),
     )
     .await?
