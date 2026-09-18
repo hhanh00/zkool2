@@ -35,9 +35,9 @@ pub async fn get_coingecko_price(api: &str, currency: &str, c: &Coin) -> Result<
     )?;
     let rep = http::http_get(
         &client,
-        &format!(
+        &[&format!(
             "https://api.coingecko.com/api/v3/simple/price?ids=zcash&vs_currencies={currency}&x_cg_demo_api_key={api}"
-        ),
+        )],
         http::RetryPolicy::default(),
     )
     .await?
@@ -57,9 +57,9 @@ pub async fn get_supported_vs_currencies(api: &str, c: &Coin) -> Result<Vec<Stri
     )?;
     let rep = http::http_get(
         &client,
-        &format!(
+        &[&format!(
             "https://api.coingecko.com/api/v3/simple/supported_vs_currencies?x_cg_demo_api_key={api}"
-        ),
+        )],
         http::RetryPolicy::default(),
     )
     .await?
@@ -84,9 +84,9 @@ pub async fn get_exchange_rate(
     )?;
     let rep = http::http_get(
         &client,
-        &format!(
+        &[&format!(
             "https://api.coingecko.com/api/v3/simple/price?ids=zcash&vs_currencies={from_currency},{to_currency}&x_cg_demo_api_key={api}"
-        ),
+        )],
         http::RetryPolicy::default(),
     )
     .await?
