@@ -166,7 +166,7 @@ async fn download_and_verify(
     let client = crate::net::http::client("", Duration::from_secs(300))?;
 
     let part1_url = format!("{}/{}.part.1", DOWNLOAD_URL, name);
-    let part1_resp = crate::net::http::http_get(&client, &part1_url, crate::net::http::RetryPolicy::default())
+    let part1_resp = crate::net::http::http_get(&client, &[&part1_url], crate::net::http::RetryPolicy::default())
         .await
         .with_context(|| format!("Failed to download {part1_url}"))?;
     let part1_bytes = part1_resp
@@ -185,7 +185,7 @@ async fn download_and_verify(
             part2_url
         );
         let part2_resp =
-            crate::net::http::http_get(&client, &part2_url, crate::net::http::RetryPolicy::default())
+            crate::net::http::http_get(&client, &[&part2_url], crate::net::http::RetryPolicy::default())
                 .await
                 .with_context(|| format!("Failed to download {part2_url}"))?;
         let part2_bytes = part2_resp

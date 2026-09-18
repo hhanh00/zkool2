@@ -35,7 +35,7 @@ async fn get(base_url: &str, path: &str, proxy: &str) -> Result<(u16, String, Op
     let url = endpoint(base_url, path)?;
     let response = http::http_get(
         &http::client(proxy, Duration::from_secs(15))?,
-        &url,
+        &[&url],
         http::RetryPolicy::default(),
     )
     .await?;
@@ -182,7 +182,7 @@ pub async fn share_status(
 pub async fn fetch_bytes(url: &str, proxy: &str) -> Result<Vec<u8>> {
     let response = http::http_get(
         &http::client(proxy, Duration::from_secs(15))?,
-        url,
+        &[url],
         http::RetryPolicy::default(),
     )
     .await?;

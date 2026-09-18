@@ -201,7 +201,7 @@ pub async fn query_lwd_list(coin: u8) -> Result<Vec<LWDInfo>> {
     let client = crate::net::http::client("", Duration::from_secs(15))?;
     let rep = crate::net::http::http_get(
         &client,
-        &url,
+        &[&url],
         crate::net::http::RetryPolicy::default(),
     )
     .await?
