@@ -4,6 +4,7 @@ use serde_json::Value;
 use std::time::Duration;
 
 use crate::api::coin::Coin;
+use crate::net::http;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 
@@ -36,15 +37,17 @@ fn coingecko_client() -> reqwest::Client {
 }
 
 pub async fn get_coingecko_price(api: &str, currency: &str) -> Result<f64> {
-    let rep = coingecko_client()
-        .get(&format!(
+    let client = coingecko_client();
+    let rep = http::http_get(
+        &client,
+        &format!(
             "https://api.coingecko.com/api/v3/simple/price?ids=zcash&vs_currencies={currency}&x_cg_demo_api_key={api}"
-        ))
-        .send()
-        .await?
-        .error_for_status()?
-        .json::<Value>()
-        .await?;
+        ),
+        http::RetryPolicy::default(),
+    )
+    .await?
+    .json::<Value>()
+    .await?;
     let price = rep["zcash"][currency]
         .as_f64()
         .ok_or(anyhow!("Price not found for currency: {currency}"))?;
@@ -53,15 +56,17 @@ pub async fn get_coingecko_price(api: &str, currency: &str) -> Result<f64> {
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn get_supported_vs_currencies(api: &str) -> Result<Vec<String>> {
-    let rep = coingecko_client()
-        .get(&format!(
+    let client = coingecko_client();
+    let rep = http::http_get(
+        &client,
+        &format!(
             "https://api.coingecko.com/api/v3/simple/supported_vs_currencies?x_cg_demo_api_key={api}"
-        ))
-        .send()
-        .await?
-        .error_for_status()?
-        .json::<Vec<String>>()
-        .await?;
+        ),
+        http::RetryPolicy::default(),
+    )
+    .await?
+    .json::<Vec<String>>()
+    .await?;
     Ok(rep)
 }
 
@@ -74,15 +79,17 @@ pub async fn get_exchange_rate(
     from_currency: &str,
     to_currency: &str,
 ) -> Result<ExchangeRate> {
-    let rep = coingecko_client()
-        .get(&format!(
+    let client = coingecko_client();
+    let rep = http::http_get(
+        &client,
+        &format!(
             "https://api.coingecko.com/api/v3/simple/price?ids=zcash&vs_currencies={from_currency},{to_currency}&x_cg_demo_api_key={api}"
-        ))
-        .send()
-        .await?
-        .error_for_status()?
-        .json::<Value>()
-        .await?;
+        ),
+        http::RetryPolicy::default(),
+    )
+    .await?
+    .json::<Value>()
+    .await?;
     let from_price = rep["zcash"][from_currency]
         .as_f64()
         .ok_or(anyhow!("Price not found for currency: {from_currency}"))?;
