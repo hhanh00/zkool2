@@ -31,7 +31,7 @@ jobs:
         run: |
           sudo apt update && sudo apt install -y libclang-dev clang
           rm -rf ./tools
-          cargo install --git https://github.com/ZcashFoundation/zebra --tag v6.2.1 --features=internal-miner --root ./tools zebrad
+          cargo install --locked --git https://github.com/ZcashFoundation/zebra --tag v6.2.1 --features=internal-miner --root ./tools zebrad
           git clone https://github.com/zecrocks/lightwalletd.git
           cd lightwalletd
           git checkout 9b69519c57785e04e92a16365483f869dd878700
