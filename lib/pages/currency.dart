@@ -49,6 +49,7 @@ class _CurrencyPageState extends ConsumerState<CurrencyPage> {
         api: settings.coingecko,
         fromCurrency: _originalCurrency,
         toCurrency: _selectedCurrency,
+        c: c,
       );
       prefilledRate = rate.toPrice / rate.fromPrice;
     } catch (_) {

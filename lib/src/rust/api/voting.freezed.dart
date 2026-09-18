@@ -1273,7 +1273,6 @@ mixin _$VotingConfig {
   String get source;
   String get sourceFingerprint;
   String get trustedKeyFingerprint;
-  String get switchKind;
   List<VotingServiceEndpoint> get voteServers;
   List<VotingServiceEndpoint> get pirServers;
   VotingPirLayout? get pirLayout;
@@ -1297,8 +1296,6 @@ mixin _$VotingConfig {
                 other.sourceFingerprint == sourceFingerprint) &&
             (identical(other.trustedKeyFingerprint, trustedKeyFingerprint) ||
                 other.trustedKeyFingerprint == trustedKeyFingerprint) &&
-            (identical(other.switchKind, switchKind) ||
-                other.switchKind == switchKind) &&
             const DeepCollectionEquality()
                 .equals(other.voteServers, voteServers) &&
             const DeepCollectionEquality()
@@ -1314,7 +1311,6 @@ mixin _$VotingConfig {
       source,
       sourceFingerprint,
       trustedKeyFingerprint,
-      switchKind,
       const DeepCollectionEquality().hash(voteServers),
       const DeepCollectionEquality().hash(pirServers),
       pirLayout,
@@ -1322,7 +1318,7 @@ mixin _$VotingConfig {
 
   @override
   String toString() {
-    return 'VotingConfig(source: $source, sourceFingerprint: $sourceFingerprint, trustedKeyFingerprint: $trustedKeyFingerprint, switchKind: $switchKind, voteServers: $voteServers, pirServers: $pirServers, pirLayout: $pirLayout, rounds: $rounds)';
+    return 'VotingConfig(source: $source, sourceFingerprint: $sourceFingerprint, trustedKeyFingerprint: $trustedKeyFingerprint, voteServers: $voteServers, pirServers: $pirServers, pirLayout: $pirLayout, rounds: $rounds)';
   }
 }
 
@@ -1336,7 +1332,6 @@ abstract mixin class $VotingConfigCopyWith<$Res> {
       {String source,
       String sourceFingerprint,
       String trustedKeyFingerprint,
-      String switchKind,
       List<VotingServiceEndpoint> voteServers,
       List<VotingServiceEndpoint> pirServers,
       VotingPirLayout? pirLayout,
@@ -1360,7 +1355,6 @@ class _$VotingConfigCopyWithImpl<$Res> implements $VotingConfigCopyWith<$Res> {
     Object? source = null,
     Object? sourceFingerprint = null,
     Object? trustedKeyFingerprint = null,
-    Object? switchKind = null,
     Object? voteServers = null,
     Object? pirServers = null,
     Object? pirLayout = freezed,
@@ -1378,10 +1372,6 @@ class _$VotingConfigCopyWithImpl<$Res> implements $VotingConfigCopyWith<$Res> {
       trustedKeyFingerprint: null == trustedKeyFingerprint
           ? _self.trustedKeyFingerprint
           : trustedKeyFingerprint // ignore: cast_nullable_to_non_nullable
-              as String,
-      switchKind: null == switchKind
-          ? _self.switchKind
-          : switchKind // ignore: cast_nullable_to_non_nullable
               as String,
       voteServers: null == voteServers
           ? _self.voteServers
@@ -1512,7 +1502,6 @@ extension VotingConfigPatterns on VotingConfig {
             String source,
             String sourceFingerprint,
             String trustedKeyFingerprint,
-            String switchKind,
             List<VotingServiceEndpoint> voteServers,
             List<VotingServiceEndpoint> pirServers,
             VotingPirLayout? pirLayout,
@@ -1527,7 +1516,6 @@ extension VotingConfigPatterns on VotingConfig {
             _that.source,
             _that.sourceFingerprint,
             _that.trustedKeyFingerprint,
-            _that.switchKind,
             _that.voteServers,
             _that.pirServers,
             _that.pirLayout,
@@ -1556,7 +1544,6 @@ extension VotingConfigPatterns on VotingConfig {
             String source,
             String sourceFingerprint,
             String trustedKeyFingerprint,
-            String switchKind,
             List<VotingServiceEndpoint> voteServers,
             List<VotingServiceEndpoint> pirServers,
             VotingPirLayout? pirLayout,
@@ -1570,7 +1557,6 @@ extension VotingConfigPatterns on VotingConfig {
             _that.source,
             _that.sourceFingerprint,
             _that.trustedKeyFingerprint,
-            _that.switchKind,
             _that.voteServers,
             _that.pirServers,
             _that.pirLayout,
@@ -1596,7 +1582,6 @@ extension VotingConfigPatterns on VotingConfig {
             String source,
             String sourceFingerprint,
             String trustedKeyFingerprint,
-            String switchKind,
             List<VotingServiceEndpoint> voteServers,
             List<VotingServiceEndpoint> pirServers,
             VotingPirLayout? pirLayout,
@@ -1610,7 +1595,6 @@ extension VotingConfigPatterns on VotingConfig {
             _that.source,
             _that.sourceFingerprint,
             _that.trustedKeyFingerprint,
-            _that.switchKind,
             _that.voteServers,
             _that.pirServers,
             _that.pirLayout,
@@ -1628,7 +1612,6 @@ class _VotingConfig implements VotingConfig {
       {required this.source,
       required this.sourceFingerprint,
       required this.trustedKeyFingerprint,
-      required this.switchKind,
       required final List<VotingServiceEndpoint> voteServers,
       required final List<VotingServiceEndpoint> pirServers,
       this.pirLayout,
@@ -1643,8 +1626,6 @@ class _VotingConfig implements VotingConfig {
   final String sourceFingerprint;
   @override
   final String trustedKeyFingerprint;
-  @override
-  final String switchKind;
   final List<VotingServiceEndpoint> _voteServers;
   @override
   List<VotingServiceEndpoint> get voteServers {
@@ -1689,8 +1670,6 @@ class _VotingConfig implements VotingConfig {
                 other.sourceFingerprint == sourceFingerprint) &&
             (identical(other.trustedKeyFingerprint, trustedKeyFingerprint) ||
                 other.trustedKeyFingerprint == trustedKeyFingerprint) &&
-            (identical(other.switchKind, switchKind) ||
-                other.switchKind == switchKind) &&
             const DeepCollectionEquality()
                 .equals(other._voteServers, _voteServers) &&
             const DeepCollectionEquality()
@@ -1706,7 +1685,6 @@ class _VotingConfig implements VotingConfig {
       source,
       sourceFingerprint,
       trustedKeyFingerprint,
-      switchKind,
       const DeepCollectionEquality().hash(_voteServers),
       const DeepCollectionEquality().hash(_pirServers),
       pirLayout,
@@ -1714,7 +1692,7 @@ class _VotingConfig implements VotingConfig {
 
   @override
   String toString() {
-    return 'VotingConfig(source: $source, sourceFingerprint: $sourceFingerprint, trustedKeyFingerprint: $trustedKeyFingerprint, switchKind: $switchKind, voteServers: $voteServers, pirServers: $pirServers, pirLayout: $pirLayout, rounds: $rounds)';
+    return 'VotingConfig(source: $source, sourceFingerprint: $sourceFingerprint, trustedKeyFingerprint: $trustedKeyFingerprint, voteServers: $voteServers, pirServers: $pirServers, pirLayout: $pirLayout, rounds: $rounds)';
   }
 }
 
@@ -1730,7 +1708,6 @@ abstract mixin class _$VotingConfigCopyWith<$Res>
       {String source,
       String sourceFingerprint,
       String trustedKeyFingerprint,
-      String switchKind,
       List<VotingServiceEndpoint> voteServers,
       List<VotingServiceEndpoint> pirServers,
       VotingPirLayout? pirLayout,
@@ -1756,7 +1733,6 @@ class __$VotingConfigCopyWithImpl<$Res>
     Object? source = null,
     Object? sourceFingerprint = null,
     Object? trustedKeyFingerprint = null,
-    Object? switchKind = null,
     Object? voteServers = null,
     Object? pirServers = null,
     Object? pirLayout = freezed,
@@ -1774,10 +1750,6 @@ class __$VotingConfigCopyWithImpl<$Res>
       trustedKeyFingerprint: null == trustedKeyFingerprint
           ? _self.trustedKeyFingerprint
           : trustedKeyFingerprint // ignore: cast_nullable_to_non_nullable
-              as String,
-      switchKind: null == switchKind
-          ? _self.switchKind
-          : switchKind // ignore: cast_nullable_to_non_nullable
               as String,
       voteServers: null == voteServers
           ? _self._voteServers

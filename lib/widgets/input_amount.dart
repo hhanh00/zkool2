@@ -119,7 +119,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
   }
 
   void onUpdateFx(AppSettings settings) async {
-    final p = await getCoingeckoPrice(api: settings.coingecko, currency: settings.currency);
+    final p = await getCoingeckoPrice(api: settings.coingecko, currency: settings.currency, c: coinContext.coin);
     setState(() {
       final price = ref.read(priceProvider.notifier);
       price.setPrice(p);
