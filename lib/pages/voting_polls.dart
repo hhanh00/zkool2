@@ -22,14 +22,14 @@ import 'package:zkool/widgets/error_display.dart';
 /// - otherwise → "Start voting".
 ///
 /// An unresolved chain status falls back to the plan-only rule.
-class VotingPollsPage extends ConsumerStatefulWidget {
-  const VotingPollsPage({super.key});
+class VotingPollsPageOld extends ConsumerStatefulWidget {
+  const VotingPollsPageOld({super.key});
 
   @override
-  ConsumerState<VotingPollsPage> createState() => VotingPollsPageState();
+  ConsumerState<VotingPollsPageOld> createState() => VotingPollsPageStateOld();
 }
 
-class VotingPollsPageState extends ConsumerState<VotingPollsPage> {
+class VotingPollsPageStateOld extends ConsumerState<VotingPollsPageOld> {
   late final c = coinContext.coin;
 
   @override
@@ -171,7 +171,7 @@ class VotingPollsPageState extends ConsumerState<VotingPollsPage> {
                   ),
                   const Divider(),
                 ],
-                ...list.map((r) => _RoundTile(round: r, chainUrl: chainUrl)),
+                ...list.map((r) => _RoundTileOld(round: r, chainUrl: chainUrl)),
               ],
             ),
           );
@@ -181,11 +181,11 @@ class VotingPollsPageState extends ConsumerState<VotingPollsPage> {
   }
 }
 
-class _RoundTile extends ConsumerWidget {
+class _RoundTileOld extends ConsumerWidget {
   final VotingRoundInfo round;
   final String chainUrl;
 
-  const _RoundTile({required this.round, required this.chainUrl});
+  const _RoundTileOld({required this.round, required this.chainUrl});
 
   String _actionLabel(String primaryAction, {bool pendingRecovery = false}) {
     switch (primaryAction) {

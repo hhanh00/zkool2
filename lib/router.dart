@@ -151,12 +151,12 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
         GoRoute(path: '/lwd_select', builder: (context, state) => const LWDSelectPage()),
         GoRoute(path: '/show_animated_qr', builder: (context, state) => ShowAnimatedQRPage(state.extra as List<Uint8List>)),
         GoRoute(path: '/migrate', builder: (context, state) => const MigratePage()),
-        GoRoute(path: '/voting', builder: (context, state) => const VotingPollsPage()),
+        GoRoute(path: '/voting', builder: (context, state) => const VotingPollsPageOld()),
         GoRoute(
           path: '/voting/proposal',
           builder: (context, state) {
             final args = state.extra as Map<String, dynamic>;
-            return VotingProposalPage(
+            return VotingProposalPageOld(
               roundId: args['roundId'] as String,
               chainUrl: args['chainUrl'] as String,
             );
@@ -166,7 +166,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
           path: '/voting/review',
           builder: (context, state) {
             final args = state.extra as Map<String, dynamic>;
-            return VotingReviewPage(
+            return VotingReviewPageOld(
               roundId: args['roundId'] as String,
               chainUrl: args['chainUrl'] as String,
               roundParamsJson: args['roundParamsJson'] as String?,
@@ -179,7 +179,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
           path: '/voting/confirmation',
           builder: (context, state) {
             final args = state.extra as Map<String, dynamic>;
-            return VotingConfirmationPage(
+            return VotingConfirmationPageOld(
               roundId: args['roundId'] as String,
               roundName: args['roundName'] as String?,
               chainUrl: args['chainUrl'] as String? ?? "",
@@ -190,7 +190,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
           path: '/voting/results',
           builder: (context, state) {
             final args = state.extra as Map<String, dynamic>;
-            return VotingResultsPage(
+            return VotingResultsPageOld(
               roundId: args['roundId'] as String,
               chainUrl: args['chainUrl'] as String,
             );
@@ -200,7 +200,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
           path: '/voting/status',
           builder: (context, state) {
             final args = state.extra as Map<String, dynamic>;
-            return VotingStatusPage(
+            return VotingStatusPageOld(
               roundId: args['roundId'] as String,
               chainUrl: args['chainUrl'] as String,
               pirServerUrl: args['pirServerUrl'] as String,
