@@ -544,9 +544,10 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
 
   Future<void> _fetchVotingConfig(BuildContext context) async {
     try {
+      await ref.read(appSettingsProvider.notifier).setVotingConfigUrl(settings.votingConfigUrl);
       final config = await ref
           .read(votingConfigProvider.notifier)
-          .resolve(source: settings.votingConfigUrl);
+          .resolve();
       if (!context.mounted) return;
       if (config == null) {
         await showMessage(
@@ -556,8 +557,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         return;
       }
       showSnackbar(
-        "Voting config resolved: ${config.rounds.length} round(s), "
-        "switch ${config.switchKind}",
+        "Voting config resolved: ${config.rounds.length} round(s)",
       );
     } on AnyhowException catch (e) {
       if (context.mounted) await showException(context, e.message);
