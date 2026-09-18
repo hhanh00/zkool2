@@ -50,7 +50,8 @@ impl ZebraClient {
         // Direct/proxy Zebra JSON-RPC uses reqwest; the proxy applies only
         // when the Proxy transport (3) is selected.
         // reqwest natively supports socks5/socks5h/http/https proxy URLs.
-        let client = if transport == 3 && !proxy.is_empty() {
+        let proxy = crate::net::http::proxy_url(transport, proxy);
+        let client = if !proxy.is_empty() {
             reqwest::Client::builder()
                 .proxy(reqwest::Proxy::all(proxy).anyhow()?)
                 .build()
