@@ -2203,6 +2203,10 @@ pub async fn voting_round_list(
     let servers: Vec<_> = config.vote_servers.iter().map(|s| s.url.clone()).collect();
     let started = std::time::Instant::now();
     let rounds = voting::net::fetch_rounds(&servers, &client).await?;
+    let authenticated_ids: std::collections::HashSet<_> = config.rounds.iter()
+        .map(|round| round.round_id.as_str()).collect();
+    let rounds: Vec<_> = rounds.into_iter()
+        .filter(|round| authenticated_ids.contains(round.round_id.as_str())).collect();
     log::info!("Voting rounds HTTP fetch: {:?}", started.elapsed());
     let inputs: Vec<_> = rounds.iter().map(|round| voting::summary::RoundInput {
         round_id: round.round_id.clone(),
@@ -2229,8 +2233,7 @@ pub async fn voting_round_list(
             voting::summary::ListAction::ViewResults => "view_results",
         }.to_string();
         Ok(VotingRoundListItem {
-            title: round.title.filter(|title| !title.trim().is_empty())
-                .unwrap_or_else(|| round.round_id.clone()),
+            title: round.display_title(),
             round_id: round.round_id,
             status: match status.as_str() {
                 "1" => "active".to_string(),
