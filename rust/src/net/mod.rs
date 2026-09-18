@@ -6,6 +6,7 @@ use tonic::async_trait;
 
 use crate::{api::coin::Network, lwd::*};
 
+pub mod http;
 pub mod lwd;
 #[cfg(feature = "nym")]
 pub mod nym;

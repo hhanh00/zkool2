@@ -2382,9 +2382,8 @@ pub async fn voting_sessions(round_ids: Vec<String>, c: &Coin) -> Result<Vec<Vot
 
 /// Generic vote-chain HTTP response: status code + raw JSON body.
 ///
-/// 404 means "not found" (e.g. a transaction that is not confirmed yet) and
-/// 422 means a deterministic chain rejection whose body is a `VotingTxResult`.
-/// Only network failures surface as `Err`.
+/// GET requests retry transport failures and HTTP 4xx/5xx responses, returning
+/// the final failure as `Err`. POST requests expose completed HTTP responses.
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VotingChainResponse {
@@ -2472,7 +2471,7 @@ pub async fn votechain_submit_vote(
     Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
-/// Fetches the on-chain confirmation for a transaction; 404 = not confirmed.
+/// Fetches the on-chain confirmation for a transaction.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn votechain_tx_confirmation(
     base_url: &str,
