@@ -18,7 +18,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
       - name: Setup regtest
-        uses: hhanh00/zkool2/.github/actions/zebra@main
+        uses: ./.github/actions/zebra
         with:
           MINER_SEED: "burger voice warrior danger satoshi you solid atom elite alcohol category layer able debate culture talk tissue language hip surge fiction paddle stove voyage"
           MINER_ADDRESS: "tmQ1BiNRfsvT6eMkJ5n7nMZsbz1PGwCs1Zs"
