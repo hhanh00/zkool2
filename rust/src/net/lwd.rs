@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::time::Duration;
 use tracing::debug;
 use zcash_primitives::transaction::Transaction;
 
@@ -197,11 +198,15 @@ pub async fn query_lwd_list(coin: u8) -> Result<Vec<LWDInfo>> {
     }
     let chain = if coin == 1 { "test" } else { "main" };
     let url = format!("https://hosh.zec.rocks/api/v0/zec.json?chain={chain}");
-    let rep = reqwest::get(&url)
-        .await?
-        .error_for_status()?
-        .json::<serde_json::Value>()
-        .await?;
+    let client = crate::net::http::client("", Duration::from_secs(15))?;
+    let rep = crate::net::http::http_get(
+        &client,
+        &url,
+        crate::net::http::RetryPolicy::default(),
+    )
+    .await?
+    .json::<serde_json::Value>()
+    .await?;
 
     // Parse the JSON response and convert it to Vec<LWDInfo>
     let servers = rep["servers"].as_array().cloned().unwrap_or_default();
