@@ -4,6 +4,43 @@ use anyhow::Result;
 
 use crate::net::http;
 
+#[derive(Debug, serde::Deserialize)]
+pub struct ServerRound {
+    #[serde(alias = "id", alias = "vote_round_id")]
+    pub round_id: String,
+    pub title: Option<String>,
+    pub status: serde_json::Value,
+    pub proposals: Vec<ServerProposal>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ServerProposal {
+    pub id: u32,
+}
+
+/// Fetches nonterminal rounds, rotating through equivalent servers on failure.
+pub async fn fetch_rounds(
+    servers: &[String],
+    client: &reqwest::Client,
+) -> Result<Vec<ServerRound>> {
+    #[derive(serde::Deserialize)]
+    struct Envelope {
+        #[serde(default)]
+        current_rounds: Vec<ServerRound>,
+    }
+    let urls: Vec<_> = servers
+        .iter()
+        .map(|server| {
+            format!(
+                "{}/shielded-vote/v1/rounds/overview",
+                server.trim_end_matches('/')
+            )
+        })
+        .collect();
+    let response = http::http_get(client, &urls, http::RetryPolicy::default()).await?;
+    Ok(response.json::<Envelope>().await?.current_rounds)
+}
+
 /// Resolves and authenticates the voting config for a source URL.
 pub async fn voting_config_resolve(
     source: &str,
@@ -36,13 +73,53 @@ pub async fn voting_config_resolve(
 
 #[cfg(test)]
 mod tests {
-    use super::voting_config_resolve;
+    use super::{fetch_rounds, voting_config_resolve};
     use std::time::Duration;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
 
     const STATIC_CONFIG_SOURCE: &str = "https://voting.valargroup.dev/pins/stage/046758f8d1f1a74c7ea63461fd77101930c5df5817b74453ed81895c26bf988f/static-voting-config.json?checksum=sha256:046758f8d1f1a74c7ea63461fd77101930c5df5817b74453ed81895c26bf988f";
     const STATIC_CONFIG: &[u8] = include_bytes!("fixtures/static-voting-config.json");
+
+    #[tokio::test]
+    async fn fetches_round_metadata_with_equivalent_server_fallback() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = Vec::new();
+            while !request.ends_with(b"\r\n\r\n") {
+                request.push(socket.read_u8().await.unwrap());
+            }
+            assert!(request.starts_with(b"GET /shielded-vote/v1/rounds/overview HTTP/1.1\r\n"));
+            let body = r#"{"current_rounds":[{"round_id":"r","title":"Poll","status":1,"proposals":[{"id":1},{"id":2}]}],"completed_round_count":962}"#;
+            socket
+                .write_all(
+                    format!(
+                        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                        body.len(),
+                        body
+                    )
+                    .as_bytes(),
+                )
+                .await
+                .unwrap();
+        });
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let rounds = tokio::time::timeout(
+            Duration::from_secs(10),
+            fetch_rounds(&["invalid-url".into(), url], &client),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert_eq!(rounds.len(), 1);
+        assert_eq!(rounds[0].round_id, "r");
+        assert_eq!(rounds[0].title.as_deref(), Some("Poll"));
+        assert_eq!(rounds[0].status, 1);
+        assert_eq!(rounds[0].proposals[1].id, 2);
+        server.await.unwrap();
+    }
 
     #[test]
     fn resolves_pinned_static_config_fixture() {
