@@ -28,16 +28,11 @@ pub async fn get_current_height(c: &Coin) -> Result<u32> {
     Ok(height as u32)
 }
 
-fn coingecko_client() -> reqwest::Client {
-    reqwest::Client::builder()
-        .user_agent("zkool/1.0")
-        .timeout(Duration::from_secs(15))
-        .build()
-        .unwrap_or_else(|_| reqwest::Client::new())
-}
-
-pub async fn get_coingecko_price(api: &str, currency: &str) -> Result<f64> {
-    let client = coingecko_client();
+pub async fn get_coingecko_price(api: &str, currency: &str, c: &Coin) -> Result<f64> {
+    let client = http::client(
+        http::proxy_url(c.transport, &c.proxy),
+        Duration::from_secs(15),
+    )?;
     let rep = http::http_get(
         &client,
         &format!(
@@ -55,8 +50,11 @@ pub async fn get_coingecko_price(api: &str, currency: &str) -> Result<f64> {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn get_supported_vs_currencies(api: &str) -> Result<Vec<String>> {
-    let client = coingecko_client();
+pub async fn get_supported_vs_currencies(api: &str, c: &Coin) -> Result<Vec<String>> {
+    let client = http::client(
+        http::proxy_url(c.transport, &c.proxy),
+        Duration::from_secs(15),
+    )?;
     let rep = http::http_get(
         &client,
         &format!(
@@ -78,8 +76,12 @@ pub async fn get_exchange_rate(
     api: &str,
     from_currency: &str,
     to_currency: &str,
+    c: &Coin,
 ) -> Result<ExchangeRate> {
-    let client = coingecko_client();
+    let client = http::client(
+        http::proxy_url(c.transport, &c.proxy),
+        Duration::from_secs(15),
+    )?;
     let rep = http::http_get(
         &client,
         &format!(

@@ -1,0 +1,24 @@
+{
+  "static_config_version": 1,
+  "dynamic_config_url": "https://voting.valargroup.dev/stage/dynamic-voting-config.json",
+  "trusted_keys": [
+    {
+      "key_id": "zodl-stage-vote-manager",
+      "alg": "ed25519",
+      "pubkey": "1zVMYcCGP6qNVq4lZtAdmumk0oNgPYojdjHUD89rl0Q=",
+      "notes": "Vote-manager Keplr-derived key for zodl stage vote manager; sv1v9rqlrlc0m2kvfkrnxcxdym70w8gftxm2a3cud"
+    },
+    {
+      "key_id": "valar-test",
+      "alg": "ed25519",
+      "pubkey": "rKDbmhkoW9ja7dMiCV+1uTao7wXWV6xN/57erkrOuiQ=",
+      "notes": "DO NOT USE IN PRODUCTION. Development-only key. Generated locally; private key NOT in production custody. Replace with vote-manager-held production key before the v2 URL ships in a wallet release. See README.md (Production handover)."
+    },
+    {
+      "key_id": "valar-test-keplr-derived",
+      "alg": "ed25519",
+      "pubkey": "NDygCpG+Y4T4uu8M1Sb/YG+74lUVj9XgYypUoMQMXT8=",
+      "notes": "Development key derived from the vote manager Keplr account for config attestation testing."
+    }
+  ]
+}

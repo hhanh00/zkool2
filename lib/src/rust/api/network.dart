@@ -9,7 +9,6 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'network.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `coingecko_client`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
 
 Future<void> initDatadir({required String directory}) =>
@@ -22,12 +21,14 @@ Future<int> getCurrentHeight({required Coin c}) =>
     RustLib.instance.api.crateApiNetworkGetCurrentHeight(c: c);
 
 Future<double> getCoingeckoPrice(
-        {required String api, required String currency}) =>
+        {required String api, required String currency, required Coin c}) =>
     RustLib.instance.api
-        .crateApiNetworkGetCoingeckoPrice(api: api, currency: currency);
+        .crateApiNetworkGetCoingeckoPrice(api: api, currency: currency, c: c);
 
-Future<List<String>> getSupportedVsCurrencies({required String api}) =>
-    RustLib.instance.api.crateApiNetworkGetSupportedVsCurrencies(api: api);
+Future<List<String>> getSupportedVsCurrencies(
+        {required String api, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiNetworkGetSupportedVsCurrencies(api: api, c: c);
 
 /// Returns the ZEC price in both `from_currency` and `to_currency`.
 /// The exchange rate from `from_currency` to `to_currency` can be computed as
@@ -35,9 +36,10 @@ Future<List<String>> getSupportedVsCurrencies({required String api}) =>
 Future<ExchangeRate> getExchangeRate(
         {required String api,
         required String fromCurrency,
-        required String toCurrency}) =>
+        required String toCurrency,
+        required Coin c}) =>
     RustLib.instance.api.crateApiNetworkGetExchangeRate(
-        api: api, fromCurrency: fromCurrency, toCurrency: toCurrency);
+        api: api, fromCurrency: fromCurrency, toCurrency: toCurrency, c: c);
 
 Future<String> getNetworkName({required Coin c}) =>
     RustLib.instance.api.crateApiNetworkGetNetworkName(c: c);
