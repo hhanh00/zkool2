@@ -26,7 +26,7 @@ async fn get_historical_prices(
     let historical_price_url = format!(
         "https://api.coingecko.com/api/v3/coins/zcash/market_chart?vs_currency={currency}&days={days}&x_cg_demo_api_key={api}"
     );
-    let rep: Value = http::http_get(client, &historical_price_url, http::RetryPolicy::default())
+    let rep: Value = http::http_get(client, &[&historical_price_url], http::RetryPolicy::default())
         .await?
         .json()
         .await?;
