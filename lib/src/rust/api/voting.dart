@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'voting.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `config_switch_kind_string`, `fork_network_string`, `from_resolved`, `prepare_bundle`, `to_fork`, `votechain_proxy`
+// These functions are ignored because they are not marked as `pub`: `fork_network_string`, `from_resolved`, `prepare_bundle`, `to_fork`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `VotingShareDelivery`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`, `from`
 
@@ -358,21 +358,11 @@ Future<VotingSharePlan> votingSharePlan(
 /// Resolves and authenticates the voting config for a source URL.
 ///
 /// The wallet owns transport: it fetches the static bytes, learns the dynamic
-/// URL, fetches the dynamic bytes, then Rust authenticates both and classifies
-/// the config switch against the previously resolved summary. The result is
-/// cached in the props table so [`voting_config_cached`] can serve as a
-/// last-good fallback.
-Future<VotingConfig> votingConfigResolve(
-        {required String source, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiVotingVotingConfigResolve(source: source, c: c);
+/// URL, fetches the dynamic bytes, then Rust authenticates both.
+Future<VotingConfig?> votingConfigResolve({required Coin c}) =>
+    RustLib.instance.api.crateApiVotingVotingConfigResolve(c: c);
 
-/// Returns the last cached resolved config for a source URL, if any.
-Future<VotingConfig?> votingConfigCached(
-        {required String source, required Coin c}) =>
-    RustLib.instance.api.crateApiVotingVotingConfigCached(source: source, c: c);
-
-/// Builds the round params JSON for `delegation_prepare` from the cached
+/// Builds the round params JSON for `delegation_prepare` from the fetched
 /// authenticated config plus chain-reported snapshot fields (`ea_pk` is
 /// pinned to the authenticated config, so a stale endpoint cannot steer
 /// voting to the wrong authority or roots).
@@ -390,10 +380,6 @@ Future<String> votingRoundParamsJson(
         ncRoot: ncRoot,
         nullifierImtRoot: nullifierImtRoot,
         c: c);
-
-/// Clears the cached resolved configs (all sources).
-Future<void> votingConfigClearCache({required Coin c}) =>
-    RustLib.instance.api.crateApiVotingVotingConfigClearCache(c: c);
 
 /// Syncs the vote-authority-note tree and derives this bundle's VAN witness.
 Future<VotingVanWitness> votingVanWitness(
@@ -627,7 +613,7 @@ Future<VotingChainResponse> votechainSubmitVote(
     RustLib.instance.api.crateApiVotingVotechainSubmitVote(
         baseUrl: baseUrl, submissionJson: submissionJson, c: c);
 
-/// Fetches the on-chain confirmation for a transaction; 404 = not confirmed.
+/// Fetches the on-chain confirmation for a transaction.
 Future<VotingChainResponse> votechainTxConfirmation(
         {required String baseUrl, required String txHash, required Coin c}) =>
     RustLib.instance.api.crateApiVotingVotechainTxConfirmation(
@@ -671,9 +657,8 @@ sealed class VotingBallotIntent with _$VotingBallotIntent {
 
 /// Generic vote-chain HTTP response: status code + raw JSON body.
 ///
-/// 404 means "not found" (e.g. a transaction that is not confirmed yet) and
-/// 422 means a deterministic chain rejection whose body is a `VotingTxResult`.
-/// Only network failures surface as `Err`.
+/// GET requests retry transport failures and HTTP 4xx/5xx responses, returning
+/// the final failure as `Err`. POST requests expose completed HTTP responses.
 @freezed
 sealed class VotingChainResponse with _$VotingChainResponse {
   const factory VotingChainResponse({
@@ -708,7 +693,6 @@ sealed class VotingConfig with _$VotingConfig {
     required String source,
     required String sourceFingerprint,
     required String trustedKeyFingerprint,
-    required String switchKind,
     required List<VotingServiceEndpoint> voteServers,
     required List<VotingServiceEndpoint> pirServers,
     VotingPirLayout? pirLayout,

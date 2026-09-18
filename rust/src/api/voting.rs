@@ -1268,87 +1268,28 @@ pub async fn voting_share_plan(
 // ---------------------------------------------------------------------------
 
 /// Resolves and authenticates the voting config for a source URL.
+/// Returns `None` when no voting config URL is configured.
 ///
 /// The wallet owns transport: it fetches the static bytes, learns the dynamic
-/// URL, fetches the dynamic bytes, then Rust authenticates both and classifies
-/// the config switch against the previously resolved summary. The resolved
-/// config is cached in the props table (under `voting_config:{source}`) so
-/// [`voting_config_cached`] can serve as a last-good fallback.
+/// URL, fetches the dynamic bytes, then Rust authenticates both.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_config_resolve(source: &str, c: &Coin) -> Result<VotingConfig> {
-    let source = source.to_string();
-    let proxy = votechain_proxy(c);
+pub async fn voting_config_resolve(c: &Coin) -> Result<Option<VotingConfig>> {
     let mut connection = c.get_connection().await?;
-
-    let static_bytes = crate::net::votechain::fetch_bytes(&source, &proxy).await?;
-    let resolved_static =
-        zcash_voting::config::resolve_static_voting_config(&source, &static_bytes)?;
-    let dynamic_bytes = crate::net::votechain::fetch_bytes(
-        &resolved_static.dynamic_config_url,
-        &proxy,
-    )
-    .await?;
-    let resolved = zcash_voting::config::resolve_dynamic_voting_config(
-        resolved_static,
-        &dynamic_bytes,
-        zcash_voting::config::ResolveVotingConfigOptions::default(),
-    )?;
-
-    let previous = crate::db::get_prop(
-        &mut connection,
-        &format!("voting_config_prev:{source}"),
-    )
-    .await?
-    .map(|json| {
-        serde_json::from_str::<zcash_voting::config::ResolvedVotingConfigSummary>(&json)
-            .map_err(anyhow::Error::from)
-    })
-    .transpose()?;
-    let decision = zcash_voting::config::decide_config_switch(
-        previous.clone(),
-        zcash_voting::config::ResolvedVotingConfigSummary::from(&resolved),
-    );
-
-    let config = VotingConfig::from_resolved(source.clone(), &resolved, decision.kind);
-    let fork_json = serde_json::to_string(&resolved)?;
-    crate::db::put_prop(&mut connection, &format!("voting_config:{source}"), &fork_json)
-        .await?;
-    let prev_json = serde_json::to_string(
-        &zcash_voting::config::ResolvedVotingConfigSummary::from(&resolved),
-    )?;
-    crate::db::put_prop(
-        &mut connection,
-        &format!("voting_config_prev:{source}"),
-        &prev_json,
-    )
-    .await?;
-    Ok(config)
-}
-
-/// Returns the last cached resolved config for a source URL, if any.
-///
-/// Reads the canonical `voting_config:{source}` prop written by
-/// [`voting_config_resolve`] and rebuilds the Dart-facing config from it.
-/// The switch kind is only meaningful for a fresh resolve, so cached reads
-/// report `unchanged`.
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_config_cached(source: &str, c: &Coin) -> Result<Option<VotingConfig>> {
-    let source = source.to_string();
-    let mut connection = c.get_connection().await?;
-    let Some(json) =
-        crate::db::get_prop(&mut connection, &format!("voting_config:{source}")).await?
+    let Some(source) = crate::db::get_prop(&mut connection, "voting_config_url")
+        .await?
+        .filter(|source| !source.is_empty())
     else {
         return Ok(None);
     };
-    let resolved: zcash_voting::config::ResolvedVotingConfig = serde_json::from_str(&json)?;
-    Ok(Some(VotingConfig::from_resolved(
-        source,
-        &resolved,
-        zcash_voting::config::ConfigSwitchKind::Unchanged,
-    )))
+    let client = crate::net::http::client(
+        crate::net::http::proxy_url(c.transport, &c.proxy),
+        std::time::Duration::from_secs(15),
+    )?;
+    let resolved = voting::net::voting_config_resolve(&source, &client).await?;
+    Ok(Some(VotingConfig::from_resolved(source, &resolved)))
 }
 
-/// Builds the round params JSON for `delegation_prepare` from the cached
+/// Builds the round params JSON for `delegation_prepare` from the fetched
 /// authenticated config plus chain-reported snapshot fields (`ea_pk` is
 /// pinned to the authenticated config, so a stale endpoint cannot steer
 /// voting to the wrong authority or roots).
@@ -1363,11 +1304,11 @@ pub async fn voting_round_params_json(
 ) -> Result<String> {
     let source = source.to_string();
     let round_id = round_id.to_string();
-    let mut connection = c.get_connection().await?;
-    let json = crate::db::get_prop(&mut connection, &format!("voting_config:{source}"))
-        .await?
-        .ok_or_else(|| anyhow!("no cached voting config for source {source}; resolve it first"))?;
-    let config: zcash_voting::config::ResolvedVotingConfig = serde_json::from_str(&json)?;
+    let client = crate::net::http::client(
+        crate::net::http::proxy_url(c.transport, &c.proxy),
+        std::time::Duration::from_secs(15),
+    )?;
+    let config = voting::net::voting_config_resolve(&source, &client).await?;
     let params = config.trusted_voting_round_params(
         round_id,
         snapshot_height,
@@ -1375,16 +1316,6 @@ pub async fn voting_round_params_json(
         nullifier_imt_root,
     )?;
     Ok(serde_json::to_string(&params)?)
-}
-
-/// Clears the cached resolved configs (all sources), including the obsolete
-/// `voting_config_mirror:` props written by older versions.
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_config_clear_cache(c: &Coin) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-    crate::db::delete_prop_prefix(&mut connection, "voting_config:").await?;
-    crate::db::delete_prop_prefix(&mut connection, "voting_config_mirror:").await?;
-    Ok(())
 }
 
 // ---------------------------------------------------------------------------
@@ -2193,36 +2124,21 @@ pub struct VotingConfig {
     pub source: String,
     pub source_fingerprint: String,
     pub trusted_key_fingerprint: String,
-    pub switch_kind: String,
     pub vote_servers: Vec<VotingServiceEndpoint>,
     pub pir_servers: Vec<VotingServiceEndpoint>,
     pub pir_layout: Option<VotingPirLayout>,
     pub rounds: Vec<VotingConfigRound>,
 }
 
-fn config_switch_kind_string(kind: zcash_voting::config::ConfigSwitchKind) -> String {
-    match kind {
-        zcash_voting::config::ConfigSwitchKind::Unchanged => "unchanged".to_string(),
-        zcash_voting::config::ConfigSwitchKind::InitialLoad => "initial_load".to_string(),
-        zcash_voting::config::ConfigSwitchKind::SameChainServiceUpdate => {
-            "same_chain_service_update".to_string()
-        }
-        zcash_voting::config::ConfigSwitchKind::NewChainOrRound => "new_chain_or_round".to_string(),
-        zcash_voting::config::ConfigSwitchKind::ProtocolChanged => "protocol_changed".to_string(),
-    }
-}
-
 impl VotingConfig {
-    fn from_resolved(
+    pub(crate) fn from_resolved(
         source: String,
         resolved: &zcash_voting::config::ResolvedVotingConfig,
-        switch_kind: zcash_voting::config::ConfigSwitchKind,
     ) -> Self {
         Self {
             source,
             source_fingerprint: resolved.source_fingerprint.clone(),
             trusted_key_fingerprint: resolved.trusted_key_fingerprint.clone(),
-            switch_kind: config_switch_kind_string(switch_kind),
             vote_servers: resolved
                 .vote_servers
                 .iter()
@@ -2397,22 +2313,12 @@ pub struct VotingChainResponse {
     pub retry_after_secs: Option<u64>,
 }
 
-/// Voting traffic honors the external-proxy setting (transport 3) only; it is
-/// never routed through the Tor/Nym transports in v1.
-fn votechain_proxy(c: &Coin) -> String {
-    if c.transport == 3 {
-        c.proxy.clone()
-    } else {
-        String::new()
-    }
-}
-
 /// Lists rounds from the vote server (`{ "rounds": [...] }`).
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn votechain_list_rounds(base_url: &str, c: &Coin) -> Result<VotingChainResponse> {
     let base_url = base_url.to_string();
-    let proxy = votechain_proxy(c);
-    let (status_code, body, retry_after_secs) = crate::net::votechain::list_rounds(&base_url, &proxy).await?;
+    let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
+    let (status_code, body, retry_after_secs) = crate::net::votechain::list_rounds(&base_url, proxy).await?;
     Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
@@ -2425,9 +2331,9 @@ pub async fn votechain_round_status(
 ) -> Result<VotingChainResponse> {
     let base_url = base_url.to_string();
     let round_id = round_id.to_string();
-    let proxy = votechain_proxy(c);
+    let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
     let (status_code, body, retry_after_secs) =
-        crate::net::votechain::round_status(&base_url, &round_id, &proxy).await?;
+        crate::net::votechain::round_status(&base_url, &round_id, proxy).await?;
     Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
@@ -2440,9 +2346,9 @@ pub async fn votechain_round_tally(
 ) -> Result<VotingChainResponse> {
     let base_url = base_url.to_string();
     let round_id = round_id.to_string();
-    let proxy = votechain_proxy(c);
+    let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
     let (status_code, body, retry_after_secs) =
-        crate::net::votechain::round_tally(&base_url, &round_id, &proxy).await?;
+        crate::net::votechain::round_tally(&base_url, &round_id, proxy).await?;
     Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
@@ -2455,9 +2361,9 @@ pub async fn votechain_submit_delegation(
 ) -> Result<VotingChainResponse> {
     let base_url = base_url.to_string();
     let submission_json = submission_json.to_string();
-    let proxy = votechain_proxy(c);
+    let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
     let (status_code, body, retry_after_secs) =
-        crate::net::votechain::submit_delegation(&base_url, &submission_json, &proxy).await?;
+        crate::net::votechain::submit_delegation(&base_url, &submission_json, proxy).await?;
     Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
@@ -2470,9 +2376,9 @@ pub async fn votechain_submit_vote(
 ) -> Result<VotingChainResponse> {
     let base_url = base_url.to_string();
     let submission_json = submission_json.to_string();
-    let proxy = votechain_proxy(c);
+    let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
     let (status_code, body, retry_after_secs) =
-        crate::net::votechain::submit_vote_commitment(&base_url, &submission_json, &proxy).await?;
+        crate::net::votechain::submit_vote_commitment(&base_url, &submission_json, proxy).await?;
     Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
@@ -2485,9 +2391,9 @@ pub async fn votechain_tx_confirmation(
 ) -> Result<VotingChainResponse> {
     let base_url = base_url.to_string();
     let tx_hash = tx_hash.to_string();
-    let proxy = votechain_proxy(c);
+    let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
     let (status_code, body, retry_after_secs) =
-        crate::net::votechain::tx_confirmation(&base_url, &tx_hash, &proxy).await?;
+        crate::net::votechain::tx_confirmation(&base_url, &tx_hash, proxy).await?;
     Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
@@ -2500,9 +2406,9 @@ pub async fn votechain_submit_share(
 ) -> Result<VotingChainResponse> {
     let server_url = server_url.to_string();
     let payload_json = payload_json.to_string();
-    let proxy = votechain_proxy(c);
+    let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
     let (status_code, body, retry_after_secs) =
-        crate::net::votechain::submit_share(&server_url, &payload_json, &proxy).await?;
+        crate::net::votechain::submit_share(&server_url, &payload_json, proxy).await?;
     Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
@@ -2516,9 +2422,9 @@ pub async fn votechain_resubmit_share(
 ) -> Result<VotingChainResponse> {
     let server_url = server_url.to_string();
     let payload_json = payload_json.to_string();
-    let proxy = votechain_proxy(c);
+    let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
     let (status_code, body, retry_after_secs) =
-        crate::net::votechain::submit_share(&server_url, &payload_json, &proxy).await?;
+        crate::net::votechain::submit_share(&server_url, &payload_json, proxy).await?;
     Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
@@ -2533,9 +2439,9 @@ pub async fn votechain_share_status(
     let server_url = server_url.to_string();
     let round_id = round_id.to_string();
     let share_id = share_id.to_string();
-    let proxy = votechain_proxy(c);
+    let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
     let (status_code, body, retry_after_secs) =
-        crate::net::votechain::share_status(&server_url, &round_id, &share_id, &proxy).await?;
+        crate::net::votechain::share_status(&server_url, &round_id, &share_id, proxy).await?;
     Ok(VotingChainResponse { status_code, body, retry_after_secs })
 }
 
@@ -2543,7 +2449,7 @@ pub async fn votechain_share_status(
 mod tests {
     use super::*;
     use zcash_voting::config::{
-        AuthenticatedRound, ConfigCondition, ConfigConditionKind, ConfigSwitchKind, PirLayout,
+        AuthenticatedRound, ConfigCondition, ConfigConditionKind, PirLayout,
         ResolvedVotingConfig, ServiceEndpoint, SupportedVersions,
     };
     use zcash_voting::phases::{DelegationPhase, SharePhase, VotePhase};
@@ -2566,18 +2472,6 @@ mod tests {
         let json = serde_json::to_string(&v).unwrap();
         let back: T = serde_json::from_str(&json).unwrap();
         assert_eq!(back, v);
-    }
-
-    fn coin(transport: u8, proxy: &str) -> Coin {
-        Coin {
-            coin: 0,
-            account: 0,
-            db_filepath: String::new(),
-            url: String::new(),
-            server_type: 0,
-            transport,
-            proxy: proxy.to_string(),
-        }
     }
 
     #[test]
@@ -3390,36 +3284,6 @@ mod tests {
         assert_eq!(fork_network_string(VotingNetwork::Regtest), "regtest");
     }
 
-    #[test]
-    fn config_switch_kind_string_maps_each_kind() {
-        assert_eq!(config_switch_kind_string(ConfigSwitchKind::Unchanged), "unchanged");
-        assert_eq!(config_switch_kind_string(ConfigSwitchKind::InitialLoad), "initial_load");
-        assert_eq!(
-            config_switch_kind_string(ConfigSwitchKind::SameChainServiceUpdate),
-            "same_chain_service_update"
-        );
-        assert_eq!(
-            config_switch_kind_string(ConfigSwitchKind::NewChainOrRound),
-            "new_chain_or_round"
-        );
-        assert_eq!(
-            config_switch_kind_string(ConfigSwitchKind::ProtocolChanged),
-            "protocol_changed"
-        );
-    }
-
-    #[test]
-    fn votechain_proxy_uses_external_proxy_only_for_transport_three() {
-        assert_eq!(
-            votechain_proxy(&coin(3, "socks5://127.0.0.1:1080")),
-            "socks5://127.0.0.1:1080"
-        );
-        assert_eq!(votechain_proxy(&coin(3, "")), "");
-        assert_eq!(votechain_proxy(&coin(0, "socks5://x")), "");
-        assert_eq!(votechain_proxy(&coin(1, "socks5://x")), "");
-        assert_eq!(votechain_proxy(&coin(2, "socks5://x")), "");
-    }
-
     fn resolved_config(pir_layout: PirLayout) -> ResolvedVotingConfig {
         ResolvedVotingConfig {
             source_fingerprint: "sf".to_string(),
@@ -3476,12 +3340,11 @@ mod tests {
         let config = VotingConfig::from_resolved(
             "https://src".to_string(),
             &resolved_config(layout),
-            ConfigSwitchKind::NewChainOrRound,
+
         );
         assert_eq!(config.source, "https://src");
         assert_eq!(config.source_fingerprint, "sf");
         assert_eq!(config.trusted_key_fingerprint, "tf");
-        assert_eq!(config.switch_kind, "new_chain_or_round");
         assert_eq!(
             config.vote_servers,
             vec![
@@ -3531,10 +3394,9 @@ mod tests {
         let config = VotingConfig::from_resolved(
             "https://src".to_string(),
             &resolved_config(PirLayout::UNKNOWN),
-            ConfigSwitchKind::InitialLoad,
+
         );
         assert_eq!(config.pir_layout, None);
-        assert_eq!(config.switch_kind, "initial_load");
     }
 
     #[test]
@@ -3673,7 +3535,6 @@ mod tests {
             source: "https://src".to_string(),
             source_fingerprint: "sf".to_string(),
             trusted_key_fingerprint: "tf".to_string(),
-            switch_kind: "initial_load".to_string(),
             vote_servers: vec![VotingServiceEndpoint {
                 url: "https://v".to_string(),
                 label: "vote".to_string(),

@@ -7,7 +7,12 @@ use flutter_rust_bridge::frb;
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn fill_missing_tx_prices(api: String, currency: String, c: &Coin) -> Result<u32> {
     let mut connection = c.get_connection().await?;
-    crate::budget::fill_missing_tx_prices(&mut connection, c.account, &currency, &api).await
+    let client = crate::net::http::client(
+        crate::net::http::proxy_url(c.transport, &c.proxy),
+        std::time::Duration::from_secs(15),
+    )?;
+    crate::budget::fill_missing_tx_prices(&mut connection, c.account, &currency, &api, &client)
+        .await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
