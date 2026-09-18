@@ -3,6 +3,8 @@ use serde_json::Value;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use std::time::Duration;
 
+use crate::net::http;
+
 fn coingecko_client() -> reqwest::Client {
     reqwest::Client::builder()
         .user_agent("zkool/1.0")
@@ -24,11 +26,9 @@ async fn get_historical_prices(days: u32, currency: &str, api: &str) -> Result<V
     let historical_price_url = format!(
         "https://api.coingecko.com/api/v3/coins/zcash/market_chart?vs_currency={currency}&days={days}&x_cg_demo_api_key={api}"
     );
-    let rep: Value = coingecko_client()
-        .get(&historical_price_url)
-        .send()
+    let client = coingecko_client();
+    let rep: Value = http::http_get(&client, &historical_price_url, http::RetryPolicy::default())
         .await?
-        .error_for_status()?
         .json()
         .await?;
     let prices = rep
