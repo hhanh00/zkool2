@@ -1,4 +1,5 @@
 import 'package:decimal/decimal.dart';
+import 'package:fixed/fixed.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -133,7 +134,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
 
   void onPriceChanged(String? v) {
     if (v == null) return;
-    final p;
+    final Fixed p;
     try {
       p = stringToDecimal(v, scale: 3);
     } on Exception {
