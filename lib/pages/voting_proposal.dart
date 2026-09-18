@@ -12,20 +12,20 @@ import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 
 /// One parsed proposal option.
-class _Option {
+class _OptionOld {
   final int id;
   final String label;
 
-  const _Option({required this.id, required this.label});
+  const _OptionOld({required this.id, required this.label});
 }
 
 /// One parsed proposal from the round status body (lenient).
-class _Proposal {
+class _ProposalOld {
   final int id;
   final String title;
-  final List<_Option> options;
+  final List<_OptionOld> options;
 
-  const _Proposal({
+  const _ProposalOld({
     required this.id,
     required this.title,
     required this.options,
@@ -35,22 +35,22 @@ class _Proposal {
 /// Ballot screen: shows the round's proposals, lets the voter choose or skip
 /// each one, persists the draft (props) and the durable ballot intent (voting
 /// DB) on every change, then hands off to the review screen.
-class VotingProposalPage extends ConsumerStatefulWidget {
+class VotingProposalPageOld extends ConsumerStatefulWidget {
   final String roundId;
   final String chainUrl;
 
-  const VotingProposalPage({
+  const VotingProposalPageOld({
     super.key,
     required this.roundId,
     required this.chainUrl,
   });
 
   @override
-  ConsumerState<VotingProposalPage> createState() => VotingProposalPageState();
+  ConsumerState<VotingProposalPageOld> createState() => VotingProposalPageStateOld();
 }
 
-class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
-  List<_Proposal> _proposals = [];
+class VotingProposalPageStateOld extends ConsumerState<VotingProposalPageOld> {
+  List<_ProposalOld> _proposals = [];
   Map<int, int> _choices = {}; // proposal id -> option id
   final Set<int> _skipped = {};
   bool _loading = true;
@@ -99,7 +99,7 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
       final proposalsJson = round['proposals'] as List<dynamic>? ?? [];
       _proposals = proposalsJson
           .map(_parseProposal)
-          .whereType<_Proposal>()
+          .whereType<_ProposalOld>()
           .toList();
 
       // Snapshot fields and the round title come from the same response, so
@@ -194,7 +194,7 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
     }
   }
 
-  _Proposal? _parseProposal(dynamic value) {
+  _ProposalOld? _parseProposal(dynamic value) {
     if (value is! Map) return null;
     final id = value['id'];
     if (id is! int || id < 1 || id > 15) return null;
@@ -205,7 +205,7 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
         .map((entry) {
           final o = entry.value;
           if (o is! Map) return null;
-          return _Option(
+          return _OptionOld(
             // vote-sdk option ids come from `index` (omitted = 0 for the
             // first option); fall back to the list position.
             id: (o['index'] is int) ? o['index'] as int : entry.key,
@@ -213,16 +213,16 @@ class VotingProposalPageState extends ConsumerState<VotingProposalPage> {
                 .toString(),
           );
         })
-        .whereType<_Option>()
+        .whereType<_OptionOld>()
         .toList();
     if (options.isEmpty) {
       // Vote-sdk default: Yes/No when options are missing.
       options = const [
-        _Option(id: 0, label: "Yes"),
-        _Option(id: 1, label: "No"),
+        _OptionOld(id: 0, label: "Yes"),
+        _OptionOld(id: 1, label: "No"),
       ];
     }
-    return _Proposal(id: id, title: title, options: options);
+    return _ProposalOld(id: id, title: title, options: options);
   }
 
   Future<void> _persistSafe() async {

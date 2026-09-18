@@ -11,21 +11,21 @@ import 'package:zkool/store.dart';
 /// Results screen: fetches the round tally from the vote chain and renders
 /// per-proposal option bars with the winning option highlighted. While the
 /// chain reports the round as tallying, it polls every 10 seconds.
-class VotingResultsPage extends ConsumerStatefulWidget {
+class VotingResultsPageOld extends ConsumerStatefulWidget {
   final String roundId;
   final String chainUrl;
 
-  const VotingResultsPage({
+  const VotingResultsPageOld({
     super.key,
     required this.roundId,
     required this.chainUrl,
   });
 
   @override
-  ConsumerState<VotingResultsPage> createState() => VotingResultsPageState();
+  ConsumerState<VotingResultsPageOld> createState() => VotingResultsPageStateOld();
 }
 
-class VotingResultsPageState extends ConsumerState<VotingResultsPage> {
+class VotingResultsPageStateOld extends ConsumerState<VotingResultsPageOld> {
   Timer? _pollTimer;
   String? _error;
   bool _tallying = false;

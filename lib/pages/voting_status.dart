@@ -10,7 +10,7 @@ import 'package:zkool/utils.dart';
 /// Delegation execution screen: watches the submission job for a round,
 /// renders per-stage progress, blocks leaving mid-run, and offers Retry on
 /// error / Done on completion.
-class VotingStatusPage extends ConsumerStatefulWidget {
+class VotingStatusPageOld extends ConsumerStatefulWidget {
   final String roundId;
   final String chainUrl;
   final String pirServerUrl;
@@ -25,7 +25,7 @@ class VotingStatusPage extends ConsumerStatefulWidget {
   final List<String> shareServerUrls;
   final bool singleShare;
 
-  const VotingStatusPage({
+  const VotingStatusPageOld({
     super.key,
     required this.roundId,
     required this.chainUrl,
@@ -43,10 +43,10 @@ class VotingStatusPage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<VotingStatusPage> createState() => VotingStatusPageState();
+  ConsumerState<VotingStatusPageOld> createState() => VotingStatusPageStateOld();
 }
 
-class VotingStatusPageState extends ConsumerState<VotingStatusPage> {
+class VotingStatusPageStateOld extends ConsumerState<VotingStatusPageOld> {
   bool _handlingLeave = false;
 
   @override

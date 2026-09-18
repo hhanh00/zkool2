@@ -7,12 +7,12 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
 /// Receipt screen shown after the submission job completes.
-class VotingConfirmationPage extends ConsumerStatefulWidget {
+class VotingConfirmationPageOld extends ConsumerStatefulWidget {
   final String roundId;
   final String? roundName;
   final String chainUrl;
 
-  const VotingConfirmationPage({
+  const VotingConfirmationPageOld({
     super.key,
     required this.roundId,
     this.roundName,
@@ -20,11 +20,11 @@ class VotingConfirmationPage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<VotingConfirmationPage> createState() =>
-      VotingConfirmationPageState();
+  ConsumerState<VotingConfirmationPageOld> createState() =>
+      VotingConfirmationPageStateOld();
 }
 
-class VotingConfirmationPageState extends ConsumerState<VotingConfirmationPage> {
+class VotingConfirmationPageStateOld extends ConsumerState<VotingConfirmationPageOld> {
   @override
   Widget build(BuildContext context) {
     final pinlock = ref.watch(lifecycleProvider);

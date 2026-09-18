@@ -10,14 +10,14 @@ import 'package:zkool/store.dart';
 
 /// Read-only summary of the persisted draft ballot. "Confirm & submit" hands
 /// off to the execution screen, which runs the submission job.
-class VotingReviewPage extends ConsumerStatefulWidget {
+class VotingReviewPageOld extends ConsumerStatefulWidget {
   final String roundId;
   final String chainUrl;
   final String? roundParamsJson;
   final String? roundName;
   final int? snapshotHeight;
 
-  const VotingReviewPage({
+  const VotingReviewPageOld({
     super.key,
     required this.roundId,
     required this.chainUrl,
@@ -27,14 +27,14 @@ class VotingReviewPage extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<VotingReviewPage> createState() => VotingReviewPageState();
+  ConsumerState<VotingReviewPageOld> createState() => VotingReviewPageStateOld();
 }
 
-class VotingReviewPageState extends ConsumerState<VotingReviewPage> {
+class VotingReviewPageStateOld extends ConsumerState<VotingReviewPageOld> {
   List<Map<String, dynamic>> _drafts = [];
   /// proposal id -> option ids and their labels, from the chain round status
   /// (the drafts store only the choice index).
-  final Map<int, List<_ReviewOption>> _optionsByProposal = {};
+  final Map<int, List<_ReviewOptionOld>> _optionsByProposal = {};
   String? _error;
 
   @override
@@ -88,13 +88,13 @@ class VotingReviewPageState extends ConsumerState<VotingReviewPage> {
               final label =
                   (o['label'] ?? o['short_title'] ?? o['title'] ?? "Option")
                       .toString();
-              return _ReviewOption(id, label);
+              return _ReviewOptionOld(id, label);
             })
-            .whereType<_ReviewOption>()
+            .whereType<_ReviewOptionOld>()
             .toList();
         if (options.isEmpty) {
           // Vote-sdk default: Yes/No when options are missing.
-          options = const [_ReviewOption(0, "Yes"), _ReviewOption(1, "No")];
+          options = const [_ReviewOptionOld(0, "Yes"), _ReviewOptionOld(1, "No")];
         }
         _optionsByProposal[pid] = options;
       }
@@ -169,9 +169,9 @@ class VotingReviewPageState extends ConsumerState<VotingReviewPage> {
   }
 }
 
-class _ReviewOption {
+class _ReviewOptionOld {
   final int id;
   final String label;
 
-  const _ReviewOption(this.id, this.label,);
+  const _ReviewOptionOld(this.id, this.label,);
 }
