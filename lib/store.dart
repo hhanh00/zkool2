@@ -872,7 +872,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
         // Sync completed successfully
         end();
         syncInProgress = false;
-        syncProgressSubscription?.cancel();
+        await syncProgressSubscription?.cancel();
         syncProgressSubscription = null;
         ref.invalidate(getAccountsProvider);
         ref.invalidate(accountProvider);
@@ -893,7 +893,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
         }));
 
         completer.complete();
-        return completer.future;
+        return await completer.future;
       } on AnyhowException catch (e) {
         retryCount++;
         final maxDelay = pow(2, min(retryCount, 10)).toInt();
@@ -901,7 +901,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
         logger.e("Sync error: $e\n\nRetrying in $delay seconds (attempt $retryCount)");
 
         final context = navigatorKey.currentContext;
-        if (context != null) {
+        if (context != null && context.mounted) {
           await ErrorDialog.show(
             context,
             error: e,
@@ -1822,9 +1822,9 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
         // The voting pages never pass a lightwalletd URL — use the app's
         // configured one for the fresh prepare (the fork needs it to fetch
         // the snapshot anchor tree state).
-        final lwdUrl = (lightwalletdUrl == null || lightwalletdUrl!.isEmpty)
+        final lwdUrl = (lightwalletdUrl == null || lightwalletdUrl.isEmpty)
             ? await _appLwdUrl()
-            : lightwalletdUrl!;
+            : lightwalletdUrl;
         final prepared = roundParamsJson != null && roundName != null
             ? await delegationPrepare(
                 roundParamsJson: roundParamsJson,
@@ -1873,7 +1873,7 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
         }
       }
 
-      if (wireJson == null || wireJson.isEmpty) {
+      if (wireJson.isEmpty) {
         throw AnyhowException(
           "No wire JSON produced for round $roundId bundle $bundleIndex",
         );
@@ -1944,7 +1944,7 @@ class VotingSubmissionJob extends _$VotingSubmissionJob {
     }
 
     state = state.copyWith(stage: "confirming");
-    final String recordedHash = txHash!;
+    final String recordedHash = txHash;
     int? confirmHeight;
     try {
       final conf = await _pollTxConfirmationWithFallback(
