@@ -1933,10 +1933,13 @@ pub async fn change_db_password(
 
     let mut connection = SqliteConnection::connect_with(&options).await?;
     let escaped_password = new_password.replace('\'', "''");
-    sqlx::query(&format!(
+    // Audited for sqlx 0.9's SqlSafeStr: ATTACH ... KEY takes no bind
+    // parameters, the path is constructed here, and the password has its
+    // quotes doubled directly above.
+    sqlx::query(sqlx::AssertSqlSafe(format!(
         "ATTACH DATABASE '{}' AS new_db KEY '{}'",
         tmp_db_filepath, escaped_password
-    ))
+    )))
     .execute(&mut connection)
     .await?;
     sqlx::query("SELECT sqlcipher_export('new_db')")

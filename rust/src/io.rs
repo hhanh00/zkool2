@@ -1,4 +1,4 @@
-use std::{borrow::Cow, collections::HashMap};
+use std::collections::HashMap;
 
 use age::{scrypt::Identity, Decryptor, Encryptor};
 use anyhow::{anyhow, Result};
@@ -7,7 +7,7 @@ use serde_with::{hex::Hex, serde_as};
 use sqlx::{
     encode::IsNull,
     error::BoxDynError,
-    sqlite::{SqliteArgumentValue, SqliteRow, SqliteValueRef},
+    sqlite::{SqliteArgumentsBuffer, SqliteRow, SqliteValueRef},
     Connection, Decode, Encode, Row, Sqlite, SqliteConnection, Type,
 };
 use std::io::prelude::*;
@@ -1091,19 +1091,12 @@ impl From<HexBytes> for Vec<u8> {
 }
 
 impl<'q> Encode<'q, Sqlite> for HexBytes {
-    fn encode(self, args: &mut Vec<SqliteArgumentValue<'q>>) -> Result<IsNull, BoxDynError> {
-        args.push(SqliteArgumentValue::Blob(Cow::Owned(self.0)));
-
-        Ok(IsNull::No)
+    fn encode(self, args: &mut SqliteArgumentsBuffer) -> Result<IsNull, BoxDynError> {
+        <Vec<u8> as Encode<'q, Sqlite>>::encode(self.0, args)
     }
 
-    fn encode_by_ref(
-        &self,
-        args: &mut Vec<SqliteArgumentValue<'q>>,
-    ) -> Result<IsNull, BoxDynError> {
-        args.push(SqliteArgumentValue::Blob(Cow::Owned(self.0.clone())));
-
-        Ok(IsNull::No)
+    fn encode_by_ref(&self, args: &mut SqliteArgumentsBuffer) -> Result<IsNull, BoxDynError> {
+        <Vec<u8> as Encode<'q, Sqlite>>::encode_by_ref(&self.0, args)
     }
 }
 
