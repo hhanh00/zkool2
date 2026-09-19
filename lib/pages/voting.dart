@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:zkool/store.dart' show coinContext;
 import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/widgets/error_display.dart';
@@ -16,6 +17,7 @@ class _VotingPageState extends State<VotingPage> {
   bool _loading = true;
   int _loadGeneration = 0;
   bool _configLoaded = false;
+  String _chainUrl = '';
 
   @override
   void initState() {
@@ -31,6 +33,7 @@ class _VotingPageState extends State<VotingPage> {
       final config = await votingConfigResolve(c: c);
       debugPrint('Voting config: ${timer.elapsedMilliseconds} ms');
       if (config == null) return const [];
+      _chainUrl = config.voteServers.isEmpty ? '' : config.voteServers.first.url;
       if (mounted && generation == _loadGeneration) {
         setState(() => _configLoaded = true);
       }
@@ -100,12 +103,59 @@ class _VotingPageState extends State<VotingPage> {
               final round = rounds[index];
               return ListTile(
                 title: Text(round.title),
-                subtitle: Text(round.status),
+                trailing: _VotingProgressButton(
+                  action: round.action,
+                  onPressed: _chainUrl.isEmpty ? null : () => _openRound(round),
+                ),
               );
             },
           );
         },
       ),
+    );
+  }
+
+  Future<void> _openRound(VotingRoundListItem round) async {
+    final router = GoRouter.of(context);
+    final extra = {'roundId': round.roundId, 'chainUrl': _chainUrl};
+    switch (round.action) {
+      case 'view_results':
+        await router.push('/voting/results', extra: extra);
+      case 'review':
+        await router.push('/voting/confirmation', extra: {
+          ...extra,
+          'roundName': round.title,
+        });
+      case 'resume':
+        await router.push('/voting/status', extra: {
+          ...extra,
+          'pirServerUrl': '',
+          'voteNodeUrl': _chainUrl,
+        });
+      default:
+        await router.push('/voting/proposal', extra: extra);
+    }
+    if (mounted) _refresh();
+  }
+}
+
+class _VotingProgressButton extends StatelessWidget {
+  final String action;
+  final VoidCallback? onPressed;
+
+  const _VotingProgressButton({required this.action, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final label = switch (action) {
+      'view_results' => 'View results',
+      'review' => 'Review',
+      'resume' => 'Resume',
+      _ => 'Start voting',
+    };
+    return FilledButton.tonal(
+      onPressed: onPressed,
+      child: Text(label),
     );
   }
 }

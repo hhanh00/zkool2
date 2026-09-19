@@ -238,8 +238,11 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                   GoRouter.of(context).push("/chart");
                 case "migration":
                   GoRouter.of(context).push("/migrate");
+                // Voting is cut out of the build pending its redesign; kept for reference.
+                /*
                 case "voting":
                   GoRouter.of(context).push("/voting");
+                */
                 case "settings":
                   GoRouter.of(context).push("/settings");
                 default:
@@ -290,10 +293,13 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                   value: "migration",
                   child: Text("Note Migration"),
                 ),
+              // Voting is cut out of the build pending its redesign; kept for reference.
+              /*
               const PopupMenuItem<String>(
                 value: "voting",
                 child: Text("Voting"),
               ),
+              */
             ],
           ),
         ],
