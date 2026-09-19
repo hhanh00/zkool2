@@ -41,6 +41,13 @@ zcash_note_encryption = { git = "https://github.com/zcash-shielded-assets/zcash_
 # -- lrz ZSA branch --
 pczt = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
 zcash_client_backend = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
+# zcash_voting 5.1.0 reaches zcash_client_sqlite through zakura-wallet-lib
+# (WalletDb/AccountUuid, ~29 uses), which drags zcash_pool_migration. The
+# crates.io copies are mainline-shaped and do not build against the ZSA
+# Orchard/pczt line; the ZSA branch already carries adapted versions of both,
+# they were simply missing from this list. pool_migration follows as an
+# in-repo path dep of client_sqlite.
+zcash_client_sqlite = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
 zcash_address = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
 zcash_encoding = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
 zcash_keys = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
@@ -57,14 +64,17 @@ zcash_spec = { git = "https://github.com/zcash-shielded-assets/zcash_spec", rev 
 halo2_gadgets = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "dcdbd1df2b30fd8d709c1a7c4ad9c4e091789d00" }
 halo2_proofs = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "dcdbd1df2b30fd8d709c1a7c4ad9c4e091789d00" }
 halo2_poseidon = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "dcdbd1df2b30fd8d709c1a7c4ad9c4e091789d00" }
-# 0.10.0 release source + the ZSA-orchard note API shim (from_parts asset
-# arg), matching the chain's verifier. Branch feat/zsa-orchard-0.10.
-voting-circuits = { git = "https://github.com/hhanh00/voting-circuits.git", rev = "44033690874bc8b92cf015426d785b0b2e107035" }
-# Patched pir-client: the async PirClient lacks a public circuit_root
-# accessor (private field), which the fork's PirProofSource trait needs.
-# Branch feat/async-circuit-root-getter. NOTE: patches only apply from the
-# workspace root manifest.
-pir-client = { git = "https://github.com/hhanh00/vote-nullifier-pir.git", rev = "b704640df339a98330a5b8e4582144fde67d0b0c" }
+# 0.12.1 release source + the ZSA-orchard note API shim (from_parts asset
+# arg), matching the chain's verifier. Branch feat/zsa-orchard-0.12: a merge
+# of upstream v0.12.1 into the 0.10 shim line, so 44033690 stays reachable.
+# zcash_voting 5.1.0 pins voting-circuits =0.12.1, which the 0.10 patch no
+# longer satisfied -- cargo silently dropped it and resolved stock 0.12.1.
+voting-circuits = { git = "https://github.com/hhanh00/voting-circuits.git", rev = "0da886cbfaf748b3cb3caf168d1c5ee16318fd94" }
+# 0.12.x routes Orchard through this facade, which voting-circuits depends on
+# by path. It must resolve to the same source here, or zcash_voting's
+# crates.io copy and voting-circuits' path copy become two distinct crates and
+# the Orchard types stop unifying across the boundary.
+voting-crypto-deps = { git = "https://github.com/hhanh00/voting-circuits.git", rev = "0da886cbfaf748b3cb3caf168d1c5ee16318fd94" }
 
 # -- Ledger emulator transport --
 # Branch feat/zemu-timeout off 8e3e28f (last commit carrying the crate,

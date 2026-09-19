@@ -13,7 +13,11 @@ required-features = ["graphql"]
 
 [dependencies]
 zcash-trees = { git = "https://github.com/hhanh00/zcash-trees.git", rev = "bb549253717e56b765b55042eea6330c5e50299a" }
-zcash_voting = { git = "https://github.com/valargroup/zcash_voting.git", rev = "67edd7eb797f66163c93ec66861f96ef7cffc4ae", default-features = false, features = ["lrz"] }
+# Fork of upstream 67edd7eb (branch sidecar-valar-v5.1.0): the zakura-wallet-lib
+# facade is dropped and the ZSA Orchard adaptations live there. Kept in the
+# build although zkool's voting modules are cut out, so dependency breakage
+# surfaces now rather than at re-enable time.
+zcash_voting = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "65a4468be3c6cef778b5748e503988fdcaf45647", default-features = false, features = ["lrz"] }
 flutter_rust_bridge = { version = "=2.12.0", optional = true }
 
 anyhow = "1.0.97"
@@ -159,10 +163,22 @@ rand = "0.6"
 # Recovery-reconciliation tests exercise the voting fork's public prelude and
 # the in-memory commitment-tree server. Same git source as the zcash_voting
 # dep so the workspace [patch] override applies to it too.
-vote-commitment-tree = { git = "https://github.com/valargroup/zcash_voting.git", rev = "67edd7eb797f66163c93ec66861f96ef7cffc4ae", default-features = false, features = ["lrz"] }
+vote-commitment-tree = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "65a4468be3c6cef778b5748e503988fdcaf45647", default-features = false, features = ["lrz"] }
+
+[[example]]
+name = "vk_probe"
+required-features = ["voting"]
+
+[[test]]
+name = "voting_recovery_reconcile"
+required-features = ["voting"]
 
 [features]
 default = ["flutter", "nym"]
+# Voting is cut out of the build pending its redesign. The sources stay in
+# place (rust/src/voting, rust/src/api/voting.rs, and the two targets above);
+# turning this on is the switch to bring them back.
+voting = []
 flutter = ["flutter_rust_bridge"]
 bundled-sapling-params = ["zcash_proofs/bundled-prover"]
 graphql = ["juniper", "juniper_warp", "juniper_graphql_ws", "dataloader", "warp", "jsonwebtoken", "bigdecimal", "chrono", "figment", "clap"]
