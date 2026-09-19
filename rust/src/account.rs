@@ -335,8 +335,7 @@ pub async fn new_account(
             )
             .await?;
         } else if let Ok(sk) = bip38::import_tsk(&key) {
-            let secp = secp256k1::Secp256k1::new();
-            let pk = sk.0.public_key(&secp);
+            let pk = sk.0.public_key();
             let tpk = if sk.1 {
                 pk.serialize_uncompressed().to_vec()
             } else {

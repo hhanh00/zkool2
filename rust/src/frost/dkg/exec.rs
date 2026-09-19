@@ -327,7 +327,10 @@ pub async fn complete_finalize(
 ) -> Result<()> {
     // 1. Rekey the protocol rows (no-ops when already done).
     for table in ["dkg_params", "dkg_state", "dkg_peers", "dkg_addresses"] {
-        sqlx::query(&format!("UPDATE {table} SET account = ?1 WHERE account = ?2"))
+        // Audited: `table` is one of the four string literals above.
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "UPDATE {table} SET account = ?1 WHERE account = ?2"
+        )))
             .bind(frost_account)
             .bind(funding_account)
             .execute(&mut *connection)
