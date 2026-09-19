@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::{LazyLock, OnceLock};
 
 use anyhow::Result;
@@ -75,6 +76,11 @@ impl Coin {
         migrate_sapling_addresses(&network, &mut connection).await?;
         backfill_diversifier_index(&mut connection).await?;
         crate::account::backfill_transparent_change_addresses(&network, &mut connection).await?;
+
+        // Voting state lives in a sidecar database beside the wallet file, not
+        // in this pool, so its schema is created here rather than by
+        // `create_schema`.
+        crate::voting::sidecar::create_voting_db(PathBuf::from(&db_filepath)).await?;
 
         Ok(Coin {
             coin,
