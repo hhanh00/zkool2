@@ -28,6 +28,27 @@ Future<void> putProp(
         {required String key, required String value, required Coin c}) =>
     RustLib.instance.api.crateApiDbPutProp(key: key, value: value, c: c);
 
+/// Deletes a wallet database and every file that belongs to it.
+///
+/// The wallet file must exist; everything beside it is optional. The voting
+/// sidecar is one of those files, and leaving it behind would strand voting
+/// state that a wallet later recreated under the same name would inherit. The
+/// WAL companions of both only exist after an unclean shutdown.
+Future<void> deleteDb({required String dbFilepath}) =>
+    RustLib.instance.api.crateApiDbDeleteDb(dbFilepath: dbFilepath);
+
+/// Renames a wallet database and every file that belongs to it.
+///
+/// Refuses an existing destination: `fs::rename` overwrites silently, and the
+/// destination here is another wallet. The voting sidecar moves with the
+/// wallet so its state stays attached to the wallet it describes, and the WAL
+/// companions move too -- one left behind holds commits the renamed database
+/// would no longer see.
+Future<void> renameDb(
+        {required String dbFilepath, required String newDbFilepath}) =>
+    RustLib.instance.api.crateApiDbRenameDb(
+        dbFilepath: dbFilepath, newDbFilepath: newDbFilepath);
+
 Future<List<String>> listDbNames({required String dir}) =>
     RustLib.instance.api.crateApiDbListDbNames(dir: dir);
 
