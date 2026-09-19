@@ -238,10 +238,13 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                           onChanged: onChangedVotingConfigUrl,
                         ),
                       ),
+                      // Voting is cut out of the build pending its redesign; kept for reference.
+                      /*
                       IconButton(
                         icon: const Icon(Icons.refresh),
                         onPressed: () => _fetchVotingConfig(context),
                       ),
+                      */
                     ],
                   ),
                 ),
@@ -542,6 +545,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     });
   }
 
+  // Voting is cut out of the build pending its redesign; kept for reference.
+  /*
   Future<void> _fetchVotingConfig(BuildContext context) async {
     try {
       await ref.read(appSettingsProvider.notifier).setVotingConfigUrl(settings.votingConfigUrl);
@@ -563,6 +568,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       if (context.mounted) await showException(context, e.message);
     }
   }
+  */
 
   void onChangedTransport(Set<int> selection) {
     setState(() {
