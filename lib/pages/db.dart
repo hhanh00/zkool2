@@ -207,7 +207,7 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
 
     for (var dbName in selection) {
       final db = await getFullDatabasePath(dbName);
-      await File(db).delete();
+      await deleteDb(dbFilepath: db);
     }
 
     if (!mounted) return;
@@ -252,7 +252,7 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
       try {
         final oldDbFilepath = await getFullDatabasePath(selection.first);
         final newDbFilepath = await getFullDatabasePath(name.text);
-        await File(oldDbFilepath).rename(newDbFilepath);
+        await renameDb(dbFilepath: oldDbFilepath, newDbFilepath: newDbFilepath);
         await refresh();
       } on AnyhowException catch (e) {
         if (!mounted) return;
