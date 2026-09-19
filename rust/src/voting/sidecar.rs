@@ -10,7 +10,7 @@
 //! keys and Merkle witnesses, so only the caller-supplied half of the crate's
 //! API is used here.
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
 use anyhow::Result;
@@ -29,6 +29,29 @@ use zcash_voting::prelude::{
 #[derive(Clone)]
 pub struct VotingSidecar {
     db: Arc<VotingDb>,
+}
+
+/// Names the voting sidecar for a wallet database without opening anything.
+///
+/// The suffix is the voting crate's to choose, so callers that need to move or
+/// remove the file alongside its wallet ask here rather than spelling it out.
+pub fn voting_db_path(wallet_db_path: &Path) -> PathBuf {
+    VotingDb::wallet_sidecar_path(wallet_db_path)
+}
+
+/// Creates the voting sidecar beside `wallet_db_path` and applies its schema.
+///
+/// The sidecar is `wallet_db_path` with a `.voting` suffix; call
+/// `VotingDb::wallet_sidecar_path` to name it without opening it. `open_path`
+/// creates the file if it is missing and runs the crate's migrations either
+/// way, so this is the whole of voting database initialization -- there is no
+/// separate schema step. No wallet id is involved: the handle opened here is
+/// unscoped and dropped immediately, since only wallet-scoped row access needs
+/// one. Blocking, like every other call into the crate.
+pub async fn create_voting_db(wallet_db_path: PathBuf) -> Result<()> {
+    let path = VotingDb::wallet_sidecar_path(&wallet_db_path);
+    tokio::task::spawn_blocking(move || VotingDb::open_path(&path)).await??;
+    Ok(())
 }
 
 impl VotingSidecar {
