@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:zkool/store.dart' show coinContext;
 import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/widgets/error_display.dart';
@@ -16,8 +15,6 @@ class _VotingPageState extends State<VotingPage> {
   late Future<List<VotingRoundListItem>> _rounds;
   bool _loading = true;
   int _loadGeneration = 0;
-  bool _configLoaded = false;
-  String _chainUrl = '';
 
   @override
   void initState() {
@@ -28,18 +25,8 @@ class _VotingPageState extends State<VotingPage> {
   Future<List<VotingRoundListItem>> _loadRounds() async {
     final generation = ++_loadGeneration;
     try {
-      final timer = Stopwatch()..start();
       final c = coinContext.coin;
-      final config = await votingConfigResolve(c: c);
-      debugPrint('Voting config: ${timer.elapsedMilliseconds} ms');
-      if (config == null) return const [];
-      _chainUrl = config.voteServers.isEmpty ? '' : config.voteServers.first.url;
-      if (mounted && generation == _loadGeneration) {
-        setState(() => _configLoaded = true);
-      }
-      timer.reset();
-      final rounds = await votingRoundList(config: config, c: c);
-      debugPrint('Voting rounds fetch + local summary: ${timer.elapsedMilliseconds} ms');
+      final rounds = await votingRoundList(c: c);
       return rounds;
     } finally {
       if (mounted && generation == _loadGeneration) {
@@ -51,7 +38,6 @@ class _VotingPageState extends State<VotingPage> {
   void _refresh() {
     setState(() {
       _loading = true;
-      _configLoaded = false;
       _rounds = _loadRounds();
     });
   }
@@ -77,15 +63,11 @@ class _VotingPageState extends State<VotingPage> {
             return LoadingSteps(
               title: 'Loading voting rounds',
               icon: Icons.how_to_vote_outlined,
-              activeStep: _configLoaded ? 1 : 0,
+              activeStep: 0,
               steps: const [
                 LoadingStep(
-                  title: 'Verify voting configuration',
-                  description: 'Loading and verifying the voting configuration.',
-                ),
-                LoadingStep(
-                  title: 'Load rounds and voting progress',
-                  description: 'Fetching the latest rounds and checking your voting progress.',
+                  title: 'Load voting rounds',
+                  description: 'Verifying the configuration, fetching rounds, and checking your progress.',
                 ),
               ],
             );
@@ -105,7 +87,7 @@ class _VotingPageState extends State<VotingPage> {
                 title: Text(round.title),
                 trailing: _VotingProgressButton(
                   action: round.action,
-                  onPressed: _chainUrl.isEmpty ? null : () => _openRound(round),
+                  onPressed: null,
                 ),
               );
             },
@@ -113,29 +95,6 @@ class _VotingPageState extends State<VotingPage> {
         },
       ),
     );
-  }
-
-  Future<void> _openRound(VotingRoundListItem round) async {
-    final router = GoRouter.of(context);
-    final extra = {'roundId': round.roundId, 'chainUrl': _chainUrl};
-    switch (round.action) {
-      case 'view_results':
-        await router.push('/voting/results', extra: extra);
-      case 'review':
-        await router.push('/voting/confirmation', extra: {
-          ...extra,
-          'roundName': round.title,
-        });
-      case 'resume':
-        await router.push('/voting/status', extra: {
-          ...extra,
-          'pirServerUrl': '',
-          'voteNodeUrl': _chainUrl,
-        });
-      default:
-        await router.push('/voting/proposal', extra: extra);
-    }
-    if (mounted) _refresh();
   }
 }
 

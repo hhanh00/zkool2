@@ -55,6 +55,11 @@ pub async fn create_voting_db(wallet_db_path: PathBuf) -> Result<()> {
 }
 
 impl VotingSidecar {
+    #[cfg(test)]
+    pub(super) fn from_db_for_test(db: VotingDb) -> Self {
+        Self { db: Arc::new(db) }
+    }
+
     /// Opens the sidecar beside `wallet_db_path` and binds it to `wallet_id`.
     ///
     /// The crate derives the sidecar filename from the wallet path and runs

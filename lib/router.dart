@@ -24,7 +24,7 @@ import 'package:zkool/pages/splash.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/tx_view.dart';
 import 'package:zkool/pages/migrate.dart';
-// import 'package:zkool/pages/voting.dart';
+import 'package:zkool/pages/voting.dart';
 // import 'package:zkool/pages/voting_proposal.dart';
 // import 'package:zkool/pages/voting_review.dart';
 // import 'package:zkool/pages/voting_confirmation.dart';
@@ -151,9 +151,9 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
         GoRoute(path: '/lwd_select', builder: (context, state) => const LWDSelectPage()),
         GoRoute(path: '/show_animated_qr', builder: (context, state) => ShowAnimatedQRPage(state.extra as List<Uint8List>)),
         GoRoute(path: '/migrate', builder: (context, state) => const MigratePage()),
-// Voting is cut out of the build pending its redesign; kept for reference.
-/*
         GoRoute(path: '/voting', builder: (context, state) => const VotingPage()),
+        // Voting workflows remain disabled until their Rust APIs are ported.
+        /*
         GoRoute(
           path: '/voting/proposal',
           builder: (context, state) {

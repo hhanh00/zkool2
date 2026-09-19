@@ -18,8 +18,8 @@ pub mod sweep;
 pub mod sync;
 pub mod transaction;
 pub mod vault;
-// Voting is cut out of the build pending a redesign on zcash_voting 5.1.0.
-// The source is kept for reference; re-enable this when the new
-// implementation lands.
-// pub mod voting;
+// Only the sidecar-ported voting API is compiled. The remaining legacy
+// endpoints stay in `voting.rs` until they are ported individually.
+#[path = "voting_list.rs"]
+pub mod voting;
 pub mod zsa;
