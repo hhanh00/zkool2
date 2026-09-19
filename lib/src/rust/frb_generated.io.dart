@@ -23,7 +23,6 @@ import 'api/sweep.dart';
 import 'api/sync.dart';
 import 'api/transaction.dart';
 import 'api/vault.dart';
-import 'api/voting.dart';
 import 'api/zsa.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -161,14 +160,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       dynamic raw);
 
   @protected
-  RustStreamSink<VotingDelegationProgress>
-      dco_decode_StreamSink_voting_delegation_progress_Sse(dynamic raw);
-
-  @protected
-  RustStreamSink<VotingVoteCommitStage>
-      dco_decode_StreamSink_voting_vote_commit_stage_Sse(dynamic raw);
-
-  @protected
   String dco_decode_String(dynamic raw);
 
   @protected
@@ -236,16 +227,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int dco_decode_box_autoadd_u_8(dynamic raw);
-
-  @protected
-  VotingCompletedVoteDisplay
-      dco_decode_box_autoadd_voting_completed_vote_display(dynamic raw);
-
-  @protected
-  VotingConfig dco_decode_box_autoadd_voting_config(dynamic raw);
-
-  @protected
-  VotingPirLayout dco_decode_box_autoadd_voting_pir_layout(dynamic raw);
 
   @protected
   Category dco_decode_category(dynamic raw);
@@ -393,68 +374,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TxSpend> dco_decode_list_tx_spend(dynamic raw);
 
   @protected
-  List<VotingBallotIntent> dco_decode_list_voting_ballot_intent(dynamic raw);
-
-  @protected
-  List<VotingCompletedVoteChoice> dco_decode_list_voting_completed_vote_choice(
-      dynamic raw);
-
-  @protected
-  List<VotingConfigRound> dco_decode_list_voting_config_round(dynamic raw);
-
-  @protected
-  List<VotingDelegationRecovery> dco_decode_list_voting_delegation_recovery(
-      dynamic raw);
-
-  @protected
-  List<VotingDelegationStatus> dco_decode_list_voting_delegation_status(
-      dynamic raw);
-
-  @protected
-  List<VotingEncryptedShare> dco_decode_list_voting_encrypted_share(
-      dynamic raw);
-
-  @protected
-  List<VotingNextStep> dco_decode_list_voting_next_step(dynamic raw);
-
-  @protected
-  List<VotingRoundInfo> dco_decode_list_voting_round_info(dynamic raw);
-
-  @protected
-  List<VotingRoundListItem> dco_decode_list_voting_round_list_item(dynamic raw);
-
-  @protected
-  List<VotingRoundSession> dco_decode_list_voting_round_session(dynamic raw);
-
-  @protected
-  List<VotingServiceEndpoint> dco_decode_list_voting_service_endpoint(
-      dynamic raw);
-
-  @protected
-  List<VotingShareDelegationRecord>
-      dco_decode_list_voting_share_delegation_record(dynamic raw);
-
-  @protected
-  List<VotingSharePayload> dco_decode_list_voting_share_payload(dynamic raw);
-
-  @protected
-  List<VotingSharePlanItem> dco_decode_list_voting_share_plan_item(dynamic raw);
-
-  @protected
-  List<VotingShareSubmissionPayload>
-      dco_decode_list_voting_share_submission_payload(dynamic raw);
-
-  @protected
-  List<VotingShareWorkflow> dco_decode_list_voting_share_workflow(dynamic raw);
-
-  @protected
-  List<VotingSignedVoteCommitment>
-      dco_decode_list_voting_signed_vote_commitment(dynamic raw);
-
-  @protected
-  List<VotingVoteRecovery> dco_decode_list_voting_vote_recovery(dynamic raw);
-
-  @protected
   List<ZsaHolding> dco_decode_list_zsa_holding(dynamic raw);
 
   @protected
@@ -528,16 +447,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int? dco_decode_opt_box_autoadd_u_8(dynamic raw);
-
-  @protected
-  VotingCompletedVoteDisplay?
-      dco_decode_opt_box_autoadd_voting_completed_vote_display(dynamic raw);
-
-  @protected
-  VotingConfig? dco_decode_opt_box_autoadd_voting_config(dynamic raw);
-
-  @protected
-  VotingPirLayout? dco_decode_opt_box_autoadd_voting_pir_layout(dynamic raw);
 
   @protected
   List<String>? dco_decode_opt_list_String(dynamic raw);
@@ -651,132 +560,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   UsizeArray4 dco_decode_usize_array_4(dynamic raw);
 
   @protected
-  VotingBallotIntent dco_decode_voting_ballot_intent(dynamic raw);
-
-  @protected
-  VotingChainResponse dco_decode_voting_chain_response(dynamic raw);
-
-  @protected
-  VotingCompletedVoteChoice dco_decode_voting_completed_vote_choice(
-      dynamic raw);
-
-  @protected
-  VotingCompletedVoteDisplay dco_decode_voting_completed_vote_display(
-      dynamic raw);
-
-  @protected
-  VotingConfig dco_decode_voting_config(dynamic raw);
-
-  @protected
-  VotingConfigRound dco_decode_voting_config_round(dynamic raw);
-
-  @protected
-  VotingDelegationBuild dco_decode_voting_delegation_build(dynamic raw);
-
-  @protected
-  VotingDelegationConfirmation dco_decode_voting_delegation_confirmation(
-      dynamic raw);
-
-  @protected
-  VotingDelegationProgress dco_decode_voting_delegation_progress(dynamic raw);
-
-  @protected
-  VotingDelegationRecovery dco_decode_voting_delegation_recovery(dynamic raw);
-
-  @protected
-  VotingDelegationSetup dco_decode_voting_delegation_setup(dynamic raw);
-
-  @protected
-  VotingDelegationStatus dco_decode_voting_delegation_status(dynamic raw);
-
-  @protected
-  VotingDelegationSubmission dco_decode_voting_delegation_submission(
-      dynamic raw);
-
-  @protected
-  VotingEncryptedShare dco_decode_voting_encrypted_share(dynamic raw);
-
-  @protected
-  VotingNextStep dco_decode_voting_next_step(dynamic raw);
-
-  @protected
-  VotingPirLayout dco_decode_voting_pir_layout(dynamic raw);
-
-  @protected
-  VotingPreparedInfo dco_decode_voting_prepared_info(dynamic raw);
-
-  @protected
-  VotingRoundInfo dco_decode_voting_round_info(dynamic raw);
-
-  @protected
-  VotingRoundListItem dco_decode_voting_round_list_item(dynamic raw);
-
-  @protected
-  VotingRoundPlan dco_decode_voting_round_plan(dynamic raw);
-
-  @protected
-  VotingRoundRecovery dco_decode_voting_round_recovery(dynamic raw);
-
-  @protected
-  VotingRoundSession dco_decode_voting_round_session(dynamic raw);
-
-  @protected
-  VotingServiceEndpoint dco_decode_voting_service_endpoint(dynamic raw);
-
-  @protected
-  VotingShareDelegationRecord dco_decode_voting_share_delegation_record(
-      dynamic raw);
-
-  @protected
-  VotingSharePayload dco_decode_voting_share_payload(dynamic raw);
-
-  @protected
-  VotingSharePlan dco_decode_voting_share_plan(dynamic raw);
-
-  @protected
-  VotingSharePlanItem dco_decode_voting_share_plan_item(dynamic raw);
-
-  @protected
-  VotingShareSubmissionPayload dco_decode_voting_share_submission_payload(
-      dynamic raw);
-
-  @protected
-  VotingShareTrackingSummary dco_decode_voting_share_tracking_summary(
-      dynamic raw);
-
-  @protected
-  VotingShareWorkflow dco_decode_voting_share_workflow(dynamic raw);
-
-  @protected
-  VotingSignedVoteCommitment dco_decode_voting_signed_vote_commitment(
-      dynamic raw);
-
-  @protected
-  VotingTreeVoteConfirmation dco_decode_voting_tree_vote_confirmation(
-      dynamic raw);
-
-  @protected
-  VotingVanWitness dco_decode_voting_van_witness(dynamic raw);
-
-  @protected
-  VotingVoteCommitStage dco_decode_voting_vote_commit_stage(dynamic raw);
-
-  @protected
-  VotingVoteCommitments dco_decode_voting_vote_commitments(dynamic raw);
-
-  @protected
-  VotingVoteConfirmation dco_decode_voting_vote_confirmation(dynamic raw);
-
-  @protected
-  VotingVotePayloads dco_decode_voting_vote_payloads(dynamic raw);
-
-  @protected
-  VotingVoteRecovery dco_decode_voting_vote_recovery(dynamic raw);
-
-  @protected
-  VotingVoteSubmission dco_decode_voting_vote_submission(dynamic raw);
-
-  @protected
   ZsaHolding dco_decode_zsa_holding(dynamic raw);
 
   @protected
@@ -883,16 +666,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
-  RustStreamSink<VotingDelegationProgress>
-      sse_decode_StreamSink_voting_delegation_progress_Sse(
-          SseDeserializer deserializer);
-
-  @protected
-  RustStreamSink<VotingVoteCommitStage>
-      sse_decode_StreamSink_voting_vote_commit_stage_Sse(
-          SseDeserializer deserializer);
-
-  @protected
   String sse_decode_String(SseDeserializer deserializer);
 
   @protected
@@ -964,19 +737,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int sse_decode_box_autoadd_u_8(SseDeserializer deserializer);
-
-  @protected
-  VotingCompletedVoteDisplay
-      sse_decode_box_autoadd_voting_completed_vote_display(
-          SseDeserializer deserializer);
-
-  @protected
-  VotingConfig sse_decode_box_autoadd_voting_config(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingPirLayout sse_decode_box_autoadd_voting_pir_layout(
-      SseDeserializer deserializer);
 
   @protected
   Category sse_decode_category(SseDeserializer deserializer);
@@ -1131,81 +891,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TxSpend> sse_decode_list_tx_spend(SseDeserializer deserializer);
 
   @protected
-  List<VotingBallotIntent> sse_decode_list_voting_ballot_intent(
-      SseDeserializer deserializer);
-
-  @protected
-  List<VotingCompletedVoteChoice> sse_decode_list_voting_completed_vote_choice(
-      SseDeserializer deserializer);
-
-  @protected
-  List<VotingConfigRound> sse_decode_list_voting_config_round(
-      SseDeserializer deserializer);
-
-  @protected
-  List<VotingDelegationRecovery> sse_decode_list_voting_delegation_recovery(
-      SseDeserializer deserializer);
-
-  @protected
-  List<VotingDelegationStatus> sse_decode_list_voting_delegation_status(
-      SseDeserializer deserializer);
-
-  @protected
-  List<VotingEncryptedShare> sse_decode_list_voting_encrypted_share(
-      SseDeserializer deserializer);
-
-  @protected
-  List<VotingNextStep> sse_decode_list_voting_next_step(
-      SseDeserializer deserializer);
-
-  @protected
-  List<VotingRoundInfo> sse_decode_list_voting_round_info(
-      SseDeserializer deserializer);
-
-  @protected
-  List<VotingRoundListItem> sse_decode_list_voting_round_list_item(
-      SseDeserializer deserializer);
-
-  @protected
-  List<VotingRoundSession> sse_decode_list_voting_round_session(
-      SseDeserializer deserializer);
-
-  @protected
-  List<VotingServiceEndpoint> sse_decode_list_voting_service_endpoint(
-      SseDeserializer deserializer);
-
-  @protected
-  List<VotingShareDelegationRecord>
-      sse_decode_list_voting_share_delegation_record(
-          SseDeserializer deserializer);
-
-  @protected
-  List<VotingSharePayload> sse_decode_list_voting_share_payload(
-      SseDeserializer deserializer);
-
-  @protected
-  List<VotingSharePlanItem> sse_decode_list_voting_share_plan_item(
-      SseDeserializer deserializer);
-
-  @protected
-  List<VotingShareSubmissionPayload>
-      sse_decode_list_voting_share_submission_payload(
-          SseDeserializer deserializer);
-
-  @protected
-  List<VotingShareWorkflow> sse_decode_list_voting_share_workflow(
-      SseDeserializer deserializer);
-
-  @protected
-  List<VotingSignedVoteCommitment>
-      sse_decode_list_voting_signed_vote_commitment(
-          SseDeserializer deserializer);
-
-  @protected
-  List<VotingVoteRecovery> sse_decode_list_voting_vote_recovery(
-      SseDeserializer deserializer);
-
-  @protected
   List<ZsaHolding> sse_decode_list_zsa_holding(SseDeserializer deserializer);
 
   @protected
@@ -1281,19 +966,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   int? sse_decode_opt_box_autoadd_u_8(SseDeserializer deserializer);
-
-  @protected
-  VotingCompletedVoteDisplay?
-      sse_decode_opt_box_autoadd_voting_completed_vote_display(
-          SseDeserializer deserializer);
-
-  @protected
-  VotingConfig? sse_decode_opt_box_autoadd_voting_config(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingPirLayout? sse_decode_opt_box_autoadd_voting_pir_layout(
-      SseDeserializer deserializer);
 
   @protected
   List<String>? sse_decode_opt_list_String(SseDeserializer deserializer);
@@ -1410,155 +1082,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   UsizeArray4 sse_decode_usize_array_4(SseDeserializer deserializer);
 
   @protected
-  VotingBallotIntent sse_decode_voting_ballot_intent(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingChainResponse sse_decode_voting_chain_response(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingCompletedVoteChoice sse_decode_voting_completed_vote_choice(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingCompletedVoteDisplay sse_decode_voting_completed_vote_display(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingConfig sse_decode_voting_config(SseDeserializer deserializer);
-
-  @protected
-  VotingConfigRound sse_decode_voting_config_round(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingDelegationBuild sse_decode_voting_delegation_build(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingDelegationConfirmation sse_decode_voting_delegation_confirmation(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingDelegationProgress sse_decode_voting_delegation_progress(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingDelegationRecovery sse_decode_voting_delegation_recovery(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingDelegationSetup sse_decode_voting_delegation_setup(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingDelegationStatus sse_decode_voting_delegation_status(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingDelegationSubmission sse_decode_voting_delegation_submission(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingEncryptedShare sse_decode_voting_encrypted_share(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingNextStep sse_decode_voting_next_step(SseDeserializer deserializer);
-
-  @protected
-  VotingPirLayout sse_decode_voting_pir_layout(SseDeserializer deserializer);
-
-  @protected
-  VotingPreparedInfo sse_decode_voting_prepared_info(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingRoundInfo sse_decode_voting_round_info(SseDeserializer deserializer);
-
-  @protected
-  VotingRoundListItem sse_decode_voting_round_list_item(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingRoundPlan sse_decode_voting_round_plan(SseDeserializer deserializer);
-
-  @protected
-  VotingRoundRecovery sse_decode_voting_round_recovery(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingRoundSession sse_decode_voting_round_session(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingServiceEndpoint sse_decode_voting_service_endpoint(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingShareDelegationRecord sse_decode_voting_share_delegation_record(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingSharePayload sse_decode_voting_share_payload(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingSharePlan sse_decode_voting_share_plan(SseDeserializer deserializer);
-
-  @protected
-  VotingSharePlanItem sse_decode_voting_share_plan_item(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingShareSubmissionPayload sse_decode_voting_share_submission_payload(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingShareTrackingSummary sse_decode_voting_share_tracking_summary(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingShareWorkflow sse_decode_voting_share_workflow(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingSignedVoteCommitment sse_decode_voting_signed_vote_commitment(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingTreeVoteConfirmation sse_decode_voting_tree_vote_confirmation(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingVanWitness sse_decode_voting_van_witness(SseDeserializer deserializer);
-
-  @protected
-  VotingVoteCommitStage sse_decode_voting_vote_commit_stage(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingVoteCommitments sse_decode_voting_vote_commitments(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingVoteConfirmation sse_decode_voting_vote_confirmation(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingVotePayloads sse_decode_voting_vote_payloads(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingVoteRecovery sse_decode_voting_vote_recovery(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingVoteSubmission sse_decode_voting_vote_submission(
-      SseDeserializer deserializer);
-
-  @protected
   ZsaHolding sse_decode_zsa_holding(SseDeserializer deserializer);
 
   @protected
@@ -1671,14 +1194,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       RustStreamSink<SyncProgress> self, SseSerializer serializer);
 
   @protected
-  void sse_encode_StreamSink_voting_delegation_progress_Sse(
-      RustStreamSink<VotingDelegationProgress> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_StreamSink_voting_vote_commit_stage_Sse(
-      RustStreamSink<VotingVoteCommitStage> self, SseSerializer serializer);
-
-  @protected
   void sse_encode_String(String self, SseSerializer serializer);
 
   @protected
@@ -1755,18 +1270,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_u_8(int self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_box_autoadd_voting_completed_vote_display(
-      VotingCompletedVoteDisplay self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_box_autoadd_voting_config(
-      VotingConfig self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_box_autoadd_voting_pir_layout(
-      VotingPirLayout self, SseSerializer serializer);
 
   @protected
   void sse_encode_category(Category self, SseSerializer serializer);
@@ -1934,78 +1437,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_tx_spend(List<TxSpend> self, SseSerializer serializer);
 
   @protected
-  void sse_encode_list_voting_ballot_intent(
-      List<VotingBallotIntent> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_completed_vote_choice(
-      List<VotingCompletedVoteChoice> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_config_round(
-      List<VotingConfigRound> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_delegation_recovery(
-      List<VotingDelegationRecovery> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_delegation_status(
-      List<VotingDelegationStatus> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_encrypted_share(
-      List<VotingEncryptedShare> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_next_step(
-      List<VotingNextStep> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_round_info(
-      List<VotingRoundInfo> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_round_list_item(
-      List<VotingRoundListItem> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_round_session(
-      List<VotingRoundSession> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_service_endpoint(
-      List<VotingServiceEndpoint> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_share_delegation_record(
-      List<VotingShareDelegationRecord> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_share_payload(
-      List<VotingSharePayload> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_share_plan_item(
-      List<VotingSharePlanItem> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_share_submission_payload(
-      List<VotingShareSubmissionPayload> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_share_workflow(
-      List<VotingShareWorkflow> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_signed_vote_commitment(
-      List<VotingSignedVoteCommitment> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_list_voting_vote_recovery(
-      List<VotingVoteRecovery> self, SseSerializer serializer);
-
-  @protected
   void sse_encode_list_zsa_holding(
       List<ZsaHolding> self, SseSerializer serializer);
 
@@ -2085,18 +1516,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_opt_box_autoadd_u_8(int? self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_opt_box_autoadd_voting_completed_vote_display(
-      VotingCompletedVoteDisplay? self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_opt_box_autoadd_voting_config(
-      VotingConfig? self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_opt_box_autoadd_voting_pir_layout(
-      VotingPirLayout? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_list_String(List<String>? self, SseSerializer serializer);
@@ -2217,161 +1636,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize_array_4(UsizeArray4 self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_ballot_intent(
-      VotingBallotIntent self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_chain_response(
-      VotingChainResponse self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_completed_vote_choice(
-      VotingCompletedVoteChoice self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_completed_vote_display(
-      VotingCompletedVoteDisplay self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_config(VotingConfig self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_config_round(
-      VotingConfigRound self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_delegation_build(
-      VotingDelegationBuild self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_delegation_confirmation(
-      VotingDelegationConfirmation self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_delegation_progress(
-      VotingDelegationProgress self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_delegation_recovery(
-      VotingDelegationRecovery self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_delegation_setup(
-      VotingDelegationSetup self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_delegation_status(
-      VotingDelegationStatus self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_delegation_submission(
-      VotingDelegationSubmission self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_encrypted_share(
-      VotingEncryptedShare self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_next_step(
-      VotingNextStep self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_pir_layout(
-      VotingPirLayout self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_prepared_info(
-      VotingPreparedInfo self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_round_info(
-      VotingRoundInfo self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_round_list_item(
-      VotingRoundListItem self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_round_plan(
-      VotingRoundPlan self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_round_recovery(
-      VotingRoundRecovery self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_round_session(
-      VotingRoundSession self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_service_endpoint(
-      VotingServiceEndpoint self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_share_delegation_record(
-      VotingShareDelegationRecord self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_share_payload(
-      VotingSharePayload self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_share_plan(
-      VotingSharePlan self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_share_plan_item(
-      VotingSharePlanItem self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_share_submission_payload(
-      VotingShareSubmissionPayload self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_share_tracking_summary(
-      VotingShareTrackingSummary self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_share_workflow(
-      VotingShareWorkflow self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_signed_vote_commitment(
-      VotingSignedVoteCommitment self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_tree_vote_confirmation(
-      VotingTreeVoteConfirmation self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_van_witness(
-      VotingVanWitness self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_vote_commit_stage(
-      VotingVoteCommitStage self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_vote_commitments(
-      VotingVoteCommitments self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_vote_confirmation(
-      VotingVoteConfirmation self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_vote_payloads(
-      VotingVotePayloads self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_vote_recovery(
-      VotingVoteRecovery self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_vote_submission(
-      VotingVoteSubmission self, SseSerializer serializer);
 
   @protected
   void sse_encode_zsa_holding(ZsaHolding self, SseSerializer serializer);

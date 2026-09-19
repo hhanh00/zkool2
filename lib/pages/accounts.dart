@@ -137,6 +137,8 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
             createBuilder: (context) => GoRouter.of(context).push("/account/new"),
             editBuilder: (context, a) => GoRouter.of(context).push("/account/edit", extra: a),
             deleteBuilder: (context, accounts) async {
+              // Voting is cut out of the build pending its redesign; kept for reference.
+              /*
               if (ref.read(votingSubmissionGuardProvider)) {
                 await showMessage(
                   context,
@@ -145,6 +147,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
                 );
                 return;
               }
+              */
               final confirmed = await confirmDialog(context, title: "Delete Account(s)", message: "Are you sure you want to delete these accounts?");
               if (confirmed) {
                 for (var a in accounts) {

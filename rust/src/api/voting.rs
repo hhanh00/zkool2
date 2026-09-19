@@ -2225,7 +2225,7 @@ pub async fn voting_round_list(
             .ok_or_else(|| anyhow!("missing local summary for round {}", round.round_id))?;
         let status = round.status.as_str().map(|s| s.trim().to_lowercase())
             .unwrap_or_else(|| round.status.to_string());
-        let finished = matches!(status.as_str(), "2" | "3" | "tallying" | "closed");
+        let finished = matches!(status.as_str(), "2" | "3" | "tallying" | "finalized");
         let action = match summary.action(finished) {
             voting::summary::ListAction::StartVoting => "start_voting",
             voting::summary::ListAction::Resume => "resume",
@@ -2236,9 +2236,12 @@ pub async fn voting_round_list(
             title: round.display_title(),
             round_id: round.round_id,
             status: match status.as_str() {
+                "0" => "unspecified".to_string(),
                 "1" => "active".to_string(),
                 "2" => "tallying".to_string(),
-                "3" => "closed".to_string(),
+                "3" => "finalized".to_string(),
+                "4" => "pending".to_string(),
+                "5" => "ceremony_failed".to_string(),
                 _ => status,
             },
             snapshot_height: summary.snapshot_height,

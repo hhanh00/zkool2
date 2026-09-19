@@ -33,7 +33,10 @@ pub mod plugin;
 pub mod recover;
 pub mod sync;
 pub mod vault;
-pub mod voting;
+// Voting is cut out of the build pending a redesign on zcash_voting 5.1.0.
+// The source is kept for reference; re-enable this when the new
+// implementation lands.
+// pub mod voting;
 pub mod warp;
 
 pub type Hash32 = [u8; 32];

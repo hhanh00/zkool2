@@ -14,10 +14,10 @@ import 'package:flutter/material.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/services/block_height_service.dart';
-import 'package:zkool/services/votechain_backoff.dart';
-import 'package:zkool/services/votechain_classify.dart';
-import 'package:zkool/services/votechain_confirmation.dart';
-import 'package:zkool/services/votechain_failover.dart';
+// import 'package:zkool/services/votechain_backoff.dart';
+// import 'package:zkool/services/votechain_classify.dart';
+// import 'package:zkool/services/votechain_confirmation.dart';
+// import 'package:zkool/services/votechain_failover.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/contacts.dart';
@@ -28,7 +28,7 @@ import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/plugin.dart' as plugin_api;
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
-import 'package:zkool/src/rust/api/voting.dart';
+// import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/src/rust/api/zsa.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
@@ -1277,11 +1277,14 @@ class VaultNotifier extends _$VaultNotifier {
 
   Future<void> signOut() async {
     logger.i("VaultNotifier.signOut");
+    // Voting is cut out of the build pending its redesign; kept for reference.
+    /*
     if (ref.read(votingSubmissionGuardProvider)) {
       throw Exception(
         "A voting submission is in progress. Wait for it to finish before signing out.",
       );
     }
+    */
     final vault = await future;
     await vault.signOut();
   }
@@ -1317,6 +1320,12 @@ final ironwoodActiveProvider = FutureProvider<bool>((ref) async {
 });
 
 // ── Voting providers ───────────────────────────────────────────────────────
+//
+// Cut out of the build pending the voting redesign on zcash_voting 5.1.0.
+// The Rust side (rust/src/voting, rust/src/api/voting.rs) is cut the same
+// way. Kept verbatim for reference; AppSettings.votingConfigUrl above stays
+// live so the settings field keeps working.
+/*
 
 /// Aggregated recovery-first view of one voting round: the fork-derived
 /// resume plan, the full recovery snapshot, and the persisted ballot intents.
@@ -3130,3 +3139,5 @@ class ShareTrackingArm extends _$ShareTrackingArm {
 
   Future<void> run() => armShareTrackingForPendingRounds(ref);
 }
+
+*/
