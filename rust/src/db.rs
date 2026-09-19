@@ -576,6 +576,34 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
         .execute(&mut *connection)
         .await;
 
+    // Stale voting schema. These tables belong to the election implementation
+    // that predates ZIP 262; nothing in the tree reads them any more, and the
+    // redesign on zcash_voting 5.1.0 keeps its state in a sidecar database
+    // (`<wallet>.voting`) rather than in the wallet pool. Dropping them here
+    // is idempotent and needs no DB_VERSION bump: the format exported by
+    // IOAccount never carried them.
+    for table in [
+        "v_actions",
+        "v_ballots",
+        "v_elections",
+        "v_final_results",
+        "v_notes",
+        "v_questions",
+        "v_results",
+        "v_spends",
+        "v_state",
+        "v_witnesses",
+        "vc_cmxs",
+        "vc_nfs",
+        "vs_cmxs",
+    ] {
+        // Audited for sqlx 0.9's SqlSafeStr: DROP TABLE takes no bind
+        // parameters and every name comes from the literal list above.
+        sqlx::query(sqlx::AssertSqlSafe(format!("DROP TABLE IF EXISTS {table}")))
+            .execute(&mut *connection)
+            .await?;
+    }
+
     let version = get_prop(connection, "version").await?;
     match version {
         Some(version) if version.parse::<u16>()? > DB_VERSION => {
