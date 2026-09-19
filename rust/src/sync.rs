@@ -1147,7 +1147,9 @@ pub async fn check_witness_consistency(
     AND w.height = d.height
     WHERE w.id_witness IS NULL AND u.pool <> 0 AND u.id_asset IS NULL
     AND u.account IN ({placeholders})");
-    let mut q = sqlx::query(&query);
+    // Audited: `placeholders` is a generated `?, ?, ...` list; the account
+    // values themselves are bound below.
+    let mut q = sqlx::query(sqlx::AssertSqlSafe(query));
     for account in accounts {
         q = q.bind(account);
     }
