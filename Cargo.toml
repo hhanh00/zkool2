@@ -17,6 +17,15 @@ debug = 1
 debug = 0
 
 [patch.crates-io]
+# zcash_script pins bip32 =0.6.0-pre.1, which holds sha2 at a superseded
+# pre-release and blocks sqlx 0.9. Patch sections only apply from the
+# workspace root, so this is repeated here. Drop once upstream moves.
+zcash_script = { git = "https://github.com/hhanh00/zcash_script.git", rev = "49545c0268966fbbc155133f5c2e775bc1e97f57" }
+# nym pins sqlx ^0.8.6, which cannot coexist with libsqlite3-sys 0.35.
+# nymtech/nym#7164 moves it to 0.9; drop when that merges and publishes.
+nym-smolmix = { git = "https://github.com/nymtech/nym.git", rev = "88f21f017710f5e832b1489fcb273bd81e1e0786" }
+nym-sdk = { git = "https://github.com/nymtech/nym.git", rev = "88f21f017710f5e832b1489fcb273bd81e1e0786" }
+nym-network-defaults = { git = "https://github.com/nymtech/nym.git", rev = "88f21f017710f5e832b1489fcb273bd81e1e0786" }
 # -- Nym transport --
 # jwt-simple <=0.12.15 pins rand =0.8.5, which conflicts with the nym
 # crates (rand ^0.8.6); >=0.12.16 conflicts with the librustzcash fork's
@@ -30,16 +39,16 @@ sapling-crypto = { git = "https://github.com/zcash-shielded-assets/sapling-crypt
 zcash_note_encryption = { git = "https://github.com/zcash-shielded-assets/zcash_note_encryption", rev = "bc7a9370e1a7253cf496f24aa0bd4d0e49c3977e" }
 
 # -- lrz ZSA branch --
-pczt = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "3cac2d7ff169c213fcb1ca76f02fb82cc8d87265" }
-zcash_client_backend = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "3cac2d7ff169c213fcb1ca76f02fb82cc8d87265" }
-zcash_address = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "3cac2d7ff169c213fcb1ca76f02fb82cc8d87265" }
-zcash_encoding = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "3cac2d7ff169c213fcb1ca76f02fb82cc8d87265" }
-zcash_keys = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "3cac2d7ff169c213fcb1ca76f02fb82cc8d87265" }
-zcash_primitives = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "3cac2d7ff169c213fcb1ca76f02fb82cc8d87265" }
-zcash_proofs = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "3cac2d7ff169c213fcb1ca76f02fb82cc8d87265" }
-zcash_protocol = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "3cac2d7ff169c213fcb1ca76f02fb82cc8d87265" }
-zcash_transparent = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "3cac2d7ff169c213fcb1ca76f02fb82cc8d87265" }
-zip321 = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "3cac2d7ff169c213fcb1ca76f02fb82cc8d87265" }
+pczt = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
+zcash_client_backend = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
+zcash_address = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
+zcash_encoding = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
+zcash_keys = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
+zcash_primitives = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
+zcash_proofs = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
+zcash_protocol = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
+zcash_transparent = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
+zip321 = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
 
 # -- remaining transitive deps --
 reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "975f9ca835c4b9196c81608e55192b0f711e951d" }
