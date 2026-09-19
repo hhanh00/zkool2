@@ -10,6 +10,7 @@
 //! DB state before votes can be cast.
 
 pub mod net;
+pub mod summary;
 
 use std::collections::HashMap;
 use std::str::FromStr;
