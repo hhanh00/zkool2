@@ -2176,6 +2176,78 @@ impl VotingConfig {
 // Recovery / plan reads
 // ---------------------------------------------------------------------------
 
+/// List-page data from one successful server fetch and one local summary query.
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct VotingRoundListItem {
+    pub round_id: String,
+    pub title: String,
+    pub status: String,
+    pub snapshot_height: Option<i64>,
+    pub bundle_count: i64,
+    pub action: String,
+}
+
+/// Fetches equivalent vote servers in randomized round-robin retry order.
+/// The display action ignores share delivery; opening a round must use its
+/// full resume plan before executing any work.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_round_list(
+    config: &VotingConfig,
+    c: &Coin,
+) -> Result<Vec<VotingRoundListItem>> {
+    let client = crate::net::http::client(
+        crate::net::http::proxy_url(c.transport, &c.proxy),
+        std::time::Duration::from_secs(15),
+    )?;
+    let servers: Vec<_> = config.vote_servers.iter().map(|s| s.url.clone()).collect();
+    let started = std::time::Instant::now();
+    let rounds = voting::net::fetch_rounds(&servers, &client).await?;
+    let authenticated_ids: std::collections::HashSet<_> = config.rounds.iter()
+        .map(|round| round.round_id.as_str()).collect();
+    let rounds: Vec<_> = rounds.into_iter()
+        .filter(|round| authenticated_ids.contains(round.round_id.as_str())).collect();
+    log::info!("Voting rounds HTTP fetch: {:?}", started.elapsed());
+    let inputs: Vec<_> = rounds.iter().map(|round| voting::summary::RoundInput {
+        round_id: round.round_id.clone(),
+        proposal_ids: round.proposals.iter().map(|p| p.id).collect(),
+    }).collect();
+    let db_started = std::time::Instant::now();
+    let mut connection = c.get_connection().await?;
+    let wallet_id = voting::voting_wallet_id(&mut connection, c.account).await?;
+    let _db = voting::open_voting_db(c.get_pool()?, &mut connection, &wallet_id).await?;
+    log::info!("Voting summary DB acquisition + initialization: {:?}", db_started.elapsed());
+    let local = voting::summary::load_local_summaries(&mut connection, &wallet_id, &inputs).await?;
+    let local: std::collections::HashMap<_, _> = local.into_iter()
+        .map(|row| (row.round_id.clone(), row)).collect();
+    rounds.into_iter().map(|round| {
+        let summary = local.get(&round.round_id)
+            .ok_or_else(|| anyhow!("missing local summary for round {}", round.round_id))?;
+        let status = round.status.as_str().map(|s| s.trim().to_lowercase())
+            .unwrap_or_else(|| round.status.to_string());
+        let finished = matches!(status.as_str(), "2" | "3" | "tallying" | "closed");
+        let action = match summary.action(finished) {
+            voting::summary::ListAction::StartVoting => "start_voting",
+            voting::summary::ListAction::Resume => "resume",
+            voting::summary::ListAction::Review => "review",
+            voting::summary::ListAction::ViewResults => "view_results",
+        }.to_string();
+        Ok(VotingRoundListItem {
+            title: round.display_title(),
+            round_id: round.round_id,
+            status: match status.as_str() {
+                "1" => "active".to_string(),
+                "2" => "tallying".to_string(),
+                "3" => "closed".to_string(),
+                _ => status,
+            },
+            snapshot_height: summary.snapshot_height,
+            bundle_count: summary.bundle_count,
+            action,
+        })
+    }).collect()
+}
+
 /// Lists rounds persisted in the voting DB for the current wallet.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn voting_rounds(c: &Coin) -> Result<Vec<VotingRoundInfo>> {
