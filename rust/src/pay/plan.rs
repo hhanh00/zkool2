@@ -1392,8 +1392,7 @@ pub async fn sign_transaction(
         let sk = sk.ok_or(Error::NoSigningKey)?;
 
         // Derive pubkey from secret key to check
-        let secp = secp256k1::Secp256k1::new();
-        let derived_pubkey = secp256k1::PublicKey::from_secret_key(&secp, &sk);
+        let derived_pubkey = secp256k1::PublicKey::from_secret_key(&sk);
         let derived_compressed = derived_pubkey.serialize();
         let derived_uncompressed = derived_pubkey.serialize_uncompressed();
         let hash_compressed = zcash_transparent::util::hash160::hash(&derived_compressed);
@@ -1412,7 +1411,7 @@ pub async fn sign_transaction(
         // Get the sighash and sign manually
         let sighash = signer.transparent_sighash(index).unwrap();
         let msg = secp256k1::Message::from_digest(sighash);
-        let sig = secp.sign_ecdsa(&msg, &sk);
+        let sig = secp256k1::ecdsa::sign(msg, &sk);
 
         // Append the signature - the pubkey will be retrieved from hash160_preimages
         info!("Appending signature for input {}", index);
