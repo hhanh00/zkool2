@@ -423,6 +423,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<VotingRoundInfo> dco_decode_list_voting_round_info(dynamic raw);
 
   @protected
+  List<VotingRoundListItem> dco_decode_list_voting_round_list_item(dynamic raw);
+
+  @protected
   List<VotingRoundSession> dco_decode_list_voting_round_session(dynamic raw);
 
   @protected
@@ -706,6 +709,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VotingRoundInfo dco_decode_voting_round_info(dynamic raw);
+
+  @protected
+  VotingRoundListItem dco_decode_voting_round_list_item(dynamic raw);
 
   @protected
   VotingRoundPlan dco_decode_voting_round_plan(dynamic raw);
@@ -1159,6 +1165,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  List<VotingRoundListItem> sse_decode_list_voting_round_list_item(
+      SseDeserializer deserializer);
+
+  @protected
   List<VotingRoundSession> sse_decode_list_voting_round_session(
       SseDeserializer deserializer);
 
@@ -1468,6 +1478,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VotingRoundInfo sse_decode_voting_round_info(SseDeserializer deserializer);
+
+  @protected
+  VotingRoundListItem sse_decode_voting_round_list_item(
+      SseDeserializer deserializer);
 
   @protected
   VotingRoundPlan sse_decode_voting_round_plan(SseDeserializer deserializer);
@@ -1954,6 +1968,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<VotingRoundInfo> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_voting_round_list_item(
+      List<VotingRoundListItem> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_voting_round_session(
       List<VotingRoundSession> self, SseSerializer serializer);
 
@@ -2272,6 +2290,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_voting_round_info(
       VotingRoundInfo self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_round_list_item(
+      VotingRoundListItem self, SseSerializer serializer);
 
   @protected
   void sse_encode_voting_round_plan(
