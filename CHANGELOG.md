@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.31.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.30.0...zkool-v6.31.0-rc) (2026-09-19)
+
+
+### Features
+
+* **http:** support round-robin GET retries with randomized starts ([e6fca9e](https://github.com/hhanh00/zkool2/commit/e6fca9e1ff8fd4b75171b3a9b31dc6a1b8a67c84))
+* **voting:** add round overview page with loading progress ([#1253](https://github.com/hhanh00/zkool2/issues/1253)) ([375b21c](https://github.com/hhanh00/zkool2/commit/375b21c48bcd92a944351cabe4f7ad77780bf1f7))
+* **voting:** create the voting sidecar database on wallet open ([#1255](https://github.com/hhanh00/zkool2/issues/1255)) ([2949a90](https://github.com/hhanh00/zkool2/commit/2949a90cc1b06a784ce9732867cfe8fa01b3f7dd))
+
+
+### Bug Fixes
+
+* **ci:** use locked Zebra dependencies in wallet tests ([717af3e](https://github.com/hhanh00/zkool2/commit/717af3e7a3ab59bacd89016a43436bc7d6759b09))
+* **dart:** resolve lint issues in sync and amount input ([d80db92](https://github.com/hhanh00/zkool2/commit/d80db922e4545767aeade0af65ae971c3bedc402))
+
 ## [6.30.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.29.0...zkool-v6.30.0) (2026-09-12)
 
 
