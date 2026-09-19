@@ -24,12 +24,12 @@ import 'package:zkool/pages/splash.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/tx_view.dart';
 import 'package:zkool/pages/migrate.dart';
-import 'package:zkool/pages/voting.dart';
-import 'package:zkool/pages/voting_proposal.dart';
-import 'package:zkool/pages/voting_review.dart';
-import 'package:zkool/pages/voting_confirmation.dart';
-import 'package:zkool/pages/voting_results.dart';
-import 'package:zkool/pages/voting_status.dart';
+// import 'package:zkool/pages/voting.dart';
+// import 'package:zkool/pages/voting_proposal.dart';
+// import 'package:zkool/pages/voting_review.dart';
+// import 'package:zkool/pages/voting_confirmation.dart';
+// import 'package:zkool/pages/voting_results.dart';
+// import 'package:zkool/pages/voting_status.dart';
 import 'package:zkool/pages/zsa.dart';
 import 'package:zkool/pages/lwd_select.dart';
 import 'package:zkool/pages/plugin_manager.dart';
@@ -38,7 +38,7 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/contacts.dart';
 import 'package:zkool/src/rust/api/pay.dart';
-import 'package:zkool/src/rust/api/voting.dart';
+// import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/widgets/scanner.dart';
@@ -151,6 +151,8 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
         GoRoute(path: '/lwd_select', builder: (context, state) => const LWDSelectPage()),
         GoRoute(path: '/show_animated_qr', builder: (context, state) => ShowAnimatedQRPage(state.extra as List<Uint8List>)),
         GoRoute(path: '/migrate', builder: (context, state) => const MigratePage()),
+// Voting is cut out of the build pending its redesign; kept for reference.
+/*
         GoRoute(path: '/voting', builder: (context, state) => const VotingPage()),
         GoRoute(
           path: '/voting/proposal',
@@ -217,6 +219,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
             );
           },
         ),
+*/
         GoRoute(path: '/zsa', builder: (context, state) => const ZsaHoldingsPage()),
         GoRoute(path: '/zsa/issue', builder: (context, state) => IssueAssetPage(args: state.extra as IssuanceArgs?)),
         GoRoute(path: '/scan_animated_qr', builder: (context, state) => ScanAnimatedQRPage()),
