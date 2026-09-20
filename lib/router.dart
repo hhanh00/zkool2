@@ -25,6 +25,7 @@ import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/tx_view.dart';
 import 'package:zkool/pages/migrate.dart';
 import 'package:zkool/pages/voting.dart';
+import 'package:zkool/pages/voting_round.dart';
 // import 'package:zkool/pages/voting_proposal.dart';
 // import 'package:zkool/pages/voting_review.dart';
 // import 'package:zkool/pages/voting_confirmation.dart';
@@ -38,7 +39,7 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/contacts.dart';
 import 'package:zkool/src/rust/api/pay.dart';
-// import 'package:zkool/src/rust/api/voting.dart';
+import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/widgets/scanner.dart';
@@ -152,6 +153,12 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
         GoRoute(path: '/show_animated_qr', builder: (context, state) => ShowAnimatedQRPage(state.extra as List<Uint8List>)),
         GoRoute(path: '/migrate', builder: (context, state) => const MigratePage()),
         GoRoute(path: '/voting', builder: (context, state) => const VotingPage()),
+        GoRoute(
+          path: '/voting/round',
+          builder: (context, state) => VotingRoundPage(
+            round: state.extra as VotingRoundListItem,
+          ),
+        ),
         // Voting workflows remain disabled until their Rust APIs are ported.
         /*
         GoRoute(
