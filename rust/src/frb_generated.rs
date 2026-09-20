@@ -42,7 +42,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -606675250;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1839309252;
 
 // Section: executor
 
@@ -6948,6 +6948,42 @@ fn wire__crate__api__openalias__validate_zcash_address_impl(
         },
     )
 }
+fn wire__crate__api__voting__voting_round_list_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "voting_round_list",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok = crate::api::voting::voting_round_list(&api_c).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 
 // Section: related_funcs
 
@@ -7878,6 +7914,20 @@ impl SseDecode for Vec<crate::api::account::TxSpend> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::account::TxSpend>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::voting::VotingRoundListItem> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::voting::VotingRoundListItem>::sse_decode(
+                deserializer,
+            ));
         }
         return ans_;
     }
@@ -8891,6 +8941,26 @@ impl SseDecode for [usize; 4] {
     }
 }
 
+impl SseDecode for crate::api::voting::VotingRoundListItem {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_roundId = <String>::sse_decode(deserializer);
+        let mut var_title = <String>::sse_decode(deserializer);
+        let mut var_status = <String>::sse_decode(deserializer);
+        let mut var_snapshotHeight = <Option<u64>>::sse_decode(deserializer);
+        let mut var_bundleCount = <u32>::sse_decode(deserializer);
+        let mut var_action = <String>::sse_decode(deserializer);
+        return crate::api::voting::VotingRoundListItem {
+            round_id: var_roundId,
+            title: var_title,
+            status: var_status,
+            snapshot_height: var_snapshotHeight,
+            bundle_count: var_bundleCount,
+            action: var_action,
+        };
+    }
+}
+
 impl SseDecode for crate::api::zsa::ZsaHolding {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -9225,6 +9295,7 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
+        179 => wire__crate__api__voting__voting_round_list_impl(port, ptr, rust_vec_len, data_len),
         _ => unreachable!(),
     }
 }
@@ -10557,6 +10628,31 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::account::TxSpend>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::voting::VotingRoundListItem {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.round_id.into_into_dart().into_dart(),
+            self.title.into_into_dart().into_dart(),
+            self.status.into_into_dart().into_dart(),
+            self.snapshot_height.into_into_dart().into_dart(),
+            self.bundle_count.into_into_dart().into_dart(),
+            self.action.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::voting::VotingRoundListItem
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::voting::VotingRoundListItem>
+    for crate::api::voting::VotingRoundListItem
+{
+    fn into_into_dart(self) -> crate::api::voting::VotingRoundListItem {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::zsa::ZsaHolding {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -11280,6 +11376,16 @@ impl SseEncode for Vec<crate::api::account::TxSpend> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::account::TxSpend>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::voting::VotingRoundListItem> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::voting::VotingRoundListItem>::sse_encode(item, serializer);
         }
     }
 }
@@ -12012,6 +12118,18 @@ impl SseEncode for [usize; 4] {
             },
             serializer,
         );
+    }
+}
+
+impl SseEncode for crate::api::voting::VotingRoundListItem {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.round_id, serializer);
+        <String>::sse_encode(self.title, serializer);
+        <String>::sse_encode(self.status, serializer);
+        <Option<u64>>::sse_encode(self.snapshot_height, serializer);
+        <u32>::sse_encode(self.bundle_count, serializer);
+        <String>::sse_encode(self.action, serializer);
     }
 }
 
