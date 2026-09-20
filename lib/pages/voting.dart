@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:zkool/store.dart' show coinContext;
 import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/widgets/error_display.dart';
@@ -77,22 +78,98 @@ class _VotingPageState extends State<VotingPage> {
           }
           final rounds = snapshot.data ?? const <VotingRoundListItem>[];
           if (rounds.isEmpty) {
-            return const Center(child: Text('No voting rounds'));
+            return const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.how_to_vote_outlined, size: 48),
+                  SizedBox(height: 12),
+                  Text('No voting rounds'),
+                ],
+              ),
+            );
           }
-          return ListView.builder(
+          return ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 8),
             itemCount: rounds.length,
-            itemBuilder: (context, index) {
-              final round = rounds[index];
-              return ListTile(
-                title: Text(round.title),
-                trailing: _VotingProgressButton(
-                  action: round.action,
-                  onPressed: null,
-                ),
-              );
-            },
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (context, index) => _VotingRoundTile(
+              round: rounds[index],
+              onPressed: () => context.push(
+                '/voting/round',
+                extra: rounds[index],
+              ),
+            ),
           );
         },
+      ),
+    );
+  }
+}
+
+class _VotingRoundTile extends StatelessWidget {
+  final VotingRoundListItem round;
+  final VoidCallback onPressed;
+
+  const _VotingRoundTile({required this.round, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final details = <String>[
+      if (round.snapshotHeight case final height?) 'Snapshot height $height',
+      '${round.bundleCount} bundle${round.bundleCount == 1 ? '' : 's'}',
+    ];
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      title: Text(round.title),
+      subtitle: Padding(
+        padding: const EdgeInsets.only(top: 6),
+        child: Wrap(
+          spacing: 8,
+          runSpacing: 6,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            _VotingStatus(status: round.status),
+            Text(details.join(' • ')),
+          ],
+        ),
+      ),
+      trailing: _VotingProgressButton(
+        action: round.action,
+        onPressed: onPressed,
+      ),
+      onTap: onPressed,
+    );
+  }
+}
+
+class _VotingStatus extends StatelessWidget {
+  final String status;
+
+  const _VotingStatus({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final (label, foreground, background) = switch (status) {
+      'active' => ('Active', colors.onPrimaryContainer, colors.primaryContainer),
+      'tallying' => ('Tallying', colors.onSecondaryContainer, colors.secondaryContainer),
+      'finalized' => ('Finalized', colors.onTertiaryContainer, colors.tertiaryContainer),
+      'pending' => ('Pending', colors.onSurfaceVariant, colors.surfaceContainerHighest),
+      'ceremony_failed' => ('Ceremony failed', colors.onErrorContainer, colors.errorContainer),
+      _ => (status.replaceAll('_', ' '), colors.onSurfaceVariant, colors.surfaceContainerHighest),
+    };
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(color: foreground),
       ),
     );
   }
