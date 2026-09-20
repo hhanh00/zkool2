@@ -11,6 +11,13 @@ use crate::{api::coin::Coin, voting};
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct VotingProposalListItem {
+    pub proposal_id: u32,
+    pub title: String,
+}
+
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VotingRoundListItem {
     pub round_id: String,
     pub title: String,
@@ -18,6 +25,7 @@ pub struct VotingRoundListItem {
     pub snapshot_height: Option<u64>,
     pub bundle_count: u32,
     pub action: String,
+    pub proposals: Vec<VotingProposalListItem>,
 }
 
 async fn wallet_id(c: &Coin) -> Result<String> {
@@ -114,6 +122,18 @@ pub async fn voting_round_list(c: &Coin) -> Result<Vec<VotingRoundListItem>> {
                 voting::summary::ListAction::Review => "review",
                 voting::summary::ListAction::ViewResults => "view_results",
             };
+            let proposals = round
+                .proposals
+                .iter()
+                .map(|proposal| VotingProposalListItem {
+                    proposal_id: proposal.id,
+                    title: proposal
+                        .title
+                        .clone()
+                        .filter(|title| !title.trim().is_empty())
+                        .unwrap_or_else(|| format!("Proposal {}", proposal.id)),
+                })
+                .collect();
             Ok(VotingRoundListItem {
                 title: round.display_title(),
                 round_id: round.round_id,
@@ -121,6 +141,7 @@ pub async fn voting_round_list(c: &Coin) -> Result<Vec<VotingRoundListItem>> {
                 snapshot_height: summary.snapshot_height,
                 bundle_count: summary.bundle_count,
                 action: action.into(),
+                proposals,
             })
         })
         .collect()
