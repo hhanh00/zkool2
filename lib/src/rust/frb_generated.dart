@@ -6257,6 +6257,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<VotingProposalListItem> dco_decode_list_voting_proposal_list_item(
+      dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_voting_proposal_list_item)
+        .toList();
+  }
+
+  @protected
   List<VotingRoundListItem> dco_decode_list_voting_round_list_item(
       dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
@@ -7057,11 +7066,23 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  VotingProposalListItem dco_decode_voting_proposal_list_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 2)
+      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    return VotingProposalListItem(
+      proposalId: dco_decode_u_32(arr[0]),
+      title: dco_decode_String(arr[1]),
+    );
+  }
+
+  @protected
   VotingRoundListItem dco_decode_voting_round_list_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 7)
+      throw Exception('unexpected arr length: expect 7 but see ${arr.length}');
     return VotingRoundListItem(
       roundId: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
@@ -7069,6 +7090,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       snapshotHeight: dco_decode_opt_box_autoadd_u_64(arr[3]),
       bundleCount: dco_decode_u_32(arr[4]),
       action: dco_decode_String(arr[5]),
+      proposals: dco_decode_list_voting_proposal_list_item(arr[6]),
     );
   }
 
@@ -8034,6 +8056,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<VotingProposalListItem> sse_decode_list_voting_proposal_list_item(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <VotingProposalListItem>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_voting_proposal_list_item(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<VotingRoundListItem> sse_decode_list_voting_round_list_item(
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -8927,6 +8962,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  VotingProposalListItem sse_decode_voting_proposal_list_item(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_proposalId = sse_decode_u_32(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    return VotingProposalListItem(proposalId: var_proposalId, title: var_title);
+  }
+
+  @protected
   VotingRoundListItem sse_decode_voting_round_list_item(
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -8936,13 +8980,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_snapshotHeight = sse_decode_opt_box_autoadd_u_64(deserializer);
     var var_bundleCount = sse_decode_u_32(deserializer);
     var var_action = sse_decode_String(deserializer);
+    var var_proposals = sse_decode_list_voting_proposal_list_item(deserializer);
     return VotingRoundListItem(
         roundId: var_roundId,
         title: var_title,
         status: var_status,
         snapshotHeight: var_snapshotHeight,
         bundleCount: var_bundleCount,
-        action: var_action);
+        action: var_action,
+        proposals: var_proposals);
   }
 
   @protected
@@ -9851,6 +9897,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_voting_proposal_list_item(
+      List<VotingProposalListItem> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_voting_proposal_list_item(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_voting_round_list_item(
       List<VotingRoundListItem> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -10520,6 +10576,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_voting_proposal_list_item(
+      VotingProposalListItem self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.proposalId, serializer);
+    sse_encode_String(self.title, serializer);
+  }
+
+  @protected
   void sse_encode_voting_round_list_item(
       VotingRoundListItem self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -10529,6 +10593,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_box_autoadd_u_64(self.snapshotHeight, serializer);
     sse_encode_u_32(self.bundleCount, serializer);
     sse_encode_String(self.action, serializer);
+    sse_encode_list_voting_proposal_list_item(self.proposals, serializer);
   }
 
   @protected

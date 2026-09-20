@@ -377,6 +377,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TxSpend> dco_decode_list_tx_spend(dynamic raw);
 
   @protected
+  List<VotingProposalListItem> dco_decode_list_voting_proposal_list_item(
+      dynamic raw);
+
+  @protected
   List<VotingRoundListItem> dco_decode_list_voting_round_list_item(dynamic raw);
 
   @protected
@@ -564,6 +568,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   UsizeArray4 dco_decode_usize_array_4(dynamic raw);
+
+  @protected
+  VotingProposalListItem dco_decode_voting_proposal_list_item(dynamic raw);
 
   @protected
   VotingRoundListItem dco_decode_voting_round_list_item(dynamic raw);
@@ -900,6 +907,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TxSpend> sse_decode_list_tx_spend(SseDeserializer deserializer);
 
   @protected
+  List<VotingProposalListItem> sse_decode_list_voting_proposal_list_item(
+      SseDeserializer deserializer);
+
+  @protected
   List<VotingRoundListItem> sse_decode_list_voting_round_list_item(
       SseDeserializer deserializer);
 
@@ -1093,6 +1104,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   UsizeArray4 sse_decode_usize_array_4(SseDeserializer deserializer);
+
+  @protected
+  VotingProposalListItem sse_decode_voting_proposal_list_item(
+      SseDeserializer deserializer);
 
   @protected
   VotingRoundListItem sse_decode_voting_round_list_item(
@@ -1454,6 +1469,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_tx_spend(List<TxSpend> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_voting_proposal_list_item(
+      List<VotingProposalListItem> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_voting_round_list_item(
       List<VotingRoundListItem> self, SseSerializer serializer);
 
@@ -1657,6 +1676,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize_array_4(UsizeArray4 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_proposal_list_item(
+      VotingProposalListItem self, SseSerializer serializer);
 
   @protected
   void sse_encode_voting_round_list_item(
