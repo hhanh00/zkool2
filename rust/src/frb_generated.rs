@@ -7919,6 +7919,20 @@ impl SseDecode for Vec<crate::api::account::TxSpend> {
     }
 }
 
+impl SseDecode for Vec<crate::api::voting::VotingProposalListItem> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::api::voting::VotingProposalListItem>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::voting::VotingRoundListItem> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -8941,6 +8955,18 @@ impl SseDecode for [usize; 4] {
     }
 }
 
+impl SseDecode for crate::api::voting::VotingProposalListItem {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_proposalId = <u32>::sse_decode(deserializer);
+        let mut var_title = <String>::sse_decode(deserializer);
+        return crate::api::voting::VotingProposalListItem {
+            proposal_id: var_proposalId,
+            title: var_title,
+        };
+    }
+}
+
 impl SseDecode for crate::api::voting::VotingRoundListItem {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -8950,6 +8976,8 @@ impl SseDecode for crate::api::voting::VotingRoundListItem {
         let mut var_snapshotHeight = <Option<u64>>::sse_decode(deserializer);
         let mut var_bundleCount = <u32>::sse_decode(deserializer);
         let mut var_action = <String>::sse_decode(deserializer);
+        let mut var_proposals =
+            <Vec<crate::api::voting::VotingProposalListItem>>::sse_decode(deserializer);
         return crate::api::voting::VotingRoundListItem {
             round_id: var_roundId,
             title: var_title,
@@ -8957,6 +8985,7 @@ impl SseDecode for crate::api::voting::VotingRoundListItem {
             snapshot_height: var_snapshotHeight,
             bundle_count: var_bundleCount,
             action: var_action,
+            proposals: var_proposals,
         };
     }
 }
@@ -10628,6 +10657,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::account::TxSpend>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::voting::VotingProposalListItem {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.proposal_id.into_into_dart().into_dart(),
+            self.title.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::voting::VotingProposalListItem
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::voting::VotingProposalListItem>
+    for crate::api::voting::VotingProposalListItem
+{
+    fn into_into_dart(self) -> crate::api::voting::VotingProposalListItem {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::voting::VotingRoundListItem {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -10637,6 +10687,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::voting::VotingRoundListItem {
             self.snapshot_height.into_into_dart().into_dart(),
             self.bundle_count.into_into_dart().into_dart(),
             self.action.into_into_dart().into_dart(),
+            self.proposals.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -11376,6 +11427,16 @@ impl SseEncode for Vec<crate::api::account::TxSpend> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::account::TxSpend>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::voting::VotingProposalListItem> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::voting::VotingProposalListItem>::sse_encode(item, serializer);
         }
     }
 }
@@ -12121,6 +12182,14 @@ impl SseEncode for [usize; 4] {
     }
 }
 
+impl SseEncode for crate::api::voting::VotingProposalListItem {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.proposal_id, serializer);
+        <String>::sse_encode(self.title, serializer);
+    }
+}
+
 impl SseEncode for crate::api::voting::VotingRoundListItem {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -12130,6 +12199,7 @@ impl SseEncode for crate::api::voting::VotingRoundListItem {
         <Option<u64>>::sse_encode(self.snapshot_height, serializer);
         <u32>::sse_encode(self.bundle_count, serializer);
         <String>::sse_encode(self.action, serializer);
+        <Vec<crate::api::voting::VotingProposalListItem>>::sse_encode(self.proposals, serializer);
     }
 }
 

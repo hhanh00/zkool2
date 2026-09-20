@@ -10,13 +10,21 @@ import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'voting.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `normalized_status`, `wallet_id`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
 
 /// Fetches authenticated server rounds and combines them with sidecar state.
 /// The returned action is display-only; execution must obtain a fresh resume
 /// plan from the voting crate.
 Future<List<VotingRoundListItem>> votingRoundList({required Coin c}) =>
     RustLib.instance.api.crateApiVotingVotingRoundList(c: c);
+
+@freezed
+sealed class VotingProposalListItem with _$VotingProposalListItem {
+  const factory VotingProposalListItem({
+    required int proposalId,
+    required String title,
+  }) = _VotingProposalListItem;
+}
 
 @freezed
 sealed class VotingRoundListItem with _$VotingRoundListItem {
@@ -27,5 +35,6 @@ sealed class VotingRoundListItem with _$VotingRoundListItem {
     BigInt? snapshotHeight,
     required int bundleCount,
     required String action,
+    required List<VotingProposalListItem> proposals,
   }) = _VotingRoundListItem;
 }
