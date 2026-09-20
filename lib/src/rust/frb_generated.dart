@@ -23,6 +23,7 @@ import 'api/sweep.dart';
 import 'api/sync.dart';
 import 'api/transaction.dart';
 import 'api/vault.dart';
+import 'api/voting.dart';
 import 'api/zsa.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -94,7 +95,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -606675250;
+  int get rustContentHash => -1839309252;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -619,6 +620,9 @@ abstract class RustLibApi extends BaseApi {
 
   bool crateApiOpenaliasValidateZcashAddress(
       {required String address, required Coin c});
+
+  Future<List<VotingRoundListItem>> crateApiVotingVotingRoundList(
+      {required Coin c});
 
   RustArcIncrementStrongCountFnType
       get rust_arc_increment_strong_count_DartVault;
@@ -5414,6 +5418,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         argNames: ["address", "c"],
       );
 
+  @override
+  Future<List<VotingRoundListItem>> crateApiVotingVotingRoundList(
+      {required Coin c}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_box_autoadd_coin(c, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 179, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_list_voting_round_list_item,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiVotingVotingRoundListConstMeta,
+      argValues: [c],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta get kCrateApiVotingVotingRoundListConstMeta =>
+      const TaskConstMeta(
+        debugName: "voting_round_list",
+        argNames: ["c"],
+      );
+
   Future<void> Function(int, dynamic)
       encode_DartFn_Inputs_list_prim_u_8_strict_Output_unit_AnyhowException(
           FutureOr<void> Function(Uint8List) raw) {
@@ -6227,6 +6257,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<VotingRoundListItem> dco_decode_list_voting_round_list_item(
+      dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return (raw as List<dynamic>)
+        .map(dco_decode_voting_round_list_item)
+        .toList();
+  }
+
+  @protected
   List<ZsaHolding> dco_decode_list_zsa_holding(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return (raw as List<dynamic>).map(dco_decode_zsa_holding).toList();
@@ -7015,6 +7054,22 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   UsizeArray4 dco_decode_usize_array_4(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return UsizeArray4(dco_decode_list_prim_usize_strict(raw));
+  }
+
+  @protected
+  VotingRoundListItem dco_decode_voting_round_list_item(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 6)
+      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    return VotingRoundListItem(
+      roundId: dco_decode_String(arr[0]),
+      title: dco_decode_String(arr[1]),
+      status: dco_decode_String(arr[2]),
+      snapshotHeight: dco_decode_opt_box_autoadd_u_64(arr[3]),
+      bundleCount: dco_decode_u_32(arr[4]),
+      action: dco_decode_String(arr[5]),
+    );
   }
 
   @protected
@@ -7979,6 +8034,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  List<VotingRoundListItem> sse_decode_list_voting_round_list_item(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var len_ = sse_decode_i_32(deserializer);
+    var ans_ = <VotingRoundListItem>[];
+    for (var idx_ = 0; idx_ < len_; ++idx_) {
+      ans_.add(sse_decode_voting_round_list_item(deserializer));
+    }
+    return ans_;
+  }
+
+  @protected
   List<ZsaHolding> sse_decode_list_zsa_holding(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
 
@@ -8856,6 +8924,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var inner = sse_decode_list_prim_usize_strict(deserializer);
     return UsizeArray4(inner);
+  }
+
+  @protected
+  VotingRoundListItem sse_decode_voting_round_list_item(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_roundId = sse_decode_String(deserializer);
+    var var_title = sse_decode_String(deserializer);
+    var var_status = sse_decode_String(deserializer);
+    var var_snapshotHeight = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_bundleCount = sse_decode_u_32(deserializer);
+    var var_action = sse_decode_String(deserializer);
+    return VotingRoundListItem(
+        roundId: var_roundId,
+        title: var_title,
+        status: var_status,
+        snapshotHeight: var_snapshotHeight,
+        bundleCount: var_bundleCount,
+        action: var_action);
   }
 
   @protected
@@ -9764,6 +9851,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_list_voting_round_list_item(
+      List<VotingRoundListItem> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_i_32(self.length, serializer);
+    for (final item in self) {
+      sse_encode_voting_round_list_item(item, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_list_zsa_holding(
       List<ZsaHolding> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
@@ -10420,6 +10517,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_usize_array_4(UsizeArray4 self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_list_prim_usize_strict(self.inner, serializer);
+  }
+
+  @protected
+  void sse_encode_voting_round_list_item(
+      VotingRoundListItem self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(self.roundId, serializer);
+    sse_encode_String(self.title, serializer);
+    sse_encode_String(self.status, serializer);
+    sse_encode_opt_box_autoadd_u_64(self.snapshotHeight, serializer);
+    sse_encode_u_32(self.bundleCount, serializer);
+    sse_encode_String(self.action, serializer);
   }
 
   @protected
