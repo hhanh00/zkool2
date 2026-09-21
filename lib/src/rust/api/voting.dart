@@ -23,6 +23,7 @@ sealed class VotingProposalListItem with _$VotingProposalListItem {
   const factory VotingProposalListItem({
     required int proposalId,
     required String title,
+    required List<String> options,
   }) = _VotingProposalListItem;
 }
 

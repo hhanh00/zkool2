@@ -16,6 +16,7 @@ T _$identity<T>(T value) => value;
 mixin _$VotingProposalListItem {
   int get proposalId;
   String get title;
+  List<String> get options;
 
   /// Create a copy of VotingProposalListItem
   /// with the given fields replaced by the non-null parameter values.
@@ -32,15 +33,17 @@ mixin _$VotingProposalListItem {
             other is VotingProposalListItem &&
             (identical(other.proposalId, proposalId) ||
                 other.proposalId == proposalId) &&
-            (identical(other.title, title) || other.title == title));
+            (identical(other.title, title) || other.title == title) &&
+            const DeepCollectionEquality().equals(other.options, options));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, proposalId, title);
+  int get hashCode => Object.hash(runtimeType, proposalId, title,
+      const DeepCollectionEquality().hash(options));
 
   @override
   String toString() {
-    return 'VotingProposalListItem(proposalId: $proposalId, title: $title)';
+    return 'VotingProposalListItem(proposalId: $proposalId, title: $title, options: $options)';
   }
 }
 
@@ -50,7 +53,7 @@ abstract mixin class $VotingProposalListItemCopyWith<$Res> {
           $Res Function(VotingProposalListItem) _then) =
       _$VotingProposalListItemCopyWithImpl;
   @useResult
-  $Res call({int proposalId, String title});
+  $Res call({int proposalId, String title, List<String> options});
 }
 
 /// @nodoc
@@ -68,6 +71,7 @@ class _$VotingProposalListItemCopyWithImpl<$Res>
   $Res call({
     Object? proposalId = null,
     Object? title = null,
+    Object? options = null,
   }) {
     return _then(_self.copyWith(
       proposalId: null == proposalId
@@ -78,6 +82,10 @@ class _$VotingProposalListItemCopyWithImpl<$Res>
           ? _self.title
           : title // ignore: cast_nullable_to_non_nullable
               as String,
+      options: null == options
+          ? _self.options
+          : options // ignore: cast_nullable_to_non_nullable
+              as List<String>,
     ));
   }
 }
@@ -173,13 +181,14 @@ extension VotingProposalListItemPatterns on VotingProposalListItem {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(int proposalId, String title)? $default, {
+    TResult Function(int proposalId, String title, List<String> options)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _VotingProposalListItem() when $default != null:
-        return $default(_that.proposalId, _that.title);
+        return $default(_that.proposalId, _that.title, _that.options);
       case _:
         return orElse();
     }
@@ -200,12 +209,13 @@ extension VotingProposalListItemPatterns on VotingProposalListItem {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(int proposalId, String title) $default,
+    TResult Function(int proposalId, String title, List<String> options)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _VotingProposalListItem():
-        return $default(_that.proposalId, _that.title);
+        return $default(_that.proposalId, _that.title, _that.options);
     }
   }
 
@@ -223,12 +233,13 @@ extension VotingProposalListItemPatterns on VotingProposalListItem {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(int proposalId, String title)? $default,
+    TResult? Function(int proposalId, String title, List<String> options)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _VotingProposalListItem() when $default != null:
-        return $default(_that.proposalId, _that.title);
+        return $default(_that.proposalId, _that.title, _that.options);
       case _:
         return null;
     }
@@ -239,12 +250,22 @@ extension VotingProposalListItemPatterns on VotingProposalListItem {
 
 class _VotingProposalListItem implements VotingProposalListItem {
   const _VotingProposalListItem(
-      {required this.proposalId, required this.title});
+      {required this.proposalId,
+      required this.title,
+      required final List<String> options})
+      : _options = options;
 
   @override
   final int proposalId;
   @override
   final String title;
+  final List<String> _options;
+  @override
+  List<String> get options {
+    if (_options is EqualUnmodifiableListView) return _options;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_options);
+  }
 
   /// Create a copy of VotingProposalListItem
   /// with the given fields replaced by the non-null parameter values.
@@ -262,15 +283,17 @@ class _VotingProposalListItem implements VotingProposalListItem {
             other is _VotingProposalListItem &&
             (identical(other.proposalId, proposalId) ||
                 other.proposalId == proposalId) &&
-            (identical(other.title, title) || other.title == title));
+            (identical(other.title, title) || other.title == title) &&
+            const DeepCollectionEquality().equals(other._options, _options));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, proposalId, title);
+  int get hashCode => Object.hash(runtimeType, proposalId, title,
+      const DeepCollectionEquality().hash(_options));
 
   @override
   String toString() {
-    return 'VotingProposalListItem(proposalId: $proposalId, title: $title)';
+    return 'VotingProposalListItem(proposalId: $proposalId, title: $title, options: $options)';
   }
 }
 
@@ -282,7 +305,7 @@ abstract mixin class _$VotingProposalListItemCopyWith<$Res>
       __$VotingProposalListItemCopyWithImpl;
   @override
   @useResult
-  $Res call({int proposalId, String title});
+  $Res call({int proposalId, String title, List<String> options});
 }
 
 /// @nodoc
@@ -300,6 +323,7 @@ class __$VotingProposalListItemCopyWithImpl<$Res>
   $Res call({
     Object? proposalId = null,
     Object? title = null,
+    Object? options = null,
   }) {
     return _then(_VotingProposalListItem(
       proposalId: null == proposalId
@@ -310,6 +334,10 @@ class __$VotingProposalListItemCopyWithImpl<$Res>
           ? _self.title
           : title // ignore: cast_nullable_to_non_nullable
               as String,
+      options: null == options
+          ? _self._options
+          : options // ignore: cast_nullable_to_non_nullable
+              as List<String>,
     ));
   }
 }
