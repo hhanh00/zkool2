@@ -8960,9 +8960,11 @@ impl SseDecode for crate::api::voting::VotingProposalListItem {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_proposalId = <u32>::sse_decode(deserializer);
         let mut var_title = <String>::sse_decode(deserializer);
+        let mut var_options = <Vec<String>>::sse_decode(deserializer);
         return crate::api::voting::VotingProposalListItem {
             proposal_id: var_proposalId,
             title: var_title,
+            options: var_options,
         };
     }
 }
@@ -10662,6 +10664,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::voting::VotingProposalListIte
         [
             self.proposal_id.into_into_dart().into_dart(),
             self.title.into_into_dart().into_dart(),
+            self.options.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -12187,6 +12190,7 @@ impl SseEncode for crate::api::voting::VotingProposalListItem {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <u32>::sse_encode(self.proposal_id, serializer);
         <String>::sse_encode(self.title, serializer);
+        <Vec<String>>::sse_encode(self.options, serializer);
     }
 }
 
