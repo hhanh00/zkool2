@@ -14,6 +14,7 @@ use crate::{api::coin::Coin, voting};
 pub struct VotingProposalListItem {
     pub proposal_id: u32,
     pub title: String,
+    pub options: Vec<String>,
 }
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
@@ -132,6 +133,20 @@ pub async fn voting_round_list(c: &Coin) -> Result<Vec<VotingRoundListItem>> {
                         .clone()
                         .filter(|title| !title.trim().is_empty())
                         .unwrap_or_else(|| format!("Proposal {}", proposal.id)),
+                    options: if proposal.options.is_empty() {
+                        vec!["Yes".into(), "No".into()]
+                    } else {
+                        proposal
+                            .options
+                            .iter()
+                            .enumerate()
+                            .map(|(index, option)| {
+                                option
+                                    .display_label()
+                                    .unwrap_or_else(|| format!("Option {}", index + 1))
+                            })
+                            .collect()
+                    },
                 })
                 .collect();
             Ok(VotingRoundListItem {

@@ -7069,11 +7069,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   VotingProposalListItem dco_decode_voting_proposal_list_item(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return VotingProposalListItem(
       proposalId: dco_decode_u_32(arr[0]),
       title: dco_decode_String(arr[1]),
+      options: dco_decode_list_String(arr[2]),
     );
   }
 
@@ -8967,7 +8968,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_proposalId = sse_decode_u_32(deserializer);
     var var_title = sse_decode_String(deserializer);
-    return VotingProposalListItem(proposalId: var_proposalId, title: var_title);
+    var var_options = sse_decode_list_String(deserializer);
+    return VotingProposalListItem(
+        proposalId: var_proposalId, title: var_title, options: var_options);
   }
 
   @protected
@@ -10581,6 +10584,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_32(self.proposalId, serializer);
     sse_encode_String(self.title, serializer);
+    sse_encode_list_String(self.options, serializer);
   }
 
   @protected

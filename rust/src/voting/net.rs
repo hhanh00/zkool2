@@ -22,6 +22,25 @@ pub struct ServerRound {
 pub struct ServerProposal {
     pub id: u32,
     pub title: Option<String>,
+    #[serde(default)]
+    pub options: Vec<ServerProposalOption>,
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct ServerProposalOption {
+    pub label: Option<String>,
+    pub short_title: Option<String>,
+    pub title: Option<String>,
+}
+
+impl ServerProposalOption {
+    pub fn display_label(&self) -> Option<String> {
+        [&self.label, &self.short_title, &self.title]
+            .into_iter()
+            .flatten()
+            .find(|label| !label.trim().is_empty())
+            .cloned()
+    }
 }
 
 fn decode_round_id<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<String, D::Error> {
