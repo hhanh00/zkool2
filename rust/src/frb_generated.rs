@@ -42,7 +42,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1839309252;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1887839612;
 
 // Section: executor
 
@@ -6948,6 +6948,126 @@ fn wire__crate__api__openalias__validate_zcash_address_impl(
         },
     )
 }
+fn wire__crate__api__voting_share_tracking__voting_cancel_all_share_tracking_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "voting_cancel_all_share_tracking",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::voting_share_tracking::voting_cancel_all_share_tracking(
+                                &api_c,
+                            )
+                            .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__voting_share_tracking__voting_cancel_share_tracking_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "voting_cancel_share_tracking",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_round_id = <String>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::voting_share_tracking::voting_cancel_share_tracking(
+                                &api_round_id,
+                                &api_c,
+                            )
+                            .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__voting_share_tracking__voting_pending_share_rounds_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "voting_pending_share_rounds",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::voting_share_tracking::voting_pending_share_rounds(&api_c)
+                                .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__voting__voting_round_list_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -6976,6 +7096,95 @@ fn wire__crate__api__voting__voting_round_list_impl(
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
                         let output_ok = crate::api::voting::voting_round_list(&api_c).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__voting__voting_save_ballot_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "voting_save_ballot",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_round_id = <String>::sse_decode(&mut deserializer);
+            let api_drafts_json = <String>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok = crate::api::voting::voting_save_ballot(
+                            &api_round_id,
+                            &api_drafts_json,
+                            &api_c,
+                        )
+                        .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__voting_share_tracking__voting_start_share_tracking_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "voting_start_share_tracking",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_round_id = <String>::sse_decode(&mut deserializer);
+            let api_helper_urls = <Vec<String>>::sse_decode(&mut deserializer);
+            let api_vote_end_time_seconds = <Option<u64>>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::voting_share_tracking::voting_start_share_tracking(
+                                &api_round_id,
+                                api_helper_urls,
+                                api_vote_end_time_seconds,
+                                &api_c,
+                            )
+                            .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -7914,6 +8123,22 @@ impl SseDecode for Vec<crate::api::account::TxSpend> {
         let mut ans_ = Vec::with_capacity(len_ as usize);
         for idx_ in 0..len_ {
             ans_.push(<crate::api::account::TxSpend>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::api::voting_share_tracking::VotingPendingShareRound> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(
+                <crate::api::voting_share_tracking::VotingPendingShareRound>::sse_decode(
+                    deserializer,
+                ),
+            );
         }
         return ans_;
     }
@@ -8955,6 +9180,18 @@ impl SseDecode for [usize; 4] {
     }
 }
 
+impl SseDecode for crate::api::voting_share_tracking::VotingPendingShareRound {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_roundId = <String>::sse_decode(deserializer);
+        let mut var_sessionJson = <Option<String>>::sse_decode(deserializer);
+        return crate::api::voting_share_tracking::VotingPendingShareRound {
+            round_id: var_roundId,
+            session_json: var_sessionJson,
+        };
+    }
+}
+
 impl SseDecode for crate::api::voting::VotingProposalListItem {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -8980,6 +9217,8 @@ impl SseDecode for crate::api::voting::VotingRoundListItem {
         let mut var_action = <String>::sse_decode(deserializer);
         let mut var_proposals =
             <Vec<crate::api::voting::VotingProposalListItem>>::sse_decode(deserializer);
+        let mut var_helperUrls = <Vec<String>>::sse_decode(deserializer);
+        let mut var_voteEndTime = <Option<u64>>::sse_decode(deserializer);
         return crate::api::voting::VotingRoundListItem {
             round_id: var_roundId,
             title: var_title,
@@ -8988,6 +9227,8 @@ impl SseDecode for crate::api::voting::VotingRoundListItem {
             bundle_count: var_bundleCount,
             action: var_action,
             proposals: var_proposals,
+            helper_urls: var_helperUrls,
+            vote_end_time: var_voteEndTime,
         };
     }
 }
@@ -9326,7 +9567,32 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        179 => wire__crate__api__voting__voting_round_list_impl(port, ptr, rust_vec_len, data_len),
+        179 => wire__crate__api__voting_share_tracking__voting_cancel_all_share_tracking_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        180 => wire__crate__api__voting_share_tracking__voting_cancel_share_tracking_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        181 => wire__crate__api__voting_share_tracking__voting_pending_share_rounds_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        182 => wire__crate__api__voting__voting_round_list_impl(port, ptr, rust_vec_len, data_len),
+        183 => wire__crate__api__voting__voting_save_ballot_impl(port, ptr, rust_vec_len, data_len),
+        184 => wire__crate__api__voting_share_tracking__voting_start_share_tracking_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
         _ => unreachable!(),
     }
 }
@@ -10659,6 +10925,27 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::account::TxSpend>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::voting_share_tracking::VotingPendingShareRound {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.round_id.into_into_dart().into_dart(),
+            self.session_json.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::api::voting_share_tracking::VotingPendingShareRound
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::voting_share_tracking::VotingPendingShareRound>
+    for crate::api::voting_share_tracking::VotingPendingShareRound
+{
+    fn into_into_dart(self) -> crate::api::voting_share_tracking::VotingPendingShareRound {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::voting::VotingProposalListItem {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -10691,6 +10978,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::voting::VotingRoundListItem {
             self.bundle_count.into_into_dart().into_dart(),
             self.action.into_into_dart().into_dart(),
             self.proposals.into_into_dart().into_dart(),
+            self.helper_urls.into_into_dart().into_dart(),
+            self.vote_end_time.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -11430,6 +11719,18 @@ impl SseEncode for Vec<crate::api::account::TxSpend> {
         <i32>::sse_encode(self.len() as _, serializer);
         for item in self {
             <crate::api::account::TxSpend>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::api::voting_share_tracking::VotingPendingShareRound> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::api::voting_share_tracking::VotingPendingShareRound>::sse_encode(
+                item, serializer,
+            );
         }
     }
 }
@@ -12185,6 +12486,14 @@ impl SseEncode for [usize; 4] {
     }
 }
 
+impl SseEncode for crate::api::voting_share_tracking::VotingPendingShareRound {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.round_id, serializer);
+        <Option<String>>::sse_encode(self.session_json, serializer);
+    }
+}
+
 impl SseEncode for crate::api::voting::VotingProposalListItem {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -12204,6 +12513,8 @@ impl SseEncode for crate::api::voting::VotingRoundListItem {
         <u32>::sse_encode(self.bundle_count, serializer);
         <String>::sse_encode(self.action, serializer);
         <Vec<crate::api::voting::VotingProposalListItem>>::sse_encode(self.proposals, serializer);
+        <Vec<String>>::sse_encode(self.helper_urls, serializer);
+        <Option<u64>>::sse_encode(self.vote_end_time, serializer);
     }
 }
 

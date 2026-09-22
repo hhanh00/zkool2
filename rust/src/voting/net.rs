@@ -15,6 +15,11 @@ pub struct ServerRound {
     pub round_id: String,
     pub title: Option<String>,
     pub status: serde_json::Value,
+    /// Absent when the overview omits it. Share tracking then polls without
+    /// ever classifying a share overdue or stopping at a boundary, rather
+    /// than costing the round list an extra per-round request to find out.
+    #[serde(default)]
+    pub vote_end_time: Option<u64>,
     pub proposals: Vec<ServerProposal>,
 }
 
