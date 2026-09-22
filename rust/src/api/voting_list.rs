@@ -7,7 +7,17 @@ use anyhow::{anyhow, ensure, Result};
 use flutter_rust_bridge::frb;
 use serde::{Deserialize, Serialize};
 
-use crate::{api::coin::Coin, voting};
+use crate::{api::coin::Coin, voting, voting::sidecar::VotingSidecar};
+
+fn voting_network(c: &Coin) -> Result<zcash_voting::Network> {
+    match c.coin {
+        0 => Ok(zcash_voting::Network::Mainnet),
+        1 => Ok(zcash_voting::Network::Testnet),
+        2 => Ok(zcash_voting::Network::Regtest),
+        3 => Err(anyhow!("voting is not supported on the ZSA network")),
+        _ => Err(anyhow!("unsupported wallet network {}", c.coin)),
+    }
+}
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -160,6 +170,18 @@ pub async fn voting_round_list(c: &Coin) -> Result<Vec<VotingRoundListItem>> {
             })
         })
         .collect()
+}
+
+/// Parses a completed UI ballot as fork `DraftVote` JSON and stores its
+/// durable choices in the wallet's voting sidecar. A skipped proposal is
+/// encoded as `choice == num_options` by the UI.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_save_ballot(round_id: &str, drafts_json: &str, c: &Coin) -> Result<()> {
+    let drafts = serde_json::from_str(drafts_json)?;
+    let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet_id(c).await?).await?;
+    sidecar
+        .save_ballot(round_id.to_owned(), voting_network(c)?, drafts)
+        .await
 }
 
 #[cfg(test)]

@@ -2,12 +2,26 @@
 //! policy for idempotent GETs.
 
 use anyhow::{anyhow, Result};
-use http_body_util::{BodyExt, Empty};
-use hyper::{body::Bytes, rt::{Read, ReadBufCursor, Write}, Request, Uri};
+use http_body_util::{BodyExt, Full};
+use hyper::{
+    body::Bytes,
+    rt::{Read, ReadBufCursor, Write},
+    Method, Request, Uri,
+};
 use hyper_rustls::HttpsConnectorBuilder;
-use hyper_util::{client::legacy::{Client as HyperClient, connect::{Connected, Connection}}, rt::{TokioExecutor, TokioIo}};
+use hyper_util::{
+    client::legacy::{
+        connect::{Connected, Connection},
+        Client as HyperClient,
+    },
+    rt::{TokioExecutor, TokioIo},
+};
 use rand::Rng;
-use std::{pin::Pin, task::{Context, Poll}, time::Duration};
+use std::{
+    pin::Pin,
+    task::{Context, Poll},
+    time::Duration,
+};
 use tokio::time::sleep;
 use tower::service_fn;
 
@@ -19,6 +33,7 @@ use tower::service_fn;
 pub struct TorHttpResponse {
     pub status: u16,
     pub body: Vec<u8>,
+    pub content_type: Option<String>,
 }
 
 /// Gives Arti's async stream the connection metadata Hyper's pooled client
@@ -66,10 +81,26 @@ impl Write for TorConnection {
 /// It is the transport primitive used when a caller has selected Tor. It
 /// keeps DNS resolution inside Tor and applies the deadline to connect,
 /// request, and body read.
-pub async fn tor_get(url: &str, timeout: Duration) -> Result<TorHttpResponse> {
+pub async fn tor_request(
+    method: Method,
+    url: &str,
+    body: Vec<u8>,
+    headers: &[(String, String)],
+    timeout: Duration,
+    max_response_bytes: usize,
+) -> Result<TorHttpResponse> {
     let uri: Uri = url.parse()?;
-    let host = uri.host().ok_or_else(|| anyhow!("HTTP URL has no host"))?.to_owned();
-    let port = uri.port_u16().unwrap_or_else(|| if uri.scheme_str() == Some("https") { 443 } else { 80 });
+    let host = uri
+        .host()
+        .ok_or_else(|| anyhow!("HTTP URL has no host"))?
+        .to_owned();
+    let port = uri.port_u16().unwrap_or_else(|| {
+        if uri.scheme_str() == Some("https") {
+            443
+        } else {
+            80
+        }
+    });
     let connector = service_fn(move |_uri: Uri| {
         let host = host.clone();
         async move {
@@ -84,16 +115,55 @@ pub async fn tor_get(url: &str, timeout: Duration) -> Result<TorHttpResponse> {
         .enable_http1()
         .enable_http2()
         .wrap_connector(connector);
-    let client: HyperClient<_, Empty<Bytes>> = HyperClient::builder(TokioExecutor::new()).build(https);
-    let request = Request::get(uri).body(Empty::new())?;
+    let client: HyperClient<_, Full<Bytes>> =
+        HyperClient::builder(TokioExecutor::new()).build(https);
+    let mut request = Request::builder().method(method).uri(uri);
+    for (name, value) in headers {
+        request = request.header(name, value);
+    }
+    let request = request.body(Full::new(Bytes::from(body)))?;
     let response = tokio::time::timeout(timeout, client.request(request))
         .await
         .map_err(|_| anyhow!("Tor HTTP request timed out"))??;
     let status = response.status().as_u16();
-    let collected = tokio::time::timeout(timeout, response.into_body().collect())
+    let content_type = response
+        .headers()
+        .get(hyper::header::CONTENT_TYPE)
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned);
+    if response
+        .headers()
+        .get(hyper::header::CONTENT_LENGTH)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| value.parse::<usize>().ok())
+        .is_some_and(|length| length > max_response_bytes)
+    {
+        return Err(anyhow!("Tor HTTP response exceeds the body limit"));
+    }
+    let mut response_body = response.into_body();
+    let mut response_bytes = Vec::new();
+    while let Some(frame) = tokio::time::timeout(timeout, response_body.frame())
         .await
-        .map_err(|_| anyhow!("Tor HTTP response body timed out"))??;
-    Ok(TorHttpResponse { status, body: collected.to_bytes().to_vec() })
+        .map_err(|_| anyhow!("Tor HTTP response body timed out"))?
+    {
+        let frame = frame?;
+        if let Some(chunk) = frame.data_ref() {
+            if response_bytes.len().saturating_add(chunk.len()) > max_response_bytes {
+                return Err(anyhow!("Tor HTTP response exceeds the body limit"));
+            }
+            response_bytes.extend_from_slice(chunk);
+        }
+    }
+    Ok(TorHttpResponse {
+        status,
+        body: response_bytes,
+        content_type,
+    })
+}
+
+/// Performs a regular HTTP(S) GET over an isolated Arti circuit.
+pub async fn tor_get(url: &str, timeout: Duration) -> Result<TorHttpResponse> {
+    tor_request(Method::GET, url, Vec::new(), &[], timeout, usize::MAX).await
 }
 
 /// Retry policy for idempotent GETs: up to [RetryPolicy::attempts] total
