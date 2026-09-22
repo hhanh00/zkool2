@@ -351,6 +351,8 @@ mixin _$VotingRoundListItem {
   int get bundleCount;
   String get action;
   List<VotingProposalListItem> get proposals;
+  List<String> get helperUrls;
+  BigInt? get voteEndTime;
 
   /// Create a copy of VotingRoundListItem
   /// with the given fields replaced by the non-null parameter values.
@@ -373,7 +375,11 @@ mixin _$VotingRoundListItem {
             (identical(other.bundleCount, bundleCount) ||
                 other.bundleCount == bundleCount) &&
             (identical(other.action, action) || other.action == action) &&
-            const DeepCollectionEquality().equals(other.proposals, proposals));
+            const DeepCollectionEquality().equals(other.proposals, proposals) &&
+            const DeepCollectionEquality()
+                .equals(other.helperUrls, helperUrls) &&
+            (identical(other.voteEndTime, voteEndTime) ||
+                other.voteEndTime == voteEndTime));
   }
 
   @override
@@ -385,11 +391,13 @@ mixin _$VotingRoundListItem {
       snapshotHeight,
       bundleCount,
       action,
-      const DeepCollectionEquality().hash(proposals));
+      const DeepCollectionEquality().hash(proposals),
+      const DeepCollectionEquality().hash(helperUrls),
+      voteEndTime);
 
   @override
   String toString() {
-    return 'VotingRoundListItem(roundId: $roundId, title: $title, status: $status, snapshotHeight: $snapshotHeight, bundleCount: $bundleCount, action: $action, proposals: $proposals)';
+    return 'VotingRoundListItem(roundId: $roundId, title: $title, status: $status, snapshotHeight: $snapshotHeight, bundleCount: $bundleCount, action: $action, proposals: $proposals, helperUrls: $helperUrls, voteEndTime: $voteEndTime)';
   }
 }
 
@@ -406,7 +414,9 @@ abstract mixin class $VotingRoundListItemCopyWith<$Res> {
       BigInt? snapshotHeight,
       int bundleCount,
       String action,
-      List<VotingProposalListItem> proposals});
+      List<VotingProposalListItem> proposals,
+      List<String> helperUrls,
+      BigInt? voteEndTime});
 }
 
 /// @nodoc
@@ -429,6 +439,8 @@ class _$VotingRoundListItemCopyWithImpl<$Res>
     Object? bundleCount = null,
     Object? action = null,
     Object? proposals = null,
+    Object? helperUrls = null,
+    Object? voteEndTime = freezed,
   }) {
     return _then(_self.copyWith(
       roundId: null == roundId
@@ -459,6 +471,14 @@ class _$VotingRoundListItemCopyWithImpl<$Res>
           ? _self.proposals
           : proposals // ignore: cast_nullable_to_non_nullable
               as List<VotingProposalListItem>,
+      helperUrls: null == helperUrls
+          ? _self.helperUrls
+          : helperUrls // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      voteEndTime: freezed == voteEndTime
+          ? _self.voteEndTime
+          : voteEndTime // ignore: cast_nullable_to_non_nullable
+              as BigInt?,
     ));
   }
 }
@@ -561,7 +581,9 @@ extension VotingRoundListItemPatterns on VotingRoundListItem {
             BigInt? snapshotHeight,
             int bundleCount,
             String action,
-            List<VotingProposalListItem> proposals)?
+            List<VotingProposalListItem> proposals,
+            List<String> helperUrls,
+            BigInt? voteEndTime)?
         $default, {
     required TResult orElse(),
   }) {
@@ -575,7 +597,9 @@ extension VotingRoundListItemPatterns on VotingRoundListItem {
             _that.snapshotHeight,
             _that.bundleCount,
             _that.action,
-            _that.proposals);
+            _that.proposals,
+            _that.helperUrls,
+            _that.voteEndTime);
       case _:
         return orElse();
     }
@@ -603,7 +627,9 @@ extension VotingRoundListItemPatterns on VotingRoundListItem {
             BigInt? snapshotHeight,
             int bundleCount,
             String action,
-            List<VotingProposalListItem> proposals)
+            List<VotingProposalListItem> proposals,
+            List<String> helperUrls,
+            BigInt? voteEndTime)
         $default,
   ) {
     final _that = this;
@@ -616,7 +642,9 @@ extension VotingRoundListItemPatterns on VotingRoundListItem {
             _that.snapshotHeight,
             _that.bundleCount,
             _that.action,
-            _that.proposals);
+            _that.proposals,
+            _that.helperUrls,
+            _that.voteEndTime);
     }
   }
 
@@ -641,7 +669,9 @@ extension VotingRoundListItemPatterns on VotingRoundListItem {
             BigInt? snapshotHeight,
             int bundleCount,
             String action,
-            List<VotingProposalListItem> proposals)?
+            List<VotingProposalListItem> proposals,
+            List<String> helperUrls,
+            BigInt? voteEndTime)?
         $default,
   ) {
     final _that = this;
@@ -654,7 +684,9 @@ extension VotingRoundListItemPatterns on VotingRoundListItem {
             _that.snapshotHeight,
             _that.bundleCount,
             _that.action,
-            _that.proposals);
+            _that.proposals,
+            _that.helperUrls,
+            _that.voteEndTime);
       case _:
         return null;
     }
@@ -671,8 +703,11 @@ class _VotingRoundListItem implements VotingRoundListItem {
       this.snapshotHeight,
       required this.bundleCount,
       required this.action,
-      required final List<VotingProposalListItem> proposals})
-      : _proposals = proposals;
+      required final List<VotingProposalListItem> proposals,
+      required final List<String> helperUrls,
+      this.voteEndTime})
+      : _proposals = proposals,
+        _helperUrls = helperUrls;
 
   @override
   final String roundId;
@@ -693,6 +728,17 @@ class _VotingRoundListItem implements VotingRoundListItem {
     // ignore: implicit_dynamic_type
     return EqualUnmodifiableListView(_proposals);
   }
+
+  final List<String> _helperUrls;
+  @override
+  List<String> get helperUrls {
+    if (_helperUrls is EqualUnmodifiableListView) return _helperUrls;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_helperUrls);
+  }
+
+  @override
+  final BigInt? voteEndTime;
 
   /// Create a copy of VotingRoundListItem
   /// with the given fields replaced by the non-null parameter values.
@@ -717,7 +763,11 @@ class _VotingRoundListItem implements VotingRoundListItem {
                 other.bundleCount == bundleCount) &&
             (identical(other.action, action) || other.action == action) &&
             const DeepCollectionEquality()
-                .equals(other._proposals, _proposals));
+                .equals(other._proposals, _proposals) &&
+            const DeepCollectionEquality()
+                .equals(other._helperUrls, _helperUrls) &&
+            (identical(other.voteEndTime, voteEndTime) ||
+                other.voteEndTime == voteEndTime));
   }
 
   @override
@@ -729,11 +779,13 @@ class _VotingRoundListItem implements VotingRoundListItem {
       snapshotHeight,
       bundleCount,
       action,
-      const DeepCollectionEquality().hash(_proposals));
+      const DeepCollectionEquality().hash(_proposals),
+      const DeepCollectionEquality().hash(_helperUrls),
+      voteEndTime);
 
   @override
   String toString() {
-    return 'VotingRoundListItem(roundId: $roundId, title: $title, status: $status, snapshotHeight: $snapshotHeight, bundleCount: $bundleCount, action: $action, proposals: $proposals)';
+    return 'VotingRoundListItem(roundId: $roundId, title: $title, status: $status, snapshotHeight: $snapshotHeight, bundleCount: $bundleCount, action: $action, proposals: $proposals, helperUrls: $helperUrls, voteEndTime: $voteEndTime)';
   }
 }
 
@@ -752,7 +804,9 @@ abstract mixin class _$VotingRoundListItemCopyWith<$Res>
       BigInt? snapshotHeight,
       int bundleCount,
       String action,
-      List<VotingProposalListItem> proposals});
+      List<VotingProposalListItem> proposals,
+      List<String> helperUrls,
+      BigInt? voteEndTime});
 }
 
 /// @nodoc
@@ -775,6 +829,8 @@ class __$VotingRoundListItemCopyWithImpl<$Res>
     Object? bundleCount = null,
     Object? action = null,
     Object? proposals = null,
+    Object? helperUrls = null,
+    Object? voteEndTime = freezed,
   }) {
     return _then(_VotingRoundListItem(
       roundId: null == roundId
@@ -805,6 +861,14 @@ class __$VotingRoundListItemCopyWithImpl<$Res>
           ? _self._proposals
           : proposals // ignore: cast_nullable_to_non_nullable
               as List<VotingProposalListItem>,
+      helperUrls: null == helperUrls
+          ? _self._helperUrls
+          : helperUrls // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      voteEndTime: freezed == voteEndTime
+          ? _self.voteEndTime
+          : voteEndTime // ignore: cast_nullable_to_non_nullable
+              as BigInt?,
     ));
   }
 }

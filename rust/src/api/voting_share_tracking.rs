@@ -5,11 +5,36 @@ use std::path::PathBuf;
 use anyhow::Result;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     api::{coin::Coin, voting::wallet_id},
     voting::sidecar::VotingSidecar,
 };
+
+/// A round whose persisted helper shares need a foreground retry worker.
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct VotingPendingShareRound {
+    pub round_id: String,
+    pub session_json: Option<String>,
+}
+
+/// Lists the current wallet's durable share-recovery work. This is empty when
+/// resuming the app has nothing to do.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_pending_share_rounds(c: &Coin) -> Result<Vec<VotingPendingShareRound>> {
+    let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet_id(c).await?).await?;
+    Ok(sidecar
+        .pending_share_rounds()
+        .await?
+        .into_iter()
+        .map(|round| VotingPendingShareRound {
+            round_id: round.round_id,
+            session_json: round.session_json,
+        })
+        .collect())
+}
 
 /// Starts durable helper-share tracking for a round. The caller supplies the
 /// freshly resolved helper fleet and vote-end boundary; the sidecar supplies
