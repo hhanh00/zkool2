@@ -10,13 +10,17 @@
 //! keys and Merkle witnesses, so only the caller-supplied half of the crate's
 //! API is used here.
 
-use std::sync::Arc;
 use std::{
+    collections::HashMap,
     path::{Path, PathBuf},
-    time::Duration,
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        Arc, LazyLock, Mutex,
+    },
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use anyhow::Result;
+use anyhow::{ensure, Result};
 use futures::StreamExt;
 use zcash_voting::delegate::{ensure_round_context, DelegationLwdInputs};
 use zcash_voting::prelude::{
@@ -24,8 +28,30 @@ use zcash_voting::prelude::{
     NoteInfo, PreparedDelegationBundle, VotingDb, VotingError, WitnessData,
 };
 use zcash_voting::{
-    HelperFuture, HelperResponse, HelperTransport, HelperTransportError, MAX_HELPER_RESPONSE_BYTES,
+    ChainSubmissionControl, HelperClient, HelperFuture, HelperHealth, HelperResponse,
+    HelperTransport, HelperTransportError, NoopShareTrackingReporter, ShareTrackingDriver,
+    ShareTrackingHostContext, ShareTrackingHostSourceBridge, MAX_HELPER_RESPONSE_BYTES,
 };
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+struct ShareTrackerKey {
+    wallet_id: String,
+    round_id: String,
+}
+
+#[derive(Clone)]
+struct ActiveShareTracker {
+    generation: u64,
+    control: ChainSubmissionControl,
+}
+
+/// Live retry workers are process-local: their durable work queue is in the
+/// voting sidecar, so a process restart simply discovers it again. The map is
+/// keyed by both wallet and round so a wallet switch cannot affect another
+/// wallet's retry worker.
+static ACTIVE_SHARE_TRACKERS: LazyLock<Mutex<HashMap<ShareTrackerKey, ActiveShareTracker>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+static NEXT_SHARE_TRACKER_GENERATION: AtomicU64 = AtomicU64::new(1);
 
 /// Routes voting-helper HTTP requests through zkool's selected transport.
 ///
@@ -339,6 +365,113 @@ impl VotingSidecar {
             zcash_voting::share::pending_rounds_for_accounts(db, &[&wallet_id])
         })
         .await
+    }
+
+    /// Starts durable helper-share tracking for one round.
+    ///
+    /// Starting an already-live round is a no-op. A cancelled predecessor is
+    /// replaced, while its SDK admission guard ensures the replacement waits
+    /// for the departing run rather than issuing duplicate helper requests.
+    pub fn start_share_tracking(
+        &self,
+        round_id: String,
+        helper_urls: Vec<String>,
+        vote_end_time_seconds: Option<u64>,
+        transport: u8,
+        proxy: String,
+    ) -> Result<bool> {
+        ensure!(
+            !helper_urls.is_empty(),
+            "share tracking requires at least one helper URL"
+        );
+        let key = ShareTrackerKey {
+            wallet_id: self.db.wallet_id().to_owned(),
+            round_id,
+        };
+        let generation = NEXT_SHARE_TRACKER_GENERATION.fetch_add(1, Ordering::Relaxed);
+        let control = ChainSubmissionControl::new(generation);
+        {
+            let mut active = ACTIVE_SHARE_TRACKERS
+                .lock()
+                .unwrap_or_else(|error| error.into_inner());
+            if active
+                .get(&key)
+                .is_some_and(|tracker| !tracker.control.is_cancelled())
+            {
+                return Ok(false);
+            }
+            active.insert(
+                key.clone(),
+                ActiveShareTracker {
+                    generation,
+                    control: control.clone(),
+                },
+            );
+        }
+
+        let db = Arc::clone(&self.db);
+        tokio::spawn(async move {
+            let client = HelperClient::new(
+                Arc::new(ZkoolHelperTransport::new(transport, proxy)),
+                HelperHealth::default(),
+            );
+            let host = ShareTrackingHostSourceBridge::new(move || ShareTrackingHostContext {
+                configured_helper_urls: helper_urls.clone(),
+                now_seconds: SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs(),
+                vote_end_time_seconds,
+            });
+            ShareTrackingDriver::new(&db, &client, &key.round_id)
+                .run(&host, &control, &NoopShareTrackingReporter::default())
+                .await;
+
+            let mut active = ACTIVE_SHARE_TRACKERS
+                .lock()
+                .unwrap_or_else(|error| error.into_inner());
+            if active
+                .get(&key)
+                .is_some_and(|tracker| tracker.generation == generation)
+            {
+                active.remove(&key);
+            }
+        });
+        Ok(true)
+    }
+
+    /// Cancels one round's tracking run. The SDK wakes any retry wait rather
+    /// than leaving the task alive until its next scheduled pass.
+    pub fn cancel_share_tracking(&self, round_id: &str) -> bool {
+        let key = ShareTrackerKey {
+            wallet_id: self.db.wallet_id().to_owned(),
+            round_id: round_id.to_owned(),
+        };
+        let active = ACTIVE_SHARE_TRACKERS
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        let Some(tracker) = active.get(&key) else {
+            return false;
+        };
+        tracker.control.cancel();
+        true
+    }
+
+    /// Cancels all tracking runs for this wallet, leaving other open wallets
+    /// untouched. Used by app background, lock, wallet switch, and close.
+    pub fn cancel_all_share_tracking(&self) -> usize {
+        let wallet_id = self.db.wallet_id();
+        let active = ACTIVE_SHARE_TRACKERS
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        let mut cancelled = 0;
+        for (key, tracker) in active.iter() {
+            if key.wallet_id == wallet_id && !tracker.control.is_cancelled() {
+                tracker.control.cancel();
+                cancelled += 1;
+            }
+        }
+        cancelled
     }
 
     /// Prepares one delegation bundle from caller-supplied notes and witnesses.
