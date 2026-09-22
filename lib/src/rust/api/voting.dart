@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'voting.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `normalized_status`, `wallet_id`
+// These functions are ignored because they are not marked as `pub`: `normalized_status`, `voting_network`, `wallet_id`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
 
 /// Fetches authenticated server rounds and combines them with sidecar state.
@@ -17,6 +17,16 @@ part 'voting.freezed.dart';
 /// plan from the voting crate.
 Future<List<VotingRoundListItem>> votingRoundList({required Coin c}) =>
     RustLib.instance.api.crateApiVotingVotingRoundList(c: c);
+
+/// Parses a completed UI ballot as fork `DraftVote` JSON and stores its
+/// durable choices in the wallet's voting sidecar. A skipped proposal is
+/// encoded as `choice == num_options` by the UI.
+Future<void> votingSaveBallot(
+        {required String roundId,
+        required String draftsJson,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiVotingVotingSaveBallot(
+        roundId: roundId, draftsJson: draftsJson, c: c);
 
 @freezed
 sealed class VotingProposalListItem with _$VotingProposalListItem {
@@ -37,5 +47,7 @@ sealed class VotingRoundListItem with _$VotingRoundListItem {
     required int bundleCount,
     required String action,
     required List<VotingProposalListItem> proposals,
+    required List<String> helperUrls,
+    BigInt? voteEndTime,
   }) = _VotingRoundListItem;
 }
