@@ -39,7 +39,7 @@ pub struct VotingRoundListItem {
     pub proposals: Vec<VotingProposalListItem>,
 }
 
-async fn wallet_id(c: &Coin) -> Result<String> {
+pub(crate) async fn wallet_id(c: &Coin) -> Result<String> {
     let mut connection = c.get_connection().await?;
     let fingerprint = crate::db::get_account_fingerprint(&mut connection, c.account)
         .await?
