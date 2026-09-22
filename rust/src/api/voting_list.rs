@@ -37,6 +37,13 @@ pub struct VotingRoundListItem {
     pub bundle_count: u32,
     pub action: String,
     pub proposals: Vec<VotingProposalListItem>,
+    /// The helper fleet resolved for this listing, so opening a round can
+    /// start share tracking without re-resolving the authenticated config.
+    /// The vote servers double as the helper (share) servers.
+    pub helper_urls: Vec<String>,
+    /// Vote-end boundary as the overview reported it, passed straight to
+    /// share tracking. `None` when the server omits it.
+    pub vote_end_time: Option<u64>,
 }
 
 pub(crate) async fn wallet_id(c: &Coin) -> Result<String> {
@@ -167,6 +174,8 @@ pub async fn voting_round_list(c: &Coin) -> Result<Vec<VotingRoundListItem>> {
                 bundle_count: summary.bundle_count,
                 action: action.into(),
                 proposals,
+                helper_urls: servers.clone(),
+                vote_end_time: round.vote_end_time,
             })
         })
         .collect()
