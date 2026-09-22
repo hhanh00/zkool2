@@ -70,7 +70,9 @@ class _VotingRoundPageState extends State<VotingRoundPage> {
                             }
                           : ballotComplete
                               ? () {
-                                  // TODO: Submit or review the completed ballot.
+                                  // TODO(next): serialize selections/skips as
+                                  // DraftVote JSON and hand the completed
+                                  // ballot to the existing voting submission job.
                                 }
                               : null,
                       child: Text(
