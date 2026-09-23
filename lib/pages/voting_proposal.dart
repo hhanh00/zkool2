@@ -32,6 +32,9 @@ class _ProposalOld {
   });
 }
 
+/// AUDIT: No new code should use the `Voting*Old` classes. They remain only
+/// as migration references until the sidecar voting UI replaces them.
+///
 /// Ballot screen: shows the round's proposals, lets the voter choose or skip
 /// each one, persists the draft (props) and the durable ballot intent (voting
 /// DB) on every change, then hands off to the review screen.
@@ -97,10 +100,7 @@ class VotingProposalPageStateOld extends ConsumerState<VotingProposalPageOld> {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       final round = body['round'] as Map<String, dynamic>? ?? {};
       final proposalsJson = round['proposals'] as List<dynamic>? ?? [];
-      _proposals = proposalsJson
-          .map(_parseProposal)
-          .whereType<_ProposalOld>()
-          .toList();
+      _proposals = proposalsJson.map(_parseProposal).whereType<_ProposalOld>().toList();
 
       // Snapshot fields and the round title come from the same response, so
       // they can be shown immediately too.
@@ -109,11 +109,7 @@ class VotingProposalPageStateOld extends ConsumerState<VotingProposalPageOld> {
       final nullifierImtRoot = _find(round, "nullifier_imt_root");
       if (snapshotHeight is int && ncRoot is String && nullifierImtRoot is String) {
         _snapshotHeight = snapshotHeight;
-        _roundName = (_find(round, "title") ??
-                    _find(round, "round_name") ??
-                    _find(round, "name"))
-                ?.toString() ??
-            widget.roundId;
+        _roundName = (_find(round, "title") ?? _find(round, "round_name") ?? _find(round, "name"))?.toString() ?? widget.roundId;
       }
       _loading = false;
       if (mounted) setState(() {});
@@ -125,8 +121,7 @@ class VotingProposalPageStateOld extends ConsumerState<VotingProposalPageOld> {
         // Derive the authenticated round params for delegation_prepare from
         // the cached config + the chain-reported snapshot fields.
         if (snapshotHeight is int && ncRoot is String && nullifierImtRoot is String) {
-          _votingPower =
-              await votingEligibleWeight(snapshotHeight: snapshotHeight, c: c);
+          _votingPower = await votingEligibleWeight(snapshotHeight: snapshotHeight, c: c);
           if (settings.votingConfigUrl.isNotEmpty) {
             _roundParamsJson = await votingRoundParamsJson(
               source: settings.votingConfigUrl,
@@ -145,9 +140,7 @@ class VotingProposalPageStateOld extends ConsumerState<VotingProposalPageOld> {
         // same REST API serves the commitment tree the sync pulls from. Runs
         // unawaited — the sync only warms the process-local tree, and the
         // commit step syncs again if needed.
-        final voteNodeUrl = settings.voteNodeUrl.isNotEmpty
-            ? settings.voteNodeUrl
-            : widget.chainUrl;
+        final voteNodeUrl = settings.voteNodeUrl.isNotEmpty ? settings.voteNodeUrl : widget.chainUrl;
         if (voteNodeUrl.isNotEmpty) {
           unawaited(() async {
             try {
@@ -209,8 +202,7 @@ class VotingProposalPageStateOld extends ConsumerState<VotingProposalPageOld> {
             // vote-sdk option ids come from `index` (omitted = 0 for the
             // first option); fall back to the list position.
             id: (o['index'] is int) ? o['index'] as int : entry.key,
-            label: (o['label'] ?? o['short_title'] ?? o['title'] ?? "Option")
-                .toString(),
+            label: (o['label'] ?? o['short_title'] ?? o['title'] ?? "Option").toString(),
           );
         })
         .whereType<_OptionOld>()
@@ -233,29 +225,42 @@ class VotingProposalPageStateOld extends ConsumerState<VotingProposalPageOld> {
     }
   }
 
-  /// Persists the draft ballot only; durable ballot intents are written by
+  /// Builds and persists the draft ballot only; durable ballot intents are written by
   /// the submission job from these drafts before the cast loop (mirrors
   /// vizor), when the round row already exists in the voting DB.
+  // TODO: Persist ballot drafts in the sidecar voting workflow once the UI is
+  // wired to the sidecar round plan and submission flow.
+  // AUDIT: Voting data must not be stored in zkool's main database. Any
+  // exception must be explicitly documented and reviewed.
   Future<void> _persist() async {
     final c = coinContext.coin;
-    // Draft votes mirror the fork's DraftVote JSON: skipped = choice == num_options.
-    final drafts = _proposals
-        .where((p) => _skipped.contains(p.id) || _choices.containsKey(p.id))
-        .map((p) {
-      final skipped = _skipped.contains(p.id);
-      return {
-        "proposal_id": p.id,
-        "choice": skipped ? p.options.length : _choices[p.id],
-        "num_options": p.options.length,
-        "vc_tree_position": 0,
-        "single_share": false,
-      };
-    }).toList();
+    final drafts = _buildDraftVotes();
     await votingDraftsSave(
       roundId: widget.roundId,
-      draftsJson: jsonEncode(drafts),
+      draftsJson: jsonEncode([
+        for (final draft in drafts)
+          {
+            "proposal_id": draft.proposalId,
+            "choice": draft.choice,
+            "num_options": draft.numOptions,
+          },
+      ]),
       c: c,
     );
+  }
+
+  /// Builds one UI-facing DraftVote for each answered proposal. This only
+  /// records ballot choices; Rust adds commitment metadata when a vote is
+  /// eventually committed.
+  List<DraftVote> _buildDraftVotes() {
+    return _proposals.where((p) => _skipped.contains(p.id) || _choices.containsKey(p.id)).map((p) {
+      final skipped = _skipped.contains(p.id);
+      return DraftVote(
+        proposalId: p.id,
+        choice: skipped ? p.options.length : _choices[p.id]!,
+        numOptions: p.options.length,
+      );
+    }).toList();
   }
 
   @override
@@ -292,9 +297,7 @@ class VotingProposalPageStateOld extends ConsumerState<VotingProposalPageOld> {
               ),
             )
           : _proposals.isEmpty
-              ? (_loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : const Center(child: Text("No proposals found for this round")))
+              ? (_loading ? const Center(child: CircularProgressIndicator()) : const Center(child: Text("No proposals found for this round")))
               : ListView.builder(
                   itemCount: _proposals.length,
                   itemBuilder: (context, i) {
@@ -307,8 +310,7 @@ class VotingProposalPageStateOld extends ConsumerState<VotingProposalPageOld> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Text(p.title,
-                                style: Theme.of(context).textTheme.titleMedium),
+                            Text(p.title, style: Theme.of(context).textTheme.titleMedium),
                             const SizedBox(height: 8),
                             ...p.options.map((o) => RadioListTile<int>(
                                   title: Text(o.label),
@@ -343,39 +345,45 @@ class VotingProposalPageStateOld extends ConsumerState<VotingProposalPageOld> {
       bottomNavigationBar: _loading || _error != null
           ? null
           : SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (_snapshotHeight != null)
-                Text(
-                  "Snapshot height: $_snapshotHeight",
-                  textAlign: TextAlign.center,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_snapshotHeight != null)
+                      Text(
+                        "Snapshot height: $_snapshotHeight",
+                        textAlign: TextAlign.center,
+                      ),
+                    if (_votingPower != null)
+                      Text(
+                        "Voting power: ${formatVotingPower(_votingPower!)}",
+                        textAlign: TextAlign.center,
+                      ),
+                    if (_snapshotHeight != null || _votingPower != null) const SizedBox(height: 8),
+                    FilledButton(
+                      onPressed: allAnswered
+                          ? () async {
+                              await _persistSafe();
+                              if (!mounted) return;
+                              await GoRouter.of(context).pushReplacement(
+                                "/voting/review",
+                                extra: {
+                                  "roundId": widget.roundId,
+                                  "chainUrl": widget.chainUrl,
+                                  "roundParamsJson": _roundParamsJson,
+                                  "roundName": _roundName,
+                                  "snapshotHeight": _snapshotHeight,
+                                },
+                              );
+                            }
+                          : null,
+                      child: const Text("Review answers"),
+                    ),
+                  ],
                 ),
-              if (_votingPower != null)
-                Text(
-                  "Voting power: ${formatVotingPower(_votingPower!)}",
-                  textAlign: TextAlign.center,
-                ),
-              if (_snapshotHeight != null || _votingPower != null)
-                const SizedBox(height: 8),
-              FilledButton(
-                onPressed: allAnswered
-                    ? () => GoRouter.of(context).pushReplacement("/voting/review", extra: {
-                          "roundId": widget.roundId,
-                          "chainUrl": widget.chainUrl,
-                          "roundParamsJson": _roundParamsJson,
-                          "roundName": _roundName,
-                          "snapshotHeight": _snapshotHeight,
-                        })
-                    : null,
-                child: const Text("Review answers"),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }
