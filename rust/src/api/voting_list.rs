@@ -27,6 +27,30 @@ pub struct VotingProposalListItem {
     pub options: Vec<String>,
 }
 
+/// A ballot choice passed by the UI to the vote commitment step.
+/// Skipped proposals must be excluded before committing.
+#[cfg_attr(feature = "flutter", frb(unignore, dart_metadata = ("freezed")))]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DraftVote {
+    pub proposal_id: u32,
+    pub choice: u32,
+    pub num_options: u32,
+}
+
+impl From<DraftVote> for zcash_voting::prelude::DraftVote {
+    fn from(draft: DraftVote) -> Self {
+        Self {
+            proposal_id: draft.proposal_id,
+            choice: draft.choice,
+            num_options: draft.num_options,
+            // These are derived by the Rust voting workflow, not supplied by
+            // the ballot UI.
+            vc_tree_position: 0,
+            single_share: false,
+        }
+    }
+}
+
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VotingRoundListItem {
