@@ -26,11 +26,6 @@ import 'package:zkool/pages/tx_view.dart';
 import 'package:zkool/pages/migrate.dart';
 import 'package:zkool/pages/voting.dart';
 import 'package:zkool/pages/voting_round.dart';
-// import 'package:zkool/pages/voting_proposal.dart';
-// import 'package:zkool/pages/voting_review.dart';
-// import 'package:zkool/pages/voting_confirmation.dart';
-// import 'package:zkool/pages/voting_results.dart';
-// import 'package:zkool/pages/voting_status.dart';
 import 'package:zkool/pages/zsa.dart';
 import 'package:zkool/pages/lwd_select.dart';
 import 'package:zkool/pages/plugin_manager.dart';
@@ -159,74 +154,6 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
             round: state.extra as VotingRoundListItem,
           ),
         ),
-        // Voting workflows remain disabled until their Rust APIs are ported.
-        /*
-        GoRoute(
-          path: '/voting/proposal',
-          builder: (context, state) {
-            final args = state.extra as Map<String, dynamic>;
-            return VotingProposalPageOld(
-              roundId: args['roundId'] as String,
-              chainUrl: args['chainUrl'] as String,
-            );
-          },
-        ),
-        GoRoute(
-          path: '/voting/review',
-          builder: (context, state) {
-            final args = state.extra as Map<String, dynamic>;
-            return VotingReviewPageOld(
-              roundId: args['roundId'] as String,
-              chainUrl: args['chainUrl'] as String,
-              roundParamsJson: args['roundParamsJson'] as String?,
-              roundName: args['roundName'] as String?,
-              snapshotHeight: args['snapshotHeight'] as int?,
-            );
-          },
-        ),
-        GoRoute(
-          path: '/voting/confirmation',
-          builder: (context, state) {
-            final args = state.extra as Map<String, dynamic>;
-            return VotingConfirmationPageOld(
-              roundId: args['roundId'] as String,
-              roundName: args['roundName'] as String?,
-              chainUrl: args['chainUrl'] as String? ?? "",
-            );
-          },
-        ),
-        GoRoute(
-          path: '/voting/results',
-          builder: (context, state) {
-            final args = state.extra as Map<String, dynamic>;
-            return VotingResultsPageOld(
-              roundId: args['roundId'] as String,
-              chainUrl: args['chainUrl'] as String,
-            );
-          },
-        ),
-        GoRoute(
-          path: '/voting/status',
-          builder: (context, state) {
-            final args = state.extra as Map<String, dynamic>;
-            return VotingStatusPageOld(
-              roundId: args['roundId'] as String,
-              chainUrl: args['chainUrl'] as String,
-              pirServerUrl: args['pirServerUrl'] as String,
-              pirLayout: args['pirLayout'] as VotingPirLayout?,
-              roundParamsJson: args['roundParamsJson'] as String?,
-              roundName: args['roundName'] as String?,
-              maxRealNotesPerBundle: args['maxRealNotesPerBundle'] as int?,
-              lightwalletdUrl: args['lightwalletdUrl'] as String?,
-              voteNodeUrl: args['voteNodeUrl'] as String? ?? "",
-              ceremonyStart: args['ceremonyStart'] as int? ?? 0,
-              voteEnd: args['voteEnd'] as int?,
-              shareServerUrls: (args['shareServerUrls'] as List<String>?) ?? const [],
-              singleShare: args['singleShare'] as bool? ?? false,
-            );
-          },
-        ),
-*/
         GoRoute(path: '/zsa', builder: (context, state) => const ZsaHoldingsPage()),
         GoRoute(path: '/zsa/issue', builder: (context, state) => IssueAssetPage(args: state.extra as IssuanceArgs?)),
         GoRoute(path: '/scan_animated_qr', builder: (context, state) => ScanAnimatedQRPage()),
