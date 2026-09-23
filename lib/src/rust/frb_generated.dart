@@ -6137,6 +6137,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  DraftVote dco_decode_draft_vote(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    final arr = raw as List<dynamic>;
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
+    return DraftVote(
+      proposalId: dco_decode_u_32(arr[0]),
+      choice: dco_decode_u_32(arr[1]),
+      numOptions: dco_decode_u_32(arr[2]),
+    );
+  }
+
+  @protected
   ExchangeRate dco_decode_exchange_rate(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -7787,6 +7800,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       default:
         throw UnimplementedError('');
     }
+  }
+
+  @protected
+  DraftVote sse_decode_draft_vote(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    var var_proposalId = sse_decode_u_32(deserializer);
+    var var_choice = sse_decode_u_32(deserializer);
+    var var_numOptions = sse_decode_u_32(deserializer);
+    return DraftVote(
+        proposalId: var_proposalId,
+        choice: var_choice,
+        numOptions: var_numOptions);
   }
 
   @protected
@@ -9735,6 +9760,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_32(10, serializer);
         sse_encode_String(field0, serializer);
     }
+  }
+
+  @protected
+  void sse_encode_draft_vote(DraftVote self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_u_32(self.proposalId, serializer);
+    sse_encode_u_32(self.choice, serializer);
+    sse_encode_u_32(self.numOptions, serializer);
   }
 
   @protected
