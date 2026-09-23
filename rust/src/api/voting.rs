@@ -2347,26 +2347,15 @@ pub async fn voting_sessions(round_ids: Vec<String>, c: &Coin) -> Result<Vec<Vot
     let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
     let mut sessions = Vec::with_capacity(round_ids.len());
     for round_id in round_ids {
-        // Draft proposal ids live in wallet props; read them on the same
-        // connection so the plan sees open proposals (mirrors the Dart
-        // votingSession._draftProposalIds).
-        let draft_ids =
-            match crate::db::get_prop(&mut connection, &format!("voting_drafts:{round_id}")).await?
-            {
-                Some(d) if !d.is_empty() => serde_json::from_str::<Vec<serde_json::Value>>(&d)
-                    .unwrap_or_default()
-                    .iter()
-                    .filter_map(|x| {
-                        x.get("proposal_id")
-                            .and_then(|v| v.as_u64())
-                            .map(|n| n as u32)
-                    })
-                    .filter(|&id| id > 0)
-                    .collect::<Vec<u32>>(),
-                _ => Vec::new(),
-            };
-        let plan = zcash_voting::session::resume_plan(&db, &mut *connection, &round_id, &draft_ids)
-            .await?;
+        let proposal_ids = db
+            .ballot_intents(&mut *connection, &round_id)
+            .await?
+            .into_iter()
+            .map(|intent| intent.proposal_id)
+            .collect::<Vec<_>>();
+        let plan =
+            zcash_voting::session::resume_plan(&db, &mut *connection, &round_id, &proposal_ids)
+                .await?;
         let recovery =
             zcash_voting::recovery::round_snapshot(&db, &mut *connection, &round_id).await?;
         let intents = db.ballot_intents(&mut *connection, &round_id).await?;
