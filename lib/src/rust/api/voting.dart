@@ -10,7 +10,7 @@ import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'voting.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `normalized_status`, `voting_network`, `wallet_id`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `from`
 
 /// Fetches authenticated server rounds and combines them with sidecar state.
 /// The returned action is display-only; execution must obtain a fresh resume
@@ -27,6 +27,17 @@ Future<void> votingSaveBallot(
         required Coin c}) =>
     RustLib.instance.api.crateApiVotingVotingSaveBallot(
         roundId: roundId, draftsJson: draftsJson, c: c);
+
+/// A ballot choice passed by the UI to the vote commitment step.
+/// Skipped proposals must be excluded before committing.
+@freezed
+sealed class DraftVote with _$DraftVote {
+  const factory DraftVote({
+    required int proposalId,
+    required int choice,
+    required int numOptions,
+  }) = _DraftVote;
+}
 
 @freezed
 sealed class VotingProposalListItem with _$VotingProposalListItem {

@@ -13,6 +13,322 @@ part of 'voting.dart';
 T _$identity<T>(T value) => value;
 
 /// @nodoc
+mixin _$DraftVote {
+  int get proposalId;
+  int get choice;
+  int get numOptions;
+
+  /// Create a copy of DraftVote
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $DraftVoteCopyWith<DraftVote> get copyWith =>
+      _$DraftVoteCopyWithImpl<DraftVote>(this as DraftVote, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is DraftVote &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.choice, choice) || other.choice == choice) &&
+            (identical(other.numOptions, numOptions) ||
+                other.numOptions == numOptions));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, proposalId, choice, numOptions);
+
+  @override
+  String toString() {
+    return 'DraftVote(proposalId: $proposalId, choice: $choice, numOptions: $numOptions)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $DraftVoteCopyWith<$Res> {
+  factory $DraftVoteCopyWith(DraftVote value, $Res Function(DraftVote) _then) =
+      _$DraftVoteCopyWithImpl;
+  @useResult
+  $Res call({int proposalId, int choice, int numOptions});
+}
+
+/// @nodoc
+class _$DraftVoteCopyWithImpl<$Res> implements $DraftVoteCopyWith<$Res> {
+  _$DraftVoteCopyWithImpl(this._self, this._then);
+
+  final DraftVote _self;
+  final $Res Function(DraftVote) _then;
+
+  /// Create a copy of DraftVote
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? proposalId = null,
+    Object? choice = null,
+    Object? numOptions = null,
+  }) {
+    return _then(_self.copyWith(
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      choice: null == choice
+          ? _self.choice
+          : choice // ignore: cast_nullable_to_non_nullable
+              as int,
+      numOptions: null == numOptions
+          ? _self.numOptions
+          : numOptions // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [DraftVote].
+extension DraftVotePatterns on DraftVote {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_DraftVote value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _DraftVote() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_DraftVote value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _DraftVote():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_DraftVote value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _DraftVote() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(int proposalId, int choice, int numOptions)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _DraftVote() when $default != null:
+        return $default(_that.proposalId, _that.choice, _that.numOptions);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(int proposalId, int choice, int numOptions) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _DraftVote():
+        return $default(_that.proposalId, _that.choice, _that.numOptions);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(int proposalId, int choice, int numOptions)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _DraftVote() when $default != null:
+        return $default(_that.proposalId, _that.choice, _that.numOptions);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _DraftVote implements DraftVote {
+  const _DraftVote(
+      {required this.proposalId,
+      required this.choice,
+      required this.numOptions});
+
+  @override
+  final int proposalId;
+  @override
+  final int choice;
+  @override
+  final int numOptions;
+
+  /// Create a copy of DraftVote
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$DraftVoteCopyWith<_DraftVote> get copyWith =>
+      __$DraftVoteCopyWithImpl<_DraftVote>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _DraftVote &&
+            (identical(other.proposalId, proposalId) ||
+                other.proposalId == proposalId) &&
+            (identical(other.choice, choice) || other.choice == choice) &&
+            (identical(other.numOptions, numOptions) ||
+                other.numOptions == numOptions));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, proposalId, choice, numOptions);
+
+  @override
+  String toString() {
+    return 'DraftVote(proposalId: $proposalId, choice: $choice, numOptions: $numOptions)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$DraftVoteCopyWith<$Res>
+    implements $DraftVoteCopyWith<$Res> {
+  factory _$DraftVoteCopyWith(
+          _DraftVote value, $Res Function(_DraftVote) _then) =
+      __$DraftVoteCopyWithImpl;
+  @override
+  @useResult
+  $Res call({int proposalId, int choice, int numOptions});
+}
+
+/// @nodoc
+class __$DraftVoteCopyWithImpl<$Res> implements _$DraftVoteCopyWith<$Res> {
+  __$DraftVoteCopyWithImpl(this._self, this._then);
+
+  final _DraftVote _self;
+  final $Res Function(_DraftVote) _then;
+
+  /// Create a copy of DraftVote
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? proposalId = null,
+    Object? choice = null,
+    Object? numOptions = null,
+  }) {
+    return _then(_DraftVote(
+      proposalId: null == proposalId
+          ? _self.proposalId
+          : proposalId // ignore: cast_nullable_to_non_nullable
+              as int,
+      choice: null == choice
+          ? _self.choice
+          : choice // ignore: cast_nullable_to_non_nullable
+              as int,
+      numOptions: null == numOptions
+          ? _self.numOptions
+          : numOptions // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// @nodoc
 mixin _$VotingProposalListItem {
   int get proposalId;
   String get title;
