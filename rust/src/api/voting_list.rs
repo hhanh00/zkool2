@@ -27,30 +27,6 @@ pub struct VotingProposalListItem {
     pub options: Vec<String>,
 }
 
-/// A ballot choice passed by the UI to the vote commitment step.
-/// Skipped proposals must be excluded before committing.
-#[cfg_attr(feature = "flutter", frb(unignore, dart_metadata = ("freezed")))]
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct DraftVote {
-    pub proposal_id: u32,
-    pub choice: u32,
-    pub num_options: u32,
-}
-
-impl From<DraftVote> for zcash_voting::prelude::DraftVote {
-    fn from(draft: DraftVote) -> Self {
-        Self {
-            proposal_id: draft.proposal_id,
-            choice: draft.choice,
-            num_options: draft.num_options,
-            // These are derived by the Rust voting workflow, not supplied by
-            // the ballot UI.
-            vc_tree_position: 0,
-            single_share: false,
-        }
-    }
-}
-
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct VotingRoundListItem {
@@ -205,15 +181,115 @@ pub async fn voting_round_list(c: &Coin) -> Result<Vec<VotingRoundListItem>> {
         .collect()
 }
 
-/// Parses a completed UI ballot as fork `DraftVote` JSON and stores its
-/// durable choices in the wallet's voting sidecar. A skipped proposal is
-/// encoded as `choice == num_options` by the UI.
+/// FRB representation of the sidecar's ballot decision.
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Decision {
+    Choice { choice: u32 },
+    Skipped,
+}
+
+impl From<zcash_voting::session::Decision> for Decision {
+    fn from(decision: zcash_voting::session::Decision) -> Self {
+        match decision {
+            zcash_voting::session::Decision::Choice(choice) => Self::Choice { choice },
+            zcash_voting::session::Decision::Skipped => Self::Skipped,
+        }
+    }
+}
+
+impl From<Decision> for zcash_voting::session::Decision {
+    fn from(decision: Decision) -> Self {
+        match decision {
+            Decision::Choice { choice } => Self::Choice(choice),
+            Decision::Skipped => Self::Skipped,
+        }
+    }
+}
+
+/// A proposal and its saved decision. Missing entries are unanswered.
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+#[derive(Clone, Debug)]
+pub struct VotingSelection {
+    pub proposal_id: u32,
+    pub decision: Decision,
+}
+
+/// Loads selections from the wallet's voting sidecar before submission.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_save_ballot(round_id: &str, drafts_json: &str, c: &Coin) -> Result<()> {
-    let drafts = serde_json::from_str(drafts_json)?;
+pub async fn voting_load_selections(round_id: &str, c: &Coin) -> Result<Vec<VotingSelection>> {
     let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet_id(c).await?).await?;
+    let round_id = round_id.to_owned();
     sidecar
-        .save_ballot(round_id.to_owned(), voting_network(c)?, drafts)
+        .run(move |db| {
+            Ok(db
+                .ballot_intents(&round_id)?
+                .into_iter()
+                .map(|(proposal_id, decision)| VotingSelection {
+                    proposal_id,
+                    decision: decision.into(),
+                })
+                .collect())
+        })
+        .await
+}
+
+/// Saves a selection or skip without submitting a vote.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_save_selection(
+    round_id: &str,
+    proposal_id: u32,
+    decision: Decision,
+    num_options: u32,
+    c: &Coin,
+) -> Result<()> {
+    let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet_id(c).await?).await?;
+    ensure_ballot_round(&sidecar, round_id, c).await?;
+    let network = voting_network(c)?;
+    let round_id = round_id.to_owned();
+    sidecar
+        .run(move |db| {
+            db.set_ballot_intents(
+                &round_id,
+                network,
+                &[(proposal_id, decision.into(), num_options)],
+            )
+        })
+        .await
+}
+
+/// Ballot intents reference a round row, even before delegation is prepared.
+/// Once initialized, editing and reloading selections needs no network.
+async fn ensure_ballot_round(sidecar: &VotingSidecar, round_id: &str, c: &Coin) -> Result<()> {
+    let id = round_id.to_owned();
+    if sidecar.run(move |db| Ok(db.round(&id)?.is_some())).await? {
+        return Ok(());
+    }
+    let mut connection = c.get_connection().await?;
+    let source = crate::db::get_prop(&mut connection, "voting_config_url")
+        .await?
+        .filter(|source| !source.is_empty())
+        .ok_or_else(|| anyhow!("voting configuration is missing"))?;
+    drop(connection);
+    let client = crate::net::http::client(
+        crate::net::http::proxy_url(c.transport, &c.proxy),
+        std::time::Duration::from_secs(15),
+    )?;
+    let config = voting::net::voting_config_resolve(&source, &client).await?;
+    let params = voting::net::fetch_round_params(round_id, &config, &client).await?;
+    let network = voting_network(c)?;
+    sidecar
+        .run(move |db| db.ensure_round(network, &params, None))
+        .await
+}
+
+/// Returns a proposal to unanswered, subject to the voting lifecycle guards.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_clear_selection(round_id: &str, proposal_id: u32, c: &Coin) -> Result<()> {
+    let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet_id(c).await?).await?;
+    let round_id = round_id.to_owned();
+    sidecar
+        .run(move |db| db.clear_ballot_intent(&round_id, proposal_id))
         .await
 }
 

@@ -324,33 +324,47 @@ impl VotingSidecar {
             .await
     }
 
-    /// Atomically persists a completed ballot before execution begins.
-    ///
-    /// The UI represents a skipped proposal using the DraftVote convention
-    /// `choice == num_options`. The sidecar owns the translation to the
-    /// voting crate's durable `Decision`, so a caller cannot accidentally
-    /// write a skipped proposal as a cast vote. The crate validates every
-    /// proposal id and option count, rejects duplicate proposals, and applies
-    /// the entire ballot in one transaction.
+    /// Atomically persists proposal decisions before execution begins.
+    /// Entries contain the proposal id, decision, and declared option count.
     pub async fn save_ballot(
         &self,
         round_id: String,
         network: Network,
-        drafts: Vec<DraftVote>,
+        intents: Vec<(u32, Decision, u32)>,
     ) -> Result<()> {
-        let intents = drafts
-            .into_iter()
-            .map(|draft| {
-                let decision = if draft.choice == draft.num_options {
-                    Decision::Skipped
-                } else {
-                    Decision::Choice(draft.choice)
-                };
-                (draft.proposal_id, decision, draft.num_options)
-            })
-            .collect::<Vec<_>>();
         self.run(move |db| db.set_ballot_intents(&round_id, network, &intents))
             .await
+    }
+
+    /// Converts persisted ballot decisions into vote drafts for the later
+    /// submission workflow. Skipped proposals are omitted; commitment fields
+    /// are filled by the bundle preparation step.
+    pub async fn submit_vote(
+        &self,
+        round_id: String,
+        proposals: Vec<(u32, u32)>,
+    ) -> Result<Vec<DraftVote>> {
+        self.run(move |db| {
+            let decisions = db.ballot_intents(&round_id)?;
+            let mut drafts = Vec::new();
+            for (proposal_id, num_options) in proposals {
+                let Some((_, decision)) = decisions.iter().find(|(id, _)| *id == proposal_id)
+                else {
+                    continue;
+                };
+                if let Decision::Choice(choice) = decision {
+                    drafts.push(DraftVote {
+                        proposal_id,
+                        choice: *choice,
+                        num_options,
+                        vc_tree_position: 0,
+                        single_share: false,
+                    });
+                }
+            }
+            Ok(drafts)
+        })
+        .await
     }
 
     /// Lists this wallet's rounds that still have helper shares awaiting

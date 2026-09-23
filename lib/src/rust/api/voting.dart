@@ -9,8 +9,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'voting.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `normalized_status`, `voting_network`, `wallet_id`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `from`
+// These functions are ignored because they are not marked as `pub`: `ensure_ballot_round`, `normalized_status`, `voting_network`, `wallet_id`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`
 
 /// Fetches authenticated server rounds and combines them with sidecar state.
 /// The returned action is display-only; execution must obtain a fresh resume
@@ -18,25 +18,40 @@ part 'voting.freezed.dart';
 Future<List<VotingRoundListItem>> votingRoundList({required Coin c}) =>
     RustLib.instance.api.crateApiVotingVotingRoundList(c: c);
 
-/// Parses a completed UI ballot as fork `DraftVote` JSON and stores its
-/// durable choices in the wallet's voting sidecar. A skipped proposal is
-/// encoded as `choice == num_options` by the UI.
-Future<void> votingSaveBallot(
-        {required String roundId,
-        required String draftsJson,
-        required Coin c}) =>
-    RustLib.instance.api.crateApiVotingVotingSaveBallot(
-        roundId: roundId, draftsJson: draftsJson, c: c);
+/// Loads selections from the wallet's voting sidecar before submission.
+Future<List<VotingSelection>> votingLoadSelections(
+        {required String roundId, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiVotingVotingLoadSelections(roundId: roundId, c: c);
 
-/// A ballot choice passed by the UI to the vote commitment step.
-/// Skipped proposals must be excluded before committing.
+/// Saves a selection or skip without submitting a vote.
+Future<void> votingSaveSelection(
+        {required String roundId,
+        required int proposalId,
+        required Decision decision,
+        required int numOptions,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiVotingVotingSaveSelection(
+        roundId: roundId,
+        proposalId: proposalId,
+        decision: decision,
+        numOptions: numOptions,
+        c: c);
+
+/// Returns a proposal to unanswered, subject to the voting lifecycle guards.
+Future<void> votingClearSelection(
+        {required String roundId, required int proposalId, required Coin c}) =>
+    RustLib.instance.api.crateApiVotingVotingClearSelection(
+        roundId: roundId, proposalId: proposalId, c: c);
+
 @freezed
-sealed class DraftVote with _$DraftVote {
-  const factory DraftVote({
-    required int proposalId,
+sealed class Decision with _$Decision {
+  const Decision._();
+
+  const factory Decision.choice({
     required int choice,
-    required int numOptions,
-  }) = _DraftVote;
+  }) = Decision_Choice;
+  const factory Decision.skipped() = Decision_Skipped;
 }
 
 @freezed
@@ -61,4 +76,13 @@ sealed class VotingRoundListItem with _$VotingRoundListItem {
     required List<String> helperUrls,
     BigInt? voteEndTime,
   }) = _VotingRoundListItem;
+}
+
+/// A proposal and its saved decision. Missing entries are unanswered.
+@freezed
+sealed class VotingSelection with _$VotingSelection {
+  const factory VotingSelection({
+    required int proposalId,
+    required Decision decision,
+  }) = _VotingSelection;
 }
