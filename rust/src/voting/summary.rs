@@ -45,7 +45,7 @@ impl LocalRoundSummary {
     pub fn action(&self, chain_finished: bool) -> ListAction {
         if chain_finished {
             ListAction::ViewResults
-        } else if self.snapshot_height.is_none() || self.intent_count == 0 {
+        } else if self.intent_count == 0 {
             ListAction::StartVoting
         } else if self.all_decided && (self.choice_count == 0 || self.completed_for_display) {
             ListAction::Review
@@ -78,20 +78,6 @@ pub async fn load_local_summaries(
                 .into_iter()
                 .map(|input| {
                     let proposal_count = input.proposal_ids.len();
-                    let Some(round) = stored.get(&input.round_id) else {
-                        return Ok(LocalRoundSummary {
-                            round_id: input.round_id,
-                            snapshot_height: None,
-                            bundle_count: 0,
-                            intent_count: 0,
-                            proposal_count,
-                            undecided_count: proposal_count,
-                            choice_count: 0,
-                            all_decided: false,
-                            completed_for_display: false,
-                        });
-                    };
-
                     let roster: HashSet<_> = input.proposal_ids.iter().copied().collect();
                     let intents = db.ballot_intents(&input.round_id)?;
                     let intent_count = intents
@@ -104,6 +90,19 @@ pub async fn load_local_summaries(
                             roster.contains(proposal_id) && matches!(decision, Decision::Choice(_))
                         })
                         .count();
+                    let Some(round) = stored.get(&input.round_id) else {
+                        return Ok(LocalRoundSummary {
+                            round_id: input.round_id,
+                            snapshot_height: None,
+                            bundle_count: 0,
+                            intent_count,
+                            proposal_count,
+                            undecided_count: proposal_count - intent_count,
+                            choice_count,
+                            all_decided: intent_count == proposal_count,
+                            completed_for_display: false,
+                        });
+                    };
                     let plan = resume_plan(db, &input.round_id, &input.proposal_ids)?;
 
                     Ok(LocalRoundSummary {
@@ -200,6 +199,63 @@ mod tests {
         assert_eq!(rows[0].proposal_count, 2);
         assert_eq!(rows[0].undecided_count, 2);
         assert_eq!(rows[0].action(false), ListAction::StartVoting);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn selections_before_delegation_can_be_reloaded_changed_and_cleared() -> Result<()> {
+        use zcash_voting::prelude::{Network, VotingDb};
+        let db = VotingDb::open(":memory:")?;
+        db.set_wallet_id("wallet");
+        let other_wallet = db.scoped("other-wallet")?;
+        let round_id = "00".repeat(32);
+        db.ensure_round(
+            Network::Regtest,
+            &zcash_voting::prelude::RoundParams {
+                vote_round_id: round_id.clone(),
+                snapshot_height: 100,
+                ea_pk: vec![0; 32],
+                nc_root: vec![0; 32],
+                nullifier_imt_root: vec![0; 32],
+            },
+            None,
+        )?;
+        let sidecar = VotingSidecar::from_db_for_test(db);
+        sidecar
+            .save_ballot(
+                round_id.clone(),
+                Network::Regtest,
+                vec![
+                    (1, Decision::Choice(0), 2),
+                    (2, Decision::Skipped, 2),
+                ],
+            )
+            .await?;
+        assert!(other_wallet.ballot_intents(&round_id)?.is_empty());
+        let round = round_id.clone();
+        sidecar
+            .run(move |db| {
+                assert_eq!(
+                    db.ballot_intents(&round)?,
+                    vec![(1, Decision::Choice(0)), (2, Decision::Skipped)]
+                );
+                assert_eq!(db.get_bundle_count(&round)?, 0);
+                db.set_ballot_intent(&round, 1, Decision::Choice(1), 2)?;
+                db.clear_ballot_intent(&round, 2)?;
+                assert_eq!(db.ballot_intents(&round)?, vec![(1, Decision::Choice(1))]);
+                Ok(())
+            })
+            .await?;
+        let rows = load_local_summaries(
+            &sidecar,
+            &[RoundInput {
+                round_id,
+                proposal_ids: vec![1, 2],
+            }],
+        )
+        .await?;
+        assert_eq!(rows[0].action(false), ListAction::Resume);
+        assert_eq!(rows[0].undecided_count, 1);
         Ok(())
     }
 

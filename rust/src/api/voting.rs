@@ -9,6 +9,8 @@
 use std::sync::Arc;
 
 use anyhow::{anyhow, Result};
+#[cfg(feature = "flutter")]
+use flutter_rust_bridge::frb;
 use rand_core::{OsRng, RngCore};
 use serde::{Deserialize, Serialize};
 use zcash_voting::prelude::{
@@ -24,8 +26,6 @@ use zcash_voting::round::RoundInfo as ForkRoundInfo;
 use zcash_voting::session::{Decision, NextStep, RoundPlan as ForkRoundPlan};
 use zcash_voting::types::ShareDelegationRecord as ForkShareDelegationRecord;
 use zcash_voting::{Network as VotingNetwork, VotingRoundParams};
-#[cfg(feature = "flutter")]
-use flutter_rust_bridge::frb;
 
 use crate::api::coin::Coin;
 #[cfg(feature = "flutter")]
@@ -234,7 +234,11 @@ impl From<zcash_voting::prelude::DelegationSubmission> for VotingDelegationSubmi
             nf_signed: submission.nf_signed.to_vec(),
             cmx_new: submission.cmx_new.to_vec(),
             gov_comm: submission.gov_comm.to_vec(),
-            gov_nullifiers: submission.gov_nullifiers.into_iter().map(|v| v.to_vec()).collect(),
+            gov_nullifiers: submission
+                .gov_nullifiers
+                .into_iter()
+                .map(|v| v.to_vec())
+                .collect(),
             alpha: submission.alpha.to_vec(),
             vote_round_id: submission.vote_round_id,
             spend_auth_sig: submission.spend_auth_sig.to_vec(),
@@ -448,8 +452,12 @@ async fn prepare_bundle(
     let wallet_network = &c.network();
     let network = voting::voting_network(wallet_network)?;
     let round_params: VotingRoundParams = serde_json::from_str(round_params_json)?;
-    let snapshot_height = u32::try_from(round_params.snapshot_height)
-        .map_err(|_| anyhow!("snapshot height {} does not fit u32", round_params.snapshot_height))?;
+    let snapshot_height = u32::try_from(round_params.snapshot_height).map_err(|_| {
+        anyhow!(
+            "snapshot height {} does not fit u32",
+            round_params.snapshot_height
+        )
+    })?;
 
     let mut client = c.client().await?;
     // The lwd tree-state fetch can take a while (bounded retries); don't hold
@@ -470,9 +478,8 @@ async fn prepare_bundle(
     let identity =
         voting::load_voting_identity(&mut connection, account, network, &lwd.resolved_round_name)
             .await?;
-    let bundle_policy = BundlePolicy::from_optional_max_real_notes_per_bundle(
-        max_real_notes_per_bundle,
-    )?;
+    let bundle_policy =
+        BundlePolicy::from_optional_max_real_notes_per_bundle(max_real_notes_per_bundle)?;
 
     let prepared = voting::prepare_delegation_bundle(
         c.get_pool()?,
@@ -604,14 +611,13 @@ pub async fn delegation_build_submission(
         let mut connection = c.get_connection().await?;
         let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
         let pir_server_url = if pir_server_url.is_empty() {
-            crate::db::get_prop(
-                &mut connection,
-                &format!("voting_round_pir_url:{round_id}"),
-            )
-            .await?
-            .ok_or_else(|| {
-                anyhow!("no saved PIR server URL for round {round_id}; pass pir_server_url once")
-            })?
+            crate::db::get_prop(&mut connection, &format!("voting_round_pir_url:{round_id}"))
+                .await?
+                .ok_or_else(|| {
+                    anyhow!(
+                        "no saved PIR server URL for round {round_id}; pass pir_server_url once"
+                    )
+                })?
         } else {
             crate::db::put_prop(
                 &mut connection,
@@ -647,46 +653,45 @@ pub async fn delegation_build_submission(
             let _ = sink_for_progress.add(p.into());
         }
     }));
-    let (submission, wire_json) =
-        match voting::prove_and_submit_delegation_with_progress(
-            c.get_pool()?,
-            &wallet_id,
-            &prepared,
-            &seed,
-            pczt_bytes,
-            pir_layout.to_fork(),
-            &pir_server_url,
-            progress.clone(),
-        )
-        .await
-        {
-            Ok(v) => v,
-            Err(e) => {
-                // The FRB stream binding runs the call with `unawaited` and
-                // discards the returned future, so a plain `Err` would surface
-                // as an unhandled exception the app can never catch. Deliver
-                // the error through the sink (decoded as AnyhowException on
-                // the Dart stream) and return a benign Ok — the binding
-                // discards this value anyway.
-                let _ = sink.add_error(e);
-                return Ok(VotingDelegationBuild {
-                    submission: VotingDelegationSubmission {
-                        proof: Vec::new(),
-                        rk: Vec::new(),
-                        nf_signed: Vec::new(),
-                        cmx_new: Vec::new(),
-                        gov_comm: Vec::new(),
-                        gov_nullifiers: Vec::new(),
-                        alpha: Vec::new(),
-                        vote_round_id: String::new(),
-                        spend_auth_sig: Vec::new(),
-                        sighash: Vec::new(),
-                        tx1_effects: Vec::new(),
-                    },
-                    wire_json: String::new(),
-                });
-            }
-        };
+    let (submission, wire_json) = match voting::prove_and_submit_delegation_with_progress(
+        c.get_pool()?,
+        &wallet_id,
+        &prepared,
+        &seed,
+        pczt_bytes,
+        pir_layout.to_fork(),
+        &pir_server_url,
+        progress.clone(),
+    )
+    .await
+    {
+        Ok(v) => v,
+        Err(e) => {
+            // The FRB stream binding runs the call with `unawaited` and
+            // discards the returned future, so a plain `Err` would surface
+            // as an unhandled exception the app can never catch. Deliver
+            // the error through the sink (decoded as AnyhowException on
+            // the Dart stream) and return a benign Ok — the binding
+            // discards this value anyway.
+            let _ = sink.add_error(e);
+            return Ok(VotingDelegationBuild {
+                submission: VotingDelegationSubmission {
+                    proof: Vec::new(),
+                    rk: Vec::new(),
+                    nf_signed: Vec::new(),
+                    cmx_new: Vec::new(),
+                    gov_comm: Vec::new(),
+                    gov_nullifiers: Vec::new(),
+                    alpha: Vec::new(),
+                    vote_round_id: String::new(),
+                    spend_auth_sig: Vec::new(),
+                    sighash: Vec::new(),
+                    tx1_effects: Vec::new(),
+                },
+                wire_json: String::new(),
+            });
+        }
+    };
     // The FRB boundary drops this return value (StreamSink params take over),
     // so persist the wire body for `delegation_wire_json` to pick up. This also
     // makes a crash between proving and broadcasting resumable without
@@ -714,13 +719,11 @@ pub async fn delegation_wire_json(
 ) -> Result<Option<String>> {
     let round_id = round_id.to_string();
     let mut connection = c.get_connection().await?;
-    Ok(
-        crate::db::get_prop(
-            &mut connection,
-            &format!("voting_round_delegation_wire:{round_id}:{bundle_index}"),
-        )
-        .await?,
+    Ok(crate::db::get_prop(
+        &mut connection,
+        &format!("voting_round_delegation_wire:{round_id}:{bundle_index}"),
     )
+    .await?)
 }
 
 /// Atomically records a delegation transaction hash with idempotency checks,
@@ -756,7 +759,9 @@ pub async fn delegation_tx_hash(
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
     let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
-    Ok(db.get_delegation_tx_hash(&mut *connection, &round_id, bundle_index).await?)
+    Ok(db
+        .get_delegation_tx_hash(&mut *connection, &round_id, bundle_index)
+        .await?)
 }
 
 // ---------------------------------------------------------------------------
@@ -800,29 +805,6 @@ pub async fn voting_eligible_weight(snapshot_height: u32, c: &Coin) -> Result<u6
     voting::eligible_voting_weight(&mut connection, c.account, snapshot_height).await
 }
 
-/// Persists the draft ballot for a round (props table, wallet-scoped).
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_drafts_save(round_id: &str, drafts_json: &str, c: &Coin) -> Result<()> {
-    let round_id = round_id.to_string();
-    let drafts_json = drafts_json.to_string();
-    let mut connection = c.get_connection().await?;
-    crate::db::put_prop(
-        &mut connection,
-        &format!("voting_drafts:{round_id}"),
-        &drafts_json,
-    )
-    .await?;
-    Ok(())
-}
-
-/// Returns the persisted draft ballot for a round, if any.
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_drafts_load(round_id: &str, c: &Coin) -> Result<Option<String>> {
-    let round_id = round_id.to_string();
-    let mut connection = c.get_connection().await?;
-    Ok(crate::db::get_prop(&mut connection, &format!("voting_drafts:{round_id}")).await?)
-}
-
 /// Commits one bundle's votes with live stage events. Draft votes are
 /// JSON-serialized fork `DraftVote`s; the VAN witness is derived internally
 /// after syncing the vote tree.
@@ -844,19 +826,22 @@ pub async fn voting_commit_with_progress(
     let (wallet_id, hotkey) = {
         let mut connection = c.get_connection().await?;
         let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
-        let hotkey = voting::voting_hotkey_load(
-            &mut connection,
-            voting::voting_network(&c.network())?,
-        )
-        .await?;
+        let hotkey =
+            voting::voting_hotkey_load(&mut connection, voting::voting_network(&c.network())?)
+                .await?;
         // Release the connection before the tree sync + ZK proof, which run
         // for a while; don't hold a pool slot hostage during the long phase
         // (a later internal acquire would queue behind it).
         (wallet_id, hotkey)
     };
-    let witness =
-        voting::vote_van_witness(c.get_pool()?, &wallet_id, &round_id, bundle_index, &vote_node_url)
-            .await?;
+    let witness = voting::vote_van_witness(
+        c.get_pool()?,
+        &wallet_id,
+        &round_id,
+        bundle_index,
+        &vote_node_url,
+    )
+    .await?;
 
     let stages = VoteCommitStageBridge::new({
         let sink_for_stages = sink.clone();
@@ -980,11 +965,13 @@ pub async fn voting_share_unconfirmed(
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
     let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
-    Ok(zcash_voting::share::unconfirmed(&db, &mut *connection, &round_id)
-        .await?
-        .into_iter()
-        .map(Into::into)
-        .collect())
+    Ok(
+        zcash_voting::share::unconfirmed(&db, &mut *connection, &round_id)
+            .await?
+            .into_iter()
+            .map(Into::into)
+            .collect(),
+    )
 }
 
 /// Marks one helper-share record confirmed.
@@ -1065,11 +1052,7 @@ pub async fn voting_share_wire_json(
 /// the latest synced tree height. Requires the round to exist locally (it is
 /// created by the first prepare); callers may ignore failures.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_sync_tree(
-    round_id: &str,
-    vote_node_url: &str,
-    c: &Coin,
-) -> Result<u32> {
+pub async fn voting_sync_tree(round_id: &str, vote_node_url: &str, c: &Coin) -> Result<u32> {
     let account = c.account;
     let round_id = round_id.to_string();
     let vote_node_url = vote_node_url.to_string();
@@ -1120,9 +1103,13 @@ pub async fn voting_share_payloads(
         if vote.phase != zcash_voting::phases::VotePhase::Confirmed {
             continue;
         }
-        let Some(bundle) =
-            zcash_voting::vote::recovery_bundle(&db, &round_id, vote.bundle_index, vote.proposal_id)
-                .await?
+        let Some(bundle) = zcash_voting::vote::recovery_bundle(
+            &db,
+            &round_id,
+            vote.bundle_index,
+            vote.proposal_id,
+        )
+        .await?
         else {
             continue;
         };
@@ -1160,8 +1147,7 @@ pub async fn voting_share_plans(
     single_share: bool,
     _c: &Coin,
 ) -> Result<Vec<VotingSharePlanItem>> {
-    let buffer =
-        zcash_voting::share_policy::last_moment_buffer_seconds(ceremony_start, vote_end);
+    let buffer = zcash_voting::share_policy::last_moment_buffer_seconds(ceremony_start, vote_end);
     let share_count = share_count as usize;
     let required = zcash_voting::share_policy::share_submission_random_bytes_required(
         share_count,
@@ -1216,12 +1202,8 @@ pub async fn voting_share_plan(
     let shares = zcash_voting::share::unconfirmed(&db, &mut *connection, &round_id).await?;
 
     let policy = ShareTimingPolicy::default();
-    let summary = zcash_voting::share_policy::summarize_share_tracking(
-        &shares,
-        now,
-        vote_end,
-        policy,
-    );
+    let summary =
+        zcash_voting::share_policy::summarize_share_tracking(&shares, now, vote_end, policy);
     let next_tracking_delay_secs =
         zcash_voting::share_policy::next_tracking_delay_seconds(&shares, now, policy);
     let last_moment = vote_end.is_some_and(|vote_end| {
@@ -1358,11 +1340,8 @@ pub async fn voting_commit(
     let drafts: Vec<zcash_voting::prelude::DraftVote> = serde_json::from_str(drafts_json)?;
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, c.account).await?;
-    let hotkey = voting::voting_hotkey_load(
-        &mut connection,
-        voting::voting_network(&c.network())?,
-    )
-    .await?;
+    let hotkey =
+        voting::voting_hotkey_load(&mut connection, voting::voting_network(&c.network())?).await?;
 
     let witness = voting::vote_van_witness(
         c.get_pool()?,
@@ -1983,16 +1962,18 @@ impl From<ForkRoundPlan> for VotingRoundPlan {
             hotkey_bound: plan.hotkey_bound,
             completed_vote_artifact: plan.completed_vote_artifact,
             completed_for_display: plan.completed_for_display,
-            completed_vote_display: plan.completed_vote_display.map(|d| VotingCompletedVoteDisplay {
-                choices: d
-                    .choices
-                    .into_iter()
-                    .map(|c| VotingCompletedVoteChoice {
-                        proposal_id: c.proposal_id,
-                        choice: c.choice,
-                    })
-                    .collect(),
-                voted_at: d.voted_at,
+            completed_vote_display: plan.completed_vote_display.map(|d| {
+                VotingCompletedVoteDisplay {
+                    choices: d
+                        .choices
+                        .into_iter()
+                        .map(|c| VotingCompletedVoteChoice {
+                            proposal_id: c.proposal_id,
+                            choice: c.choice,
+                        })
+                        .collect(),
+                    voted_at: d.voted_at,
+                }
             }),
             needs_draft_setup: plan.needs_draft_setup,
             primary_action: plan.primary_action.as_str().to_string(),
@@ -2203,52 +2184,73 @@ pub async fn voting_round_list(
     let servers: Vec<_> = config.vote_servers.iter().map(|s| s.url.clone()).collect();
     let started = std::time::Instant::now();
     let rounds = voting::net::fetch_rounds(&servers, &client).await?;
-    let authenticated_ids: std::collections::HashSet<_> = config.rounds.iter()
-        .map(|round| round.round_id.as_str()).collect();
-    let rounds: Vec<_> = rounds.into_iter()
-        .filter(|round| authenticated_ids.contains(round.round_id.as_str())).collect();
+    let authenticated_ids: std::collections::HashSet<_> = config
+        .rounds
+        .iter()
+        .map(|round| round.round_id.as_str())
+        .collect();
+    let rounds: Vec<_> = rounds
+        .into_iter()
+        .filter(|round| authenticated_ids.contains(round.round_id.as_str()))
+        .collect();
     log::info!("Voting rounds HTTP fetch: {:?}", started.elapsed());
-    let inputs: Vec<_> = rounds.iter().map(|round| voting::summary::RoundInput {
-        round_id: round.round_id.clone(),
-        proposal_ids: round.proposals.iter().map(|p| p.id).collect(),
-    }).collect();
+    let inputs: Vec<_> = rounds
+        .iter()
+        .map(|round| voting::summary::RoundInput {
+            round_id: round.round_id.clone(),
+            proposal_ids: round.proposals.iter().map(|p| p.id).collect(),
+        })
+        .collect();
     let db_started = std::time::Instant::now();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, c.account).await?;
     let _db = voting::open_voting_db(c.get_pool()?, &mut connection, &wallet_id).await?;
-    log::info!("Voting summary DB acquisition + initialization: {:?}", db_started.elapsed());
+    log::info!(
+        "Voting summary DB acquisition + initialization: {:?}",
+        db_started.elapsed()
+    );
     let local = voting::summary::load_local_summaries(&mut connection, &wallet_id, &inputs).await?;
-    let local: std::collections::HashMap<_, _> = local.into_iter()
-        .map(|row| (row.round_id.clone(), row)).collect();
-    rounds.into_iter().map(|round| {
-        let summary = local.get(&round.round_id)
-            .ok_or_else(|| anyhow!("missing local summary for round {}", round.round_id))?;
-        let status = round.status.as_str().map(|s| s.trim().to_lowercase())
-            .unwrap_or_else(|| round.status.to_string());
-        let finished = matches!(status.as_str(), "2" | "3" | "tallying" | "finalized");
-        let action = match summary.action(finished) {
-            voting::summary::ListAction::StartVoting => "start_voting",
-            voting::summary::ListAction::Resume => "resume",
-            voting::summary::ListAction::Review => "review",
-            voting::summary::ListAction::ViewResults => "view_results",
-        }.to_string();
-        Ok(VotingRoundListItem {
-            title: round.display_title(),
-            round_id: round.round_id,
-            status: match status.as_str() {
-                "0" => "unspecified".to_string(),
-                "1" => "active".to_string(),
-                "2" => "tallying".to_string(),
-                "3" => "finalized".to_string(),
-                "4" => "pending".to_string(),
-                "5" => "ceremony_failed".to_string(),
-                _ => status,
-            },
-            snapshot_height: summary.snapshot_height,
-            bundle_count: summary.bundle_count,
-            action,
+    let local: std::collections::HashMap<_, _> = local
+        .into_iter()
+        .map(|row| (row.round_id.clone(), row))
+        .collect();
+    rounds
+        .into_iter()
+        .map(|round| {
+            let summary = local
+                .get(&round.round_id)
+                .ok_or_else(|| anyhow!("missing local summary for round {}", round.round_id))?;
+            let status = round
+                .status
+                .as_str()
+                .map(|s| s.trim().to_lowercase())
+                .unwrap_or_else(|| round.status.to_string());
+            let finished = matches!(status.as_str(), "2" | "3" | "tallying" | "finalized");
+            let action = match summary.action(finished) {
+                voting::summary::ListAction::StartVoting => "start_voting",
+                voting::summary::ListAction::Resume => "resume",
+                voting::summary::ListAction::Review => "review",
+                voting::summary::ListAction::ViewResults => "view_results",
+            }
+            .to_string();
+            Ok(VotingRoundListItem {
+                title: round.display_title(),
+                round_id: round.round_id,
+                status: match status.as_str() {
+                    "0" => "unspecified".to_string(),
+                    "1" => "active".to_string(),
+                    "2" => "tallying".to_string(),
+                    "3" => "finalized".to_string(),
+                    "4" => "pending".to_string(),
+                    "5" => "ceremony_failed".to_string(),
+                    _ => status,
+                },
+                snapshot_height: summary.snapshot_height,
+                bundle_count: summary.bundle_count,
+                action,
+            })
         })
-    }).collect()
+        .collect()
 }
 
 /// Lists rounds persisted in the voting DB for the current wallet.
@@ -2266,13 +2268,18 @@ pub async fn voting_rounds(c: &Coin) -> Result<Vec<VotingRoundInfo>> {
 /// after any restart; empty `next_steps` with `primary_action == "done"` means
 /// the round is complete for this wallet).
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_plan(round_id: &str, proposal_ids: Vec<u32>, c: &Coin) -> Result<VotingRoundPlan> {
+pub async fn voting_plan(
+    round_id: &str,
+    proposal_ids: Vec<u32>,
+    c: &Coin,
+) -> Result<VotingRoundPlan> {
     let account = c.account;
     let round_id = round_id.to_string();
     let mut connection = c.get_connection().await?;
     let wallet_id = voting::voting_wallet_id(&mut connection, account).await?;
     let db = voting::open_voting_db(c.get_pool()?, &mut *connection, &wallet_id).await?;
-    let plan = zcash_voting::session::resume_plan(&db, &mut *connection, &round_id, &proposal_ids).await?;
+    let plan =
+        zcash_voting::session::resume_plan(&db, &mut *connection, &round_id, &proposal_ids).await?;
     Ok(plan.into())
 }
 
@@ -2343,20 +2350,21 @@ pub async fn voting_sessions(round_ids: Vec<String>, c: &Coin) -> Result<Vec<Vot
         // Draft proposal ids live in wallet props; read them on the same
         // connection so the plan sees open proposals (mirrors the Dart
         // votingSession._draftProposalIds).
-        let draft_ids = match crate::db::get_prop(
-            &mut connection,
-            &format!("voting_drafts:{round_id}"),
-        )
-        .await?
-        {
-            Some(d) if !d.is_empty() => serde_json::from_str::<Vec<serde_json::Value>>(&d)
-                .unwrap_or_default()
-                .iter()
-                .filter_map(|x| x.get("proposal_id").and_then(|v| v.as_u64()).map(|n| n as u32))
-                .filter(|&id| id > 0)
-                .collect::<Vec<u32>>(),
-            _ => Vec::new(),
-        };
+        let draft_ids =
+            match crate::db::get_prop(&mut connection, &format!("voting_drafts:{round_id}")).await?
+            {
+                Some(d) if !d.is_empty() => serde_json::from_str::<Vec<serde_json::Value>>(&d)
+                    .unwrap_or_default()
+                    .iter()
+                    .filter_map(|x| {
+                        x.get("proposal_id")
+                            .and_then(|v| v.as_u64())
+                            .map(|n| n as u32)
+                    })
+                    .filter(|&id| id > 0)
+                    .collect::<Vec<u32>>(),
+                _ => Vec::new(),
+            };
         let plan = zcash_voting::session::resume_plan(&db, &mut *connection, &round_id, &draft_ids)
             .await?;
         let recovery =
@@ -2393,8 +2401,13 @@ pub struct VotingChainResponse {
 pub async fn votechain_list_rounds(base_url: &str, c: &Coin) -> Result<VotingChainResponse> {
     let base_url = base_url.to_string();
     let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
-    let (status_code, body, retry_after_secs) = crate::net::votechain::list_rounds(&base_url, proxy).await?;
-    Ok(VotingChainResponse { status_code, body, retry_after_secs })
+    let (status_code, body, retry_after_secs) =
+        crate::net::votechain::list_rounds(&base_url, proxy).await?;
+    Ok(VotingChainResponse {
+        status_code,
+        body,
+        retry_after_secs,
+    })
 }
 
 /// Fetches one round's status (`{ "round": ... }` envelope).
@@ -2409,7 +2422,11 @@ pub async fn votechain_round_status(
     let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
     let (status_code, body, retry_after_secs) =
         crate::net::votechain::round_status(&base_url, &round_id, proxy).await?;
-    Ok(VotingChainResponse { status_code, body, retry_after_secs })
+    Ok(VotingChainResponse {
+        status_code,
+        body,
+        retry_after_secs,
+    })
 }
 
 /// Fetches the round tally envelope.
@@ -2424,7 +2441,11 @@ pub async fn votechain_round_tally(
     let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
     let (status_code, body, retry_after_secs) =
         crate::net::votechain::round_tally(&base_url, &round_id, proxy).await?;
-    Ok(VotingChainResponse { status_code, body, retry_after_secs })
+    Ok(VotingChainResponse {
+        status_code,
+        body,
+        retry_after_secs,
+    })
 }
 
 /// Broadcasts a delegation transaction to the vote chain.
@@ -2439,7 +2460,11 @@ pub async fn votechain_submit_delegation(
     let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
     let (status_code, body, retry_after_secs) =
         crate::net::votechain::submit_delegation(&base_url, &submission_json, proxy).await?;
-    Ok(VotingChainResponse { status_code, body, retry_after_secs })
+    Ok(VotingChainResponse {
+        status_code,
+        body,
+        retry_after_secs,
+    })
 }
 
 /// Broadcasts a vote commitment transaction to the vote chain.
@@ -2454,7 +2479,11 @@ pub async fn votechain_submit_vote(
     let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
     let (status_code, body, retry_after_secs) =
         crate::net::votechain::submit_vote_commitment(&base_url, &submission_json, proxy).await?;
-    Ok(VotingChainResponse { status_code, body, retry_after_secs })
+    Ok(VotingChainResponse {
+        status_code,
+        body,
+        retry_after_secs,
+    })
 }
 
 /// Fetches the on-chain confirmation for a transaction.
@@ -2469,7 +2498,11 @@ pub async fn votechain_tx_confirmation(
     let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
     let (status_code, body, retry_after_secs) =
         crate::net::votechain::tx_confirmation(&base_url, &tx_hash, proxy).await?;
-    Ok(VotingChainResponse { status_code, body, retry_after_secs })
+    Ok(VotingChainResponse {
+        status_code,
+        body,
+        retry_after_secs,
+    })
 }
 
 /// Posts one encrypted share to a helper server.
@@ -2484,7 +2517,11 @@ pub async fn votechain_submit_share(
     let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
     let (status_code, body, retry_after_secs) =
         crate::net::votechain::submit_share(&server_url, &payload_json, proxy).await?;
-    Ok(VotingChainResponse { status_code, body, retry_after_secs })
+    Ok(VotingChainResponse {
+        status_code,
+        body,
+        retry_after_secs,
+    })
 }
 
 /// Resends a previously generated share to a helper server (same endpoint as
@@ -2500,7 +2537,11 @@ pub async fn votechain_resubmit_share(
     let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
     let (status_code, body, retry_after_secs) =
         crate::net::votechain::submit_share(&server_url, &payload_json, proxy).await?;
-    Ok(VotingChainResponse { status_code, body, retry_after_secs })
+    Ok(VotingChainResponse {
+        status_code,
+        body,
+        retry_after_secs,
+    })
 }
 
 /// Checks whether a helper has confirmed a share identified by its nullifier.
@@ -2517,15 +2558,19 @@ pub async fn votechain_share_status(
     let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
     let (status_code, body, retry_after_secs) =
         crate::net::votechain::share_status(&server_url, &round_id, &share_id, proxy).await?;
-    Ok(VotingChainResponse { status_code, body, retry_after_secs })
+    Ok(VotingChainResponse {
+        status_code,
+        body,
+        retry_after_secs,
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use zcash_voting::config::{
-        AuthenticatedRound, ConfigCondition, ConfigConditionKind, PirLayout,
-        ResolvedVotingConfig, ServiceEndpoint, SupportedVersions,
+        AuthenticatedRound, ConfigCondition, ConfigConditionKind, PirLayout, ResolvedVotingConfig,
+        ServiceEndpoint, SupportedVersions,
     };
     use zcash_voting::phases::{DelegationPhase, SharePhase, VotePhase};
     use zcash_voting::prelude::{
@@ -2990,7 +3035,14 @@ mod tests {
             assert_eq!(mirror.share_index, share);
         }
 
-        assert_step(NextStep::Delegate { bundle_index: 1 }, "delegate", 1, 0, 0, 0);
+        assert_step(
+            NextStep::Delegate { bundle_index: 1 },
+            "delegate",
+            1,
+            0,
+            0,
+            0,
+        );
         assert_step(
             NextStep::PollDelegation { bundle_index: 2 },
             "poll_delegation",
@@ -3412,11 +3464,8 @@ mod tests {
             tier1_layers: 3,
             poly_len: 2048,
         };
-        let config = VotingConfig::from_resolved(
-            "https://src".to_string(),
-            &resolved_config(layout),
-
-        );
+        let config =
+            VotingConfig::from_resolved("https://src".to_string(), &resolved_config(layout));
         assert_eq!(config.source, "https://src");
         assert_eq!(config.source_fingerprint, "sf");
         assert_eq!(config.trusted_key_fingerprint, "tf");
@@ -3469,7 +3518,6 @@ mod tests {
         let config = VotingConfig::from_resolved(
             "https://src".to_string(),
             &resolved_config(PirLayout::UNKNOWN),
-
         );
         assert_eq!(config.pir_layout, None);
     }

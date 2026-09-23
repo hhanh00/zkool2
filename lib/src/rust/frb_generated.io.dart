@@ -189,6 +189,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Coin dco_decode_box_autoadd_coin(dynamic raw);
 
   @protected
+  Decision dco_decode_box_autoadd_decision(dynamic raw);
+
+  @protected
   double dco_decode_box_autoadd_f_64(dynamic raw);
 
   @protected
@@ -246,10 +249,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DbAccountPreview dco_decode_db_account_preview(dynamic raw);
 
   @protected
-  DKGStatus dco_decode_dkg_status(dynamic raw);
+  Decision dco_decode_decision(dynamic raw);
 
   @protected
-  DraftVote dco_decode_draft_vote(dynamic raw);
+  DKGStatus dco_decode_dkg_status(dynamic raw);
 
   @protected
   ExchangeRate dco_decode_exchange_rate(dynamic raw);
@@ -388,6 +391,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<VotingRoundListItem> dco_decode_list_voting_round_list_item(dynamic raw);
+
+  @protected
+  List<VotingSelection> dco_decode_list_voting_selection(dynamic raw);
 
   @protected
   List<ZsaHolding> dco_decode_list_zsa_holding(dynamic raw);
@@ -585,6 +591,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   VotingRoundListItem dco_decode_voting_round_list_item(dynamic raw);
 
   @protected
+  VotingSelection dco_decode_voting_selection(dynamic raw);
+
+  @protected
   ZsaHolding dco_decode_zsa_holding(dynamic raw);
 
   @protected
@@ -719,6 +728,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Coin sse_decode_box_autoadd_coin(SseDeserializer deserializer);
 
   @protected
+  Decision sse_decode_box_autoadd_decision(SseDeserializer deserializer);
+
+  @protected
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
 
   @protected
@@ -779,10 +791,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   DbAccountPreview sse_decode_db_account_preview(SseDeserializer deserializer);
 
   @protected
-  DKGStatus sse_decode_dkg_status(SseDeserializer deserializer);
+  Decision sse_decode_decision(SseDeserializer deserializer);
 
   @protected
-  DraftVote sse_decode_draft_vote(SseDeserializer deserializer);
+  DKGStatus sse_decode_dkg_status(SseDeserializer deserializer);
 
   @protected
   ExchangeRate sse_decode_exchange_rate(SseDeserializer deserializer);
@@ -928,6 +940,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<VotingRoundListItem> sse_decode_list_voting_round_list_item(
+      SseDeserializer deserializer);
+
+  @protected
+  List<VotingSelection> sse_decode_list_voting_selection(
       SseDeserializer deserializer);
 
   @protected
@@ -1134,6 +1150,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  VotingSelection sse_decode_voting_selection(SseDeserializer deserializer);
+
+  @protected
   ZsaHolding sse_decode_zsa_holding(SseDeserializer deserializer);
 
   @protected
@@ -1274,6 +1293,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_box_autoadd_coin(Coin self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_decision(Decision self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
 
   @protected
@@ -1340,10 +1362,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       DbAccountPreview self, SseSerializer serializer);
 
   @protected
-  void sse_encode_dkg_status(DKGStatus self, SseSerializer serializer);
+  void sse_encode_decision(Decision self, SseSerializer serializer);
 
   @protected
-  void sse_encode_draft_vote(DraftVote self, SseSerializer serializer);
+  void sse_encode_dkg_status(DKGStatus self, SseSerializer serializer);
 
   @protected
   void sse_encode_exchange_rate(ExchangeRate self, SseSerializer serializer);
@@ -1502,6 +1524,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_voting_round_list_item(
       List<VotingRoundListItem> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_voting_selection(
+      List<VotingSelection> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_zsa_holding(
@@ -1715,6 +1741,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_voting_round_list_item(
       VotingRoundListItem self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_selection(
+      VotingSelection self, SseSerializer serializer);
 
   @protected
   void sse_encode_zsa_holding(ZsaHolding self, SseSerializer serializer);
