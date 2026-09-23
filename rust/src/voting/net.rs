@@ -1,6 +1,6 @@
 //! Voting configuration transport and authentication.
 
-use anyhow::Result;
+use anyhow::{anyhow, ensure, Result};
 use base64::Engine as _;
 
 use crate::net::http;
@@ -134,6 +134,64 @@ pub async fn voting_config_resolve(
     Ok(resolved)
 }
 
+/// Fetches snapshot metadata, binding the authority key to authenticated config.
+pub async fn fetch_round_params(
+    round_id: &str,
+    config: &zcash_voting::config::ResolvedVotingConfig,
+    client: &reqwest::Client,
+) -> Result<zcash_voting::VotingRoundParams> {
+    ensure!(
+        round_id.len() == 64 && round_id.bytes().all(|b| b.is_ascii_hexdigit()),
+        "invalid round id"
+    );
+    ensure!(
+        config
+            .authenticated_rounds
+            .iter()
+            .any(|round| round.round_id == round_id),
+        "round is not authenticated"
+    );
+    let urls: Vec<_> = config
+        .vote_servers
+        .iter()
+        .map(|server| {
+            format!(
+                "{}/shielded-vote/v1/round/{round_id}",
+                server.url.trim_end_matches('/')
+            )
+        })
+        .collect();
+    let response = http::http_get(
+        client,
+        &urls.iter().map(String::as_str).collect::<Vec<_>>(),
+        http::RetryPolicy::default(),
+    )
+    .await?;
+    let body: serde_json::Value = response.json().await?;
+    let round = &body["round"];
+    let snapshot_height = round["snapshot_height"]
+        .as_u64()
+        .or_else(|| round["snapshot_height"].as_str()?.parse().ok())
+        .ok_or_else(|| anyhow!("round snapshot height is missing or invalid"))?;
+    fn root(round: &serde_json::Value, name: &str) -> Result<Vec<u8>> {
+        let value = round[name]
+            .as_str()
+            .ok_or_else(|| anyhow!("round {name} is missing"))?;
+        let bytes = if value.len() == 64 && value.bytes().all(|b| b.is_ascii_hexdigit()) {
+            hex::decode(value)?
+        } else {
+            base64::engine::general_purpose::STANDARD.decode(value)?
+        };
+        Ok(bytes)
+    }
+    Ok(config.trusted_voting_round_params(
+        round_id.to_owned(),
+        snapshot_height,
+        root(round, "nc_root")?,
+        root(round, "nullifier_imt_root")?,
+    )?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{fetch_rounds, voting_config_resolve};
@@ -169,6 +227,80 @@ mod tests {
             }))
             .is_err()
         );
+    }
+
+    #[tokio::test]
+    async fn ballot_round_params_use_authenticated_authority() {
+        use zcash_voting::config::{
+            AuthenticatedRound, ResolvedVotingConfig, ServiceEndpoint, SupportedVersions,
+        };
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let round_id = "01".repeat(32);
+        let config = ResolvedVotingConfig {
+            source_fingerprint: String::new(),
+            trusted_key_fingerprint: String::new(),
+            dynamic_config_fingerprint: String::new(),
+            vote_servers: vec![ServiceEndpoint {
+                url,
+                label: String::new(),
+            }],
+            pir_endpoints: vec![],
+            pir_layout: Default::default(),
+            supported_versions: SupportedVersions {
+                pir: vec![],
+                vote_protocol: String::new(),
+                tally: String::new(),
+                vote_server: String::new(),
+            },
+            authenticated_rounds: vec![AuthenticatedRound {
+                round_id: round_id.clone(),
+                ea_pk: vec![7; 32],
+            }],
+            skipped_round_ids: vec![],
+            conditions: vec![],
+        };
+        let requested_id = round_id.clone();
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = Vec::new();
+            while !request.ends_with(b"\r\n\r\n") {
+                request.push(socket.read_u8().await.unwrap());
+            }
+            assert!(request.starts_with(
+                format!("GET /shielded-vote/v1/round/{requested_id} HTTP/1.1\r\n").as_bytes()
+            ));
+            let body = serde_json::json!({"round": {
+                "snapshot_height": "123", "nc_root": "02".repeat(32),
+                "nullifier_imt_root": "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM=",
+                "ea_pk": "04".repeat(32)
+            }})
+            .to_string();
+            socket
+                .write_all(
+                    format!(
+                        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                        body.len()
+                    )
+                    .as_bytes(),
+                )
+                .await
+                .unwrap();
+        });
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let params = super::fetch_round_params(&round_id, &config, &client)
+            .await
+            .unwrap();
+        assert_eq!(params.ea_pk, vec![7; 32]);
+        assert_eq!(params.snapshot_height, 123);
+        assert_eq!(params.nc_root, vec![2; 32]);
+        assert_eq!(params.nullifier_imt_root, vec![3; 32]);
+        assert!(
+            super::fetch_round_params(&"ff".repeat(32), &config, &client)
+                .await
+                .is_err()
+        );
+        server.await.unwrap();
     }
 
     #[tokio::test]
