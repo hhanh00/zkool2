@@ -7652,6 +7652,20 @@ impl SseDecode for crate::api::frost::DKGStatus {
     }
 }
 
+impl SseDecode for crate::api::voting::DraftVote {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_proposalId = <u32>::sse_decode(deserializer);
+        let mut var_choice = <u32>::sse_decode(deserializer);
+        let mut var_numOptions = <u32>::sse_decode(deserializer);
+        return crate::api::voting::DraftVote {
+            proposal_id: var_proposalId,
+            choice: var_choice,
+            num_options: var_numOptions,
+        };
+    }
+}
+
 impl SseDecode for crate::api::network::ExchangeRate {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -9937,6 +9951,25 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::frost::DKGStatus>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::voting::DraftVote {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.proposal_id.into_into_dart().into_dart(),
+            self.choice.into_into_dart().into_dart(),
+            self.num_options.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::voting::DraftVote {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::voting::DraftVote>
+    for crate::api::voting::DraftVote
+{
+    fn into_into_dart(self) -> crate::api::voting::DraftVote {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::network::ExchangeRate {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -11333,6 +11366,15 @@ impl SseEncode for crate::api::frost::DKGStatus {
                 unimplemented!("");
             }
         }
+    }
+}
+
+impl SseEncode for crate::api::voting::DraftVote {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <u32>::sse_encode(self.proposal_id, serializer);
+        <u32>::sse_encode(self.choice, serializer);
+        <u32>::sse_encode(self.num_options, serializer);
     }
 }
 
