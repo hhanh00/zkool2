@@ -54,6 +54,50 @@ fn delegation_identity(
     })
 }
 
+/// Parses a JSON value as Unix seconds; the chain serves ints with string
+/// fallbacks.
+fn json_unix_seconds(value: &serde_json::Value) -> Option<u64> {
+    value
+        .as_u64()
+        .or_else(|| value.as_str().and_then(|raw| raw.parse().ok()))
+}
+
+/// Fetches round timing from the vote chain status endpoint, rotating
+/// through equivalent servers.
+///
+/// Returns `(ceremony_start, vote_end)` when the chain publishes both; the
+/// driver needs them to detect the last-moment share window. Missing timing
+/// degrades to share tracking without boundaries rather than failing the run.
+async fn fetch_round_timing(
+    servers: &[String],
+    round_id: &str,
+    c: &Coin,
+) -> Result<Option<(u64, u64)>> {
+    let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
+    for server in servers {
+        let Ok((status, body, _)) =
+            crate::net::votechain::round_status(server, round_id, proxy).await
+        else {
+            continue;
+        };
+        if !(200..300).contains(&status) {
+            continue;
+        }
+        let Ok(body) = serde_json::from_str::<serde_json::Value>(&body) else {
+            continue;
+        };
+        let round = body.get("round").cloned().unwrap_or_default();
+        let ceremony = round
+            .get("ceremony_phase_start")
+            .and_then(json_unix_seconds);
+        let end = round.get("vote_end_time").and_then(json_unix_seconds);
+        if let (Some(ceremony), Some(end)) = (ceremony, end) {
+            return Ok(Some((ceremony, end)));
+        }
+    }
+    Ok(None)
+}
+
 /// Snapshot of one round's driver run for the UI.
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -172,14 +216,18 @@ pub async fn voting_drive_start(
         },
         &routes,
     )?;
-    // The vote servers double as the vote-tree node fleet.
-    let host = drive::ZkoolRoundHost::new(
-        servers.clone(),
-        servers,
-        None,
-        server_round.vote_end_time,
-        Some(delegation),
-    );
+    // The vote servers double as the vote-tree node fleet. Round timing
+    // comes from the chain status so the driver can detect the last-moment
+    // share window; the overview's vote end is the fallback.
+    let timing = fetch_round_timing(&servers, round_id, c).await?;
+    let (ceremony_start, vote_end) = match timing {
+        Some((ceremony, end)) => (Some(ceremony), Some(end)),
+        None => (None, server_round.vote_end_time),
+    };
+    let host =
+        drive::ZkoolRoundHost::new(servers.clone(), servers, ceremony_start, vote_end, Some(
+            delegation,
+        ));
     let binding = drive::build_binding(round_id, network, &roster, Some(&hotkey))?;
     drive::start_round_drive(sidecar.db(), binding, routes, host)
 }
