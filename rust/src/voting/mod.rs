@@ -10,6 +10,7 @@
 //! compiled. Independent configuration transport and list-page summaries have
 //! been ported to the sidecar design and remain available.
 
+pub mod chain;
 pub mod net;
 pub mod sidecar;
 pub mod summary;
