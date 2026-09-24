@@ -170,12 +170,35 @@ pub struct DelegationHostInputs {
     pub seed: Vec<u8>,
 }
 
+/// Assembles the delegation pipeline over zkool's note source and hotkey.
+///
+/// The concrete pipeline exposes the host-side setup stages (round row,
+/// note selection, bundle layout persistence, eligibility preview) that the
+/// object-safe [`DelegationDriver`] surface hides from the executor.
+pub fn build_pipeline(
+    db: Arc<VotingDb>,
+    hotkey: &VotingHotkey,
+    inputs: DelegationHostInputs,
+) -> Result<DelegationPipeline<crate::voting::note_source::ZkoolNoteSource>> {
+    let hotkey = VotingHotkey::from_stored_secret(hotkey.stored_secret(), hotkey.network())
+        .map_err(|error| anyhow::anyhow!("voting hotkey reload failed: {error}"))?;
+    Ok(DelegationPipeline::new(
+        db,
+        inputs.note_source,
+        inputs.lwd,
+        inputs.identity,
+        Some(hotkey),
+        inputs.bundle_policy,
+        inputs.session_json.as_deref(),
+    )?)
+}
+
 /// Assembles the per-dispatch delegation inputs: pipeline driver, software
 /// signer, and PIR fleet over zkool's routed transport.
 pub fn build_delegation_step_inputs(
     db: Arc<VotingDb>,
     hotkey: &VotingHotkey,
-    inputs: DelegationHostInputs,
+    mut inputs: DelegationHostInputs,
     routes: &ExecutorRoutes,
 ) -> Result<DelegationStepInputs> {
     ensure!(
@@ -187,23 +210,13 @@ pub fn build_delegation_step_inputs(
         inputs.pir_layout,
         Arc::new(ZkoolPirTransport::new(routes.transport, &routes.proxy)),
     )?;
-    let hotkey = VotingHotkey::from_stored_secret(hotkey.stored_secret(), hotkey.network())
-        .map_err(|error| anyhow::anyhow!("voting hotkey reload failed: {error}"))?;
-    let pipeline = DelegationPipeline::new(
-        db,
-        inputs.note_source,
-        inputs.lwd,
-        inputs.identity,
-        Some(hotkey),
-        inputs.bundle_policy,
-        inputs.session_json.as_deref(),
-    )?;
-    let seed = inputs.seed;
+    let seed = std::mem::take(&mut inputs.seed);
+    let driver = build_pipeline(db, hotkey, inputs)?;
     let signer = DelegationSigner::Software(Arc::new(move |request| {
         sign_delegation_request(&seed, request)
     }));
     Ok(DelegationStepInputs {
-        driver: Arc::new(pipeline),
+        driver: Arc::new(driver),
         signer,
         pir: Arc::new(pir),
     })
