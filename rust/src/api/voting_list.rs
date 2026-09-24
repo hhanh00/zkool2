@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{api::coin::Coin, voting, voting::sidecar::VotingSidecar};
 
-fn voting_network(c: &Coin) -> Result<zcash_voting::Network> {
+pub(crate) fn voting_network(c: &Coin) -> Result<zcash_voting::Network> {
     match c.coin {
         0 => Ok(zcash_voting::Network::Mainnet),
         1 => Ok(zcash_voting::Network::Testnet),
