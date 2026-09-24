@@ -34,7 +34,7 @@ impl RouteFailure {
                 ChainTransportError::definitely_unsent(error.to_string())
             }
             RouteFailure::Timeout => {
-                ChainTransportError::possibly_dispatched("request timed out".to_string())
+                ChainTransportError::possibly_dispatched("request timed out")
             }
             RouteFailure::Ambiguous(error) => ChainTransportError::possibly_dispatched(
                 format!("request ended before response: {error}"),
@@ -61,6 +61,7 @@ fn route_kind(transport: u8) -> Result<(), ChainTransportError> {
 /// network stack: after the client and request objects are fully built, so a
 /// failure before the marker is definitely unsent, and everything after it is
 /// conservatively treated as possibly dispatched.
+#[allow(clippy::too_many_arguments)]
 async fn route_request(
     transport: u8,
     proxy: &str,
@@ -328,9 +329,7 @@ impl vote_commitment_tree_client::transport::Transport for ZkoolTreeTransport {
         let result = route_kind(self.transport).map_err(|error| {
             vote_commitment_tree_client::transport::TransportError::Request(error.to_string())
         });
-        if let Err(error) = result {
-            return Err(error);
-        }
+        result?;
         let proxy = self.proxy.clone();
         let url = url.to_owned();
         TREE_RUNTIME
