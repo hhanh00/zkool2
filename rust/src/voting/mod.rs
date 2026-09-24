@@ -11,6 +11,7 @@
 //! been ported to the sidecar design and remain available.
 
 pub mod chain;
+pub mod hotkey;
 pub mod net;
 pub mod sidecar;
 pub mod summary;
