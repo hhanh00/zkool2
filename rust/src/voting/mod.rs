@@ -1,7 +1,7 @@
 //! Zcash shielded voting (ZIP 262).
 //!
 //! The redesign on zcash_voting 5.1.0 lands piece by piece, and only the
-//! sidecar database layer is in the build so far. 5.1.0 dropped the
+//! sidecar database and wallet note source are in the build. 5.1.0 dropped the
 //! embedded-pool API (`VotingDb::from_pool`) the previous implementation was
 //! built on: voting state now lives in the crate's own rusqlite database
 //! beside the wallet file rather than in zkool's SQLCipher pool.
@@ -13,3 +13,6 @@
 pub mod net;
 pub mod sidecar;
 pub mod summary;
+
+pub mod note_source;
+pub use note_source::ZkoolNoteSource;
