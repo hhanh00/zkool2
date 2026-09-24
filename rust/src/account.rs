@@ -698,8 +698,10 @@ pub async fn get_orchard_note(
     .context("retrieve oinput")?;
 
     let scope = scope.unwrap_or(0);
+    anyhow::ensure!(scope <= 1, "Invalid Orchard note scope {scope}");
     let scope = scope.orchard_scope();
-    let (witness, _) = bincode::decode_from_slice::<Witness, _>(&witness, legacy()).unwrap();
+    let (witness, _) = bincode::decode_from_slice::<Witness, _>(&witness, legacy())
+        .context("decode Orchard witness")?;
     let witness = match rewind_to_position {
         Some(position) => {
             anyhow::ensure!(
@@ -711,30 +713,62 @@ pub async fn get_orchard_note(
         }
         None => witness,
     };
-    let rho = Rho::from_bytes(&rho.try_into().unwrap()).unwrap();
+    let rho = Rho::from_bytes(
+        &rho.try_into()
+            .map_err(|_| anyhow::anyhow!("Invalid rho length"))?,
+    )
+    .into_option()
+    .context("Invalid Orchard rho")?;
 
-    let diversifer = orchard::keys::Diversifier::from_bytes(diversifier.try_into().unwrap());
+    let diversifer = orchard::keys::Diversifier::from_bytes(
+        diversifier
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("Invalid diversifier length"))?,
+    );
     let recipient = ovk.address(diversifer, scope);
     let value = NoteValue::from_raw(value);
-    let rseed = RandomSeed::from_bytes(rcm.try_into().unwrap(), &rho).unwrap();
+    let rseed = RandomSeed::from_bytes(
+        rcm.try_into()
+            .map_err(|_| anyhow::anyhow!("Invalid rseed length"))?,
+        &rho,
+    )
+    .into_option()
+    .context("Invalid Orchard rseed")?;
     let zec_asset_base = [0u8; 32];
     let asset_base = if asset_base == zec_asset_base {
         AssetBase::zatoshi()
     } else {
-        AssetBase::from_bytes(&asset_base.try_into().unwrap()).unwrap()
+        AssetBase::from_bytes(
+            &asset_base
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("Invalid asset base length"))?,
+        )
+        .into_option()
+        .context("Invalid Orchard asset base")?
     };
     let note = Note::from_parts(recipient, value, asset_base, rho, rseed, note_version)
         .into_option()
-        .unwrap();
+        .context("Invalid Orchard note")?;
 
-    assert_eq!(witness.position, position);
-    let auth_path = witness.build_auth_path(eo, ero).unwrap();
+    anyhow::ensure!(
+        witness.position == position,
+        "Orchard witness position does not match note"
+    );
+    let auth_path = witness
+        .build_auth_path(eo, ero)
+        .context("build Orchard authentication path")?;
     let auth_path = auth_path
         .0
         .iter()
-        .map(|a| MerkleHashOrchard::from_bytes(a).unwrap())
-        .collect::<Vec<_>>();
-    let auth_path: [MerkleHashOrchard; MERKLE_DEPTH as usize] = auth_path.try_into().unwrap();
+        .map(|a| {
+            MerkleHashOrchard::from_bytes(a)
+                .into_option()
+                .context("Invalid Orchard witness sibling")
+        })
+        .collect::<Result<Vec<_>>>()?;
+    let auth_path: [MerkleHashOrchard; MERKLE_DEPTH as usize] = auth_path
+        .try_into()
+        .map_err(|_| anyhow::anyhow!("Invalid Orchard authentication path length"))?;
     let merkle_path = orchard::tree::MerklePath::from_parts(witness.position, auth_path);
 
     Ok((note, merkle_path))
