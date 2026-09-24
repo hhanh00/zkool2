@@ -112,24 +112,29 @@ pub struct VotingDriveStatus {
     pub failures: Vec<String>,
 }
 
-/// Starts driving one round: delegation (if still owed), vote casting, chain
-/// submission, and share handoff.
-///
-/// Returns false when a run is already live for this wallet and round. The
-/// run is idempotent and resumable: every step is planned from durable
-/// sidecar state, so restarting after a crash or cancel is always safe.
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_drive_start(
+/// Everything `voting_drive_start` and `voting_prepare_round` need, gathered
+/// once: authenticated config, round material, and wallet keys and notes.
+struct GatheredRound {
+    sidecar: VotingSidecar,
+    network: zcash_voting::Network,
+    servers: Vec<String>,
+    roster: Vec<(u32, u32)>,
+    /// Vote end as the rounds overview reported it; the chain status fetch
+    /// refines it with the ceremony boundary.
+    vote_end: Option<u64>,
+    hotkey: zcash_voting::prelude::VotingHotkey,
+    inputs: drive::DelegationHostInputs,
+}
+
+async fn gather_round_inputs(
     round_id: &str,
     lightwalletd_url: &str,
     round_name: &str,
     c: &Coin,
-) -> Result<bool> {
-    ensure_nonempty(round_id, "round id")?;
-    ensure_nonempty(lightwalletd_url, "lightwalletd URL")?;
+) -> Result<GatheredRound> {
     let network = voting_network(c)?;
     let wallet = wallet_id(c).await?;
-    let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet.clone()).await?;
+    let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet).await?;
 
     let http_client = crate::net::http::client(
         crate::net::http::proxy_url(c.transport, &c.proxy),
@@ -154,6 +159,7 @@ pub async fn voting_drive_start(
         .into_iter()
         .find(|round| round.round_id == round_id)
         .ok_or_else(|| anyhow!("round {round_id} is not active"))?;
+    let vote_end = server_round.vote_end_time;
     let roster: Vec<(u32, u32)> = server_round
         .proposals
         .iter()
@@ -186,21 +192,20 @@ pub async fn voting_drive_start(
     let lwd = zcash_voting::delegate::gather_delegation_lwd_inputs(ResolveDelegationLwdParams {
         lightwalletd_url,
         network,
-        round_params: params.clone(),
+        round_params: params,
         round_name,
     })
     .await
     .map_err(|error| anyhow!("{error}"))?;
 
-    let routes = drive::ExecutorRoutes {
-        transport: c.transport,
-        proxy: c.proxy.clone(),
-        chain_endpoints: servers.clone(),
-    };
-    let delegation = drive::build_delegation_step_inputs(
-        sidecar.db(),
-        &hotkey,
-        drive::DelegationHostInputs {
+    Ok(GatheredRound {
+        sidecar,
+        network,
+        servers,
+        roster,
+        vote_end,
+        hotkey,
+        inputs: drive::DelegationHostInputs {
             lwd,
             identity,
             note_source,
@@ -214,15 +219,115 @@ pub async fn voting_drive_start(
             pir_layout: config.pir_layout,
             seed,
         },
-        &routes,
+    })
+}
+
+/// Runs the delegation pipeline's bundle setup on a blocking thread.
+///
+/// Bundle setup persists the round's bundle layout (idempotent: existing rows
+/// are reused when they still match the eligible note set), which the driver
+/// requires before it can plan any vote work. The eligibility preview
+/// describes the persisted plan.
+async fn prepare_bundles(
+    gathered: GatheredRound,
+    _c: &Coin,
+) -> Result<VotingEligibilityPreview> {
+    let pipeline = drive::build_pipeline(
+        gathered.sidecar.db(),
+        &gathered.hotkey,
+        gathered.inputs,
     )?;
+    let report = tokio::task::spawn_blocking(move || -> Result<zcash_voting::VotingEligibilityReport> {
+        pipeline.setup_bundles()?;
+        Ok(pipeline.eligibility()?)
+    })
+    .await
+    .map_err(|error| anyhow!("bundle setup task failed: {error}"))??;
+    Ok(VotingEligibilityPreview {
+        note_count: u32::try_from(report.eligibility.distinct_note_count).unwrap_or(u32::MAX),
+        eligible_weight_zatoshi: report.eligibility.eligible_weight,
+        is_eligible: report.eligibility.is_eligible(),
+        privacy_trim_dropped_value_zatoshi: report.privacy_trim_dropped_value_zatoshi,
+        skipped_suffix_bundles: report.skipped_suffix_bundles,
+        skipped_suffix_notes: report.skipped_suffix_notes,
+        skipped_suffix_value_zatoshi: report.skipped_suffix_value_zatoshi,
+    })
+}
+
+/// Eligibility preview for the round's persisted bundle plan.
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VotingEligibilityPreview {
+    pub note_count: u32,
+    pub eligible_weight_zatoshi: u64,
+    /// False when the weight is below the round's minimum voting rule.
+    pub is_eligible: bool,
+    /// Raw note value the privacy trim withholds from delegation.
+    pub privacy_trim_dropped_value_zatoshi: u64,
+    pub skipped_suffix_bundles: u32,
+    pub skipped_suffix_notes: u32,
+    pub skipped_suffix_value_zatoshi: u64,
+}
+
+/// Prepares one round for submission: persists the bundle layout from the
+/// wallet's eligible notes and returns the eligibility preview.
+///
+/// The explicit user step before `voting_drive_start`: without persisted
+/// bundle rows the driver quiesces with `needs_bundle_setup` and nothing can
+/// be planned. Safe to repeat; existing bundle rows are reused when they
+/// still match the current note set.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_prepare_round(
+    round_id: &str,
+    lightwalletd_url: &str,
+    round_name: &str,
+    c: &Coin,
+) -> Result<VotingEligibilityPreview> {
+    ensure_nonempty(round_id, "round id")?;
+    ensure_nonempty(lightwalletd_url, "lightwalletd URL")?;
+    let gathered = gather_round_inputs(round_id, lightwalletd_url, round_name, c).await?;
+    prepare_bundles(gathered, c).await
+}
+
+/// Starts driving one round: delegation (if still owed), vote casting, chain
+/// submission, and share handoff.
+///
+/// Returns false when a run is already live for this wallet and round. The
+/// run is idempotent and resumable: every step is planned from durable
+/// sidecar state, so restarting after a crash or cancel is always safe.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_drive_start(
+    round_id: &str,
+    lightwalletd_url: &str,
+    round_name: &str,
+    c: &Coin,
+) -> Result<bool> {
+    ensure_nonempty(round_id, "round id")?;
+    ensure_nonempty(lightwalletd_url, "lightwalletd URL")?;
+    let gathered = gather_round_inputs(round_id, lightwalletd_url, round_name, c).await?;
+    let GatheredRound {
+        sidecar,
+        network,
+        servers,
+        roster,
+        vote_end,
+        hotkey,
+        inputs,
+    } = gathered;
+
+    let routes = drive::ExecutorRoutes {
+        transport: c.transport,
+        proxy: c.proxy.clone(),
+        chain_endpoints: servers.clone(),
+    };
+    let delegation =
+        drive::build_delegation_step_inputs(sidecar.db(), &hotkey, inputs, &routes)?;
     // The vote servers double as the vote-tree node fleet. Round timing
     // comes from the chain status so the driver can detect the last-moment
     // share window; the overview's vote end is the fallback.
-    let timing = fetch_round_timing(&servers, round_id, c).await?;
-    let (ceremony_start, vote_end) = match timing {
+    let (ceremony_start, vote_end) = match fetch_round_timing(&servers, round_id, c).await? {
         Some((ceremony, end)) => (Some(ceremony), Some(end)),
-        None => (None, server_round.vote_end_time),
+        None => (None, vote_end),
     };
     let host =
         drive::ZkoolRoundHost::new(servers.clone(), servers, ceremony_start, vote_end, Some(
