@@ -17,7 +17,7 @@ zcash-trees = { git = "https://github.com/hhanh00/zcash-trees.git", rev = "bb549
 # facade is dropped and the ZSA Orchard adaptations live there. Kept in the
 # build although zkool's voting modules are cut out, so dependency breakage
 # surfaces now rather than at re-enable time.
-zcash_voting = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "8596cea723d5f98ce01427ce394777d5f16e62a4", default-features = false, features = ["lrz"] }
+zcash_voting = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "d53e5dc47fd4374491914ff4e7a85d226e34a302", default-features = false, features = ["lrz"] }
 flutter_rust_bridge = { version = "=2.12.0", optional = true }
 
 anyhow = "1.0.97"
@@ -166,7 +166,7 @@ rand = "0.6"
 # Recovery-reconciliation tests exercise the voting fork's public prelude and
 # the in-memory commitment-tree server. Same git source as the zcash_voting
 # dep so the workspace [patch] override applies to it too.
-vote-commitment-tree = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "8596cea723d5f98ce01427ce394777d5f16e62a4", default-features = false, features = ["lrz"] }
+vote-commitment-tree = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "d53e5dc47fd4374491914ff4e7a85d226e34a302", default-features = false, features = ["lrz"] }
 
 [[example]]
 name = "vk_probe"
