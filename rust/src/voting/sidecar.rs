@@ -274,6 +274,12 @@ pub async fn create_voting_db(wallet_db_path: PathBuf) -> Result<()> {
 }
 
 impl VotingSidecar {
+    /// A shareable handle on the sidecar connection for assemblers that need
+    /// the database by value (the round driver's executor, for instance).
+    pub fn db(&self) -> Arc<VotingDb> {
+        Arc::clone(&self.db)
+    }
+
     #[cfg(test)]
     pub(super) fn from_db_for_test(db: VotingDb) -> Self {
         Self { db: Arc::new(db) }
