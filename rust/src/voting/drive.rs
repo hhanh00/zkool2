@@ -7,7 +7,9 @@
 //! keys, and per-dispatch context; this module builds those adapters and the
 //! process-local run registry that drives the executor to quiescence.
 
-use std::sync::Arc;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{ensure, Result};
@@ -144,7 +146,7 @@ fn sign_delegation_request(
         message: "delegation alpha is not a valid Pallas scalar".to_string(),
     })?;
     let rsk = ask.randomize(&alpha);
-    let sig = rsk.sign(&mut OsRng, &request.sighash);
+    let sig = rsk.sign(OsRng, &request.sighash);
     Ok((&sig).into())
 }
 
@@ -257,6 +259,286 @@ impl RoundHostSource for ZkoolRoundHost {
             // proving runtime; one at a time keeps memory bounded on phones.
             max_proof_concurrency: 1,
         }
+    }
+}
+
+/// A snapshot of one driver run for the FRB layer to poll.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DriveRunStatus {
+    pub round_id: String,
+    /// False once the run reached quiescence or was cancelled.
+    pub running: bool,
+    /// Dispatched obligations so far, from the run report.
+    pub dispatches: u64,
+    /// Vote-work progress: completed and total proposal obligations.
+    pub completed_proposals: u32,
+    pub total_proposals: u32,
+    /// Remaining bundle obligations the run can still execute.
+    pub remaining_obligations: u32,
+    /// Why the run stopped, formatted for display and logs.
+    pub quiescence: Option<String>,
+    /// Failure messages in dispatch order.
+    pub failures: Vec<String>,
+}
+
+impl DriveRunStatus {
+    fn idle(round_id: &str) -> Self {
+        Self {
+            round_id: round_id.to_owned(),
+            running: false,
+            dispatches: 0,
+            completed_proposals: 0,
+            total_proposals: 0,
+            remaining_obligations: 0,
+            quiescence: None,
+            failures: Vec::new(),
+        }
+    }
+}
+
+/// Mutable per-run state the reporter records and status reads.
+#[derive(Default)]
+struct DriveRunState {
+    running: bool,
+    dispatches: u64,
+    completed_proposals: u32,
+    total_proposals: u32,
+    remaining_obligations: u32,
+    quiescence: Option<String>,
+    failures: Vec<String>,
+}
+
+impl DriveRunState {
+    fn snapshot(&self, round_id: &str) -> DriveRunStatus {
+        DriveRunStatus {
+            round_id: round_id.to_owned(),
+            running: self.running,
+            dispatches: self.dispatches,
+            completed_proposals: self.completed_proposals,
+            total_proposals: self.total_proposals,
+            remaining_obligations: self.remaining_obligations,
+            quiescence: self.quiescence.clone(),
+            failures: self.failures.clone(),
+        }
+    }
+}
+
+/// Records [`RoundDriveEvent`]s into the run state.
+///
+/// Called from several concurrent bundle tasks, so it is Mutex-guarded and
+/// never blocks on I/O.
+struct DriveRunRecorder {
+    state: Arc<Mutex<DriveRunState>>,
+}
+
+impl zcash_voting::RoundDriveReporter for DriveRunRecorder {
+    fn report(&self, event: zcash_voting::RoundDriveEvent) {
+        let mut state = self.state.lock().unwrap_or_else(|error| error.into_inner());
+        match event {
+            zcash_voting::RoundDriveEvent::PlanRefreshed { tally, .. } => {
+                state.completed_proposals = tally.completed_proposals;
+                state.total_proposals = tally.total_proposals;
+                state.remaining_obligations = tally.remaining_obligations;
+            }
+            zcash_voting::RoundDriveEvent::StepFinished { .. } => {
+                state.dispatches += 1;
+            }
+            zcash_voting::RoundDriveEvent::StepFailed { kind, message, .. } => {
+                state
+                    .failures
+                    .push(format!("{kind:?}: {message}"));
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Formats the stop reason for display.
+fn quiescence_label(quiescence: &zcash_voting::RoundQuiescence) -> String {
+    use zcash_voting::RoundQuiescence as Q;
+    match quiescence {
+        Q::NoWorkLeft => "done".to_string(),
+        Q::NeedsBundleSetup => "needs_bundle_setup".to_string(),
+        Q::PersistedChainTerminal => "chain_terminal".to_string(),
+        Q::NeedsBallot {
+            open_proposals, ..
+        } => format!("needs_ballot({} open)", open_proposals.len()),
+        Q::NeedsDelegationSignatures { bundles } => {
+            format!("needs_delegation_signatures({bundles:?})")
+        }
+        Q::BackgroundShareWorkOnly { shares } => {
+            format!("background_shares({})", shares.len())
+        }
+        Q::Cancelled => "cancelled".to_string(),
+        Q::ChainTerminal { .. } => "chain_terminal".to_string(),
+        Q::ChainRecoveryStalled { .. } => "chain_recovery_stalled".to_string(),
+        Q::Failures => "failures".to_string(),
+        Q::PassBudgetExhausted { remaining } => {
+            format!("pass_budget_exhausted({} remaining)", remaining.len())
+        }
+        _ => format!("{quiescence:?}"),
+    }
+}
+
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+struct DriveKey {
+    wallet_id: String,
+    round_id: String,
+}
+
+#[derive(Clone)]
+struct ActiveDrive {
+    control: zcash_voting::ChainSubmissionControl,
+    state: Arc<Mutex<DriveRunState>>,
+}
+
+/// Live driver runs are process-local: their durable queue is the voting
+/// sidecar, so a restart simply discovers unfinished work again. Keyed by
+/// wallet and round so a wallet switch cannot touch another wallet's run.
+static ACTIVE_DRIVES: LazyLock<Mutex<HashMap<DriveKey, ActiveDrive>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+static NEXT_DRIVE_GENERATION: AtomicU64 = AtomicU64::new(1);
+
+/// Starts one driver run for `binding`, or reports `Ok(false)` when a run is
+/// already live for the wallet and round.
+///
+/// The executor is constructed and driven entirely on the spawned task; a
+/// cancelled predecessor's SDK admission guard makes a replacement wait for
+/// the departing run rather than double-dispatching.
+pub fn start_round_drive(
+    db: Arc<VotingDb>,
+    binding: RoundBinding,
+    routes: ExecutorRoutes,
+    host: ZkoolRoundHost,
+) -> Result<bool> {
+    let key = DriveKey {
+        wallet_id: db.wallet_id().to_owned(),
+        round_id: binding.round_id.clone(),
+    };
+    let generation = NEXT_DRIVE_GENERATION.fetch_add(1, Ordering::Relaxed);
+    let control = zcash_voting::ChainSubmissionControl::new(generation);
+    {
+        let mut active = ACTIVE_DRIVES
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
+        if active
+            .get(&key)
+            .is_some_and(|drive| !drive.control.is_cancelled())
+        {
+            return Ok(false);
+        }
+        active.insert(
+            key.clone(),
+            ActiveDrive {
+                control: control.clone(),
+                state: Arc::new(Mutex::new(DriveRunState {
+                    running: true,
+                    ..Default::default()
+                })),
+            },
+        );
+    }
+
+    tokio::spawn(async move {
+        let executor = match build_executor(db, binding, &routes) {
+            Ok(executor) => executor,
+            Err(error) => {
+                let state = run_state(&key);
+                let mut state = state.lock().unwrap_or_else(|error| error.into_inner());
+                state.running = false;
+                state
+                    .failures
+                    .push(format!("executor construction failed: {error}"));
+                return;
+            }
+        };
+        let state = run_state(&key);
+        let recorder = DriveRunRecorder {
+            state: Arc::clone(&state),
+        };
+        let report = zcash_voting::RoundDriver::new(&executor)
+            .run(&host, &control, &recorder)
+            .await;
+        {
+            let mut state = state.lock().unwrap_or_else(|error| error.into_inner());
+            state.running = false;
+            state.quiescence = Some(quiescence_label(&report.quiescence));
+            state.completed_proposals = report.tally.completed_proposals;
+            state.total_proposals = report.tally.total_proposals;
+            state.remaining_obligations = report.tally.remaining_obligations;
+            if matches!(
+                report.quiescence,
+                zcash_voting::RoundQuiescence::Failures
+            ) {
+                for failure in &report.failures {
+                    state
+                        .failures
+                        .push(format!("{:?}: {}", failure.failure.kind, failure.failure.message));
+                }
+            }
+        }
+    });
+    Ok(true)
+}
+
+fn run_state(key: &DriveKey) -> Arc<Mutex<DriveRunState>> {
+    let active = ACTIVE_DRIVES
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    active
+        .get(key)
+        .map(|drive| Arc::clone(&drive.state))
+        .unwrap_or_default()
+}
+
+/// Cancels one round's driver run. The SDK wakes retry waits rather than
+/// leaving the task parked until its next pass.
+pub fn cancel_round_drive(wallet_id: &str, round_id: &str) -> bool {
+    let key = DriveKey {
+        wallet_id: wallet_id.to_owned(),
+        round_id: round_id.to_owned(),
+    };
+    let active = ACTIVE_DRIVES
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let Some(drive) = active.get(&key) else {
+        return false;
+    };
+    drive.control.cancel();
+    true
+}
+
+/// Cancels all driver runs for this wallet, leaving other wallets untouched.
+pub fn cancel_all_round_drives(wallet_id: &str) -> usize {
+    let active = ACTIVE_DRIVES
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    let mut cancelled = 0;
+    for (key, drive) in active.iter() {
+        if key.wallet_id == wallet_id && !drive.control.is_cancelled() {
+            drive.control.cancel();
+            cancelled += 1;
+        }
+    }
+    cancelled
+}
+
+/// Snapshots one round's run status; idle when nothing is registered.
+pub fn drive_status(wallet_id: &str, round_id: &str) -> DriveRunStatus {
+    let key = DriveKey {
+        wallet_id: wallet_id.to_owned(),
+        round_id: round_id.to_owned(),
+    };
+    let active = ACTIVE_DRIVES
+        .lock()
+        .unwrap_or_else(|error| error.into_inner());
+    match active.get(&key) {
+        Some(drive) => drive
+            .state
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .snapshot(round_id),
+        None => DriveRunStatus::idle(round_id),
     }
 }
 
