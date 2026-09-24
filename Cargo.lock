@@ -13438,7 +13438,6 @@ checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 [[package]]
 name = "vote-commitment-tree"
 version = "0.6.2"
-source = "git+https://github.com/hhanh00/zcash_voting.git?rev=8596cea723d5f98ce01427ce394777d5f16e62a4#8596cea723d5f98ce01427ce394777d5f16e62a4"
 dependencies = [
  "anyhow",
  "imt-tree",
@@ -13452,7 +13451,6 @@ dependencies = [
 [[package]]
 name = "vote-commitment-tree-client"
 version = "0.8.2"
-source = "git+https://github.com/hhanh00/zcash_voting.git?rev=8596cea723d5f98ce01427ce394777d5f16e62a4#8596cea723d5f98ce01427ce394777d5f16e62a4"
 dependencies = [
  "base64 0.22.1",
  "hex",
@@ -14706,7 +14704,6 @@ dependencies = [
 [[package]]
 name = "zcash_voting"
 version = "5.1.0"
-source = "git+https://github.com/hhanh00/zcash_voting.git?rev=8596cea723d5f98ce01427ce394777d5f16e62a4#8596cea723d5f98ce01427ce394777d5f16e62a4"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
@@ -14754,6 +14751,27 @@ dependencies = [
  "zcash_primitives",
  "zcash_protocol",
  "zeroize",
+ "zip32",
+]
+
+[[package]]
+name = "zcv-harness"
+version = "0.0.0"
+dependencies = [
+ "hex",
+ "incrementalmerkletree",
+ "orchard",
+ "pczt",
+ "prost 0.14.4",
+ "rand 0.8.7",
+ "rusqlite",
+ "secrecy 0.8.0",
+ "zcash_client_backend",
+ "zcash_client_sqlite",
+ "zcash_keys",
+ "zcash_primitives",
+ "zcash_protocol",
+ "zcash_voting",
  "zip32",
 ]
 
