@@ -1273,14 +1273,11 @@ class VaultNotifier extends _$VaultNotifier {
 
   Future<void> signOut() async {
     logger.i("VaultNotifier.signOut");
-    // Voting is cut out of the build pending its redesign; kept for reference.
-    /*
     if (ref.read(votingSubmissionGuardProvider)) {
       throw Exception(
         "A voting submission is in progress. Wait for it to finish before signing out.",
       );
     }
-    */
     final vault = await future;
     await vault.signOut();
   }
@@ -3145,6 +3142,28 @@ class ShareTrackingArm extends _$ShareTrackingArm {
 // values; prepare, start, and status polling go through the Rust host
 // adapter, and the durable truth lives in the voting sidecar.
 
+/// Blocks destructive wallet actions (account deletion, vault sign-out,
+/// wallet removal) while a voting submission run is in flight.
+@Riverpod(keepAlive: true)
+class VotingSubmissionGuard extends _$VotingSubmissionGuard {
+  @override
+  bool build() => false;
+
+  void setActive(bool active) {
+    state = active;
+  }
+}
+
+/// Rounds whose driver run is live in this process; keeps the submission
+/// guard truthful across concurrent per-round jobs.
+final Set<String> _votingDriveRunningRounds = {};
+
+void _syncVotingSubmissionGuard(Ref ref) {
+  ref
+      .read(votingSubmissionGuardProvider.notifier)
+      .setActive(_votingDriveRunningRounds.isNotEmpty);
+}
+
 /// State of the submission job for one round: an explicit prepare step
 /// (eligibility preview), then a driven run observed by polling.
 @freezed
@@ -3214,6 +3233,8 @@ class VotingDriveJob extends _$VotingDriveJob {
       return;
     }
     state = state.copyWith(stage: "driving", error: null);
+    _votingDriveRunningRounds.add(_roundId);
+    _syncVotingSubmissionGuard(ref);
     _startPolling();
   }
 
@@ -3233,6 +3254,8 @@ class VotingDriveJob extends _$VotingDriveJob {
       final status = await votingDriveStatus(roundId: _roundId, c: coinContext.coin);
       if (status.running && state.stage != "driving") {
         state = state.copyWith(stage: "driving", status: status);
+        _votingDriveRunningRounds.add(_roundId);
+        _syncVotingSubmissionGuard(ref);
         _startPolling();
       }
     } on Exception {
@@ -3255,7 +3278,11 @@ class VotingDriveJob extends _$VotingDriveJob {
     try {
       final status = await votingDriveStatus(roundId: _roundId, c: coinContext.coin);
       state = state.copyWith(status: status);
-      if (!status.running) _stopPolling();
+      if (!status.running) {
+        _stopPolling();
+        _votingDriveRunningRounds.remove(_roundId);
+        _syncVotingSubmissionGuard(ref);
+      }
     } on Exception {
       // Transient status errors keep the poll loop alive; the run outlives
       // them and the next tick retries.
