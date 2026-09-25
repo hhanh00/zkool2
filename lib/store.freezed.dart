@@ -4673,4 +4673,424 @@ class __$QRSettingsCopyWithImpl<$Res> implements _$QRSettingsCopyWith<$Res> {
   }
 }
 
+/// @nodoc
+mixin _$VotingDriveJobState {
+  String get stage; // idle|preparing|ready|driving|error
+  VotingEligibilityPreview? get eligibility;
+
+  /// Last polled driver status; null before the first poll.
+  VotingDriveStatus? get status;
+  String? get error;
+
+  /// Create a copy of VotingDriveJobState
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingDriveJobStateCopyWith<VotingDriveJobState> get copyWith =>
+      _$VotingDriveJobStateCopyWithImpl<VotingDriveJobState>(
+          this as VotingDriveJobState, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingDriveJobState &&
+            (identical(other.stage, stage) || other.stage == stage) &&
+            (identical(other.eligibility, eligibility) ||
+                other.eligibility == eligibility) &&
+            (identical(other.status, status) || other.status == status) &&
+            (identical(other.error, error) || other.error == error));
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(runtimeType, stage, eligibility, status, error);
+
+  @override
+  String toString() {
+    return 'VotingDriveJobState(stage: $stage, eligibility: $eligibility, status: $status, error: $error)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingDriveJobStateCopyWith<$Res> {
+  factory $VotingDriveJobStateCopyWith(
+          VotingDriveJobState value, $Res Function(VotingDriveJobState) _then) =
+      _$VotingDriveJobStateCopyWithImpl;
+  @useResult
+  $Res call(
+      {String stage,
+      VotingEligibilityPreview? eligibility,
+      VotingDriveStatus? status,
+      String? error});
+
+  $VotingEligibilityPreviewCopyWith<$Res>? get eligibility;
+  $VotingDriveStatusCopyWith<$Res>? get status;
+}
+
+/// @nodoc
+class _$VotingDriveJobStateCopyWithImpl<$Res>
+    implements $VotingDriveJobStateCopyWith<$Res> {
+  _$VotingDriveJobStateCopyWithImpl(this._self, this._then);
+
+  final VotingDriveJobState _self;
+  final $Res Function(VotingDriveJobState) _then;
+
+  /// Create a copy of VotingDriveJobState
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? stage = null,
+    Object? eligibility = freezed,
+    Object? status = freezed,
+    Object? error = freezed,
+  }) {
+    return _then(_self.copyWith(
+      stage: null == stage
+          ? _self.stage
+          : stage // ignore: cast_nullable_to_non_nullable
+              as String,
+      eligibility: freezed == eligibility
+          ? _self.eligibility
+          : eligibility // ignore: cast_nullable_to_non_nullable
+              as VotingEligibilityPreview?,
+      status: freezed == status
+          ? _self.status
+          : status // ignore: cast_nullable_to_non_nullable
+              as VotingDriveStatus?,
+      error: freezed == error
+          ? _self.error
+          : error // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ));
+  }
+
+  /// Create a copy of VotingDriveJobState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingEligibilityPreviewCopyWith<$Res>? get eligibility {
+    if (_self.eligibility == null) {
+      return null;
+    }
+
+    return $VotingEligibilityPreviewCopyWith<$Res>(_self.eligibility!, (value) {
+      return _then(_self.copyWith(eligibility: value));
+    });
+  }
+
+  /// Create a copy of VotingDriveJobState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingDriveStatusCopyWith<$Res>? get status {
+    if (_self.status == null) {
+      return null;
+    }
+
+    return $VotingDriveStatusCopyWith<$Res>(_self.status!, (value) {
+      return _then(_self.copyWith(status: value));
+    });
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingDriveJobState].
+extension VotingDriveJobStatePatterns on VotingDriveJobState {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingDriveJobState value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDriveJobState() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingDriveJobState value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDriveJobState():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingDriveJobState value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDriveJobState() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(String stage, VotingEligibilityPreview? eligibility,
+            VotingDriveStatus? status, String? error)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDriveJobState() when $default != null:
+        return $default(
+            _that.stage, _that.eligibility, _that.status, _that.error);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(String stage, VotingEligibilityPreview? eligibility,
+            VotingDriveStatus? status, String? error)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDriveJobState():
+        return $default(
+            _that.stage, _that.eligibility, _that.status, _that.error);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(String stage, VotingEligibilityPreview? eligibility,
+            VotingDriveStatus? status, String? error)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingDriveJobState() when $default != null:
+        return $default(
+            _that.stage, _that.eligibility, _that.status, _that.error);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingDriveJobState implements VotingDriveJobState {
+  const _VotingDriveJobState(
+      {required this.stage, this.eligibility, this.status, this.error});
+
+  @override
+  final String stage;
+// idle|preparing|ready|driving|error
+  @override
+  final VotingEligibilityPreview? eligibility;
+
+  /// Last polled driver status; null before the first poll.
+  @override
+  final VotingDriveStatus? status;
+  @override
+  final String? error;
+
+  /// Create a copy of VotingDriveJobState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingDriveJobStateCopyWith<_VotingDriveJobState> get copyWith =>
+      __$VotingDriveJobStateCopyWithImpl<_VotingDriveJobState>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingDriveJobState &&
+            (identical(other.stage, stage) || other.stage == stage) &&
+            (identical(other.eligibility, eligibility) ||
+                other.eligibility == eligibility) &&
+            (identical(other.status, status) || other.status == status) &&
+            (identical(other.error, error) || other.error == error));
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(runtimeType, stage, eligibility, status, error);
+
+  @override
+  String toString() {
+    return 'VotingDriveJobState(stage: $stage, eligibility: $eligibility, status: $status, error: $error)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingDriveJobStateCopyWith<$Res>
+    implements $VotingDriveJobStateCopyWith<$Res> {
+  factory _$VotingDriveJobStateCopyWith(_VotingDriveJobState value,
+          $Res Function(_VotingDriveJobState) _then) =
+      __$VotingDriveJobStateCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {String stage,
+      VotingEligibilityPreview? eligibility,
+      VotingDriveStatus? status,
+      String? error});
+
+  @override
+  $VotingEligibilityPreviewCopyWith<$Res>? get eligibility;
+  @override
+  $VotingDriveStatusCopyWith<$Res>? get status;
+}
+
+/// @nodoc
+class __$VotingDriveJobStateCopyWithImpl<$Res>
+    implements _$VotingDriveJobStateCopyWith<$Res> {
+  __$VotingDriveJobStateCopyWithImpl(this._self, this._then);
+
+  final _VotingDriveJobState _self;
+  final $Res Function(_VotingDriveJobState) _then;
+
+  /// Create a copy of VotingDriveJobState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? stage = null,
+    Object? eligibility = freezed,
+    Object? status = freezed,
+    Object? error = freezed,
+  }) {
+    return _then(_VotingDriveJobState(
+      stage: null == stage
+          ? _self.stage
+          : stage // ignore: cast_nullable_to_non_nullable
+              as String,
+      eligibility: freezed == eligibility
+          ? _self.eligibility
+          : eligibility // ignore: cast_nullable_to_non_nullable
+              as VotingEligibilityPreview?,
+      status: freezed == status
+          ? _self.status
+          : status // ignore: cast_nullable_to_non_nullable
+              as VotingDriveStatus?,
+      error: freezed == error
+          ? _self.error
+          : error // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ));
+  }
+
+  /// Create a copy of VotingDriveJobState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingEligibilityPreviewCopyWith<$Res>? get eligibility {
+    if (_self.eligibility == null) {
+      return null;
+    }
+
+    return $VotingEligibilityPreviewCopyWith<$Res>(_self.eligibility!, (value) {
+      return _then(_self.copyWith(eligibility: value));
+    });
+  }
+
+  /// Create a copy of VotingDriveJobState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingDriveStatusCopyWith<$Res>? get status {
+    if (_self.status == null) {
+      return null;
+    }
+
+    return $VotingDriveStatusCopyWith<$Res>(_self.status!, (value) {
+      return _then(_self.copyWith(status: value));
+    });
+  }
+}
+
 // dart format on
