@@ -1262,7 +1262,7 @@ final class VaultNotifierProvider
   VaultNotifier create() => VaultNotifier();
 }
 
-String _$vaultNotifierHash() => r'f1317577395220210fdffc5a59cd90bb6ad683da';
+String _$vaultNotifierHash() => r'b2840c7cbc6b39a9eaea18ab703eaddc59d00259';
 
 abstract class _$VaultNotifier extends $AsyncNotifier<Vault> {
   FutureOr<Vault> build();
@@ -1601,5 +1601,67 @@ abstract class _$VotingDriveJob extends $Notifier<VotingDriveJobState> {
         Object?,
         Object?>;
     element.handleValue(ref, created);
+  }
+}
+
+/// Re-runnable trigger to stop every live driver run for the current wallet.
+/// Backgrounding and wallet switches invoke it so no run outlives its wallet;
+/// durable effects stay and a later start re-plans from the sidecar.
+
+@ProviderFor(VotingDriveStopAll)
+const votingDriveStopAllProvider = VotingDriveStopAllProvider._();
+
+/// Re-runnable trigger to stop every live driver run for the current wallet.
+/// Backgrounding and wallet switches invoke it so no run outlives its wallet;
+/// durable effects stay and a later start re-plans from the sidecar.
+final class VotingDriveStopAllProvider
+    extends $NotifierProvider<VotingDriveStopAll, void> {
+  /// Re-runnable trigger to stop every live driver run for the current wallet.
+  /// Backgrounding and wallet switches invoke it so no run outlives its wallet;
+  /// durable effects stay and a later start re-plans from the sidecar.
+  const VotingDriveStopAllProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'votingDriveStopAllProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$votingDriveStopAllHash();
+
+  @$internal
+  @override
+  VotingDriveStopAll create() => VotingDriveStopAll();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(void value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<void>(value),
+    );
+  }
+}
+
+String _$votingDriveStopAllHash() =>
+    r'bf6da0fb2895b3d183bf0f230921c7b2973a6604';
+
+/// Re-runnable trigger to stop every live driver run for the current wallet.
+/// Backgrounding and wallet switches invoke it so no run outlives its wallet;
+/// durable effects stay and a later start re-plans from the sidecar.
+
+abstract class _$VotingDriveStopAll extends $Notifier<void> {
+  void build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    build();
+    final ref = this.ref as $Ref<void, void>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<void, void>, void, Object?, Object?>;
+    element.handleValue(ref, null);
   }
 }
