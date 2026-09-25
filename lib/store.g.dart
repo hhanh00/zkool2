@@ -1415,3 +1415,133 @@ final class PluginMemoSectionsFamily extends $Family
   @override
   String toString() => r'pluginMemoSectionsProvider';
 }
+
+/// Submission job for one round. `prepare` persists the bundle layout and
+/// returns the eligibility preview the UI shows before the voter commits;
+/// `start` hands the round to the Rust driver, which runs to quiescence on
+/// its own task. Status polling is owned here, so it survives page
+/// navigation; a run already live in Rust is adopted on first read.
+
+@ProviderFor(VotingDriveJob)
+const votingDriveJobProvider = VotingDriveJobFamily._();
+
+/// Submission job for one round. `prepare` persists the bundle layout and
+/// returns the eligibility preview the UI shows before the voter commits;
+/// `start` hands the round to the Rust driver, which runs to quiescence on
+/// its own task. Status polling is owned here, so it survives page
+/// navigation; a run already live in Rust is adopted on first read.
+final class VotingDriveJobProvider
+    extends $NotifierProvider<VotingDriveJob, VotingDriveJobState> {
+  /// Submission job for one round. `prepare` persists the bundle layout and
+  /// returns the eligibility preview the UI shows before the voter commits;
+  /// `start` hands the round to the Rust driver, which runs to quiescence on
+  /// its own task. Status polling is owned here, so it survives page
+  /// navigation; a run already live in Rust is adopted on first read.
+  const VotingDriveJobProvider._(
+      {required VotingDriveJobFamily super.from,
+      required String super.argument})
+      : super(
+          retry: null,
+          name: r'votingDriveJobProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$votingDriveJobHash();
+
+  @override
+  String toString() {
+    return r'votingDriveJobProvider'
+        ''
+        '($argument)';
+  }
+
+  @$internal
+  @override
+  VotingDriveJob create() => VotingDriveJob();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(VotingDriveJobState value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<VotingDriveJobState>(value),
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is VotingDriveJobProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
+  }
+}
+
+String _$votingDriveJobHash() => r'd905146006377ad8656e157d3a0e97c1db3247ea';
+
+/// Submission job for one round. `prepare` persists the bundle layout and
+/// returns the eligibility preview the UI shows before the voter commits;
+/// `start` hands the round to the Rust driver, which runs to quiescence on
+/// its own task. Status polling is owned here, so it survives page
+/// navigation; a run already live in Rust is adopted on first read.
+
+final class VotingDriveJobFamily extends $Family
+    with
+        $ClassFamilyOverride<VotingDriveJob, VotingDriveJobState,
+            VotingDriveJobState, VotingDriveJobState, String> {
+  const VotingDriveJobFamily._()
+      : super(
+          retry: null,
+          name: r'votingDriveJobProvider',
+          dependencies: null,
+          $allTransitiveDependencies: null,
+          isAutoDispose: false,
+        );
+
+  /// Submission job for one round. `prepare` persists the bundle layout and
+  /// returns the eligibility preview the UI shows before the voter commits;
+  /// `start` hands the round to the Rust driver, which runs to quiescence on
+  /// its own task. Status polling is owned here, so it survives page
+  /// navigation; a run already live in Rust is adopted on first read.
+
+  VotingDriveJobProvider call(
+    String roundId,
+  ) =>
+      VotingDriveJobProvider._(argument: roundId, from: this);
+
+  @override
+  String toString() => r'votingDriveJobProvider';
+}
+
+/// Submission job for one round. `prepare` persists the bundle layout and
+/// returns the eligibility preview the UI shows before the voter commits;
+/// `start` hands the round to the Rust driver, which runs to quiescence on
+/// its own task. Status polling is owned here, so it survives page
+/// navigation; a run already live in Rust is adopted on first read.
+
+abstract class _$VotingDriveJob extends $Notifier<VotingDriveJobState> {
+  late final _$args = ref.$arg as String;
+  String get roundId => _$args;
+
+  VotingDriveJobState build(
+    String roundId,
+  );
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build(
+      _$args,
+    );
+    final ref = this.ref as $Ref<VotingDriveJobState, VotingDriveJobState>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<VotingDriveJobState, VotingDriveJobState>,
+        VotingDriveJobState,
+        Object?,
+        Object?>;
+    element.handleValue(ref, created);
+  }
+}
