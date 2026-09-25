@@ -1091,6 +1091,14 @@ class LifecycleWatcher with WidgetsBindingObserver {
       final scope = ProviderScope.containerOf(appKey.currentContext!);
       scope.read(lifecycleProvider.notifier).lock(force: false);
     }
+    if (state == AppLifecycleState.paused) {
+      // Voting driver runs are wallet-scoped background work: stop them at
+      // the boundary instead of letting them race the suspended process.
+      // Share tracking is deliberately left alone — it is durable and
+      // resumes on the next round open.
+      final scope = ProviderScope.containerOf(appKey.currentContext!);
+      unawaited(scope.read(votingDriveStopAllProvider.notifier).run());
+    }
   }
 }
 
@@ -1278,6 +1286,9 @@ class VaultNotifier extends _$VaultNotifier {
         "A voting submission is in progress. Wait for it to finish before signing out.",
       );
     }
+    // Wallet switch: stop this wallet's driver runs (none live past the
+    // guard above; this also clears any finished registry entries' wakeups).
+    unawaited(ref.read(votingDriveStopAllProvider.notifier).run());
     final vault = await future;
     await vault.signOut();
   }
@@ -3312,4 +3323,25 @@ String votingQuiescenceLabel(String? quiescence) {
   if (q == "failures") return "Submission failed";
   if (q.startsWith("pass_budget_exhausted")) return "Paused — resume to continue";
   return q.replaceAll('_', ' ');
+}
+
+/// Re-runnable trigger to stop every live driver run for the current wallet.
+/// Backgrounding and wallet switches invoke it so no run outlives its wallet;
+/// durable effects stay and a later start re-plans from the sidecar.
+@Riverpod(keepAlive: true)
+class VotingDriveStopAll extends _$VotingDriveStopAll {
+  @override
+  void build() {}
+
+  Future<void> run() async {
+    try {
+      final cancelled = await votingDriveCancelAll(c: coinContext.coin);
+      if (cancelled > BigInt.zero) {
+        logger.i("[Voting] stopped $cancelled driver run(s) for this wallet");
+      }
+    } on Exception catch (e) {
+      // Best-effort: backgrounding and sign-out never surface errors.
+      logger.i("[Voting] drive stop-all skipped: $e");
+    }
+  }
 }
