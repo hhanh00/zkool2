@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:zkool/store.dart' show coinContext;
+import 'package:zkool/store.dart' show coinContext, votingDriveJobProvider, votingQuiescenceLabel;
 import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/widgets/loading_steps.dart';
 
-class VotingPage extends StatefulWidget {
+class VotingPage extends ConsumerStatefulWidget {
   const VotingPage({super.key});
 
   @override
-  State<VotingPage> createState() => _VotingPageState();
+  ConsumerState<VotingPage> createState() => _VotingPageState();
 }
 
-class _VotingPageState extends State<VotingPage> {
+class _VotingPageState extends ConsumerState<VotingPage> {
   late Future<List<VotingRoundListItem>> _rounds;
   bool _loading = true;
   int _loadGeneration = 0;
@@ -107,18 +108,23 @@ class _VotingPageState extends State<VotingPage> {
   }
 }
 
-class _VotingRoundTile extends StatelessWidget {
+class _VotingRoundTile extends ConsumerWidget {
   final VotingRoundListItem round;
   final VoidCallback onPressed;
 
   const _VotingRoundTile({required this.round, required this.onPressed});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final details = <String>[
       if (round.snapshotHeight case final height?) 'Snapshot height $height',
       '${round.bundleCount} bundle${round.bundleCount == 1 ? '' : 's'}',
     ];
+    // Submission truth comes from the drive registry, not the round list:
+    // a live run (or its last outcome) overrides the tile's default action.
+    final job = ref.watch(votingDriveJobProvider(round.roundId));
+    final driving = job.stage == "driving";
+    final running = driving && (job.status?.running ?? true);
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -132,14 +138,58 @@ class _VotingRoundTile extends StatelessWidget {
           children: [
             _VotingStatus(status: round.status),
             Text(details.join(' • ')),
+            if (driving)
+              _VotingDriveChip(
+                label: votingQuiescenceLabel(running ? null : job.status?.quiescence),
+                running: running,
+              ),
           ],
         ),
       ),
       trailing: _VotingProgressButton(
         action: round.action,
+        driving: driving,
         onPressed: onPressed,
       ),
       onTap: onPressed,
+    );
+  }
+}
+
+/// Live submission state on a round tile: spinner while the driver runs,
+/// the quiescence outcome once it stops.
+class _VotingDriveChip extends StatelessWidget {
+  final String label;
+  final bool running;
+
+  const _VotingDriveChip({required this.label, required this.running});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: colors.secondaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (running) ...[
+            SizedBox(
+              width: 10,
+              height: 10,
+              child: CircularProgressIndicator(strokeWidth: 2, color: colors.onSecondaryContainer),
+            ),
+            const SizedBox(width: 6),
+          ],
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: colors.onSecondaryContainer),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -177,18 +227,21 @@ class _VotingStatus extends StatelessWidget {
 
 class _VotingProgressButton extends StatelessWidget {
   final String action;
+  final bool driving;
   final VoidCallback? onPressed;
 
-  const _VotingProgressButton({required this.action, required this.onPressed});
+  const _VotingProgressButton({required this.action, required this.driving, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
-    final label = switch (action) {
-      'view_results' => 'View results',
-      'review' => 'Review',
-      'resume' => 'Resume',
-      _ => 'Start voting',
-    };
+    final label = driving
+        ? 'View status'
+        : switch (action) {
+            'view_results' => 'View results',
+            'review' => 'Review',
+            'resume' => 'Resume',
+            _ => 'Start voting',
+          };
     return FilledButton.tonal(
       onPressed: onPressed,
       child: Text(label),
