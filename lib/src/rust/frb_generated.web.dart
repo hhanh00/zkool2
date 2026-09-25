@@ -27,6 +27,7 @@ import 'api/sync.dart';
 import 'api/transaction.dart';
 import 'api/vault.dart';
 import 'api/voting.dart';
+import 'api/voting_drive.dart';
 import 'api/voting_share_tracking.dart';
 import 'api/zsa.dart';
 import 'dart:async';
@@ -584,6 +585,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   UsizeArray4 dco_decode_usize_array_4(dynamic raw);
 
   @protected
+  VotingDriveStatus dco_decode_voting_drive_status(dynamic raw);
+
+  @protected
+  VotingEligibilityPreview dco_decode_voting_eligibility_preview(dynamic raw);
+
+  @protected
   VotingPendingShareRound dco_decode_voting_pending_share_round(dynamic raw);
 
   @protected
@@ -1138,6 +1145,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   UsizeArray4 sse_decode_usize_array_4(SseDeserializer deserializer);
+
+  @protected
+  VotingDriveStatus sse_decode_voting_drive_status(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingEligibilityPreview sse_decode_voting_eligibility_preview(
+      SseDeserializer deserializer);
 
   @protected
   VotingPendingShareRound sse_decode_voting_pending_share_round(
@@ -1731,6 +1746,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_usize_array_4(UsizeArray4 self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_drive_status(
+      VotingDriveStatus self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_eligibility_preview(
+      VotingEligibilityPreview self, SseSerializer serializer);
 
   @protected
   void sse_encode_voting_pending_share_round(

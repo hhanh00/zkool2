@@ -362,6 +362,15 @@ pub async fn voting_drive_cancel(round_id: &str, c: &Coin) -> Result<bool> {
     Ok(drive::cancel_round_drive(&wallet, round_id))
 }
 
+/// Cancels every live driver run for the current wallet, leaving other
+/// wallets untouched. Wallet switch and backgrounding call this so no run
+/// outlives its wallet; durable effects stay resumable through a later start.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_drive_cancel_all(c: &Coin) -> Result<usize> {
+    let wallet = wallet_id(c).await?;
+    Ok(drive::cancel_all_round_drives(&wallet))
+}
+
 fn ensure_nonempty(value: &str, name: &str) -> Result<()> {
     anyhow::ensure!(!value.trim().is_empty(), "{name} must not be empty");
     Ok(())
