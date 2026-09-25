@@ -1262,7 +1262,7 @@ final class VaultNotifierProvider
   VaultNotifier create() => VaultNotifier();
 }
 
-String _$vaultNotifierHash() => r'422ba342430a4319552b41d8dbe378de7dba470a';
+String _$vaultNotifierHash() => r'f1317577395220210fdffc5a59cd90bb6ad683da';
 
 abstract class _$VaultNotifier extends $AsyncNotifier<Vault> {
   FutureOr<Vault> build();
@@ -1416,6 +1416,64 @@ final class PluginMemoSectionsFamily extends $Family
   String toString() => r'pluginMemoSectionsProvider';
 }
 
+/// Blocks destructive wallet actions (account deletion, vault sign-out,
+/// wallet removal) while a voting submission run is in flight.
+
+@ProviderFor(VotingSubmissionGuard)
+const votingSubmissionGuardProvider = VotingSubmissionGuardProvider._();
+
+/// Blocks destructive wallet actions (account deletion, vault sign-out,
+/// wallet removal) while a voting submission run is in flight.
+final class VotingSubmissionGuardProvider
+    extends $NotifierProvider<VotingSubmissionGuard, bool> {
+  /// Blocks destructive wallet actions (account deletion, vault sign-out,
+  /// wallet removal) while a voting submission run is in flight.
+  const VotingSubmissionGuardProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'votingSubmissionGuardProvider',
+          isAutoDispose: false,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$votingSubmissionGuardHash();
+
+  @$internal
+  @override
+  VotingSubmissionGuard create() => VotingSubmissionGuard();
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$votingSubmissionGuardHash() =>
+    r'7fbcb88ac8361aa94083e9d98321f96c521a2777';
+
+/// Blocks destructive wallet actions (account deletion, vault sign-out,
+/// wallet removal) while a voting submission run is in flight.
+
+abstract class _$VotingSubmissionGuard extends $Notifier<bool> {
+  bool build();
+  @$mustCallSuper
+  @override
+  void runBuild() {
+    final created = build();
+    final ref = this.ref as $Ref<bool, bool>;
+    final element = ref.element as $ClassProviderElement<
+        AnyNotifier<bool, bool>, bool, Object?, Object?>;
+    element.handleValue(ref, created);
+  }
+}
+
 /// Submission job for one round. `prepare` persists the bundle layout and
 /// returns the eligibility preview the UI shows before the voter commits;
 /// `start` hands the round to the Rust driver, which runs to quiescence on
@@ -1481,7 +1539,7 @@ final class VotingDriveJobProvider
   }
 }
 
-String _$votingDriveJobHash() => r'd905146006377ad8656e157d3a0e97c1db3247ea';
+String _$votingDriveJobHash() => r'59d259a8a4ff1f13106d131ec2dc517319fe0ca4';
 
 /// Submission job for one round. `prepare` persists the bundle layout and
 /// returns the eligibility preview the UI shows before the voter commits;
