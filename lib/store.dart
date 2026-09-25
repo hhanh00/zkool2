@@ -24,6 +24,7 @@ import 'package:zkool/src/rust/api/plugin.dart' as plugin_api;
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 // import 'package:zkool/src/rust/api/voting.dart';
+import 'package:zkool/src/rust/api/voting_drive.dart';
 import 'package:zkool/src/rust/api/zsa.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
@@ -3136,3 +3137,152 @@ class ShareTrackingArm extends _$ShareTrackingArm {
 }
 
 */
+
+// ── Voting round drive providers ────────────────────────────────────────────
+//
+// Live counterpart of the round driver described in
+// docs/voting-submission-orchestration.md: the UI saves only `Decision`
+// values; prepare, start, and status polling go through the Rust host
+// adapter, and the durable truth lives in the voting sidecar.
+
+/// State of the submission job for one round: an explicit prepare step
+/// (eligibility preview), then a driven run observed by polling.
+@freezed
+sealed class VotingDriveJobState with _$VotingDriveJobState {
+  const factory VotingDriveJobState({
+    required String stage, // idle|preparing|ready|driving|error
+    VotingEligibilityPreview? eligibility,
+    /// Last polled driver status; null before the first poll.
+    VotingDriveStatus? status,
+    String? error,
+  }) = _VotingDriveJobState;
+}
+
+/// Submission job for one round. `prepare` persists the bundle layout and
+/// returns the eligibility preview the UI shows before the voter commits;
+/// `start` hands the round to the Rust driver, which runs to quiescence on
+/// its own task. Status polling is owned here, so it survives page
+/// navigation; a run already live in Rust is adopted on first read.
+@Riverpod(keepAlive: true)
+class VotingDriveJob extends _$VotingDriveJob {
+  String _roundId = "";
+  Timer? _poll;
+
+  @override
+  VotingDriveJobState build(String roundId) {
+    _roundId = roundId;
+    ref.onDispose(_stopPolling);
+    // Runs are process-local in Rust; a page reopened mid-run adopts the
+    // live registry entry instead of showing a stale idle ballot.
+    unawaited(_adoptLiveRun());
+    return const VotingDriveJobState(stage: "idle");
+  }
+
+  /// Persists the round's bundle layout and records the eligibility preview.
+  /// Returns false on failure; the reason is in `state.error`.
+  Future<bool> prepare({required String lightwalletdUrl, required String roundName}) async {
+    if (state.stage == "preparing" || state.stage == "driving") return false;
+    state = state.copyWith(stage: "preparing", error: null, eligibility: null);
+    try {
+      final eligibility = await votingPrepareRound(
+        roundId: _roundId,
+        lightwalletdUrl: lightwalletdUrl,
+        roundName: roundName,
+        c: coinContext.coin,
+      );
+      state = state.copyWith(stage: "ready", eligibility: eligibility);
+      return true;
+    } on Exception catch (e) {
+      state = state.copyWith(stage: "error", error: e.toString());
+      return false;
+    }
+  }
+
+  /// Starts the driver run after the ballot was confirmed. A run already
+  /// live for the round is adopted rather than duplicated.
+  Future<void> start({required String lightwalletdUrl, required String roundName}) async {
+    if (state.stage == "driving") return;
+    try {
+      await votingDriveStart(
+        roundId: _roundId,
+        lightwalletdUrl: lightwalletdUrl,
+        roundName: roundName,
+        c: coinContext.coin,
+      );
+    } on Exception catch (e) {
+      state = state.copyWith(stage: "error", error: e.toString());
+      return;
+    }
+    state = state.copyWith(stage: "driving", error: null);
+    _startPolling();
+  }
+
+  /// Cooperatively cancels the run; durable effects stay and a later start
+  /// re-plans from the sidecar. Polling continues until Rust reports the run
+  /// stopped.
+  Future<void> cancel() async {
+    try {
+      await votingDriveCancel(roundId: _roundId, c: coinContext.coin);
+    } on Exception catch (e) {
+      state = state.copyWith(error: e.toString());
+    }
+  }
+
+  Future<void> _adoptLiveRun() async {
+    try {
+      final status = await votingDriveStatus(roundId: _roundId, c: coinContext.coin);
+      if (status.running && state.stage != "driving") {
+        state = state.copyWith(stage: "driving", status: status);
+        _startPolling();
+      }
+    } on Exception {
+      // No registry entry (or wallet not open yet); the idle ballot is right.
+    }
+  }
+
+  void _startPolling() {
+    _stopPolling();
+    unawaited(_pollOnce());
+    _poll = Timer.periodic(const Duration(seconds: 2), (_) => unawaited(_pollOnce()));
+  }
+
+  void _stopPolling() {
+    _poll?.cancel();
+    _poll = null;
+  }
+
+  Future<void> _pollOnce() async {
+    try {
+      final status = await votingDriveStatus(roundId: _roundId, c: coinContext.coin);
+      state = state.copyWith(status: status);
+      if (!status.running) _stopPolling();
+    } on Exception {
+      // Transient status errors keep the poll loop alive; the run outlives
+      // them and the next tick retries.
+    }
+  }
+}
+
+/// Friendly headline for a driver quiescence label, as formatted by
+/// `quiescence_label` in `rust/src/voting/drive.rs`.
+String votingQuiescenceLabel(String? quiescence) {
+  final q = quiescence;
+  if (q == null) return "Submitting votes";
+  if (q == "done") return "Votes submitted";
+  if (q.startsWith("background_shares")) {
+    return "Votes confirmed; remaining shares finish in background";
+  }
+  if (q == "cancelled") return "Cancelled — resume to continue";
+  if (q.startsWith("needs_ballot")) return "Ballot incomplete";
+  if (q.startsWith("needs_delegation_signatures")) {
+    return "Delegation signatures needed";
+  }
+  if (q == "needs_bundle_setup") return "Bundle setup needed — prepare again";
+  if (q == "chain_terminal") return "Chain rejected the submission";
+  if (q == "chain_recovery_stalled") {
+    return "Submission recovery stalled — try again later";
+  }
+  if (q == "failures") return "Submission failed";
+  if (q.startsWith("pass_budget_exhausted")) return "Paused — resume to continue";
+  return q.replaceAll('_', ' ');
+}

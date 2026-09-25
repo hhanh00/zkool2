@@ -2,10 +2,19 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart' show logger;
 import 'package:zkool/src/rust/api/voting.dart';
+import 'package:zkool/src/rust/api/voting_drive.dart';
 import 'package:zkool/src/rust/api/voting_share_tracking.dart';
-import 'package:zkool/store.dart' show appSettingsProvider, coinContext;
+import 'package:zkool/store.dart'
+    show
+        VotingDriveJobState,
+        appSettingsProvider,
+        coinContext,
+        votingDriveJobProvider,
+        votingQuiescenceLabel;
+import 'package:zkool/utils.dart' show zatToString;
 
 class VotingRoundPage extends ConsumerStatefulWidget {
   final VotingRoundListItem round;
@@ -161,17 +170,117 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
     return index == null || index >= proposal.options.length ? null : proposal.options[index];
   }
 
+  /// Ballot complete → explicit prepare (eligibility preview) → confirm
+  /// dialog → start the driver run. The durable work happens in Rust; this
+  /// page only observes the polled status afterwards.
+  Future<void> _onBallotComplete() async {
+    final settings = await ref.read(appSettingsProvider.future);
+    if (settings.offline) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Voting submission is disabled in offline mode')),
+        );
+      }
+      return;
+    }
+    final job = ref.read(votingDriveJobProvider(widget.round.roundId).notifier);
+    final prepared = await job.prepare(lightwalletdUrl: settings.lwd, roundName: widget.round.title);
+    if (!prepared) {
+      if (mounted) {
+        final error = ref.read(votingDriveJobProvider(widget.round.roundId)).error;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not prepare the round: ${error ?? "unknown error"}')),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    final confirmed = await _confirmSubmission(
+      ref.read(votingDriveJobProvider(widget.round.roundId)).eligibility,
+    );
+    if (!confirmed || !mounted) return;
+    await job.start(lightwalletdUrl: settings.lwd, roundName: widget.round.title);
+  }
+
+  /// Eligibility preview plus the finality warning; the last gate before the
+  /// driver is allowed to submit.
+  Future<bool> _confirmSubmission(VotingEligibilityPreview? preview) async {
+    if (preview == null) return false;
+    final trim = preview.privacyTrimDroppedValueZatoshi;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Submit votes?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${preview.noteCount} notes'),
+            const SizedBox(height: 4),
+            Text('${zatToString(preview.eligibleWeightZatoshi)} ZEC voting weight'),
+            if (!preview.isEligible) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'This weight is below the round\'s minimum voting rule.',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
+            if (trim > BigInt.zero) ...[
+              const SizedBox(height: 8),
+              Text(
+                'The privacy trim withholds ${zatToString(trim)} ZEC '
+                '(${preview.skippedSuffixBundles} bundles, ${preview.skippedSuffixNotes} notes).',
+              ),
+            ],
+            const SizedBox(height: 12),
+            const Text(
+              'Votes are final once submission starts and cannot be changed after confirmation.',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Submit votes')),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  Future<String> _lwdUrl() async => (await ref.read(appSettingsProvider.future)).lwd;
+
   @override
   Widget build(BuildContext context) {
+    final job = ref.watch(votingDriveJobProvider(widget.round.roundId));
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.round.title)),
+      body: job.stage == "driving"
+          ? _DriveStatusView(
+              job: job,
+              onDone: () => context.pop(),
+              onCancel: () => ref
+                  .read(votingDriveJobProvider(widget.round.roundId).notifier)
+                  .cancel(),
+              onResume: () async {
+                final lwd = await _lwdUrl();
+                await ref
+                    .read(votingDriveJobProvider(widget.round.roundId).notifier)
+                    .start(lightwalletdUrl: lwd, roundName: widget.round.title);
+              },
+            )
+          : _buildBallot(),
+    );
+  }
+
+  Widget _buildBallot() {
     final proposals = widget.round.proposals;
     final ballotComplete = proposals.every(
       (proposal) => _selections.containsKey(proposal.proposalId) || _skipped.contains(proposal.proposalId),
     );
     final secondaryColor = Theme.of(context).colorScheme.secondary;
-    return Scaffold(
-      appBar: AppBar(title: Text(widget.round.title)),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
+    return _loading
+        ? const Center(child: CircularProgressIndicator())
           : _loadError != null
               ? Center(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -221,15 +330,11 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
                                         if (mounted) details.onStepContinue?.call();
                                       }
                                     : ballotComplete
-                                        ? () {
-                                            // TODO(next): serialize selections/skips as
-                                            // DraftVote JSON and hand the completed
-                                            // ballot to the existing voting submission job.
-                                          }
+                                        ? () => unawaited(_onBallotComplete())
                                         : null,
                                 child: Text(
                                   _currentStep == proposals.length - 1
-                                      ? 'Done'
+                                      ? 'Submit'
                                       : _selections.containsKey(proposals[_currentStep].proposalId)
                                           ? 'Next'
                                           : 'Skip',
@@ -290,7 +395,113 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
                             ),
                         ],
                       ),
-                    ),
+                    );
+  }
+}
+
+/// Live view of one round's driver run: progress while running, the
+/// quiescence outcome (and failures) once stopped, and resume/cancel/leave
+/// actions derived from the polled status.
+class _DriveStatusView extends StatelessWidget {
+  final VotingDriveJobState job;
+  final VoidCallback onDone;
+  final VoidCallback onCancel;
+  final Future<void> Function() onResume;
+
+  const _DriveStatusView({
+    required this.job,
+    required this.onDone,
+    required this.onCancel,
+    required this.onResume,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final status = job.status;
+    final running = status?.running ?? true;
+    final theme = Theme.of(context);
+    final failures = status?.failures ?? const <String>[];
+    final progress = (status != null && status.totalProposals > 0)
+        ? status.completedProposals / status.totalProposals
+        : null;
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Icon(
+              running
+                  ? Icons.how_to_vote_outlined
+                  : switch (status?.quiescence) {
+                      'done' => Icons.check_circle,
+                      'cancelled' => Icons.cancel_outlined,
+                      'failures' || 'chain_terminal' => Icons.error_outline,
+                      _ => Icons.info_outline,
+                    },
+              size: 48,
+              color: running
+                  ? theme.colorScheme.secondary
+                  : switch (status?.quiescence) {
+                      'done' => Colors.green,
+                      'failures' || 'chain_terminal' => theme.colorScheme.error,
+                      _ => null,
+                    },
+            ),
+            const SizedBox(height: 12),
+            Text(
+              votingQuiescenceLabel(running ? null : status?.quiescence),
+              textAlign: TextAlign.center,
+              style: theme.textTheme.titleMedium,
+            ),
+            const SizedBox(height: 16),
+            LinearProgressIndicator(value: progress, minHeight: 8),
+            const SizedBox(height: 8),
+            if (status != null) ...[
+              Text(
+                '${status.completedProposals} of ${status.totalProposals} proposals',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${status.dispatches} dispatches • ${status.remainingObligations} obligations left',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+            if (job.error != null) ...[
+              const SizedBox(height: 12),
+              Text(job.error!, style: TextStyle(color: theme.colorScheme.error)),
+            ],
+            if (failures.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              for (final failure in failures)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(failure, style: TextStyle(color: theme.colorScheme.error)),
+                ),
+            ],
+            const SizedBox(height: 20),
+            if (running)
+              OutlinedButton.icon(
+                onPressed: onCancel,
+                icon: const Icon(Icons.close),
+                label: const Text('Cancel submission'),
+              )
+            else ...[
+              switch (status?.quiescence) {
+                'cancelled' || 'pass_budget_exhausted' => FilledButton.icon(
+                    onPressed: () => onResume(),
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('Resume submission'),
+                  ),
+                _ => FilledButton(onPressed: onDone, child: const Text('Done')),
+              },
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
