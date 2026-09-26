@@ -103,7 +103,9 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
       return true;
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not save selection: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: SelectableText('Could not save selection: $e')),
+        );
       }
       return false;
     } finally {
@@ -178,7 +180,7 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
     if (settings.offline) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Voting submission is disabled in offline mode')),
+          const SnackBar(content: SelectableText('Voting submission is disabled in offline mode')),
         );
       }
       return;
@@ -189,7 +191,10 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
       if (mounted) {
         final error = ref.read(votingDriveJobProvider(widget.round.roundId)).error;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not prepare the round: ${error ?? "unknown error"}')),
+          SnackBar(
+            content: SelectableText('Could not prepare the round: ${error ?? "unknown error"}'),
+            duration: const Duration(seconds: 10),
+          ),
         );
       }
       return;
@@ -284,7 +289,7 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
           : _loadError != null
               ? Center(
                   child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text(_loadError!),
+                  SelectableText(_loadError!),
                   TextButton(onPressed: _loadSelections, child: const Text('Retry')),
                 ]))
               : proposals.isEmpty
@@ -472,14 +477,14 @@ class _DriveStatusView extends StatelessWidget {
             ],
             if (job.error != null) ...[
               const SizedBox(height: 12),
-              Text(job.error!, style: TextStyle(color: theme.colorScheme.error)),
+              SelectableText(job.error!, style: TextStyle(color: theme.colorScheme.error)),
             ],
             if (failures.isNotEmpty) ...[
               const SizedBox(height: 12),
               for (final failure in failures)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(failure, style: TextStyle(color: theme.colorScheme.error)),
+                  child: SelectableText(failure, style: TextStyle(color: theme.colorScheme.error)),
                 ),
             ],
             const SizedBox(height: 20),
