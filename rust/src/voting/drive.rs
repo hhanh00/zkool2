@@ -15,20 +15,18 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use anyhow::{ensure, Result};
 use halo2_proofs::pasta::group::ff::PrimeField as _;
 use rand_core::OsRng;
-use zeroize::Zeroizing;
 use zcash_keys::keys::UnifiedSpendingKey;
-use zip32::AccountId;
 use zcash_voting::prelude::{VotingDb, VotingHotkey};
 use zcash_voting::vote_work::{
     DelegationStepInputs, ProposalRosterEntry, RoundBinding, RoundExecutor, RoundHostContext,
 };
 use zcash_voting::{
-    delegation_pipeline::{
-        DelegationAccountIdentity, DelegationPipeline, DelegationSigner,
-    },
+    delegation_pipeline::{DelegationAccountIdentity, DelegationPipeline, DelegationSigner},
     ChainAdvancePolicy, ChainSubmissionClientConfig, HelperClient, HelperHealth, Network,
     PirFleet, RoundHostSource,
 };
+use zeroize::Zeroizing;
+use zip32::AccountId;
 
 use crate::voting::chain::{ZkoolChainTransport, ZkoolPirTransport, ZkoolTreeTransport};
 use crate::voting::sidecar::ZkoolHelperTransport;
@@ -63,16 +61,10 @@ pub fn build_executor(
     let chain_config =
         ChainSubmissionClientConfig::for_network(binding.network, routes.chain_endpoints.clone());
     let helper_client = HelperClient::new(
-        Arc::new(ZkoolHelperTransport::new(
-            routes.transport,
-            &routes.proxy,
-        )),
+        Arc::new(ZkoolHelperTransport::new(routes.transport, &routes.proxy)),
         HelperHealth::default(),
     );
-    let tree_transport = Arc::new(ZkoolTreeTransport::new(
-        routes.transport,
-        &routes.proxy,
-    ));
+    let tree_transport = Arc::new(ZkoolTreeTransport::new(routes.transport, &routes.proxy));
     let executor = RoundExecutor::with_transport(db, chain_transport, chain_config, helper_client)?
         .with_tree_transport(tree_transport)
         .with_binding(binding)?;
@@ -116,27 +108,27 @@ fn sign_delegation_request(
     request: zcash_voting::prelude::DelegationSigningRequest,
 ) -> Result<[u8; 64], zcash_voting::VotingError> {
     use zcash_voting::VotingError;
-    let seed_fingerprint = zip32::fingerprint::SeedFingerprint::from_seed(seed).ok_or_else(
-        || VotingError::InvalidInput {
-            message: "wallet seed length is not valid for ZIP-32".to_string(),
-        },
-    )?;
+    let seed_fingerprint =
+        zip32::fingerprint::SeedFingerprint::from_seed(seed).ok_or_else(|| {
+            VotingError::InvalidInput {
+                message: "wallet seed length is not valid for ZIP-32".to_string(),
+            }
+        })?;
     if seed_fingerprint.to_bytes() != request.seed_fingerprint {
         return Err(VotingError::InvalidInput {
             message: "wallet seed fingerprint does not match delegation signing request"
                 .to_string(),
         });
     }
-    let account = AccountId::try_from(request.account_index).map_err(|_| {
-        VotingError::InvalidInput {
+    let account =
+        AccountId::try_from(request.account_index).map_err(|_| VotingError::InvalidInput {
             message: format!("invalid account_index {}", request.account_index),
+        })?;
+    let usk = UnifiedSpendingKey::from_seed(&request.network, seed, account).map_err(|error| {
+        VotingError::InvalidInput {
+            message: format!("account spending key derivation failed: {error}"),
         }
     })?;
-    let usk = UnifiedSpendingKey::from_seed(&request.network, seed, account).map_err(
-        |error| VotingError::InvalidInput {
-            message: format!("account spending key derivation failed: {error}"),
-        },
-    )?;
     let sk = *usk.orchard();
     let ask = orchard::keys::SpendAuthorizingKey::from(&sk);
     let alpha = Option::<halo2_proofs::pasta::pallas::Scalar>::from(
@@ -357,9 +349,7 @@ impl zcash_voting::RoundDriveReporter for DriveRunRecorder {
                 state.dispatches += 1;
             }
             zcash_voting::RoundDriveEvent::StepFailed { kind, message, .. } => {
-                state
-                    .failures
-                    .push(format!("{kind:?}: {message}"));
+                state.failures.push(format!("{kind:?}: {message}"));
             }
             _ => {}
         }
@@ -373,9 +363,9 @@ fn quiescence_label(quiescence: &zcash_voting::RoundQuiescence) -> String {
         Q::NoWorkLeft => "done".to_string(),
         Q::NeedsBundleSetup => "needs_bundle_setup".to_string(),
         Q::PersistedChainTerminal => "chain_terminal".to_string(),
-        Q::NeedsBallot {
-            open_proposals, ..
-        } => format!("needs_ballot({} open)", open_proposals.len()),
+        Q::NeedsBallot { open_proposals, .. } => {
+            format!("needs_ballot({} open)", open_proposals.len())
+        }
         Q::NeedsDelegationSignatures { bundles } => {
             format!("needs_delegation_signatures({bundles:?})")
         }
@@ -486,22 +476,21 @@ pub fn start_round_drive(
                 .map(|failure| format!("{:?}: {}", failure.failure.kind, failure.failure.message))
                 .collect::<Vec<_>>(),
         );
-        {
-            let mut state = state.lock().unwrap_or_else(|error| error.into_inner());
-            state.running = false;
-            state.quiescence = Some(quiescence_label(&report.quiescence));
-            state.completed_proposals = report.tally.completed_proposals;
-            state.total_proposals = report.tally.total_proposals;
-            state.remaining_obligations = report.tally.remaining_obligations;
-            if matches!(
-                report.quiescence,
-                zcash_voting::RoundQuiescence::Failures
-            ) {
-                for failure in &report.failures {
-                    state
-                        .failures
-                        .push(format!("{:?}: {}", failure.failure.kind, failure.failure.message));
-                }
+        // Share confirmation is not driven here. The round page owns it with
+        // repeated `track_pending_shares` passes while it is open, so there is
+        // exactly one share mechanism and it is page-scoped.
+        let mut state = state.lock().unwrap_or_else(|error| error.into_inner());
+        state.running = false;
+        state.quiescence = Some(quiescence_label(&report.quiescence));
+        state.completed_proposals = report.tally.completed_proposals;
+        state.total_proposals = report.tally.total_proposals;
+        state.remaining_obligations = report.tally.remaining_obligations;
+        if matches!(report.quiescence, zcash_voting::RoundQuiescence::Failures) {
+            for failure in &report.failures {
+                state.failures.push(format!(
+                    "{:?}: {}",
+                    failure.failure.kind, failure.failure.message
+                ));
             }
         }
     });
@@ -580,8 +569,8 @@ mod tests {
 
     #[test]
     fn binding_maps_the_roster_and_hotkey() {
-        let hotkey = zcash_voting::prelude::generate_random_voting_hotkey(Network::Regtest)
-            .expect("hotkey");
+        let hotkey =
+            zcash_voting::prelude::generate_random_voting_hotkey(Network::Regtest).expect("hotkey");
         let binding = build_binding(
             &"01".repeat(32),
             Network::Regtest,
@@ -603,16 +592,17 @@ mod tests {
         let fingerprint = zip32::fingerprint::SeedFingerprint::from_seed(&seed)
             .expect("fingerprint")
             .to_bytes();
-        let request = |seed_fingerprint: [u8; 32]| zcash_voting::prelude::DelegationSigningRequest {
-            account_index: 0,
-            network: Network::Regtest,
-            seed_fingerprint,
-            sighash: [9u8; 32],
-            alpha: [
-                1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                0, 0, 0, 0, 0,
-            ],
-        };
+        let request =
+            |seed_fingerprint: [u8; 32]| zcash_voting::prelude::DelegationSigningRequest {
+                account_index: 0,
+                network: Network::Regtest,
+                seed_fingerprint,
+                sighash: [9u8; 32],
+                alpha: [
+                    1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0,
+                ],
+            };
         assert!(sign_delegation_request(&seed, request([0u8; 32])).is_err());
         let signature = sign_delegation_request(&seed, request(fingerprint)).expect("signs");
         assert_eq!(signature.len(), 64);

@@ -15,8 +15,8 @@ use bip39::Mnemonic;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 use sqlx::SqliteConnection;
-use zcash_voting::delegation_pipeline::DelegationAccountIdentity;
 use zcash_voting::delegate::ResolveDelegationLwdParams;
+use zcash_voting::delegation_pipeline::DelegationAccountIdentity;
 use zcash_voting::prelude::BundlePolicy;
 
 use crate::api::coin::Coin;
@@ -112,7 +112,16 @@ pub struct VotingDriveStatus {
     pub dispatches: u64,
     pub completed_proposals: u32,
     pub total_proposals: u32,
+    /// Foreground obligations left, including share work the run has handed to
+    /// the background tracker. Prefer `shares_*` for progress the user sees.
     pub remaining_obligations: u32,
+    /// Helper shares already confirmed for the round, and the total recorded.
+    ///
+    /// Read from the durable sidecar on every poll, because confirmations land
+    /// after the foreground run stops. `total == 0` means the round has no
+    /// share work (not yet cast, or an imported capability).
+    pub shares_confirmed: u32,
+    pub shares_total: u32,
     pub quiescence: Option<String>,
     pub failures: Vec<String>,
 }
@@ -193,17 +202,20 @@ async fn gather_round_inputs(
     // account id and the stored ZIP-32 aindex (what the old identity carried).
     // Remove with the zcash_voting path override.
     {
-        use zip32::AccountId;
         use zcash_keys::keys::UnifiedSpendingKey;
+        use zip32::AccountId;
         let derive = |index: u32| {
-            UnifiedSpendingKey::from_seed(&network, &seed, AccountId::try_from(index).unwrap())
-                .map(|usk| orchard::keys::FullViewingKey::from(usk.orchard()).to_bytes()[..32].to_vec())
+            UnifiedSpendingKey::from_seed(&network, &seed, AccountId::try_from(index).unwrap()).map(
+                |usk| orchard::keys::FullViewingKey::from(usk.orchard()).to_bytes()[..32].to_vec(),
+            )
         };
         let note_ufvk = crate::key::get_account_ufvk(&c.network(), &mut connection, c.account, 4)
             .await
             .ok();
         let note_ak = note_ufvk
-            .and_then(|ufvk| zcash_keys::keys::UnifiedFullViewingKey::decode(&c.network(), &ufvk).ok())
+            .and_then(|ufvk| {
+                zcash_keys::keys::UnifiedFullViewingKey::decode(&c.network(), &ufvk).ok()
+            })
             .and_then(|ufvk| ufvk.orchard().map(|fvk| fvk.to_bytes()[..32].to_vec()));
         eprintln!(
             "[ZK-DIAG] account={} aindex={} stored_xvk_ak={} note_ufvk_ak={:?} seed_id_ak={:?} seed_aindex_ak={:?}",
@@ -268,21 +280,15 @@ async fn gather_round_inputs(
 /// are reused when they still match the eligible note set), which the driver
 /// requires before it can plan any vote work. The eligibility preview
 /// describes the persisted plan.
-async fn prepare_bundles(
-    gathered: GatheredRound,
-    _c: &Coin,
-) -> Result<VotingEligibilityPreview> {
-    let pipeline = drive::build_pipeline(
-        gathered.sidecar.db(),
-        &gathered.hotkey,
-        gathered.inputs,
-    )?;
-    let report = tokio::task::spawn_blocking(move || -> Result<zcash_voting::VotingEligibilityReport> {
-        pipeline.setup_bundles()?;
-        Ok(pipeline.eligibility()?)
-    })
-    .await
-    .map_err(|error| anyhow!("bundle setup task failed: {error}"))??;
+async fn prepare_bundles(gathered: GatheredRound, _c: &Coin) -> Result<VotingEligibilityPreview> {
+    let pipeline = drive::build_pipeline(gathered.sidecar.db(), &gathered.hotkey, gathered.inputs)?;
+    let report =
+        tokio::task::spawn_blocking(move || -> Result<zcash_voting::VotingEligibilityReport> {
+            pipeline.setup_bundles()?;
+            Ok(pipeline.eligibility()?)
+        })
+        .await
+        .map_err(|error| anyhow!("bundle setup task failed: {error}"))??;
     Ok(VotingEligibilityPreview {
         note_count: u32::try_from(report.eligibility.distinct_note_count).unwrap_or(u32::MAX),
         eligible_weight_zatoshi: report.eligibility.eligible_weight,
@@ -360,19 +366,21 @@ pub async fn voting_drive_start(
         proxy: c.proxy.clone(),
         chain_endpoints: servers.clone(),
     };
-    let delegation =
-        drive::build_delegation_step_inputs(sidecar.db(), &hotkey, inputs, &routes)?;
+    let delegation = drive::build_delegation_step_inputs(sidecar.db(), &hotkey, inputs, &routes)?;
     // The vote servers double as the vote-tree node fleet. Round timing
     // comes from the chain status so the driver can detect the last-moment
     // share window; the overview's vote end is the fallback.
-    let (ceremony_start, vote_end) = match fetch_round_timing(&servers, round_id, c).await? {
-        Some((ceremony, end)) => (Some(ceremony), Some(end)),
-        None => (None, vote_end),
+    // Deliver helper shares immediately: leaving the ceremony start unset
+    // makes the crate's last-moment buffer absent, so every share is planned
+    // with `submit_at = 0` instead of a randomized delay spread across the
+    // round. This trades the timing-correlation resistance of the spread for a
+    // single foreground delivery pass. Vote end is still carried for recovery.
+    let vote_end = match fetch_round_timing(&servers, round_id, c).await? {
+        Some((_ceremony, end)) => Some(end),
+        None => vote_end,
     };
     let host =
-        drive::ZkoolRoundHost::new(servers.clone(), servers, ceremony_start, vote_end, Some(
-            delegation,
-        ));
+        drive::ZkoolRoundHost::new(servers.clone(), servers, None, vote_end, Some(delegation));
     let binding = drive::build_binding(round_id, network, &roster, Some(&hotkey))?;
     drive::start_round_drive(sidecar.db(), binding, routes, host)
 }
@@ -381,17 +389,39 @@ pub async fn voting_drive_start(
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn voting_drive_status(round_id: &str, c: &Coin) -> Result<VotingDriveStatus> {
     let wallet = wallet_id(c).await?;
-    Ok(match drive::drive_status(&wallet, round_id) {
-        status => VotingDriveStatus {
-            round_id: status.round_id,
-            running: status.running,
-            dispatches: status.dispatches,
-            completed_proposals: status.completed_proposals,
-            total_proposals: status.total_proposals,
-            remaining_obligations: status.remaining_obligations,
-            quiescence: status.quiescence,
-            failures: status.failures,
-        },
+    // Share confirmations are driven by the background tracker and land after
+    // the foreground run quiesces, so read the live counts from the sidecar
+    // rather than the run's stale tally.
+    let (shares_confirmed, shares_total) = {
+        let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet.clone()).await?;
+        let round = round_id.to_owned();
+        sidecar
+            .run(move |db| {
+                let total =
+                    u32::try_from(db.get_share_delegations(&round)?.len()).unwrap_or(u32::MAX);
+                let remaining = u32::try_from(db.get_unconfirmed_delegations(&round)?.len())
+                    .unwrap_or(u32::MAX);
+                Ok((total.saturating_sub(remaining), total))
+            })
+            .await?
+    };
+    let status = drive::drive_status(&wallet, round_id);
+    // [ZK-DIAG] temporary: what the page's poll actually sees.
+    eprintln!(
+        "[ZK-DIAG] status round={round_id} running={} quiescence={:?} shares={}/{}",
+        status.running, status.quiescence, shares_confirmed, shares_total,
+    );
+    Ok(VotingDriveStatus {
+        round_id: status.round_id,
+        running: status.running,
+        dispatches: status.dispatches,
+        completed_proposals: status.completed_proposals,
+        total_proposals: status.total_proposals,
+        remaining_obligations: status.remaining_obligations,
+        shares_confirmed,
+        shares_total,
+        quiescence: status.quiescence,
+        failures: status.failures,
     })
 }
 

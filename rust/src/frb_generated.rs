@@ -42,7 +42,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 2101198764;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1455524393;
 
 // Section: executor
 
@@ -7484,6 +7484,52 @@ fn wire__crate__api__voting_share_tracking__voting_start_share_tracking_impl(
         },
     )
 }
+fn wire__crate__api__voting_share_tracking__voting_track_shares_once_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "voting_track_shares_once",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_round_id = <String>::sse_decode(&mut deserializer);
+            let api_helper_urls = <Vec<String>>::sse_decode(&mut deserializer);
+            let api_vote_end_time_seconds = <Option<u64>>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::voting_share_tracking::voting_track_shares_once(
+                                &api_round_id,
+                                api_helper_urls,
+                                api_vote_end_time_seconds,
+                                &api_c,
+                            )
+                            .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 
 // Section: related_funcs
 
@@ -9513,6 +9559,8 @@ impl SseDecode for crate::api::voting_drive::VotingDriveStatus {
         let mut var_completedProposals = <u32>::sse_decode(deserializer);
         let mut var_totalProposals = <u32>::sse_decode(deserializer);
         let mut var_remainingObligations = <u32>::sse_decode(deserializer);
+        let mut var_sharesConfirmed = <u32>::sse_decode(deserializer);
+        let mut var_sharesTotal = <u32>::sse_decode(deserializer);
         let mut var_quiescence = <Option<String>>::sse_decode(deserializer);
         let mut var_failures = <Vec<String>>::sse_decode(deserializer);
         return crate::api::voting_drive::VotingDriveStatus {
@@ -9522,6 +9570,8 @@ impl SseDecode for crate::api::voting_drive::VotingDriveStatus {
             completed_proposals: var_completedProposals,
             total_proposals: var_totalProposals,
             remaining_obligations: var_remainingObligations,
+            shares_confirmed: var_sharesConfirmed,
+            shares_total: var_sharesTotal,
             quiescence: var_quiescence,
             failures: var_failures,
         };
@@ -10008,6 +10058,12 @@ fn pde_ffi_dispatcher_primary_impl(
             wire__crate__api__voting__voting_save_selection_impl(port, ptr, rust_vec_len, data_len)
         }
         191 => wire__crate__api__voting_share_tracking__voting_start_share_tracking_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        192 => wire__crate__api__voting_share_tracking__voting_track_shares_once_impl(
             port,
             ptr,
             rust_vec_len,
@@ -11376,6 +11432,8 @@ impl flutter_rust_bridge::IntoDart for crate::api::voting_drive::VotingDriveStat
             self.completed_proposals.into_into_dart().into_dart(),
             self.total_proposals.into_into_dart().into_dart(),
             self.remaining_obligations.into_into_dart().into_dart(),
+            self.shares_confirmed.into_into_dart().into_dart(),
+            self.shares_total.into_into_dart().into_dart(),
             self.quiescence.into_into_dart().into_dart(),
             self.failures.into_into_dart().into_dart(),
         ]
@@ -13043,6 +13101,8 @@ impl SseEncode for crate::api::voting_drive::VotingDriveStatus {
         <u32>::sse_encode(self.completed_proposals, serializer);
         <u32>::sse_encode(self.total_proposals, serializer);
         <u32>::sse_encode(self.remaining_obligations, serializer);
+        <u32>::sse_encode(self.shares_confirmed, serializer);
+        <u32>::sse_encode(self.shares_total, serializer);
         <Option<String>>::sse_encode(self.quiescence, serializer);
         <Vec<String>>::sse_encode(self.failures, serializer);
     }
