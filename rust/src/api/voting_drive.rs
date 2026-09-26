@@ -15,8 +15,6 @@ use bip39::Mnemonic;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 use sqlx::SqliteConnection;
-use zip32::AccountId;
-use zcash_keys::keys::UnifiedSpendingKey;
 use zcash_voting::delegation_pipeline::DelegationAccountIdentity;
 use zcash_voting::delegate::ResolveDelegationLwdParams;
 use zcash_voting::prelude::BundlePolicy;
@@ -35,22 +33,29 @@ async fn account_seed(connection: &mut SqliteConnection, account: u32) -> Result
 }
 
 /// Wallet-derived delegation facts for the note-owning account.
+///
+/// `fvk_bytes` must be the wallet's stored account viewing key — the same
+/// key the note source stamps onto every note. The voting crate rebuilds
+/// each note from that key and recomputes the proof's rk from it, while the
+/// PCZT's rk comes from this identity; deriving the identity from the seed
+/// instead lets the two keys drift (imported keys, derivation changes) and
+/// the proof is then rejected with "rk does not match stored PCZT data".
+///
+/// `aindex` must be the account's ZIP-32 derivation index (`accounts.aindex`),
+/// not the row id: the crate embeds it in the PCZT ZIP-32 path and the signer
+/// derives its spending key from it, so a row id here signs with a different
+/// account's key than the notes and the spend use.
 fn delegation_identity(
+    fvk: &orchard::keys::FullViewingKey,
     seed: &[u8],
-    network: zcash_voting::Network,
-    account: u32,
+    aindex: u32,
 ) -> Result<DelegationAccountIdentity> {
     let fingerprint = zip32::fingerprint::SeedFingerprint::from_seed(seed)
         .ok_or_else(|| anyhow!("wallet seed length is not valid for ZIP-32"))?;
-    let account_id =
-        AccountId::try_from(account).map_err(|_| anyhow!("invalid account index {account}"))?;
-    let usk = UnifiedSpendingKey::from_seed(&network, seed, account_id)
-        .map_err(|error| anyhow!("account spending key derivation failed: {error}"))?;
-    let fvk = orchard::keys::FullViewingKey::from(usk.orchard());
     Ok(DelegationAccountIdentity {
         fvk_bytes: fvk.to_bytes().to_vec(),
         seed_fingerprint: fingerprint.to_bytes(),
-        account_index: account,
+        account_index: aindex,
     })
 }
 
@@ -174,7 +179,42 @@ async fn gather_round_inputs(
     // Wallet material: hotkey, seed-derived identity, notes and witnesses.
     let hotkey = hotkey::load_or_create(&mut connection, network).await?;
     let seed = account_seed(&mut connection, c.account).await?;
-    let identity = delegation_identity(&seed, network, c.account)?;
+    // The identity's viewing key must be the stored account key the note
+    // source uses, not a fresh seed derivation — see delegation_identity.
+    let orchard_keys = crate::db::select_account_orchard(&mut connection, c.account).await?;
+    let account_fvk = orchard_keys
+        .xvk
+        .ok_or_else(|| anyhow!("account {} has no orchard viewing key", c.account))?;
+    // The signer's ZIP-32 index, never the row id — see delegation_identity.
+    let aindex = crate::db::get_account_aindex(&mut connection, c.account).await?;
+    let identity = delegation_identity(&account_fvk, &seed, aindex)?;
+    // [ZK-DIAG] temporary: compare the stored account key (what the notes and
+    // the new identity carry) against fresh seed derivations at both the DB
+    // account id and the stored ZIP-32 aindex (what the old identity carried).
+    // Remove with the zcash_voting path override.
+    {
+        use zip32::AccountId;
+        use zcash_keys::keys::UnifiedSpendingKey;
+        let derive = |index: u32| {
+            UnifiedSpendingKey::from_seed(&network, &seed, AccountId::try_from(index).unwrap())
+                .map(|usk| orchard::keys::FullViewingKey::from(usk.orchard()).to_bytes()[..32].to_vec())
+        };
+        let note_ufvk = crate::key::get_account_ufvk(&c.network(), &mut connection, c.account, 4)
+            .await
+            .ok();
+        let note_ak = note_ufvk
+            .and_then(|ufvk| zcash_keys::keys::UnifiedFullViewingKey::decode(&c.network(), &ufvk).ok())
+            .and_then(|ufvk| ufvk.orchard().map(|fvk| fvk.to_bytes()[..32].to_vec()));
+        eprintln!(
+            "[ZK-DIAG] account={} aindex={} stored_xvk_ak={} note_ufvk_ak={:?} seed_id_ak={:?} seed_aindex_ak={:?}",
+            c.account,
+            aindex,
+            hex::encode(&account_fvk.to_bytes()[..32]),
+            note_ak.as_deref().map(hex::encode),
+            derive(c.account).as_deref().map(hex::encode),
+            derive(aindex).as_deref().map(hex::encode),
+        );
+    }
     let mut client = c.client().await?;
     let note_source = note_source::ZkoolNoteSource::load(
         &c.network(),
