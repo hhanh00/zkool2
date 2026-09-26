@@ -75,6 +75,8 @@ sealed class VotingDriveStatus with _$VotingDriveStatus {
     required int completedProposals,
     required int totalProposals,
     required int remainingObligations,
+    required int sharesConfirmed,
+    required int sharesTotal,
     String? quiescence,
     required List<String> failures,
   }) = _VotingDriveStatus;

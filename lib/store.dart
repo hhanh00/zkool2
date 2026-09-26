@@ -3314,7 +3314,7 @@ String votingQuiescenceLabel(String? quiescence) {
   if (q == null) return "Submitting votes";
   if (q == "done") return "Votes submitted";
   if (q.startsWith("background_shares")) {
-    return "Votes confirmed; remaining shares finish in background";
+    return "Votes confirmed — delivering helper shares";
   }
   if (q == "cancelled") return "Cancelled — resume to continue";
   if (q.startsWith("needs_ballot")) return "Ballot incomplete";

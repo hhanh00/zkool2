@@ -1539,7 +1539,7 @@ final class VotingDriveJobProvider
   }
 }
 
-String _$votingDriveJobHash() => r'59d259a8a4ff1f13106d131ec2dc517319fe0ca4';
+String _$votingDriveJobHash() => r'683928d706c3fed628fee0f445c3dfbb1102ebb1';
 
 /// Submission job for one round. `prepare` persists the bundle layout and
 /// returns the eligibility preview the UI shows before the voter commits;
