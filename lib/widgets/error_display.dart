@@ -431,7 +431,7 @@ class ErrorCard extends StatelessWidget {
               ),
               const Gap(12),
               Expanded(
-                child: Text(
+                child: SelectableText(
                   customMessage ?? error.toString(),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onErrorContainer,
