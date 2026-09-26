@@ -197,36 +197,6 @@ async fn gather_round_inputs(
     // The signer's ZIP-32 index, never the row id — see delegation_identity.
     let aindex = crate::db::get_account_aindex(&mut connection, c.account).await?;
     let identity = delegation_identity(&account_fvk, &seed, aindex)?;
-    // [ZK-DIAG] temporary: compare the stored account key (what the notes and
-    // the new identity carry) against fresh seed derivations at both the DB
-    // account id and the stored ZIP-32 aindex (what the old identity carried).
-    // Remove with the zcash_voting path override.
-    {
-        use zcash_keys::keys::UnifiedSpendingKey;
-        use zip32::AccountId;
-        let derive = |index: u32| {
-            UnifiedSpendingKey::from_seed(&network, &seed, AccountId::try_from(index).unwrap()).map(
-                |usk| orchard::keys::FullViewingKey::from(usk.orchard()).to_bytes()[..32].to_vec(),
-            )
-        };
-        let note_ufvk = crate::key::get_account_ufvk(&c.network(), &mut connection, c.account, 4)
-            .await
-            .ok();
-        let note_ak = note_ufvk
-            .and_then(|ufvk| {
-                zcash_keys::keys::UnifiedFullViewingKey::decode(&c.network(), &ufvk).ok()
-            })
-            .and_then(|ufvk| ufvk.orchard().map(|fvk| fvk.to_bytes()[..32].to_vec()));
-        eprintln!(
-            "[ZK-DIAG] account={} aindex={} stored_xvk_ak={} note_ufvk_ak={:?} seed_id_ak={:?} seed_aindex_ak={:?}",
-            c.account,
-            aindex,
-            hex::encode(&account_fvk.to_bytes()[..32]),
-            note_ak.as_deref().map(hex::encode),
-            derive(c.account).as_deref().map(hex::encode),
-            derive(aindex).as_deref().map(hex::encode),
-        );
-    }
     let mut client = c.client().await?;
     let note_source = note_source::ZkoolNoteSource::load(
         &c.network(),
@@ -406,11 +376,6 @@ pub async fn voting_drive_status(round_id: &str, c: &Coin) -> Result<VotingDrive
             .await?
     };
     let status = drive::drive_status(&wallet, round_id);
-    // [ZK-DIAG] temporary: what the page's poll actually sees.
-    eprintln!(
-        "[ZK-DIAG] status round={round_id} running={} quiescence={:?} shares={}/{}",
-        status.running, status.quiescence, shares_confirmed, shares_total,
-    );
     Ok(VotingDriveStatus {
         round_id: status.round_id,
         running: status.running,
