@@ -64,12 +64,6 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
     try {
       final status = await votingDriveStatus(roundId: widget.round.roundId, c: _coin);
       if (!mounted) return;
-      debugPrint(
-        '[ZK-DIAG] page shares round=${widget.round.roundId} '
-        'confirmed=${status.sharesConfirmed}/${status.sharesTotal} '
-        'running=${status.running} quiescence=${status.quiescence} '
-        'helpers=${widget.round.helperUrls.length} voteEnd=${widget.round.voteEndTime}',
-      );
       final pending = status.sharesTotal > status.sharesConfirmed;
       if (!pending) {
         _shareTimer?.cancel();
@@ -80,8 +74,8 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
         unawaited(_trackSharesOnce());
       }
       setState(() => _shareStatus = status);
-    } on Exception catch (e) {
-      debugPrint('[ZK-DIAG] page shares status failed: $e');
+    } on Exception {
+      // Transient status errors: the next tick retries.
     }
   }
 
@@ -92,17 +86,15 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
   Future<void> _trackSharesOnce() async {
     if (_sharePassRunning || widget.round.helperUrls.isEmpty) return;
     _sharePassRunning = true;
-    debugPrint('[ZK-DIAG] share pass start round=${widget.round.roundId}');
     try {
-      final confirmed = await votingTrackSharesOnce(
+      await votingTrackSharesOnce(
         roundId: widget.round.roundId,
         helperUrls: widget.round.helperUrls,
         voteEndTimeSeconds: widget.round.voteEndTime,
         c: _coin,
       );
-      debugPrint('[ZK-DIAG] share pass done round=${widget.round.roundId} confirmed=$confirmed');
-    } on Exception catch (e) {
-      debugPrint('[ZK-DIAG] share pass failed: $e');
+    } on Exception {
+      // A pass that fails leaves the rows durable; the next tick retries.
     } finally {
       _sharePassRunning = false;
     }
@@ -131,6 +123,15 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
               _skipped.add(selection.proposalId);
           }
         }
+        // Resume at the last proposal already answered, so reopening a
+        // partly-filled ballot continues where the voter left off instead of
+        // starting at the first proposal.
+        var lastAnswered = -1;
+        for (var i = 0; i < widget.round.proposals.length; i++) {
+          final id = widget.round.proposals[i].proposalId;
+          if (_selections.containsKey(id) || _skipped.contains(id)) lastAnswered = i;
+        }
+        if (lastAnswered >= 0) _currentStep = lastAnswered;
       });
     } catch (e) {
       if (mounted) setState(() => _loadError = 'Could not load saved selections: $e');
@@ -313,7 +314,82 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
     } else {
       body = _buildBallot();
     }
-    return Scaffold(appBar: AppBar(title: Text(widget.round.title)), body: body);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.round.title),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.receipt_long_outlined),
+            tooltip: 'Vote report',
+            onPressed: _showReport,
+          ),
+        ],
+      ),
+      body: body,
+    );
+  }
+
+  /// Human-readable choice recorded for one proposal.
+  String _choiceText(VotingProposalListItem proposal) {
+    if (_skipped.contains(proposal.proposalId)) return 'Skipped';
+    final choice = _selections[proposal.proposalId];
+    if (choice == null) return 'Not answered';
+    if (choice < 0 || choice >= proposal.options.length) return 'Choice $choice';
+    return proposal.options[choice];
+  }
+
+  /// Report of the choices made in this round, one row per proposal.
+  void _showReport() {
+    final proposals = widget.round.proposals;
+    final answered = proposals
+        .where((p) => _selections.containsKey(p.proposalId) || _skipped.contains(p.proposalId))
+        .length;
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Vote report — ${widget.round.title}'),
+        content: SizedBox(
+          width: 480,
+          child: proposals.isEmpty
+              ? const Text('No proposals recorded for this round.')
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('$answered of ${proposals.length} proposals answered'),
+                    const SizedBox(height: 8),
+                    Flexible(
+                      child: ListView.separated(
+                        shrinkWrap: true,
+                        itemCount: proposals.length,
+                        separatorBuilder: (_, __) => const Divider(height: 12),
+                        itemBuilder: (context, index) {
+                          final proposal = proposals[index];
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                proposal.title,
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 2),
+                              Text('Choice: ${_choiceText(proposal)}'),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Status shown by the page, synthesized for an already-voted round opened
