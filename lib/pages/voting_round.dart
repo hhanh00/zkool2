@@ -186,7 +186,14 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
       return;
     }
     final job = ref.read(votingDriveJobProvider(widget.round.roundId).notifier);
-    final prepared = await job.prepare(lightwalletdUrl: settings.lwd, roundName: widget.round.title);
+    // A fresh prepare already ran for this ballot: reuse its preview. The
+    // eligible note set is snapshot-determined, so it cannot have changed.
+    final cached = ref.read(votingDriveJobProvider(widget.round.roundId));
+    final prepared = (cached.stage == "ready" && cached.eligibility != null) ||
+        await job.prepare(
+          lightwalletdUrl: settings.lwd,
+          roundName: widget.round.title,
+        );
     if (!prepared) {
       if (mounted) {
         final error = ref.read(votingDriveJobProvider(widget.round.roundId)).error;
@@ -205,6 +212,17 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
     );
     if (!confirmed || !mounted) return;
     await job.start(lightwalletdUrl: settings.lwd, roundName: widget.round.title);
+    if (!mounted) return;
+    final stage = ref.read(votingDriveJobProvider(widget.round.roundId)).stage;
+    if (stage == "error") {
+      final error = ref.read(votingDriveJobProvider(widget.round.roundId)).error;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: SelectableText('Could not start the submission: ${error ?? "unknown error"}'),
+          duration: const Duration(seconds: 10),
+        ),
+      );
+    }
   }
 
   /// Eligibility preview plus the finality warning; the last gate before the
@@ -260,21 +278,23 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
     final job = ref.watch(votingDriveJobProvider(widget.round.roundId));
     return Scaffold(
       appBar: AppBar(title: Text(widget.round.title)),
-      body: job.stage == "driving"
-          ? _DriveStatusView(
-              job: job,
-              onDone: () => context.pop(),
-              onCancel: () => ref
+      body: switch (job.stage) {
+        "preparing" => const _PreparingView(),
+        "starting" || "driving" => _DriveStatusView(
+            job: job,
+            onDone: () => context.pop(),
+            onCancel: () => ref
+                .read(votingDriveJobProvider(widget.round.roundId).notifier)
+                .cancel(),
+            onResume: () async {
+              final lwd = await _lwdUrl();
+              await ref
                   .read(votingDriveJobProvider(widget.round.roundId).notifier)
-                  .cancel(),
-              onResume: () async {
-                final lwd = await _lwdUrl();
-                await ref
-                    .read(votingDriveJobProvider(widget.round.roundId).notifier)
-                    .start(lightwalletdUrl: lwd, roundName: widget.round.title);
-              },
-            )
-          : _buildBallot(),
+                  .start(lightwalletdUrl: lwd, roundName: widget.round.title);
+            },
+          ),
+        _ => _buildBallot(),
+      },
     );
   }
 
@@ -404,6 +424,32 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
   }
 }
 
+/// Immediate feedback while the explicit prepare runs: config, round, and
+/// lightwalletd fetches plus bundle setup take several seconds.
+class _PreparingView extends StatelessWidget {
+  const _PreparingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16),
+          Text('Preparing vote…', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 4),
+          Text(
+            'Fetching the round configuration and building the bundle plan',
+            style: Theme.of(context).textTheme.bodySmall,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Live view of one round's driver run: progress while running, the
 /// quiescence outcome (and failures) once stopped, and resume/cancel/leave
 /// actions derived from the polled status.
@@ -456,7 +502,9 @@ class _DriveStatusView extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              votingQuiescenceLabel(running ? null : status?.quiescence),
+              job.stage == "starting"
+                  ? "Starting submission"
+                  : votingQuiescenceLabel(running ? null : status?.quiescence),
               textAlign: TextAlign.center,
               style: theme.textTheme.titleMedium,
             ),
