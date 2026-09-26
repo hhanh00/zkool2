@@ -9627,6 +9627,7 @@ dependencies = [
  "uuid",
  "vcard4",
  "vote-commitment-tree",
+ "vote-commitment-tree-client",
  "warp",
  "webpki-roots 1.0.9",
  "x25519-dalek",
@@ -9641,6 +9642,7 @@ dependencies = [
  "zcash_script",
  "zcash_transparent",
  "zcash_voting",
+ "zeroize",
  "zip",
  "zip32",
  "zip321",
@@ -14751,27 +14753,6 @@ dependencies = [
  "zcash_primitives",
  "zcash_protocol",
  "zeroize",
- "zip32",
-]
-
-[[package]]
-name = "zcv-harness"
-version = "0.0.0"
-dependencies = [
- "hex",
- "incrementalmerkletree",
- "orchard",
- "pczt",
- "prost 0.14.4",
- "rand 0.8.7",
- "rusqlite",
- "secrecy 0.8.0",
- "zcash_client_backend",
- "zcash_client_sqlite",
- "zcash_keys",
- "zcash_primitives",
- "zcash_protocol",
- "zcash_voting",
  "zip32",
 ]
 
