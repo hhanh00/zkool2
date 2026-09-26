@@ -17,6 +17,14 @@ use zcash_voting::{
     ChainTransportFuture, MAX_CHAIN_HTTP_RESPONSE_BYTES,
 };
 
+/// PIR and vote-tree responses are multi-megabyte: the SDK's built-in
+/// transport caps both at 8 MiB (its private `MAX_PIR_RESPONSE_BYTES` and
+/// `MAX_TREE_RESPONSE_BYTES`) so a server cannot force unbounded allocation
+/// before the client validates the negotiated geometry. Mirror those caps;
+/// the 256 KiB chain limit must not leak into these routes.
+const MAX_PIR_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
+const MAX_TREE_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
+
 /// The route failure of one request, before or after the network boundary.
 enum RouteFailure {
     /// The request never left: route construction or request building failed.
@@ -272,7 +280,7 @@ impl ZkoolPirTransport {
             body,
             &[],
             Duration::from_secs(30),
-            MAX_CHAIN_HTTP_RESPONSE_BYTES,
+            MAX_PIR_RESPONSE_BYTES,
             None,
         )
         .await
@@ -341,7 +349,7 @@ impl vote_commitment_tree_client::transport::Transport for ZkoolTreeTransport {
                 Vec::new(),
                 &[],
                 Duration::from_secs(30),
-                MAX_CHAIN_HTTP_RESPONSE_BYTES,
+                MAX_TREE_RESPONSE_BYTES,
                 None,
             ))
             .map(|response| vote_commitment_tree_client::transport::TransportResponse {
@@ -372,5 +380,41 @@ mod tests {
         assert!(route_kind(0).is_ok());
         assert!(route_kind(1).is_ok());
         assert!(route_kind(3).is_ok());
+    }
+
+    /// A real PIR response is multi-megabyte; the 256 KiB chain cap must not
+    /// leak into the PIR route (regression: "response exceeds the body
+    /// limit" against live PIR servers).
+    #[tokio::test]
+    async fn pir_transport_accepts_multi_megabyte_responses() {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/pir", listener.local_addr().unwrap());
+        let server = tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = Vec::new();
+            while !request.ends_with(b"\r\n\r\n") {
+                request.push(socket.read_u8().await.unwrap());
+            }
+            let body = vec![b'x'; 512 * 1024];
+            socket
+                .write_all(
+                    format!(
+                        "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+                        body.len()
+                    )
+                    .as_bytes(),
+                )
+                .await
+                .unwrap();
+            socket.write_all(&body).await.unwrap();
+        });
+        let transport = super::ZkoolPirTransport::new(0, "");
+        let response = zcash_voting::Transport::get(&transport, &url)
+            .await
+            .expect("large PIR response is accepted");
+        assert_eq!(response.body.len(), 512 * 1024);
+        server.await.unwrap();
     }
 }
