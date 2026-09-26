@@ -1,5 +1,26 @@
 # Changelog
 
+## [6.31.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.31.0-rc...zkool-v6.31.0-rc.1) (2026-09-26)
+
+
+### Features
+
+* **voting:** block wallet-destructive actions during a drive run ([8158e65](https://github.com/hhanh00/zkool2/commit/8158e656134ac0e78460c47c0d0c142e673624fa))
+* **voting:** derive round-list state from drive status ([ad0cbf5](https://github.com/hhanh00/zkool2/commit/ad0cbf553a64450c5120be7894587cd002f07a52))
+* **voting:** drive helper-share confirmation from the round page ([4245c78](https://github.com/hhanh00/zkool2/commit/4245c783863b670bf71762b44015ab4994de8389))
+* **voting:** make error text selectable ([1d058fb](https://github.com/hhanh00/zkool2/commit/1d058fb56de80f3a6cacc060feea6ce7872dc122))
+* **voting:** regenerate FRB bindings for the round drive API ([bc89005](https://github.com/hhanh00/zkool2/commit/bc890056da3f819f2eb7436067eb146ab46dae61))
+* **voting:** round page submission flow over the drive API ([e94e370](https://github.com/hhanh00/zkool2/commit/e94e3704e4f22a69f3dec6db682cc6e8fc709375))
+* **voting:** stop all driver runs on wallet switch and background ([26071d9](https://github.com/hhanh00/zkool2/commit/26071d90636874df01e5ae0610856dc145c2208f))
+* **voting:** vote report and resume the ballot at the last answer ([6d21bd5](https://github.com/hhanh00/zkool2/commit/6d21bd5e0e2597adb3ece9585aff430d2c040a08))
+
+
+### Bug Fixes
+
+* **voting:** derive delegation identity from stored account key and aindex ([43b1ffc](https://github.com/hhanh00/zkool2/commit/43b1ffcea4bb49e3cddf00f46bf791086f1f1d7f))
+* **voting:** immediate UI feedback for prepare and drive start ([83ac911](https://github.com/hhanh00/zkool2/commit/83ac9114b666599e04cf0cefc1c01074e2186253))
+* **voting:** PIR and tree routes exceeded the 256 KiB chain body cap ([f5ebbf7](https://github.com/hhanh00/zkool2/commit/f5ebbf7999481f74a9eb2289b6b8462e6248ff06))
+
 ## [6.31.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.30.0...zkool-v6.31.0-rc) (2026-09-24)
 
 
