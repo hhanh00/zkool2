@@ -3211,7 +3211,9 @@ class VotingDriveJob extends _$VotingDriveJob {
   /// Persists the round's bundle layout and records the eligibility preview.
   /// Returns false on failure; the reason is in `state.error`.
   Future<bool> prepare({required String lightwalletdUrl, required String roundName}) async {
-    if (state.stage == "preparing" || state.stage == "driving") return false;
+    if (state.stage == "preparing" || state.stage == "starting" || state.stage == "driving") {
+      return false;
+    }
     state = state.copyWith(stage: "preparing", error: null, eligibility: null);
     try {
       final eligibility = await votingPrepareRound(
@@ -3231,7 +3233,11 @@ class VotingDriveJob extends _$VotingDriveJob {
   /// Starts the driver run after the ballot was confirmed. A run already
   /// live for the round is adopted rather than duplicated.
   Future<void> start({required String lightwalletdUrl, required String roundName}) async {
-    if (state.stage == "driving") return;
+    if (state.stage == "starting" || state.stage == "driving") return;
+    // The start call re-gathers every round input over the network before
+    // returning; reflect it immediately so the UI is not stuck on the
+    // ballot behind a closed dialog.
+    state = state.copyWith(stage: "starting", error: null);
     try {
       await votingDriveStart(
         roundId: _roundId,
