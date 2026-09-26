@@ -472,6 +472,20 @@ pub fn start_round_drive(
         let report = zcash_voting::RoundDriver::new(&executor)
             .run(&host, &control, &recorder)
             .await;
+        // [ZK-DIAG] temporary: the run's actual stop reason and counts.
+        eprintln!(
+            "[ZK-DIAG] drive round={} quiescence={} raw={:?} tally={:?} skipped={:?} failures={:?}",
+            key.round_id,
+            quiescence_label(&report.quiescence),
+            report.quiescence,
+            report.tally,
+            report.skipped_bundles,
+            report
+                .failures
+                .iter()
+                .map(|failure| format!("{:?}: {}", failure.failure.kind, failure.failure.message))
+                .collect::<Vec<_>>(),
+        );
         {
             let mut state = state.lock().unwrap_or_else(|error| error.into_inner());
             state.running = false;

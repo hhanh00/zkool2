@@ -83,4 +83,12 @@ voting-crypto-deps = { git = "https://github.com/hhanh00/voting-circuits.git", r
 # on-device review, which always exceeds 5s.
 ledger-transport-zemu = { git = "https://github.com/hhanh00/ledger-rs", rev = "75cec634d11c29f110d098a34d13e1c22eab895e" }
 
+# TEMPORARY diagnostic override: build the delegation stack from the local
+# clone so the `[ZK-DIAG]` tracing added there is compiled in. Remove this
+# block (and the tracing) once the rk mismatch is understood.
+[patch."https://github.com/hhanh00/zcash_voting.git"]
+zcash_voting = { path = "/Users/hanh/projects/zcash_voting/zcash_voting" }
+vote-commitment-tree = { path = "/Users/hanh/projects/zcash_voting/vote-commitment-tree" }
+vote-commitment-tree-client = { path = "/Users/hanh/projects/zcash_voting/vote-commitment-tree-client" }
+
 
