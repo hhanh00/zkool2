@@ -20,6 +20,8 @@ mixin _$VotingDriveStatus {
   int get completedProposals;
   int get totalProposals;
   int get remainingObligations;
+  int get sharesConfirmed;
+  int get sharesTotal;
   String? get quiescence;
   List<String> get failures;
 
@@ -46,6 +48,10 @@ mixin _$VotingDriveStatus {
                 other.totalProposals == totalProposals) &&
             (identical(other.remainingObligations, remainingObligations) ||
                 other.remainingObligations == remainingObligations) &&
+            (identical(other.sharesConfirmed, sharesConfirmed) ||
+                other.sharesConfirmed == sharesConfirmed) &&
+            (identical(other.sharesTotal, sharesTotal) ||
+                other.sharesTotal == sharesTotal) &&
             (identical(other.quiescence, quiescence) ||
                 other.quiescence == quiescence) &&
             const DeepCollectionEquality().equals(other.failures, failures));
@@ -60,12 +66,14 @@ mixin _$VotingDriveStatus {
       completedProposals,
       totalProposals,
       remainingObligations,
+      sharesConfirmed,
+      sharesTotal,
       quiescence,
       const DeepCollectionEquality().hash(failures));
 
   @override
   String toString() {
-    return 'VotingDriveStatus(roundId: $roundId, running: $running, dispatches: $dispatches, completedProposals: $completedProposals, totalProposals: $totalProposals, remainingObligations: $remainingObligations, quiescence: $quiescence, failures: $failures)';
+    return 'VotingDriveStatus(roundId: $roundId, running: $running, dispatches: $dispatches, completedProposals: $completedProposals, totalProposals: $totalProposals, remainingObligations: $remainingObligations, sharesConfirmed: $sharesConfirmed, sharesTotal: $sharesTotal, quiescence: $quiescence, failures: $failures)';
   }
 }
 
@@ -82,6 +90,8 @@ abstract mixin class $VotingDriveStatusCopyWith<$Res> {
       int completedProposals,
       int totalProposals,
       int remainingObligations,
+      int sharesConfirmed,
+      int sharesTotal,
       String? quiescence,
       List<String> failures});
 }
@@ -105,6 +115,8 @@ class _$VotingDriveStatusCopyWithImpl<$Res>
     Object? completedProposals = null,
     Object? totalProposals = null,
     Object? remainingObligations = null,
+    Object? sharesConfirmed = null,
+    Object? sharesTotal = null,
     Object? quiescence = freezed,
     Object? failures = null,
   }) {
@@ -132,6 +144,14 @@ class _$VotingDriveStatusCopyWithImpl<$Res>
       remainingObligations: null == remainingObligations
           ? _self.remainingObligations
           : remainingObligations // ignore: cast_nullable_to_non_nullable
+              as int,
+      sharesConfirmed: null == sharesConfirmed
+          ? _self.sharesConfirmed
+          : sharesConfirmed // ignore: cast_nullable_to_non_nullable
+              as int,
+      sharesTotal: null == sharesTotal
+          ? _self.sharesTotal
+          : sharesTotal // ignore: cast_nullable_to_non_nullable
               as int,
       quiescence: freezed == quiescence
           ? _self.quiescence
@@ -243,6 +263,8 @@ extension VotingDriveStatusPatterns on VotingDriveStatus {
             int completedProposals,
             int totalProposals,
             int remainingObligations,
+            int sharesConfirmed,
+            int sharesTotal,
             String? quiescence,
             List<String> failures)?
         $default, {
@@ -258,6 +280,8 @@ extension VotingDriveStatusPatterns on VotingDriveStatus {
             _that.completedProposals,
             _that.totalProposals,
             _that.remainingObligations,
+            _that.sharesConfirmed,
+            _that.sharesTotal,
             _that.quiescence,
             _that.failures);
       case _:
@@ -287,6 +311,8 @@ extension VotingDriveStatusPatterns on VotingDriveStatus {
             int completedProposals,
             int totalProposals,
             int remainingObligations,
+            int sharesConfirmed,
+            int sharesTotal,
             String? quiescence,
             List<String> failures)
         $default,
@@ -301,6 +327,8 @@ extension VotingDriveStatusPatterns on VotingDriveStatus {
             _that.completedProposals,
             _that.totalProposals,
             _that.remainingObligations,
+            _that.sharesConfirmed,
+            _that.sharesTotal,
             _that.quiescence,
             _that.failures);
     }
@@ -327,6 +355,8 @@ extension VotingDriveStatusPatterns on VotingDriveStatus {
             int completedProposals,
             int totalProposals,
             int remainingObligations,
+            int sharesConfirmed,
+            int sharesTotal,
             String? quiescence,
             List<String> failures)?
         $default,
@@ -341,6 +371,8 @@ extension VotingDriveStatusPatterns on VotingDriveStatus {
             _that.completedProposals,
             _that.totalProposals,
             _that.remainingObligations,
+            _that.sharesConfirmed,
+            _that.sharesTotal,
             _that.quiescence,
             _that.failures);
       case _:
@@ -359,6 +391,8 @@ class _VotingDriveStatus implements VotingDriveStatus {
       required this.completedProposals,
       required this.totalProposals,
       required this.remainingObligations,
+      required this.sharesConfirmed,
+      required this.sharesTotal,
       this.quiescence,
       required final List<String> failures})
       : _failures = failures;
@@ -375,6 +409,10 @@ class _VotingDriveStatus implements VotingDriveStatus {
   final int totalProposals;
   @override
   final int remainingObligations;
+  @override
+  final int sharesConfirmed;
+  @override
+  final int sharesTotal;
   @override
   final String? quiescence;
   final List<String> _failures;
@@ -408,6 +446,10 @@ class _VotingDriveStatus implements VotingDriveStatus {
                 other.totalProposals == totalProposals) &&
             (identical(other.remainingObligations, remainingObligations) ||
                 other.remainingObligations == remainingObligations) &&
+            (identical(other.sharesConfirmed, sharesConfirmed) ||
+                other.sharesConfirmed == sharesConfirmed) &&
+            (identical(other.sharesTotal, sharesTotal) ||
+                other.sharesTotal == sharesTotal) &&
             (identical(other.quiescence, quiescence) ||
                 other.quiescence == quiescence) &&
             const DeepCollectionEquality().equals(other._failures, _failures));
@@ -422,12 +464,14 @@ class _VotingDriveStatus implements VotingDriveStatus {
       completedProposals,
       totalProposals,
       remainingObligations,
+      sharesConfirmed,
+      sharesTotal,
       quiescence,
       const DeepCollectionEquality().hash(_failures));
 
   @override
   String toString() {
-    return 'VotingDriveStatus(roundId: $roundId, running: $running, dispatches: $dispatches, completedProposals: $completedProposals, totalProposals: $totalProposals, remainingObligations: $remainingObligations, quiescence: $quiescence, failures: $failures)';
+    return 'VotingDriveStatus(roundId: $roundId, running: $running, dispatches: $dispatches, completedProposals: $completedProposals, totalProposals: $totalProposals, remainingObligations: $remainingObligations, sharesConfirmed: $sharesConfirmed, sharesTotal: $sharesTotal, quiescence: $quiescence, failures: $failures)';
   }
 }
 
@@ -446,6 +490,8 @@ abstract mixin class _$VotingDriveStatusCopyWith<$Res>
       int completedProposals,
       int totalProposals,
       int remainingObligations,
+      int sharesConfirmed,
+      int sharesTotal,
       String? quiescence,
       List<String> failures});
 }
@@ -469,6 +515,8 @@ class __$VotingDriveStatusCopyWithImpl<$Res>
     Object? completedProposals = null,
     Object? totalProposals = null,
     Object? remainingObligations = null,
+    Object? sharesConfirmed = null,
+    Object? sharesTotal = null,
     Object? quiescence = freezed,
     Object? failures = null,
   }) {
@@ -496,6 +544,14 @@ class __$VotingDriveStatusCopyWithImpl<$Res>
       remainingObligations: null == remainingObligations
           ? _self.remainingObligations
           : remainingObligations // ignore: cast_nullable_to_non_nullable
+              as int,
+      sharesConfirmed: null == sharesConfirmed
+          ? _self.sharesConfirmed
+          : sharesConfirmed // ignore: cast_nullable_to_non_nullable
+              as int,
+      sharesTotal: null == sharesTotal
+          ? _self.sharesTotal
+          : sharesTotal // ignore: cast_nullable_to_non_nullable
               as int,
       quiescence: freezed == quiescence
           ? _self.quiescence

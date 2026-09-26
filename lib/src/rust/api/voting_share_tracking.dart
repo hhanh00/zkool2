@@ -44,6 +44,24 @@ Future<BigInt> votingCancelAllShareTracking({required Coin c}) =>
     RustLib.instance.api
         .crateApiVotingShareTrackingVotingCancelAllShareTracking(c: c);
 
+/// Runs exactly one helper-share tracking pass for a round and returns how many
+/// shares it confirmed.
+///
+/// This is the page-scoped alternative to a resident `ShareTrackingDriver`: the
+/// caller polls it while the round is open, so confirmation advances every pass
+/// without a long-lived in-process run. Everything the pass needs comes from
+/// the arguments and the durable sidecar.
+Future<int> votingTrackSharesOnce(
+        {required String roundId,
+        required List<String> helperUrls,
+        BigInt? voteEndTimeSeconds,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiVotingShareTrackingVotingTrackSharesOnce(
+        roundId: roundId,
+        helperUrls: helperUrls,
+        voteEndTimeSeconds: voteEndTimeSeconds,
+        c: c);
+
 /// A round whose persisted helper shares need a foreground retry worker.
 @freezed
 sealed class VotingPendingShareRound with _$VotingPendingShareRound {

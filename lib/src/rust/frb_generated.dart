@@ -97,7 +97,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 2101198764;
+  int get rustContentHash => 1455524393;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -669,6 +669,12 @@ abstract class RustLibApi extends BaseApi {
       required Coin c});
 
   Future<bool> crateApiVotingShareTrackingVotingStartShareTracking(
+      {required String roundId,
+      required List<String> helperUrls,
+      BigInt? voteEndTimeSeconds,
+      required Coin c});
+
+  Future<int> crateApiVotingShareTrackingVotingTrackSharesOnce(
       {required String roundId,
       required List<String> helperUrls,
       BigInt? voteEndTimeSeconds,
@@ -5842,6 +5848,39 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             argNames: ["roundId", "helperUrls", "voteEndTimeSeconds", "c"],
           );
 
+  @override
+  Future<int> crateApiVotingShareTrackingVotingTrackSharesOnce(
+      {required String roundId,
+      required List<String> helperUrls,
+      BigInt? voteEndTimeSeconds,
+      required Coin c}) {
+    return handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(roundId, serializer);
+        sse_encode_list_String(helperUrls, serializer);
+        sse_encode_opt_box_autoadd_u_64(voteEndTimeSeconds, serializer);
+        sse_encode_box_autoadd_coin(c, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 192, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_u_32,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiVotingShareTrackingVotingTrackSharesOnceConstMeta,
+      argValues: [roundId, helperUrls, voteEndTimeSeconds, c],
+      apiImpl: this,
+    ));
+  }
+
+  TaskConstMeta
+      get kCrateApiVotingShareTrackingVotingTrackSharesOnceConstMeta =>
+          const TaskConstMeta(
+            debugName: "voting_track_shares_once",
+            argNames: ["roundId", "helperUrls", "voteEndTimeSeconds", "c"],
+          );
+
   Future<void> Function(int, dynamic)
       encode_DartFn_Inputs_list_prim_u_8_strict_Output_unit_AnyhowException(
           FutureOr<void> Function(Uint8List) raw) {
@@ -7503,8 +7542,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   VotingDriveStatus dco_decode_voting_drive_status(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 10)
+      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
     return VotingDriveStatus(
       roundId: dco_decode_String(arr[0]),
       running: dco_decode_bool(arr[1]),
@@ -7512,8 +7551,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       completedProposals: dco_decode_u_32(arr[3]),
       totalProposals: dco_decode_u_32(arr[4]),
       remainingObligations: dco_decode_u_32(arr[5]),
-      quiescence: dco_decode_opt_String(arr[6]),
-      failures: dco_decode_list_String(arr[7]),
+      sharesConfirmed: dco_decode_u_32(arr[6]),
+      sharesTotal: dco_decode_u_32(arr[7]),
+      quiescence: dco_decode_opt_String(arr[8]),
+      failures: dco_decode_list_String(arr[9]),
     );
   }
 
@@ -9515,6 +9556,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_completedProposals = sse_decode_u_32(deserializer);
     var var_totalProposals = sse_decode_u_32(deserializer);
     var var_remainingObligations = sse_decode_u_32(deserializer);
+    var var_sharesConfirmed = sse_decode_u_32(deserializer);
+    var var_sharesTotal = sse_decode_u_32(deserializer);
     var var_quiescence = sse_decode_opt_String(deserializer);
     var var_failures = sse_decode_list_String(deserializer);
     return VotingDriveStatus(
@@ -9524,6 +9567,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         completedProposals: var_completedProposals,
         totalProposals: var_totalProposals,
         remainingObligations: var_remainingObligations,
+        sharesConfirmed: var_sharesConfirmed,
+        sharesTotal: var_sharesTotal,
         quiescence: var_quiescence,
         failures: var_failures);
   }
@@ -11236,6 +11281,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.completedProposals, serializer);
     sse_encode_u_32(self.totalProposals, serializer);
     sse_encode_u_32(self.remainingObligations, serializer);
+    sse_encode_u_32(self.sharesConfirmed, serializer);
+    sse_encode_u_32(self.sharesTotal, serializer);
     sse_encode_opt_String(self.quiescence, serializer);
     sse_encode_list_String(self.failures, serializer);
   }
