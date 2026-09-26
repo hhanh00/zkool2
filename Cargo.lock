@@ -13440,6 +13440,7 @@ checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 [[package]]
 name = "vote-commitment-tree"
 version = "0.6.2"
+source = "git+https://github.com/hhanh00/zcash_voting.git?rev=d53e5dc47fd4374491914ff4e7a85d226e34a302#d53e5dc47fd4374491914ff4e7a85d226e34a302"
 dependencies = [
  "anyhow",
  "imt-tree",
@@ -13453,6 +13454,7 @@ dependencies = [
 [[package]]
 name = "vote-commitment-tree-client"
 version = "0.8.2"
+source = "git+https://github.com/hhanh00/zcash_voting.git?rev=d53e5dc47fd4374491914ff4e7a85d226e34a302#d53e5dc47fd4374491914ff4e7a85d226e34a302"
 dependencies = [
  "base64 0.22.1",
  "hex",
@@ -14706,6 +14708,7 @@ dependencies = [
 [[package]]
 name = "zcash_voting"
 version = "5.1.0"
+source = "git+https://github.com/hhanh00/zcash_voting.git?rev=d53e5dc47fd4374491914ff4e7a85d226e34a302#d53e5dc47fd4374491914ff4e7a85d226e34a302"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
