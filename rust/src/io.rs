@@ -184,21 +184,23 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
     let mut blocks = vec![];
     for height in checkpoints.iter() {
         // Get headers for given height
-        let mut block = sqlx::query("SELECT hash, time FROM headers WHERE height = ?")
-            .bind(height)
-            .map(|row: SqliteRow| {
-                let hash: Vec<u8> = row.get(0);
-                let time: u32 = row.get(1);
+        let mut block =
+            sqlx::query("SELECT hash, time FROM headers WHERE height = ? AND account = ?")
+                .bind(height)
+                .bind(account)
+                .map(|row: SqliteRow| {
+                    let hash: Vec<u8> = row.get(0);
+                    let time: u32 = row.get(1);
 
-                IOBlock {
-                    height: *height,
-                    hash: hash.into(),
-                    time,
-                    ..Default::default()
-                }
-            })
-            .fetch_one(&mut *connection)
-            .await?;
+                    IOBlock {
+                        height: *height,
+                        hash: hash.into(),
+                        time,
+                        ..Default::default()
+                    }
+                })
+                .fetch_one(&mut *connection)
+                .await?;
 
         // Get witness for given height
         let witness =
@@ -823,8 +825,9 @@ pub async fn import_account(
     for block in io_account.blocks.iter() {
         sqlx::query(
             "INSERT INTO headers
-            (height, hash, time) VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+            (account, height, hash, time) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
         )
+        .bind(new_id_account)
         .bind(block.height)
         .bind(&block.hash)
         .bind(block.time)
