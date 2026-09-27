@@ -1,5 +1,48 @@
 # Changelog
 
+## [6.31.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.30.0...zkool-v6.31.0) (2026-09-27)
+
+
+### Features
+
+* add proposal selection stepper ([d38f033](https://github.com/hhanh00/zkool2/commit/d38f03397c78bbdf283eeffb001fa2b564d769b1))
+* expose proposal options to voting UI ([2595149](https://github.com/hhanh00/zkool2/commit/259514928438e7c0f3bc2e87524f030c2ada7d2a))
+* **http:** support round-robin GET retries with randomized starts ([8dd9b7c](https://github.com/hhanh00/zkool2/commit/8dd9b7c15be8d811613b94db52326e5a40fd2485))
+* **net:** add Arti HTTP transport ([#1260](https://github.com/hhanh00/zkool2/issues/1260)) ([8f911b4](https://github.com/hhanh00/zkool2/commit/8f911b436d0f1c0c8cd35150ac617d75ad27c954))
+* **voting:** add round details ([#1257](https://github.com/hhanh00/zkool2/issues/1257)) ([84b10cb](https://github.com/hhanh00/zkool2/commit/84b10cbdb33d550d39519aefac1549a4843e8303))
+* **voting:** add round overview page with loading progress ([#1253](https://github.com/hhanh00/zkool2/issues/1253)) ([604ca55](https://github.com/hhanh00/zkool2/commit/604ca555d2cf3e5b17814d0289976c4d8c536621))
+* **voting:** add share tracking lifecycle controls ([#1261](https://github.com/hhanh00/zkool2/issues/1261)) ([731fb15](https://github.com/hhanh00/zkool2/commit/731fb1555000d89adace39e458791fdacb73a849))
+* **voting:** assemble the voting round executor over zkool transports ([842f5bf](https://github.com/hhanh00/zkool2/commit/842f5bf8c9cc3ec5445f5f8b2a4c36caadc07ec9))
+* **voting:** block wallet-destructive actions during a drive run ([bb34566](https://github.com/hhanh00/zkool2/commit/bb34566473d92a7642665c87c0d58eb6a7afc09d))
+* **voting:** create the voting sidecar database on wallet open ([#1255](https://github.com/hhanh00/zkool2/issues/1255)) ([14b5c85](https://github.com/hhanh00/zkool2/commit/14b5c8551c743fe486f5dd488db5b872dec55620))
+* **voting:** derive round-list state from drive status ([65612ef](https://github.com/hhanh00/zkool2/commit/65612efc231f17e8df1e4772bb9200e7cbf22b1a))
+* **voting:** drive helper-share confirmation from the round page ([86d4bcd](https://github.com/hhanh00/zkool2/commit/86d4bcd6c1279931a369c0293a5bda2dea4d59c7))
+* **voting:** explicit bundle-setup step with eligibility preview before driving ([4617828](https://github.com/hhanh00/zkool2/commit/461782831eac8aebe61237233536d163dbb8d775))
+* **voting:** fetch round ceremony timing from the chain for last-moment detection ([58d0a6b](https://github.com/hhanh00/zkool2/commit/58d0a6b00687dfb3cc9f6024c8045891304ab917))
+* **voting:** FRB endpoints to drive a round from decisions to confirmation ([2f89e51](https://github.com/hhanh00/zkool2/commit/2f89e51bcbf09a03877bd7feb4ecf842a0e3a7e4))
+* **voting:** make error text selectable ([54c49c9](https://github.com/hhanh00/zkool2/commit/54c49c95105e4c0ee49c8707320892c188da81e4))
+* **voting:** process-local round driver run registry with recorder and status ([aea148e](https://github.com/hhanh00/zkool2/commit/aea148e9a1e7afa23cbaf763ebdb4b295e6ce404))
+* **voting:** regenerate FRB bindings for the round drive API ([ac1028f](https://github.com/hhanh00/zkool2/commit/ac1028f601c9c9bc54d78bdeeeb341a453189c59))
+* **voting:** restore round list ([#1256](https://github.com/hhanh00/zkool2/issues/1256)) ([4bc2e0c](https://github.com/hhanh00/zkool2/commit/4bc2e0c232aefd3362ab0371b394027ab0521b2d))
+* **voting:** resume helper share delivery when a round page opens ([#1262](https://github.com/hhanh00/zkool2/issues/1262)) ([915f39e](https://github.com/hhanh00/zkool2/commit/915f39edf06fd9476ca4090ebbce52cce75b37f2))
+* **voting:** round host context, software delegation signer, and PIR inputs ([8243c7d](https://github.com/hhanh00/zkool2/commit/8243c7d0cb9f4cad47b8ff17c3fb3627d9d47947))
+* **voting:** round page submission flow over the drive API ([a56dff0](https://github.com/hhanh00/zkool2/commit/a56dff0a8c294c45bb277108d07dbd622109dd3b))
+* **voting:** route helper requests through Tor ([#1259](https://github.com/hhanh00/zkool2/issues/1259)) ([6d1f038](https://github.com/hhanh00/zkool2/commit/6d1f038aafa81a65077f97dee565f109a12b88b5))
+* **voting:** route vote-chain, tree, and PIR HTTP through zkool transports ([a1eaa96](https://github.com/hhanh00/zkool2/commit/a1eaa9601f7ce99ce2882f5848c5d2e896228b60))
+* **voting:** stop all driver runs on wallet switch and background ([f0c911e](https://github.com/hhanh00/zkool2/commit/f0c911eabee3a595028abfd539c7669ddf919d3e))
+* **voting:** vote report and resume the ballot at the last answer ([2e73b6a](https://github.com/hhanh00/zkool2/commit/2e73b6a226d3ef3e2c02d450ba3e85dc81bffd98))
+* **voting:** wallet-prop voting hotkey create/load for the sidecar design ([ac26804](https://github.com/hhanh00/zkool2/commit/ac268048b0df2f6c3b14de188e903181b3b7a3ba))
+
+
+### Bug Fixes
+
+* **ci:** use locked Zebra dependencies in wallet tests ([0720378](https://github.com/hhanh00/zkool2/commit/0720378b43311f96fe35aae0da1b8f41a7976645))
+* **dart:** resolve lint issues in sync and amount input ([abe1f37](https://github.com/hhanh00/zkool2/commit/abe1f37c7a23977aa438c39c2d9103feb59ad870))
+* scope sync headers per account ([#1274](https://github.com/hhanh00/zkool2/issues/1274)) ([0b86d1d](https://github.com/hhanh00/zkool2/commit/0b86d1dd02c1a1eb3b2e465afee2910546a69eca)), closes [#1270](https://github.com/hhanh00/zkool2/issues/1270)
+* **voting:** derive delegation identity from stored account key and aindex ([63e3caa](https://github.com/hhanh00/zkool2/commit/63e3caaad0dc0596361cdaa609ef3e3b828979e9))
+* **voting:** immediate UI feedback for prepare and drive start ([41d7b4b](https://github.com/hhanh00/zkool2/commit/41d7b4bbf9af025d5203e91bb6bbb1e597e4646d))
+* **voting:** PIR and tree routes exceeded the 256 KiB chain body cap ([17a9ac0](https://github.com/hhanh00/zkool2/commit/17a9ac0f5a31019f06405a010abae50db35e2d11))
+
 ## [6.30.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.29.0...zkool-v6.30.0) (2026-09-12)
 
 
