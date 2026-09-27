@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.31.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.31.0-rc.1...zkool-v6.31.0-rc.2) (2026-09-27)
+
+
+### Bug Fixes
+
+* scope sync headers per account ([#1274](https://github.com/hhanh00/zkool2/issues/1274)) ([fab950f](https://github.com/hhanh00/zkool2/commit/fab950f4e0e0de628acdb42e831764396c3b1df8)), closes [#1270](https://github.com/hhanh00/zkool2/issues/1270)
+
 ## [6.31.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.31.0-rc...zkool-v6.31.0-rc.1) (2026-09-26)
 
 
