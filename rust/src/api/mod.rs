@@ -18,8 +18,6 @@ pub mod sweep;
 pub mod sync;
 pub mod transaction;
 pub mod vault;
-// Only the sidecar-ported voting API is compiled. The remaining legacy
-// endpoints stay in `voting.rs` until they are ported individually.
 #[path = "voting_list.rs"]
 pub mod voting;
 pub mod voting_drive;
