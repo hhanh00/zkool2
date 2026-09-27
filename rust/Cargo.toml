@@ -168,25 +168,9 @@ unexpected_cfgs = {level = "warn", check-cfg = ['cfg(frb_expand)']}
 [dev-dependencies]
 chrono = "0.4"
 rand = "0.6"
-# Recovery-reconciliation tests exercise the voting fork's public prelude and
-# the in-memory commitment-tree server. Same git source as the zcash_voting
-# dep so the workspace [patch] override applies to it too.
-vote-commitment-tree = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "d53e5dc47fd4374491914ff4e7a85d226e34a302", default-features = false, features = ["lrz"] }
-
-[[example]]
-name = "vk_probe"
-required-features = ["voting"]
-
-[[test]]
-name = "voting_recovery_reconcile"
-required-features = ["voting"]
 
 [features]
 default = ["flutter", "nym"]
-# Voting is cut out of the build pending its redesign. The sources stay in
-# place (rust/src/voting, rust/src/api/voting.rs, and the two targets above);
-# turning this on is the switch to bring them back.
-voting = []
 flutter = ["flutter_rust_bridge"]
 bundled-sapling-params = ["zcash_proofs/bundled-prover"]
 graphql = ["juniper", "juniper_warp", "juniper_graphql_ws", "dataloader", "warp", "jsonwebtoken", "bigdecimal", "chrono", "figment", "clap"]
