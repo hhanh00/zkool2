@@ -21,11 +21,11 @@ use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
 
 use crate::api::account::Folder;
 use crate::api::account::TAddressTxCount;
+use crate::api::account::TxNote;
 use crate::api::account::{Account, Memo, Tx};
 use crate::api::coin::Network;
 use crate::api::sync::PoolBalance;
 use crate::sync::BlockHeader;
-use crate::api::account::TxNote;
 
 /// Schema version. Bump only when the export format changes (IOAccount or any
 /// embedded struct gains/removes/changes a field). Do NOT bump for runtime-only
@@ -125,14 +125,7 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .execute(&mut *connection)
     .await?;
 
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS headers(
-        height INTEGER PRIMARY KEY,
-        hash BLOB NOT NULL,
-        time INTEGER NOT NULL)",
-    )
-    .execute(&mut *connection)
-    .await?;
+    migrate_headers(connection).await?;
 
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS notes(
@@ -835,14 +828,57 @@ pub async fn store_account_metadata(
     Ok(id)
 }
 
+// Runtime schema migration; the account backup format is unchanged.
+async fn migrate_headers(connection: &mut SqliteConnection) -> Result<()> {
+    let mut tx = connection.begin().await?;
+    let columns = sqlx::query("PRAGMA table_info(headers)")
+        .fetch_all(&mut *tx)
+        .await?;
+    let legacy = !columns.is_empty()
+        && !columns
+            .iter()
+            .any(|row| row.get::<String, _>("name") == "account");
+    if legacy {
+        sqlx::query("ALTER TABLE headers RENAME TO legacy_headers")
+            .execute(&mut *tx)
+            .await?;
+    }
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS headers (
+        account INTEGER NOT NULL,
+        height INTEGER NOT NULL,
+        hash BLOB NOT NULL,
+        time INTEGER NOT NULL,
+        PRIMARY KEY (account, height))",
+    )
+    .execute(&mut *tx)
+    .await?;
+    if legacy {
+        sqlx::query(
+            "INSERT INTO headers (account, height, hash, time)
+            SELECT a.id_account, h.height, h.hash, h.time
+            FROM accounts a CROSS JOIN legacy_headers h",
+        )
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query("DROP TABLE legacy_headers")
+            .execute(&mut *tx)
+            .await?;
+    }
+    tx.commit().await?;
+    Ok(())
+}
+
 pub async fn store_block_header(
     connection: &mut SqliteConnection,
+    account: u32,
     block_header: &BlockHeader,
 ) -> Result<()> {
     sqlx::query(
-        "INSERT INTO headers (height, hash, time)
-                    VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
+        "INSERT INTO headers (account, height, hash, time)
+                    VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
     )
+    .bind(account)
     .bind(block_header.height)
     .bind(&block_header.hash)
     .bind(block_header.time)
@@ -1248,7 +1284,7 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
         hw
         FROM accounts a
         JOIN sh ON a.id_account = sh.account
-        LEFT JOIN headers hdr ON sh.height = hdr.height
+        LEFT JOIN headers hdr ON sh.height = hdr.height AND sh.account = hdr.account
         LEFT JOIN unspent ON a.id_account = unspent.account
         LEFT JOIN folders f ON a.folder = f.id_folder
         GROUP BY id_account
@@ -1358,6 +1394,10 @@ pub async fn delete_account(connection: &mut SqliteConnection, account: u32) -> 
         .execute(&mut *tx)
         .await?;
     sqlx::query("DELETE FROM transactions WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("DELETE FROM headers WHERE account = ?")
         .bind(account)
         .execute(&mut *tx)
         .await?;
@@ -2163,4 +2203,36 @@ pub async fn max_spendable(connection: &mut SqliteConnection, account: u32) -> R
     .fetch_one(connection)
     .await?;
     Ok(amount.unwrap_or_default())
+}
+
+#[cfg(test)]
+mod header_tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn legacy_headers_fan_out_and_migration_is_idempotent() -> Result<()> {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        sqlx::raw_sql("CREATE TABLE accounts(id_account INTEGER PRIMARY KEY);
+            INSERT INTO accounts VALUES (1), (2);
+            CREATE TABLE headers(height INTEGER PRIMARY KEY, hash BLOB NOT NULL, time INTEGER NOT NULL);
+            INSERT INTO headers VALUES (100, X'01', 123), (200, X'02', 456);")
+            .execute(&mut db).await?;
+        migrate_headers(&mut db).await?;
+        migrate_headers(&mut db).await?;
+        let rows: Vec<(u32, u32, Vec<u8>, u32)> = sqlx::query_as(
+            "SELECT account, height, hash, time FROM headers ORDER BY account, height",
+        )
+        .fetch_all(&mut db)
+        .await?;
+        assert_eq!(
+            rows,
+            vec![
+                (1, 100, vec![1], 123),
+                (1, 200, vec![2], 456),
+                (2, 100, vec![1], 123),
+                (2, 200, vec![2], 456)
+            ]
+        );
+        Ok(())
+    }
 }
