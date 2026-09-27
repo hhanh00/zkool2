@@ -1053,6 +1053,7 @@ fn wire__crate__api__sync__cache_block_time_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_account = <u32>::sse_decode(&mut deserializer);
             let api_height = <u32>::sse_decode(&mut deserializer);
             let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             deserializer.end();
@@ -1060,7 +1061,8 @@ fn wire__crate__api__sync__cache_block_time_impl(
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
                         let output_ok =
-                            crate::api::sync::cache_block_time(api_height, &api_c).await?;
+                            crate::api::sync::cache_block_time(api_account, api_height, &api_c)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,

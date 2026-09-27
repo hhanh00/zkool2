@@ -443,7 +443,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         final settings = ref.read(appSettingsProvider).requireValue;
         try {
           // ignore errors since it's just caching
-          if (!settings.offline) await cacheBlockTime(height: bh, c: c);
+          if (!settings.offline) await cacheBlockTime(account: account, height: bh, c: c);
         } on AnyhowException catch (_) {}
 
         // Refresh the account list before switching selection, so the provider
