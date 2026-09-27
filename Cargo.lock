@@ -9626,7 +9626,6 @@ dependencies = [
  "tracing-subscriber",
  "uuid",
  "vcard4",
- "vote-commitment-tree",
  "vote-commitment-tree-client",
  "warp",
  "webpki-roots 1.0.9",
