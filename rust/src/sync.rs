@@ -257,22 +257,28 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
 
             debug!("heights_without_time");
             let heights_without_time =
-                get_heights_without_time(&mut connection, start_height, end_height).await?;
+                get_heights_without_time(&mut connection, &account_ids, start_height, end_height)
+                    .await?;
             for h in heights_without_time {
                 debug!("fetch block @{h}");
                 let block = client.block(&network, h).await?;
                 let time = block.time;
-                sqlx::query("UPDATE transactions SET time = ? WHERE height = ? AND time = 0")
+                for account in &account_ids {
+                    sqlx::query("UPDATE transactions SET time = ? WHERE height = ? AND time = 0 AND account = ?")
                     .bind(time)
                     .bind(h)
+                    .bind(account)
                     .execute(&mut *connection)
                     .await?;
+                }
                 let block_header = BlockHeader {
                     height: h,
                     hash: block.hash,
                     time: block.time,
                 };
-                store_block_header(&mut connection, &block_header).await?;
+                for account in &account_ids {
+                    store_relevant_block_header(&mut connection, *account, &block_header).await?;
+                }
             }
 
             // Update our local map as well for the next iteration
@@ -753,7 +759,8 @@ async fn shielded_sync_range(
         let mut connection = pool.acquire().await?;
         // get the list of transaction heights for which the time is 0
         // because raw transactions do not have timestamp (it comes from the block header)
-        let heights_without_time = get_heights_without_time(&mut connection, start, end).await?;
+        let heights_without_time =
+            get_heights_without_time(&mut connection, &account_ids, start, end).await?;
 
         let mut writer_connection = pool.acquire().await?;
 
@@ -772,8 +779,15 @@ async fn shielded_sync_range(
                     let mut new_messages = vec![];
                     mem::swap(&mut new_messages, &mut messages);
                     for msg in new_messages {
-                        match handle_message(&network, &mut db_tx, msg, &tx_progress, &key_cache)
-                            .await
+                        match handle_message(
+                            &network,
+                            &mut db_tx,
+                            msg,
+                            &tx_progress,
+                            &key_cache,
+                            &account_ids,
+                        )
+                        .await
                         {
                             Ok(_) => {}
                             Err(e) => {
@@ -791,7 +805,16 @@ async fn shielded_sync_range(
 
             let mut db_tx = writer_connection.begin().await.unwrap();
             for msg in messages {
-                match handle_message(&network, &mut db_tx, msg, &tx_progress, &key_cache).await {
+                match handle_message(
+                    &network,
+                    &mut db_tx,
+                    msg,
+                    &tx_progress,
+                    &key_cache,
+                    &account_ids,
+                )
+                .await
+                {
                     Ok(_) => {}
                     Err(e) => {
                         info!("ERROR HANDLING MESSAGE: {:?}", e);
@@ -845,6 +868,7 @@ async fn handle_message(
     msg: WarpSyncMessage,
     tx_progress: &Sender<SyncProgress>,
     key_cache: &AccountKeyCache,
+    accounts: &[u32],
 ) -> Result<()> {
     tracing::debug!(target: "warp", "Warp Message: {msg:?}");
     match msg {
@@ -1019,23 +1043,15 @@ async fn handle_message(
         }
         WarpSyncMessage::BlockHeader(block_header) => {
             debug!("Processing BlockHeader: {:?}", block_header);
-            // ignore dups because we could have already inserted the block header
-            // if a transparent transaction needs it
-            // to resolve the time of the transaction
-            sqlx::query(
-                "INSERT INTO headers (height, hash, time)
-                    VALUES (?, ?, ?) ON CONFLICT DO NOTHING",
-            )
-            .bind(block_header.height)
-            .bind(&block_header.hash)
-            .bind(block_header.time)
-            .execute(&mut **db_tx)
-            .await?;
-            sqlx::query("UPDATE transactions SET time = ? WHERE height = ?")
-                .bind(block_header.time)
-                .bind(block_header.height)
-                .execute(&mut **db_tx)
-                .await?;
+            for account in accounts {
+                store_relevant_block_header(db_tx, *account, &block_header).await?;
+                sqlx::query("UPDATE transactions SET time = ? WHERE height = ? AND account = ?")
+                    .bind(block_header.time)
+                    .bind(block_header.height)
+                    .bind(account)
+                    .execute(&mut **db_tx)
+                    .await?;
+            }
         }
         WarpSyncMessage::Commit => {
             // handled in the caller
@@ -1082,13 +1098,18 @@ pub async fn recover_from_partial_sync(
 
 // remove synchronization data (notes, spends, transactions, witnesses) after the given height
 // keep the data at the given height
-// do not remove headers because they are used by multiple accounts
+// Headers follow the same account checkpoint as witnesses.
 pub async fn trim_sync_data(
     connection: &mut SqliteConnection,
     account: u32,
     height: u32,
 ) -> Result<()> {
     let mut db_tx = connection.begin().await?;
+    sqlx::query("DELETE FROM headers WHERE height > ? AND account = ?")
+        .bind(height)
+        .bind(account)
+        .execute(&mut *db_tx)
+        .await?;
     sqlx::query("DELETE FROM notes WHERE height > ? AND account = ?")
         .bind(height)
         .bind(account)
@@ -1162,7 +1183,8 @@ pub async fn check_witness_consistency(
             let db_height: u32 = r.get(4);
             (account, pool, height, value, db_height)
         })
-        .fetch_all(connection).await?;
+        .fetch_all(connection)
+        .await?;
 
     for (account, pool, height, value, db_height) in notes.iter() {
         debug!("Missing witness for note {pool} {height} {value} of account {account} at height {db_height}");
@@ -1207,12 +1229,6 @@ pub async fn rewind_sync(
         crate::account::reset_sync(network, &mut *connection, account).await?;
     }
 
-    // then trim the headers because there are no accounts using them
-    sqlx::query("DELETE FROM headers WHERE height > ?")
-        .bind(height)
-        .execute(connection)
-        .await?;
-
     Ok(())
 }
 
@@ -1250,8 +1266,9 @@ pub async fn get_db_height(connection: &mut SqliteConnection, account: u32) -> R
         "WITH mh AS (SELECT MIN(height) AS min_height
             FROM sync_heights
             WHERE account = ?1)
-            SELECT h.height, COALESCE(h.time, 0) FROM headers h
-            JOIN mh ON h.height = mh.min_height",
+            SELECT mh.min_height, COALESCE(h.time, 0) FROM mh
+            LEFT JOIN headers h ON h.height = mh.min_height AND h.account = ?1
+            WHERE mh.min_height IS NOT NULL",
     )
     .bind(account)
     .fetch_one(connection)
@@ -1426,39 +1443,175 @@ pub async fn transparent_sweep(
     Ok(())
 }
 
+// A downloaded height is shared by the batch, but its stored header belongs only
+// to accounts with a transaction or checkpoint there. Checkpoints keep the
+// frontier hash available for continuity checks even when there are no transactions.
+async fn store_relevant_block_header(
+    connection: &mut SqliteConnection,
+    account: u32,
+    header: &BlockHeader,
+) -> Result<()> {
+    let relevant: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM transactions WHERE account = ?1 AND height = ?2)
+            OR EXISTS(SELECT 1 FROM sync_heights WHERE account = ?1 AND height = ?2)
+            OR EXISTS(SELECT 1 FROM witnesses WHERE account = ?1 AND height = ?2)",
+    )
+    .bind(account)
+    .bind(header.height)
+    .fetch_one(&mut *connection)
+    .await?;
+    if relevant {
+        store_block_header(connection, account, header).await?;
+    }
+    Ok(())
+}
+
 pub async fn get_heights_without_time(
     connection: &mut SqliteConnection,
+    accounts: &[u32],
     start: u32,
     end: u32,
 ) -> Result<HashSet<u32>> {
-    let mut tx_without_time: HashSet<u32> = sqlx::query(
-        "SELECT DISTINCT height FROM transactions WHERE time = 0
-        AND height >= ? AND height <= ?",
-    )
-    .bind(start)
-    .bind(end)
-    .map(|row: SqliteRow| {
-        let height: u32 = row.get(0);
-        height
-    })
-    .fetch_all(&mut *connection)
-    .await?
-    .into_iter()
-    .collect();
+    let mut heights = HashSet::new();
+    for account in accounts {
+        let missing: Vec<u32> = sqlx::query_scalar(
+            "SELECT height FROM transactions WHERE account = ?1 AND time = 0
+                AND height >= ?2 AND height <= ?3
+            UNION
+            SELECT sh.height FROM sync_heights sh
+                LEFT JOIN headers h ON sh.account = h.account AND sh.height = h.height
+                WHERE sh.account = ?1 AND h.time IS NULL AND sh.height > 0",
+        )
+        .bind(account)
+        .bind(start)
+        .bind(end)
+        .fetch_all(&mut *connection)
+        .await?;
+        heights.extend(missing);
+    }
+    Ok(heights)
+}
 
-    let synced_heights_without_time = sqlx::query(
-        "SELECT sh.height FROM sync_heights sh
-        LEFT JOIN headers h ON sh.height = h.height
-        WHERE h.time IS NULL AND sh.height > 0",
-    )
-    .map(|row: SqliteRow| {
-        let height: u32 = row.get(0);
-        height
-    })
-    .fetch_all(&mut *connection)
-    .await?
-    .into_iter();
-    tx_without_time.extend(synced_heights_without_time);
+#[cfg(test)]
+mod header_tests {
+    use super::*;
+    use crate::db::{create_schema, store_synced_height};
 
-    Ok(tx_without_time)
+    #[tokio::test]
+    async fn backfill_headers_only_belong_to_relevant_accounts() -> Result<()> {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        create_schema(&mut db).await?;
+        // Two owners share one fetch; account 3 needs the frontier without a
+        // transaction; account 4 is unrelated, and account 5 is outside the batch.
+        for account in [1, 2, 5] {
+            sqlx::query(
+                "INSERT INTO transactions(account, height, txid, time) VALUES (?, 100, X'01', 0)",
+            )
+            .bind(account)
+            .execute(&mut db)
+            .await?;
+        }
+        store_synced_height(&mut db, 3, 1, 100).await?;
+        let accounts = [1, 2, 3, 4];
+        assert_eq!(
+            get_heights_without_time(&mut db, &accounts, 1, 200).await?,
+            HashSet::from([100])
+        );
+        let header = BlockHeader {
+            height: 100,
+            hash: vec![1; 32],
+            time: 123,
+        };
+        for account in accounts {
+            store_relevant_block_header(&mut db, account, &header).await?;
+        }
+        let owners: Vec<u32> = sqlx::query_scalar("SELECT account FROM headers ORDER BY account")
+            .fetch_all(&mut db)
+            .await?;
+        assert_eq!(owners, vec![1, 2, 3]);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn rewinding_one_account_preserves_the_other_anchor() -> Result<()> {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        create_schema(&mut db).await?;
+        for account in [1, 2] {
+            store_synced_height(&mut db, account, 1, 200).await?;
+            for height in [100, 150, 200] {
+                store_block_header(
+                    &mut db,
+                    account,
+                    &BlockHeader {
+                        height,
+                        hash: vec![1; 32],
+                        time: height + account,
+                    },
+                )
+                .await?;
+            }
+        }
+        sqlx::query(
+            "INSERT INTO witnesses(account, height, note, witness) VALUES (1, 100, 0, X'00')",
+        )
+        .execute(&mut db)
+        .await?;
+        rewind_sync(&Network::Main, &mut db, 1, 175).await?;
+        let a = get_db_height(&mut db, 1).await?;
+        let b = get_db_height(&mut db, 2).await?;
+        assert_eq!((a.height, a.time), (100, 101));
+        assert_eq!((b.height, b.time), (200, 202));
+        let count: i64 =
+            sqlx::query_scalar("SELECT COUNT(*) FROM headers WHERE account = 1 AND height > 100")
+                .fetch_one(&mut db)
+                .await?;
+        assert_eq!(count, 0);
+        // A can scan a replacement chain without overwriting B's frontier.
+        store_block_header(
+            &mut db,
+            1,
+            &BlockHeader {
+                height: 200,
+                hash: vec![2; 32],
+                time: 999,
+            },
+        )
+        .await?;
+        let hashes: Vec<Vec<u8>> =
+            sqlx::query_scalar("SELECT hash FROM headers WHERE height = 200 ORDER BY account")
+                .fetch_all(&mut db)
+                .await?;
+        assert_eq!(hashes, vec![vec![2; 32], vec![1; 32]]);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn missing_timestamps_are_optional_and_account_scoped() -> Result<()> {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        create_schema(&mut db).await?;
+        store_synced_height(&mut db, 1, 0, 100).await?;
+        store_synced_height(&mut db, 2, 0, 100).await?;
+        store_block_header(
+            &mut db,
+            2,
+            &BlockHeader {
+                height: 100,
+                hash: vec![1; 32],
+                time: 123,
+            },
+        )
+        .await?;
+        let a = get_db_height(&mut db, 1).await?;
+        assert_eq!((a.height, a.time), (100, 0));
+        assert_eq!(get_db_height(&mut db, 2).await?.time, 123);
+        assert_eq!(
+            get_heights_without_time(&mut db, &[1], 1, 200).await?,
+            HashSet::from([100])
+        );
+        assert!(get_heights_without_time(&mut db, &[2], 1, 200)
+            .await?
+            .is_empty());
+        assert!(get_db_height(&mut db, 3).await.is_err());
+        Ok(())
+    }
 }

@@ -106,13 +106,21 @@ pub async fn warp_sync(
         return Ok(());
     }
 
-    let mut prev_hash = sqlx::query("SELECT hash FROM headers WHERE height = ?")
-        .bind(start_height - 1)
-        .map(|row: SqliteRow| row.get::<Vec<u8>, _>(0))
-        .fetch_optional(&mut *connection)
-        .await
-        .unwrap();
-
+    // Check every account: accounts at the same height can still be on different chains.
+    let mut frontier_hashes = Vec::new();
+    for (account, _) in accounts {
+        let hash = sqlx::query("SELECT hash FROM headers WHERE account = ? AND height = ?")
+            .bind(account)
+            .bind(start_height - 1)
+            .map(|row: SqliteRow| row.get::<Vec<u8>, _>(0))
+            .fetch_optional(&mut *connection)
+            .await
+            .context("reading account frontier header")?;
+        if let Some(hash) = hash {
+            frontier_hashes.push(hash);
+        }
+    }
+    let mut prev_hash: Option<Vec<u8>> = None;
     let account_ids = accounts.iter().map(|(id, _)| *id).collect::<Vec<_>>();
     let (tx_blocks, mut rx_blocks) = tokio::sync::mpsc::channel::<BlockMessage>(2);
     tokio::spawn(async move {
@@ -144,12 +152,14 @@ pub async fn warp_sync(
                     if let Some(block) = m {
                         let block_prev_hash = block.prev_hash.clone();
                         current_height = block.height as u32;
-                        if let Some(prev_hash) = prev_hash {
-                            if prev_hash != block_prev_hash {
-                                let _ = tx_blocks.send(BlockMessage::Reorg(account_ids, current_height - 1)).await;
-                                debug!("Reorganization detected at block {}", block.height);
-                                break;
-                            }
+                        let discontinuity = match &prev_hash {
+                            Some(hash) => hash != &block_prev_hash,
+                            None => frontier_hashes.iter().any(|hash| hash != &block_prev_hash),
+                        };
+                        if discontinuity {
+                            let _ = tx_blocks.send(BlockMessage::Reorg(account_ids, current_height - 1)).await;
+                            debug!("Reorganization detected at block {}", block.height);
+                            break;
                         }
                         prev_hash = Some(block.hash.clone());
 

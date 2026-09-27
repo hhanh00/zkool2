@@ -51,8 +51,10 @@ Future<SyncHeight> getDbHeight({required Coin c}) =>
 Future<void> fetchTxDetails({required int account, required Coin c}) =>
     RustLib.instance.api.crateApiSyncFetchTxDetails(account: account, c: c);
 
-Future<void> cacheBlockTime({required int height, required Coin c}) =>
-    RustLib.instance.api.crateApiSyncCacheBlockTime(height: height, c: c);
+Future<void> cacheBlockTime(
+        {required int account, required int height, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiSyncCacheBlockTime(account: account, height: height, c: c);
 
 class PoolBalance {
   final Uint64List field0;
