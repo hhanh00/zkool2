@@ -85,7 +85,7 @@ pub async fn fetch_tx_details(account: u32, c: &Coin) -> Result<()> {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn cache_block_time(height: u32, c: &Coin) -> Result<()> {
+pub async fn cache_block_time(account: u32, height: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
     let block = client.block(&c.network(), height).await?;
@@ -94,7 +94,7 @@ pub async fn cache_block_time(height: u32, c: &Coin) -> Result<()> {
         hash: block.hash,
         time: block.time,
     };
-    crate::db::store_block_header(&mut connection, &bh).await?;
+    crate::db::store_block_header(&mut connection, account, &bh).await?;
     Ok(())
 }
 

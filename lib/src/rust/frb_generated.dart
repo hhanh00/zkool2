@@ -184,7 +184,7 @@ abstract class RustLibApi extends BaseApi {
   Future<String> crateApiPayBuildPuri({required List<Recipient> recipients});
 
   Future<void> crateApiSyncCacheBlockTime(
-      {required int height, required Coin c});
+      {required int account, required int height, required Coin c});
 
   Future<void> crateApiFrostCancelDkg({required Coin c});
 
@@ -1300,10 +1300,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   Future<void> crateApiSyncCacheBlockTime(
-      {required int height, required Coin c}) {
+      {required int account, required int height, required Coin c}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_u_32(account, serializer);
         sse_encode_u_32(height, serializer);
         sse_encode_box_autoadd_coin(c, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
@@ -1314,14 +1315,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiSyncCacheBlockTimeConstMeta,
-      argValues: [height, c],
+      argValues: [account, height, c],
       apiImpl: this,
     ));
   }
 
   TaskConstMeta get kCrateApiSyncCacheBlockTimeConstMeta => const TaskConstMeta(
         debugName: "cache_block_time",
-        argNames: ["height", "c"],
+        argNames: ["account", "height", "c"],
       );
 
   @override
