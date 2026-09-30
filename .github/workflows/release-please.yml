@@ -10,6 +10,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: release-please-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   release-please:
     runs-on: ubuntu-latest
@@ -26,18 +30,34 @@ jobs:
           token: ${{ secrets.RELEASE_PLEASE_TOKEN }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
-      - if: steps.release.outputs.pr
+      - name: Check out release PR
+        if: steps.release.outputs.pr
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
         run: |
           BRANCH="release-please--branches--main--components--zkool"
           git fetch origin "$BRANCH"
           git checkout "$BRANCH"
+      - name: Install Nix
+        if: steps.release.outputs.pr
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - name: Refresh Nix dependency hashes
+        if: steps.release.outputs.pr
+        run: python3 scripts/update_nix_hashes.py
+      - name: Update release PR
+        if: steps.release.outputs.pr
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_PLEASE_TOKEN }}
+        run: |
+          BRANCH="release-please--branches--main--components--zkool"
           git config user.name "$(git log -1 --format='%an')"
           git config user.email "$(git log -1 --format='%ae')"
           BUILD=$(cat build_number.txt)
           NEW_BUILD=$((BUILD + 1))
           echo "$NEW_BUILD" > build_number.txt
-          git add build_number.txt
+          git add build_number.txt flake.nix
           git commit --amend --no-edit
-          git push --force "https://x-access-token:$(gh auth token)@github.com/$GITHUB_REPOSITORY" "$BRANCH"
+          git push --force-with-lease "https://x-access-token:$(gh auth token)@github.com/$GITHUB_REPOSITORY" "$BRANCH"
