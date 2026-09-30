@@ -37,7 +37,8 @@ jobs:
         run: |
           BRANCH="release-please--branches--main--components--zkool"
           git fetch origin "$BRANCH"
-          git checkout "$BRANCH"
+          git checkout -B "$BRANCH" FETCH_HEAD
+          echo "RELEASE_PR_BASE=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
       - name: Install Nix
         if: steps.release.outputs.pr
         uses: cachix/install-nix-action@v31
@@ -60,4 +61,4 @@ jobs:
           echo "$NEW_BUILD" > build_number.txt
           git add build_number.txt flake.nix
           git commit --amend --no-edit
-          git push --force-with-lease "https://x-access-token:$(gh auth token)@github.com/$GITHUB_REPOSITORY" "$BRANCH"
+          git push --force-with-lease="refs/heads/$BRANCH:$RELEASE_PR_BASE" "https://x-access-token:$(gh auth token)@github.com/$GITHUB_REPOSITORY" "$BRANCH"
