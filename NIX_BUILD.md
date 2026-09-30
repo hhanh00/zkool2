@@ -2,8 +2,8 @@
 
 The flake provides a reproducible development environment for the whole
 project (Flutter app, Rust `rlz` core via `flutter_rust_bridge`/`cargokit`, the
-`zkool_graphql` server, and the Python test suite) plus a hermetic package for
-the GraphQL server.
+`zkool_graphql` server, and the Python test suite) plus hermetic packages for
+the Linux GUI (`zkool-pure`) and the GraphQL server (`zkool-graphql`).
 
 ## Prerequisites
 
@@ -74,21 +74,6 @@ environment.systemPackages = [ pkgs.zkool-graphql ];
 or by reference, without an overlay:
 `inputs.zkool2.packages.${pkgs.system}.zkool-graphql`.
 
-### `zkool-graphql-bin` (prebuilt, x86_64-linux)
-
-If you do not want to compile Rust, this downloads the `zkool_graphql` binary
-that CI attaches to the GitHub release and makes it runnable on NixOS
-(`autoPatchelfHook`):
-
-```bash
-nix build .#zkool-graphql-bin
-./result/bin/zkool_graphql --help
-nix profile install .#zkool-graphql-bin   # into your profile
-```
-
-The release is produced by `.github/workflows/build-graphql.yml`; bump `version`
-in the URL and the `hash` when a new tag is published.
-
 ### `cargo-vendor`
 
 `nix build .#cargo-vendor` produces the vendored source tree used by the offline
@@ -97,40 +82,14 @@ dependencies change, refresh `outputHash` with the hash Nix reports on failure.
 
 ## The GUI app
 
-A pure `nix build` of the GUI app is not possible in this setup:
-
-- Flutter downloads engine/pub artifacts and cargokit shells out to cargo, so
-  the build needs network. `__noChroot`/`--option sandbox false` require a
-  trusted user, which a normal user is not.
-- A fixed-output derivation is not an option either: Nix 2.34 rejects store-path
-  references in FOD outputs, and the bundle links GTK/WebKit/etc. from the store.
-
-Instead, build it in the dev shell and import the result into the store:
-
-```bash
-nix run .#zkool-store      # builds --release, prints the /nix/store path
-```
-
-This is equivalent to:
-
-```bash
-nix develop -c bash -c '
-  flutter build linux --release
-  nix store add-path --name zkool-6.31.0 build/linux/x64/release/bundle
-'
-```
-
-The result is a real store path (references recorded), but it is not a
-reproducible derivation.
-
-### Pure (sandboxed, offline) build — `zkool-pure`
+### Build the GUI — `zkool-pure` (x86_64-linux)
 
 `zkool-pure` is a normal derivation that builds the whole GUI with
 `sandbox = true` and **no network**, so `nix build .#zkool-pure` works like any
 other Nix package (and is cacheable). It makes cargokit sandbox-safe by
-pre-vending every fetch:
+pre-vendoring every fetch:
 
-- app + cargokit `build_tool` pub deps -> `pkgs.zkool-pub-cache` (a
+- app + cargokit `build_tool` pub deps -> `packages.zkool-pub-cache` (a
   normalized, reproducible FOD; the git checkout's volatile `.git`/`hooks` and
   pub's version-listing cache are stripped so the output is path-independent),
 - `run_build_tool.sh` is patched to `pub get --offline`,
@@ -141,10 +100,31 @@ pre-vending every fetch:
 ```bash
 nix build .#zkool-pure
 ./result/bin/zkool
+
+# Optional: install the GUI into your profile.
+nix profile install .#zkool-pure
+zkool
 ```
 
-Caveats: it still links the Nix store (same portability caveat as above), and
-updating pub/cargo dependencies means refreshing the FOD hashes.
+Dependency fetching can require network access on the first build; the GUI
+compilation itself runs offline in the sandbox. Updating pub/cargo dependencies
+means refreshing the fixed-output derivation (FOD) hashes in `flake.nix`.
+
+The installed launcher sets the library path for `librlz.so` and adds
+`xdg-user-dir` to `PATH`. Use `./result/bin/zkool` to launch the packaged app.
+The package still depends on its Nix store closure; see portability below.
+
+### Alternative: import a development-shell build — `zkool-store`
+
+For a development-shell build, this helper builds the release GUI and imports
+the bundle into the store:
+
+```bash
+nix run .#zkool-store      # builds --release, prints the /nix/store path
+```
+
+The result is a store path, but it is not a reproducible derivation. Use
+`zkool-pure` for sandboxed builds and binary-cache distribution.
 
 ### Portability: why a Nix-built GUI crashes on other distros
 
@@ -178,9 +158,9 @@ locally on a normal distro):
 
 See `.github/actions/linux/action.yml` (via `fastforge`) for the CI pipeline.
 
-The Nix flake is intended as a **development environment** for the GUI, and for
-producing the server (`zkool-graphql` / `zkool-graphql-bin`), which is a single
-static-ish binary and *is* portable across Nix machines.
+The flake supports both GUI and server development and packaging. Distribute
+Nix-built packages through a binary cache or copy their full closure to another
+Nix machine.
 
 ## Offline / hermetic cargo
 
@@ -191,6 +171,25 @@ cargo build -p rlz --offline
 
 `.#offline` points cargo at `packages.cargo-vendor` via a generated `CARGO_HOME`
 config and sets `CARGO_NET_OFFLINE=true`.
+
+## Release hash maintenance
+
+The release-please workflow refreshes the GUI Cargo vendor hash, the server
+Cargo dependency hash, and the pub cache hash on the release PR before pushing
+its updated commit. It forces fresh dependency fetches with placeholder hashes,
+then verifies the resulting hashes. No manual hash edits are needed for normal
+releases. If fetching fails, the workflow fails without pushing partial updates;
+resolve the failure and rerun it before merging the release PR.
+
+To run the same refresh locally on x86_64 Linux with Nix installed:
+
+```bash
+python3 scripts/update_nix_hashes.py
+```
+
+The release-tag Nix workflow then builds and caches the GUI and server. Use
+`zkool-graphql` with Cachix to download the server without compiling it; there
+is no separate package that downloads a GitHub release binary.
 
 ## Binary cache (Cachix)
 
@@ -238,5 +237,8 @@ A `/nix/store` path is only usable by a machine with Nix and that exact closure.
 
 ## Platforms
 
-The dev shell is defined for all default systems (`flake-utils`). Linux is
-fully exercised; the macOS shell is provided but untested.
+The flake defines outputs for `x86_64-linux`, `aarch64-linux`, and
+`aarch64-darwin`. The GUI packaging currently uses the Flutter
+`build/linux/x64/release/bundle` path, so use `x86_64-linux` for `zkool-pure`
+and `zkool-store`; the cache workflow builds on x86_64 Linux. The macOS
+development shell is provided but untested. `x86_64-darwin` is excluded.

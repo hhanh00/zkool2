@@ -222,13 +222,8 @@
           '';
         };
 
-        # The Flutter GUI cannot be a normal Nix package here: Flutter fetches
-        # engine/pub artifacts and cargokit shells out to cargo (network), and
-        # a fixed-output derivation is not an option because Nix 2.34 rejects
-        # store-path references in FOD outputs while the bundle links
-        # GTK/WebKit/etc. from the store. Instead `nix run .#zkool-store`
-        # builds in the dev shell and imports the result with `nix store
-        # add-path`. See NIX_BUILD.md.
+        # Alternative to zkool-pure: build in the development shell and
+        # import the bundle with `nix store add-path`. See NIX_BUILD.md.
         zkoolStore = pkgs.writeShellScriptBin "zkool-store" ''
           set -euo pipefail
           root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
@@ -326,30 +321,6 @@
             doCheck = false;
             meta = {
               description = "GraphQL server for Zcash operations";
-              mainProgram = "zkool_graphql";
-            };
-          };
-        } // lib.optionalAttrs (pkgs.stdenv.hostPlatform.system == "x86_64-linux") {
-          # Prebuilt server binary from the GitHub release, so `nix build`/
-          # `nix profile install` downloads instead of compiling Rust. The
-          # release is produced by .github/workflows/build-graphql.yml.
-          zkool-graphql-bin = pkgs.stdenv.mkDerivation {
-            pname = "zkool_graphql-bin";
-            version = zkoolVersion;
-            src = pkgs.fetchurl {
-              url = "https://github.com/hhanh00/zkool2/releases/download/zkool-v${zkoolVersion}/zkool_graphql";
-              hash = "sha256-IRUizrR6z/n1uOxAYWxeNcXgHwrvQdGkMlGeo6+bEOM=";
-            };
-            dontUnpack = true;
-            nativeBuildInputs = [ pkgs.autoPatchelfHook ];
-            buildInputs = [ pkgs.stdenv.cc.cc.lib pkgs.glibc ];
-            installPhase = ''
-              runHook preInstall
-              install -Dm755 "$src" "$out/bin/zkool_graphql"
-              runHook postInstall
-            '';
-            meta = {
-              description = "GraphQL server for Zcash operations (prebuilt)";
               mainProgram = "zkool_graphql";
             };
           };
