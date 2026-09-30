@@ -35,6 +35,39 @@
           ];
         };
 
+        # Pub cache covering the app AND cargokit's Dart `build_tool` (which
+        # run_build_tool.sh resolves at build time). Fetched once with network
+        # (legal for a FOD: the output is only Dart/git sources, no store
+        # references), then reused offline by the sandboxed app build.
+        pubCache = pkgs.stdenv.mkDerivation {
+          name = "zkool-pub-cache";
+          src = ./.;
+          nativeBuildInputs = [ pkgs.flutter pkgs.git pkgs.cacert ];
+          SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+          GIT_SSL_CAINFO = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+          outputHashMode = "recursive";
+          outputHashAlgo = "sha256";
+          outputHash = "sha256-Y7GfEIONx5n9R1jnuhn0w9/FwBHxdTef9mg/FeKa+5o=";
+          buildCommand = ''
+            export HOME="$TMPDIR"
+            export PUB_CACHE="$out"
+            cp -r "$src" source
+            chmod -R u+w source
+            cd source
+            flutter pub get
+            ( cd rust_builder/cargokit/build_tool && flutter pub get )
+
+            # Normalize for reproducibility: pub's HTTP version-listing cache
+            # and the git checkouts' volatile .git metadata (config embeds the
+            # absolute cache path, index/logs embed timestamps) must go. The
+            # bare mirrors in git/cache stay; offline pub get still resolves.
+            rm -rf "$out/hosted/pub.dev/.cache" "$out/log" "$out/_temp" "$out/active_roots"
+            find "$out/git" -type d -name .git -prune -exec rm -rf {} + 2>/dev/null || true
+            # git's sample hooks have Nix store shebangs (bash/perl) -> store refs.
+            find "$out/git" -type d -name hooks -prune -exec rm -rf {} + 2>/dev/null || true
+          '';
+        };
+
         # Must match rust-toolchain.toml: 1.88-1.94 fail to compile
         # libcrux-psq (transitive nym dep) with E0716; 1.95.0 builds cleanly.
         rustVersion = "1.95.0";
@@ -124,6 +157,61 @@
         nativeBuildInputs = [ rustToolchain ]
           ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux linuxNativeBuildInputs;
 
+        # Pure (sandboxed, no-network) GUI build. All fetches are pre-vendored:
+        # pub -> pubCache, cargo -> cargo-vendor, engine -> pkgs.flutter.
+        # cargokit is made sandbox-safe by (a) running its `dart pub get` with
+        # --offline against the pinned cache and (b) serving its rustup calls
+        # from cargokitRustup. Being a normal derivation, referencing
+        # GTK/WebKit/etc. from the store is allowed (the FOD restriction does
+        # not apply).
+        zkoolPure = pkgs.stdenv.mkDerivation {
+          pname = "zkool-pure";
+          version = zkoolVersion;
+          src = ./.;
+          nativeBuildInputs = [
+            rustToolchain
+            pkgs.flutter
+            cargokitRustup
+          ] ++ (with pkgs; [ pkg-config cmake ninja clang git perl which coreutils cacert ]);
+          buildInputs = linuxBuildInputs;
+          SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+          GIT_SSL_CAINFO = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
+          buildCommand = ''
+            cp -r "$src" source
+            chmod -R u+w source
+            cd source
+
+            # cargokit's helpers use #!/usr/bin/env bash, absent in the sandbox.
+            patchShebangs rust_builder/cargokit
+
+            export HOME="$TMPDIR"
+
+            # pub needs a writable cache (it writes active_roots/log/.cache),
+            # so start from a copy of the pinned FOD.
+            export PUB_CACHE="$TMPDIR/pub-cache"
+            cp -r --no-preserve=mode "${pubCache}" "$PUB_CACHE"
+            chmod -R u+w "$PUB_CACHE"
+
+            # Offline cargo through the vendored sources.
+            export CARGO_NET_OFFLINE=true
+            export CARGO_HOME="$TMPDIR/cargo-home"
+            mkdir -p "$CARGO_HOME"
+            sed "s|directory = \"vendor\"|directory = \"${self.packages.${system}.cargo-vendor}/vendor\"|" \
+              "${self.packages.${system}.cargo-vendor}/config.toml" > "$CARGO_HOME/config.toml"
+
+            # cargokit's runner resolves build_tool deps with pub: make it offline.
+            substituteInPlace rust_builder/cargokit/run_build_tool.sh \
+              --replace-fail 'pub get --no-precompile' 'pub get --offline --no-precompile'
+
+            flutter pub get --offline
+            flutter build linux --release --no-pub
+
+            mkdir -p "$out/libexec/zkool" "$out/bin"
+            cp -r build/linux/x64/release/bundle/. "$out/libexec/zkool/"
+            ln -s "$out/libexec/zkool/zkool" "$out/bin/zkool"
+          '';
+        };
+
         # The Flutter GUI cannot be a normal Nix package here: Flutter fetches
         # engine/pub artifacts and cargokit shells out to cargo (network), and
         # a fixed-output derivation is not an option because Nix 2.34 rejects
@@ -200,6 +288,12 @@
               cp vendor-config.toml "$out/config.toml"
             '';
           };
+
+          # Pub cache FOD (app + cargokit build_tool), used by the pure build.
+          zkool-pub-cache = pubCache;
+
+          # EXPERIMENTAL pure GUI build (sandboxed, no network).
+          zkool-pure = zkoolPure;
 
           # Hermetic build of the GraphQL server. Mirrors
           # .github/workflows/build-graphql.yml:

@@ -123,6 +123,29 @@ nix develop -c bash -c '
 The result is a real store path (references recorded), but it is not a
 reproducible derivation.
 
+### Pure (sandboxed, offline) build — `zkool-pure`
+
+`zkool-pure` is a normal derivation that builds the whole GUI with
+`sandbox = true` and **no network**, so `nix build .#zkool-pure` works like any
+other Nix package (and is cacheable). It makes cargokit sandbox-safe by
+pre-vending every fetch:
+
+- app + cargokit `build_tool` pub deps -> `pkgs.zkool-pub-cache` (a
+  normalized, reproducible FOD; the git checkout's volatile `.git`/`hooks` and
+  pub's version-listing cache are stripped so the output is path-independent),
+- `run_build_tool.sh` is patched to `pub get --offline`,
+- cargo uses `packages.cargo-vendor` with `CARGO_NET_OFFLINE=true`,
+- rustup calls are served by the `rustup` shim,
+- engine artifacts come from `pkgs.flutter`.
+
+```bash
+nix build .#zkool-pure
+./result/bin/zkool
+```
+
+Caveats: it still links the Nix store (same portability caveat as above), and
+updating pub/cargo dependencies means refreshing the FOD hashes.
+
 ### Portability: why a Nix-built GUI crashes on other distros
 
 A binary produced through the Nix toolchain is hard-wired to `/nix/store`, so
@@ -168,6 +191,39 @@ cargo build -p rlz --offline
 
 `.#offline` points cargo at `packages.cargo-vendor` via a generated `CARGO_HOME`
 config and sets `CARGO_NET_OFFLINE=true`.
+
+## Binary cache (Cachix)
+
+`.github/workflows/nix-cache.yml` builds `zkool-graphql` and `zkool-pure` on
+stable release tags (`zkool-v*`, excluding `-rc` tags) and on manual dispatch,
+then pushes them, with their closure, to the public Cachix cache `zkool`.
+
+One-time setup:
+
+- Create the cache `zkool` at https://app.cachix.org (free for public caches).
+- Add a repository secret `CACHIX_AUTH_TOKEN` holding a write token for it.
+
+Consumers then substitute instead of building:
+
+```bash
+nix build github:hhanh00/zkool2#zkool-pure   # downloads
+```
+
+once they trust the cache (`cachix use zkool`, or in `~/.config/nix/nix.conf`):
+
+```
+extra-substituters = https://zkool.cachix.org
+extra-trusted-public-keys = zkool.cachix.org-1:<public key>
+```
+
+The public key is shown in the Cachix dashboard / by `cachix use zkool`. Adding
+it to the flake's `nixConfig` would apply it automatically, at the cost of an
+interactive trust prompt on first use.
+
+Note: only the *runtime* closure of `zkool-pure` is pushed, so a consumer whose
+`flake.lock` differs (different store paths) will rebuild and re-fetch the
+pub/cargo FODs; pushing those too (`nix build .#zkool-pub-cache .#cargo-vendor`)
+avoids that.
 
 ## Distribution
 
