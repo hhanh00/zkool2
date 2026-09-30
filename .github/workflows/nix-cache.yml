@@ -1,0 +1,46 @@
+name: Nix cache
+
+on:
+  push:
+    tags:
+    - 'zkool-v*'
+    - '!zkool-v*-rc*'
+  workflow_dispatch:
+
+concurrency:
+  group: nix-cache-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cache:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    permissions:
+      contents: read
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+
+      - name: Set up Cachix
+        uses: cachix/cachix-action@v15
+        with:
+          name: zkool
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+
+      - name: Build
+        run: |
+          nix build --print-out-paths .#zkool-graphql .#zkool-pure | tee /tmp/paths
+
+      - name: Push to Cachix
+        run: cachix push zkool $(cat /tmp/paths)
