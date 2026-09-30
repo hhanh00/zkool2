@@ -172,7 +172,7 @@
             rustToolchain
             pkgs.flutter
             cargokitRustup
-          ] ++ (with pkgs; [ pkg-config cmake ninja clang git perl which coreutils cacert ]);
+          ] ++ (with pkgs; [ pkg-config cmake ninja clang git perl which coreutils cacert makeWrapper ]);
           buildInputs = linuxBuildInputs;
           SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
           GIT_SSL_CAINFO = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
@@ -208,7 +208,17 @@
 
             mkdir -p "$out/libexec/zkool" "$out/bin"
             cp -r build/linux/x64/release/bundle/. "$out/libexec/zkool/"
-            ln -s "$out/libexec/zkool/zkool" "$out/bin/zkool"
+
+            # Wrap rather than symlink. The bundle dlopen()s librlz.so by bare
+            # soname from the Dart VM, so $out/libexec/zkool/lib has to be on
+            # the loader path; a bare symlink in $out/bin does not provide that
+            # and RustLib.init() fails with "Failed to load dynamic library
+            # 'librlz.so'". path_provider_linux also shells out to xdg-user-dir,
+            # which must be on PATH or main() throws
+            # MissingPlatformDirectoryException.
+            makeWrapper "$out/libexec/zkool/zkool" "$out/bin/zkool" \
+              --prefix LD_LIBRARY_PATH : "$out/libexec/zkool/lib" \
+              --prefix PATH : "${lib.makeBinPath [ pkgs.xdg-user-dirs ]}"
           '';
         };
 
