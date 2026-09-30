@@ -75,3 +75,7 @@ macos/Podfile.lock
 
 # FVM Version Cache
 .fvm/
+
+# Nix build symlinks
+result
+result-*
