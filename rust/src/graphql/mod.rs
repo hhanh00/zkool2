@@ -11,6 +11,7 @@ pub mod jwt;
 pub mod mutation;
 pub mod query;
 pub mod subs;
+pub mod voting;
 
 #[derive(Clone)]
 pub struct Context {

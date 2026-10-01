@@ -624,7 +624,7 @@ mixin _$VotingRoundListItem {
   String get roundId;
   String get title;
   String get status;
-  BigInt? get snapshotHeight;
+  int get snapshotHeight;
   int get bundleCount;
   String get action;
   List<VotingProposalListItem> get proposals;
@@ -688,7 +688,7 @@ abstract mixin class $VotingRoundListItemCopyWith<$Res> {
       {String roundId,
       String title,
       String status,
-      BigInt? snapshotHeight,
+      int snapshotHeight,
       int bundleCount,
       String action,
       List<VotingProposalListItem> proposals,
@@ -712,7 +712,7 @@ class _$VotingRoundListItemCopyWithImpl<$Res>
     Object? roundId = null,
     Object? title = null,
     Object? status = null,
-    Object? snapshotHeight = freezed,
+    Object? snapshotHeight = null,
     Object? bundleCount = null,
     Object? action = null,
     Object? proposals = null,
@@ -732,10 +732,10 @@ class _$VotingRoundListItemCopyWithImpl<$Res>
           ? _self.status
           : status // ignore: cast_nullable_to_non_nullable
               as String,
-      snapshotHeight: freezed == snapshotHeight
+      snapshotHeight: null == snapshotHeight
           ? _self.snapshotHeight
           : snapshotHeight // ignore: cast_nullable_to_non_nullable
-              as BigInt?,
+              as int,
       bundleCount: null == bundleCount
           ? _self.bundleCount
           : bundleCount // ignore: cast_nullable_to_non_nullable
@@ -855,7 +855,7 @@ extension VotingRoundListItemPatterns on VotingRoundListItem {
             String roundId,
             String title,
             String status,
-            BigInt? snapshotHeight,
+            int snapshotHeight,
             int bundleCount,
             String action,
             List<VotingProposalListItem> proposals,
@@ -901,7 +901,7 @@ extension VotingRoundListItemPatterns on VotingRoundListItem {
             String roundId,
             String title,
             String status,
-            BigInt? snapshotHeight,
+            int snapshotHeight,
             int bundleCount,
             String action,
             List<VotingProposalListItem> proposals,
@@ -943,7 +943,7 @@ extension VotingRoundListItemPatterns on VotingRoundListItem {
             String roundId,
             String title,
             String status,
-            BigInt? snapshotHeight,
+            int snapshotHeight,
             int bundleCount,
             String action,
             List<VotingProposalListItem> proposals,
@@ -977,7 +977,7 @@ class _VotingRoundListItem implements VotingRoundListItem {
       {required this.roundId,
       required this.title,
       required this.status,
-      this.snapshotHeight,
+      required this.snapshotHeight,
       required this.bundleCount,
       required this.action,
       required final List<VotingProposalListItem> proposals,
@@ -993,7 +993,7 @@ class _VotingRoundListItem implements VotingRoundListItem {
   @override
   final String status;
   @override
-  final BigInt? snapshotHeight;
+  final int snapshotHeight;
   @override
   final int bundleCount;
   @override
@@ -1078,7 +1078,7 @@ abstract mixin class _$VotingRoundListItemCopyWith<$Res>
       {String roundId,
       String title,
       String status,
-      BigInt? snapshotHeight,
+      int snapshotHeight,
       int bundleCount,
       String action,
       List<VotingProposalListItem> proposals,
@@ -1102,7 +1102,7 @@ class __$VotingRoundListItemCopyWithImpl<$Res>
     Object? roundId = null,
     Object? title = null,
     Object? status = null,
-    Object? snapshotHeight = freezed,
+    Object? snapshotHeight = null,
     Object? bundleCount = null,
     Object? action = null,
     Object? proposals = null,
@@ -1122,10 +1122,10 @@ class __$VotingRoundListItemCopyWithImpl<$Res>
           ? _self.status
           : status // ignore: cast_nullable_to_non_nullable
               as String,
-      snapshotHeight: freezed == snapshotHeight
+      snapshotHeight: null == snapshotHeight
           ? _self.snapshotHeight
           : snapshotHeight // ignore: cast_nullable_to_non_nullable
-              as BigInt?,
+              as int,
       bundleCount: null == bundleCount
           ? _self.bundleCount
           : bundleCount // ignore: cast_nullable_to_non_nullable
