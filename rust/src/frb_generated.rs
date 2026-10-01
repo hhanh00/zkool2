@@ -9634,7 +9634,7 @@ impl SseDecode for crate::api::voting::VotingRoundListItem {
         let mut var_roundId = <String>::sse_decode(deserializer);
         let mut var_title = <String>::sse_decode(deserializer);
         let mut var_status = <String>::sse_decode(deserializer);
-        let mut var_snapshotHeight = <Option<u64>>::sse_decode(deserializer);
+        let mut var_snapshotHeight = <u32>::sse_decode(deserializer);
         let mut var_bundleCount = <u32>::sse_decode(deserializer);
         let mut var_action = <String>::sse_decode(deserializer);
         let mut var_proposals =
@@ -13146,7 +13146,7 @@ impl SseEncode for crate::api::voting::VotingRoundListItem {
         <String>::sse_encode(self.round_id, serializer);
         <String>::sse_encode(self.title, serializer);
         <String>::sse_encode(self.status, serializer);
-        <Option<u64>>::sse_encode(self.snapshot_height, serializer);
+        <u32>::sse_encode(self.snapshot_height, serializer);
         <u32>::sse_encode(self.bundle_count, serializer);
         <String>::sse_encode(self.action, serializer);
         <Vec<crate::api::voting::VotingProposalListItem>>::sse_encode(self.proposals, serializer);
