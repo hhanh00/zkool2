@@ -17,15 +17,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache Cargo artifacts
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: . -> target
-          cache-on-failure: true
-
       - name: Start fresh regtest and fund an Ironwood note
         uses: ./.github/actions/zebra
         with:
@@ -34,10 +25,31 @@ jobs:
           SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
           DESTINATION_ADDRESS: uregtest1ur83jamvhc5pwe8xzlu9d8ur4mxmny385mhlurxh5z00e6vhcf9zk0dncar334n0ucskdya9ytdrvzucprqjrhy7hd6rkklp0q6eyxp5
 
-      - name: Build checked-out ZKool GraphQL
-        uses: ./.github/actions/build-graphql
+      - name: Restore ZKool GraphQL v6.31.0
+        id: zkool-graphql-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: target/release/zkool_graphql
+          key: ${{ runner.os }}-zkool-graphql-v6.31.0
 
-      - name: Scan the real Ironwood note with checked-out ZKool
+      - name: Download ZKool GraphQL v6.31.0
+        if: steps.zkool-graphql-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p target/release
+          curl --fail --location --retry 5 \
+            --output target/release/zkool_graphql \
+            https://github.com/hhanh00/zkool2/releases/download/zkool-v6.31.0/zkool_graphql
+          chmod +x target/release/zkool_graphql
+
+      - name: Save ZKool GraphQL v6.31.0
+        if: steps.zkool-graphql-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: target/release/zkool_graphql
+          key: ${{ steps.zkool-graphql-cache.outputs.cache-primary-key }}
+
+      - name: Scan the real Ironwood note with pinned ZKool
         run: ./example/sh/e2e-ironwood-wallet.sh
         env:
           SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
