@@ -10,6 +10,7 @@ pub struct ServerRound {
     #[serde(
         alias = "id",
         alias = "vote_round_id",
+        alias = "voteRoundId",
         deserialize_with = "decode_round_id"
     )]
     pub round_id: String,
@@ -18,7 +19,7 @@ pub struct ServerRound {
     /// Absent when the overview omits it. Share tracking then polls without
     /// ever classifying a share overdue or stopping at a boundary, rather
     /// than costing the round list an extra per-round request to find out.
-    #[serde(default)]
+    #[serde(default, alias = "voteEndTime")]
     pub vote_end_time: Option<u64>,
     pub proposals: Vec<ServerProposal>,
 }
@@ -171,11 +172,19 @@ pub async fn fetch_round_params(
     let round = &body["round"];
     let snapshot_height = round["snapshot_height"]
         .as_u64()
+        .or_else(|| round["snapshotHeight"].as_u64())
         .or_else(|| round["snapshot_height"].as_str()?.parse().ok())
+        .or_else(|| round["snapshotHeight"].as_str()?.parse().ok())
         .ok_or_else(|| anyhow!("round snapshot height is missing or invalid"))?;
     fn root(round: &serde_json::Value, name: &str) -> Result<Vec<u8>> {
+        let camel_name = match name {
+            "nc_root" => "ncRoot",
+            "nullifier_imt_root" => "nullifierImtRoot",
+            _ => name,
+        };
         let value = round[name]
             .as_str()
+            .or_else(|| round[camel_name].as_str())
             .ok_or_else(|| anyhow!("round {name} is missing"))?;
         let bytes = if value.len() == 64 && value.bytes().all(|b| b.is_ascii_hexdigit()) {
             hex::decode(value)?

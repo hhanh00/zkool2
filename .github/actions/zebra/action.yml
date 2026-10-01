@@ -9,6 +9,9 @@ inputs:
     required: true
   DESTINATION_ADDRESS:
     required: true
+  BLOCKS:
+    required: false
+    default: "300"
 runs:
   using: "composite"
   steps:
@@ -23,6 +26,7 @@ runs:
         rm -f "$GITHUB_WORKSPACE/regtest.db"
         ./example/sh/mine.sh
       env:
+        BLOCKS: ${{ inputs.BLOCKS }}
         MINER_SEED: ${{ inputs.MINER_SEED }}
         MINER_ADDRESS: ${{ inputs.MINER_ADDRESS }}
         SEED: ${{ inputs.SEED }}

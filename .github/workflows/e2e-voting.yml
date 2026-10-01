@@ -28,25 +28,20 @@ jobs:
           MINER_ADDRESS: "tmQ1BiNRfsvT6eMkJ5n7nMZsbz1PGwCs1Zs"
           SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
           DESTINATION_ADDRESS: uregtest1ur83jamvhc5pwe8xzlu9d8ur4mxmny385mhlurxh5z00e6vhcf9zk0dncar334n0ucskdya9ytdrvzucprqjrhy7hd6rkklp0q6eyxp5
+          BLOCKS: "350"
 
-      - name: Restore ZKool GraphQL v6.31.0
+      - name: Restore checked-out ZKool GraphQL
         id: zkool-graphql-cache
         uses: actions/cache/restore@v5
         with:
           path: target/release/zkool_graphql
-          key: ${{ runner.os }}-zkool-graphql-v6.31.0
+          key: ${{ runner.os }}-zkool-graphql-voting-${{ hashFiles('Cargo.lock', 'rust/Cargo.toml', 'rust/src/**') }}
 
-      - name: Download ZKool GraphQL v6.31.0
+      - name: Build checked-out ZKool GraphQL
         if: steps.zkool-graphql-cache.outputs.cache-hit != 'true'
-        run: |
-          set -euo pipefail
-          mkdir -p target/release
-          curl --fail --location --retry 5 \
-            --output target/release/zkool_graphql \
-            https://github.com/hhanh00/zkool2/releases/download/zkool-v6.31.0/zkool_graphql
-          chmod +x target/release/zkool_graphql
+        uses: ./.github/actions/build-graphql
 
-      - name: Save ZKool GraphQL v6.31.0
+      - name: Save checked-out ZKool GraphQL
         if: steps.zkool-graphql-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
         with:
@@ -58,7 +53,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: tools/voting
-          key: ${{ runner.os }}-voting-services-${{ env.SVOTED_VERSION }}-${{ env.NF_SERVER_REPOSITORY }}-${{ env.NF_SERVER_COMMIT }}-serve-v3
+          key: ${{ runner.os }}-voting-services-${{ env.SVOTED_VERSION }}-${{ env.NF_SERVER_REPOSITORY }}-${{ env.NF_SERVER_COMMIT }}-serve-grpcurl-v4
 
       - name: Download svoted and build nf-server
         if: steps.voting-services-cache.outputs.cache-hit != 'true'
@@ -84,6 +79,8 @@ jobs:
           git -C /tmp/vote-nullifier-pir checkout --detach "$NF_SERVER_COMMIT"
           cargo build --locked --release --manifest-path /tmp/vote-nullifier-pir/Cargo.toml -p nf-server --features serve
           cp /tmp/vote-nullifier-pir/target/release/nf-server tools/voting/nf-server
+          GOBIN="$GITHUB_WORKSPACE/tools/voting" \
+            go install github.com/fullstorydev/grpcurl/cmd/grpcurl@v1.9.3
 
       - name: Save svoted and nf-server
         if: steps.voting-services-cache.outputs.cache-hit != 'true'
@@ -98,6 +95,7 @@ jobs:
           "$GITHUB_WORKSPACE/tools/voting/svoted" version || \
             "$GITHUB_WORKSPACE/tools/voting/svoted" --version
           "$GITHUB_WORKSPACE/tools/voting/nf-server" --version
+          "$GITHUB_WORKSPACE/tools/voting/grpcurl" -version
 
       - name: Initialize local svoted chain
         run: |
@@ -110,6 +108,7 @@ jobs:
           export VM_PRIVKEYS="$(openssl rand -hex 32)"
           export SVOTE_USE_DEFAULT_GENESIS_VOTE_MANAGERS=false
           bash tools/vote-sdk/scripts/init.sh
+          go build -C tools/vote-sdk -o "$GITHUB_WORKSPACE/tools/voting/voting-config" ./cmd/voting-config
 
       - name: Start local svoted chain
         run: |
@@ -157,7 +156,63 @@ jobs:
             sleep 1
           done
 
-      - name: Scan the real Ironwood note with pinned ZKool
+      - name: Create real voting rounds
+        run: scripts/create-e2e-voting-rounds.sh
+        env:
+          SVOTED_BIN: ${{ github.workspace }}/tools/voting/svoted
+          SVOTED_HOME: ${{ github.workspace }}/.svoted-ci
+          CHAIN_ID: svote-ci
+          SVOTED_GRPC: 127.0.0.1:9190
+          VOTE_SDK_PROTO_ROOT: ${{ github.workspace }}/tools/vote-sdk/proto
+
+      - name: Sign and serve local voting configuration
+        run: |
+          set -euo pipefail
+          config_dir="$GITHUB_WORKSPACE/e2e-voting-config"
+          cert_dir="$GITHUB_WORKSPACE/e2e-voting-tls"
+          mkdir -p "$cert_dir"
+          openssl req -x509 -new -nodes -sha256 -days 1 \
+            -subj '/CN=ZKool E2E Config CA' \
+            -keyout "$cert_dir/ca.key" -out "$cert_dir/ca.crt"
+          openssl req -new -nodes -sha256 \
+            -subj '/CN=localhost' \
+            -addext 'subjectAltName=DNS:localhost,IP:127.0.0.1' \
+            -keyout "$cert_dir/server.key" -out "$cert_dir/server.csr"
+          openssl x509 -req -sha256 -days 1 \
+            -in "$cert_dir/server.csr" -CA "$cert_dir/ca.crt" -CAkey "$cert_dir/ca.key" \
+            -CAcreateserial -out "$cert_dir/server.crt" \
+            -extfile <(printf 'subjectAltName=DNS:localhost,IP:127.0.0.1')
+          sudo cp "$cert_dir/ca.crt" /usr/local/share/ca-certificates/zkool-e2e-config-ca.crt
+          sudo update-ca-certificates
+          set -a
+          source pir-server.env
+          set +a
+          CONFIG_DIR="$config_dir" \
+          VOTING_CONFIG_BIN="$GITHUB_WORKSPACE/tools/voting/voting-config" \
+          GRPCURL_BIN="$GITHUB_WORKSPACE/tools/voting/grpcurl" \
+          VOTE_SDK_PROTO_ROOT="$GITHUB_WORKSPACE/tools/vote-sdk/proto" \
+          bash "$GITHUB_WORKSPACE/scripts/configure-e2e-voting-config.sh"
+          nohup python3 "$GITHUB_WORKSPACE/scripts/serve-e2e-voting-config.py" \
+            --directory "$config_dir" --cert "$cert_dir/server.crt" --key "$cert_dir/server.key" \
+            --grpcurl "$GITHUB_WORKSPACE/tools/voting/grpcurl" \
+            --proto-root "$GITHUB_WORKSPACE/tools/vote-sdk/proto" \
+            > voting-config.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error --cacert "$cert_dir/ca.crt" \
+              https://localhost:8443/static-voting-config.json >/dev/null; then
+              break
+            fi
+            if [[ "$attempt" == 30 ]]; then
+              cat voting-config.log >&2 || true
+              exit 1
+            fi
+            sleep 1
+          done
+          source "$config_dir/config.env"
+          echo "VOTING_CONFIG_URL=$VOTING_CONFIG_URL" >> "$GITHUB_ENV"
+          echo "ZKOOL_EXTRA_ROOT_CERT_PATH=$cert_dir/ca.crt" >> "$GITHUB_ENV"
+
+      - name: Scan the real Ironwood note and resolve voting configuration
         run: ./example/sh/e2e-ironwood-wallet.sh
         env:
           SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
@@ -167,7 +222,7 @@ jobs:
         if: always()
         run: |
           mkdir -p e2e-artifacts
-          for file in zebrad.log lightwalletd.log lwd.log graphql.log e2e-zkool-graphql.log; do
+          for file in zebrad.log lightwalletd.log lwd.log graphql.log e2e-zkool-graphql.log svoted.log nf-server.log voting-config.log; do
             if [[ -f "$file" ]]; then
               cp "$file" e2e-artifacts/
             fi

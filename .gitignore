@@ -58,6 +58,7 @@ ios/build/
 *.sh
 !example/sh/e2e-ironwood-wallet.sh
 !misc/ledger/*.sh
+!scripts/configure-e2e-voting-config.sh
 .env
 /certs/
 node_modules/

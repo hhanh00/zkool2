@@ -9,7 +9,7 @@ inputs:
   lightwalletd-revision:
     description: lightwalletd git revision
     required: false
-    default: 9b69519c57785e04e92a16365483f869dd878700
+    default: 09593edbee4ee68d47e5a53f8ce1c83514c4e8e6
   bootstrap-zkool-version:
     description: Released ZKool tag used only to create regtest fixture state
     required: false
