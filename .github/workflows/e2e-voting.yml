@@ -16,7 +16,7 @@ jobs:
     env:
       SVOTED_VERSION: v1.6.1-rc.6
       NF_SERVER_REPOSITORY: hhanh00/vote-nullifier-pir
-      NF_SERVER_REF: regtest-support
+      NF_SERVER_COMMIT: 01de80be9940fd2d79f2aed3fe4c0692ff7f0393
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -58,7 +58,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: tools/voting
-          key: ${{ runner.os }}-voting-services-${{ env.SVOTED_VERSION }}-${{ env.NF_SERVER_REPOSITORY }}-${{ env.NF_SERVER_REF }}-network-alias-v2
+          key: ${{ runner.os }}-voting-services-${{ env.SVOTED_VERSION }}-${{ env.NF_SERVER_REPOSITORY }}-${{ env.NF_SERVER_COMMIT }}-serve-v3
 
       - name: Download svoted and build nf-server
         if: steps.voting-services-cache.outputs.cache-hit != 'true'
@@ -78,9 +78,11 @@ jobs:
           mv tools/voting/bin/svoted tools/voting/svoted
           rmdir tools/voting/bin
 
-          git clone --depth 1 --branch "$NF_SERVER_REF" \
+          git clone --no-checkout --filter=blob:none \
             "https://github.com/$NF_SERVER_REPOSITORY.git" /tmp/vote-nullifier-pir
-          cargo build --locked --release --manifest-path /tmp/vote-nullifier-pir/Cargo.toml -p nf-server
+          git -C /tmp/vote-nullifier-pir fetch --depth 1 origin "$NF_SERVER_COMMIT"
+          git -C /tmp/vote-nullifier-pir checkout --detach "$NF_SERVER_COMMIT"
+          cargo build --locked --release --manifest-path /tmp/vote-nullifier-pir/Cargo.toml -p nf-server --features serve
           cp /tmp/vote-nullifier-pir/target/release/nf-server tools/voting/nf-server
 
       - name: Save svoted and nf-server
