@@ -15,7 +15,8 @@ jobs:
     timeout-minutes: 90
     env:
       SVOTED_VERSION: v1.6.1-rc.6
-      NF_SERVER_VERSION: v0.12.2
+      NF_SERVER_REPOSITORY: hhanh00/vote-nullifier-pir
+      NF_SERVER_REF: regtest-support
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -57,9 +58,9 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: tools/voting
-          key: ${{ runner.os }}-voting-services-${{ env.SVOTED_VERSION }}-${{ env.NF_SERVER_VERSION }}
+          key: ${{ runner.os }}-voting-services-${{ env.SVOTED_VERSION }}-${{ env.NF_SERVER_REPOSITORY }}-${{ env.NF_SERVER_REF }}-network-alias-v2
 
-      - name: Download svoted and nf-server
+      - name: Download svoted and build nf-server
         if: steps.voting-services-cache.outputs.cache-hit != 'true'
         run: |
           set -euo pipefail
@@ -77,15 +78,10 @@ jobs:
           mv tools/voting/bin/svoted tools/voting/svoted
           rmdir tools/voting/bin
 
-          nf_url="https://github.com/valargroup/vote-nullifier-pir/releases/download/${NF_SERVER_VERSION}/nf-server-linux-amd64"
-          curl --fail --location --retry 5 -o tools/voting/nf-server "$nf_url"
-          curl --fail --location --retry 5 \
-            -o /tmp/nf-server-checksums \
-            "https://github.com/valargroup/vote-nullifier-pir/releases/download/${NF_SERVER_VERSION}/SHA256SUMS"
-          expected_nf_hash=$(awk '$2 == "nf-server-linux-amd64" { print $1 }' /tmp/nf-server-checksums)
-          test -n "$expected_nf_hash"
-          printf '%s  %s\n' "$expected_nf_hash" tools/voting/nf-server | sha256sum -c -
-          chmod +x tools/voting/nf-server
+          git clone --depth 1 --branch "$NF_SERVER_REF" \
+            "https://github.com/$NF_SERVER_REPOSITORY.git" /tmp/vote-nullifier-pir
+          cargo build --locked --release --manifest-path /tmp/vote-nullifier-pir/Cargo.toml -p nf-server
+          cp /tmp/vote-nullifier-pir/target/release/nf-server tools/voting/nf-server
 
       - name: Save svoted and nf-server
         if: steps.voting-services-cache.outputs.cache-hit != 'true'
@@ -121,7 +117,7 @@ jobs:
           export SVOTE_PIR_URL=disabled
           nohup svoted start --home "$SVOTED_HOME" > svoted.log 2>&1 &
           for attempt in $(seq 1 60); do
-            if curl -fsS http://127.0.0.1:1317/status >/dev/null; then
+            if curl -fsS http://127.0.0.1:1317/cosmos/base/tendermint/v1beta1/node_info >/dev/null; then
               break
             fi
             if [[ "$attempt" == 60 ]]; then
