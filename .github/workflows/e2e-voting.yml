@@ -1,0 +1,64 @@
+name: Voting E2E Infrastructure
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: voting-e2e-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ironwood-wallet:
+    name: Zebra → lightwalletd → ZKool V3 note
+    if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
+          cache-on-failure: true
+
+      - name: Start fresh regtest and fund an Ironwood note
+        uses: ./.github/actions/zebra
+        with:
+          MINER_SEED: "burger voice warrior danger satoshi you solid atom elite alcohol category layer able debate culture talk tissue language hip surge fiction paddle stove voyage"
+          MINER_ADDRESS: "tmQ1BiNRfsvT6eMkJ5n7nMZsbz1PGwCs1Zs"
+          SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
+          DESTINATION_ADDRESS: uregtest1ur83jamvhc5pwe8xzlu9d8ur4mxmny385mhlurxh5z00e6vhcf9zk0dncar334n0ucskdya9ytdrvzucprqjrhy7hd6rkklp0q6eyxp5
+
+      - name: Build checked-out ZKool GraphQL
+        uses: ./.github/actions/build-graphql
+
+      - name: Scan the real Ironwood note with checked-out ZKool
+        run: ./example/sh/e2e-ironwood-wallet.sh
+        env:
+          SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
+          ZKOOL_GRAPHQL_BIN: ${{ github.workspace }}/target/release/zkool_graphql
+
+      - name: Collect service logs
+        if: always()
+        run: |
+          mkdir -p e2e-artifacts
+          for file in zebrad.log lightwalletd.log lwd.log graphql.log e2e-zkool-graphql.log; do
+            if [[ -f "$file" ]]; then
+              cp "$file" e2e-artifacts/
+            fi
+          done
+          cp misc/zebra.toml e2e-artifacts/zebra.toml
+
+      - name: Upload E2E diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: voting-e2e-logs
+          path: e2e-artifacts
+          if-no-files-found: warn
+          retention-days: 7

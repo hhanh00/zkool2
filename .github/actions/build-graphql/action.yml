@@ -1,0 +1,33 @@
+name: Build ZKool GraphQL
+description: Build the GraphQL wallet server from the checked-out revision.
+
+inputs:
+  profile:
+    description: Cargo profile (release or debug)
+    required: false
+    default: release
+
+runs:
+  using: composite
+  steps:
+    - name: Install native dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libudev-dev pkg-config
+
+    - name: Build zkool_graphql
+      shell: bash
+      env:
+        BUILD_PROFILE: ${{ inputs.profile }}
+      run: |
+        set -euo pipefail
+        args=(build --bin zkool_graphql --no-default-features --features=graphql,bundled-sapling-params)
+        if [[ "$BUILD_PROFILE" == "release" ]]; then
+          args+=(--release)
+        elif [[ "$BUILD_PROFILE" != "debug" ]]; then
+          echo "profile must be release or debug" >&2
+          exit 2
+        fi
+        cargo "${args[@]}" --manifest-path rust/Cargo.toml
+        echo "$GITHUB_WORKSPACE/target/$BUILD_PROFILE" >> "$GITHUB_PATH"

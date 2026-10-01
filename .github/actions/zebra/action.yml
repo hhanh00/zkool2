@@ -1,4 +1,5 @@
-name: "Build Zebra & Zaino"
+name: "Setup Zebra regtest"
+description: Use a pinned bootstrap wallet to start and fund an independent Ironwood regtest.
 inputs:
   MINER_SEED:
     required: true
@@ -11,59 +12,15 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Cache zebra
-      id: cache-zebra
-      uses: actions/cache@v5
-      with:
-        path: |
-          ./tools/bin
-        key: ${{ runner.os }}-zebra-lwd-6.2.1
-
-    - name: Install zebra & zaino
-      if: steps.cache-zebra.outputs.cache-hit != 'true'
-      shell: bash
-      run: |
-        sudo apt update && sudo apt install -y libclang-dev clang
-        rm -rf ./tools
-        cargo install --locked --git https://github.com/ZcashFoundation/zebra --tag v6.2.1 --features=internal-miner --root ./tools zebrad
-        git clone https://github.com/zecrocks/lightwalletd.git
-        cd lightwalletd
-        git checkout 9b69519c57785e04e92a16365483f869dd878700
-        go build -o ../tools/bin/lightwalletd .
-
-    - name: Install zkool
-      if: steps.cache-zebra.outputs.cache-hit != 'true'
-      shell: bash
-      run: cargo install --git https://github.com/hhanh00/zkool2 --tag zkool-v6.25.1 --features=graphql --root ./tools --force --bin zkool_graphql
-
-    - name: Save cache
-      if: steps.cache-zebra.outputs.cache-hit != 'true'
-      uses: actions/cache/save@v5
-      with:
-        path: ./tools/bin
-        key: ${{ runner.os }}-zebra-lwd-6.2.1
-
-    - name: Install config
-      if: github.repository != 'hhanh00/zkool2'
-      shell: bash
-      run: |
-        set -e
-        curl -sSf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/misc/zebra.toml -o misc/zebra.toml
-        curl -sSf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/misc/zebra.conf -o misc/zebra.conf
-        curl -sSf --create-dirs https://raw.githubusercontent.com/hhanh00/zkool2/refs/heads/main/example/sh/mine.sh -o example/sh/mine.sh
-        chmod +x ./example/sh/mine.sh
-
-    - name: Add tools to PATH
-      shell: bash
-      run: echo "$GITHUB_WORKSPACE/tools/bin" >> $GITHUB_PATH
+    - name: Install Zebra and lightwalletd
+      uses: ./.github/actions/install-regtest-tools
 
     - name: Start regtest, mine and shield to wallet
       shell: bash
       run: |
-        set -e
-        rm -rf $HOME/.cache/zebra
-        rm -rf data
-        rm -f regtest.db
+        set -euo pipefail
+        rm -rf "$HOME/.cache/zebra" "$GITHUB_WORKSPACE/data"
+        rm -f "$GITHUB_WORKSPACE/regtest.db"
         ./example/sh/mine.sh
       env:
         MINER_SEED: ${{ inputs.MINER_SEED }}
