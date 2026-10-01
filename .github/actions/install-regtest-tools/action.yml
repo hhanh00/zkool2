@@ -1,0 +1,68 @@
+name: Install regtest tools
+description: Install and cache Zebra, lightwalletd, and an independent bootstrap wallet.
+
+inputs:
+  zebra-version:
+    description: Zebra git tag
+    required: false
+    default: v6.2.1
+  lightwalletd-revision:
+    description: lightwalletd git revision
+    required: false
+    default: 9b69519c57785e04e92a16365483f869dd878700
+  bootstrap-zkool-version:
+    description: Released ZKool tag used only to create regtest fixture state
+    required: false
+    default: zkool-v6.25.1
+
+runs:
+  using: composite
+  steps:
+    - name: Cache regtest tools
+      id: cache
+      uses: actions/cache@v5
+      with:
+        path: tools/bin
+        key: ${{ runner.os }}-regtest-${{ inputs.zebra-version }}-${{ inputs.lightwalletd-revision }}-${{ inputs.bootstrap-zkool-version }}
+
+    - name: Install build dependencies
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang libclang-dev
+
+    - name: Build Zebra, lightwalletd, and bootstrap wallet
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        ZEBRA_VERSION: ${{ inputs.zebra-version }}
+        LIGHTWALLETD_REVISION: ${{ inputs.lightwalletd-revision }}
+        BOOTSTRAP_ZKOOL_VERSION: ${{ inputs.bootstrap-zkool-version }}
+      run: |
+        set -euo pipefail
+        tool_root="${RUNNER_TEMP}/zkool-regtest-tools"
+        lwd_source="${RUNNER_TEMP}/lightwalletd"
+        rm -rf "$tool_root" "$lwd_source"
+        cargo install --locked \
+          --git https://github.com/ZcashFoundation/zebra \
+          --tag "$ZEBRA_VERSION" \
+          --features=internal-miner \
+          --root "$tool_root" \
+          zebrad
+        git clone https://github.com/zecrocks/lightwalletd.git "$lwd_source"
+        git -C "$lwd_source" checkout --detach "$LIGHTWALLETD_REVISION"
+        mkdir -p tools/bin
+        go build -C "$lwd_source" -o "$GITHUB_WORKSPACE/tools/bin/lightwalletd" .
+        cp "$tool_root/bin/zebrad" tools/bin/zebrad
+        cargo install \
+          --git https://github.com/hhanh00/zkool2 \
+          --tag "$BOOTSTRAP_ZKOOL_VERSION" \
+          --features=graphql \
+          --root "$GITHUB_WORKSPACE/tools" \
+          --force \
+          --bin zkool_graphql
+
+    - name: Add tools to PATH
+      shell: bash
+      run: echo "$GITHUB_WORKSPACE/tools/bin" >> "$GITHUB_PATH"
