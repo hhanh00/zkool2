@@ -64,11 +64,11 @@ for attempt in $(seq 1 30); do
        | { proposal: proposal, choice: choice, total: total }]
       | sort_by([.proposal, .choice]) == [
           { proposal: 1, choice: 0, total: 499 },
-          { proposal: 2, choice: 0, total: 499 },
-          { proposal: 3, choice: 0, total: 499 }
+          { proposal: 2, choice: 1, total: 499 },
+          { proposal: 3, choice: 2, total: 499 }
         ]
     ' <<<"$tally" >/dev/null
-    echo "svoted finalized the real vote with 499 ballots for choice 0 of all proposals"
+    echo "svoted finalized the real vote with 499 ballots for choices 0, 1, and 2"
     exit 0
   fi
   sleep 1
