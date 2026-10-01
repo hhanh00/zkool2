@@ -97,8 +97,9 @@ jobs:
       - name: Add voting services to PATH
         run: |
           echo "$GITHUB_WORKSPACE/tools/voting" >> "$GITHUB_PATH"
-          svoted version || svoted --version
-          nf-server --version
+          "$GITHUB_WORKSPACE/tools/voting/svoted" version || \
+            "$GITHUB_WORKSPACE/tools/voting/svoted" --version
+          "$GITHUB_WORKSPACE/tools/voting/nf-server" --version
 
       - name: Scan the real Ironwood note with pinned ZKool
         run: ./example/sh/e2e-ironwood-wallet.sh
