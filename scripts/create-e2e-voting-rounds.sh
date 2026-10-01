@@ -23,7 +23,18 @@ rpc() {
 }
 
 snapshot_blockhash=$(rpc getblockhash "[$SNAPSHOT_HEIGHT]" | jq -er '.result')
-nullifier_root=$(jq -er '.pir_root' "$PIR_DATA_DIR/pir_root.json")
+# A round's nullifier_imt_root is the depth-29 circuit root, not the
+# shallower PIR transport-tree root. Read it from the running server, then
+# verify that it is the root exported for the snapshot used by this round.
+pir_root_info=$(curl -fsS "$PIR_URL/root")
+nullifier_root=$(jq -er '.circuit_root' <<<"$pir_root_info")
+exported_nullifier_root=$(jq -er '.circuit_root' "$PIR_DATA_DIR/pir_root.json")
+if [[ "$nullifier_root" != "$exported_nullifier_root" ]]; then
+  echo "running PIR server circuit_root does not match pir_root.json" >&2
+  echo "server:   $nullifier_root" >&2
+  echo "exported: $exported_nullifier_root" >&2
+  exit 1
+fi
 
 # Zebra currently exposes the local Ironwood commitment tree under its
 # Orchard-compatible field. Accept both that wire form and newer Ironwood
@@ -52,7 +63,7 @@ proposals=$(jq -cn '[range(1; 4) | {
 proposals_hash=$(printf '%s' "$proposals" | openssl dgst -sha256 -binary | xxd -p -c 256)
 
 create_round() {
-  local number=$1 session_json result
+  local number=$1 session_json result expected_nullifier_root
   session_json=$(mktemp "${RUNNER_TEMP:-/tmp}/e2e-voting-session.XXXXXX.json")
   jq -n \
     --argjson snapshot_height "$SNAPSHOT_HEIGHT" \
@@ -78,10 +89,12 @@ create_round() {
     rounds=$("$GRPCURL_BIN" -plaintext \
       -import-path "$VOTE_SDK_PROTO_ROOT" -proto svote/v1/query.proto \
       -d '{}' "$SVOTED_GRPC" svote.v1.Query/ListRounds)
-    if jq -e --arg title "E2E Round $number" \
-      '[.rounds[]? | select(.title == $title) | .proposals[] | select(.options | length == 3)] | length == 3' \
+    expected_nullifier_root=$(printf '%s' "$nullifier_root" | xxd -r -p | base64 | tr -d '\n')
+    if jq -e --arg title "E2E Round $number" --arg root "$expected_nullifier_root" \
+      '[.rounds[]? | select(.title == $title and .nullifierImtRoot == $root)
+        | .proposals[] | select(.options | length == 3)] | length == 3' \
       <<<"$rounds" >/dev/null; then
-      echo "created E2E Round $number"
+      echo "created E2E Round $number with PIR circuit root $nullifier_root"
       return
     fi
     sleep 1
