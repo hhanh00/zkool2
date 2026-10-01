@@ -40,27 +40,30 @@ impl Query {
         "1.0"
     }
 
-    /// Lists authenticated voting rounds for the wallet's selected account.
+    /// Lists authenticated voting rounds for the specified account.
     async fn voting_rounds(
+        id_account: i32,
         context: &Context,
     ) -> FieldResult<Vec<crate::graphql::voting::VotingRound>> {
-        crate::graphql::voting::rounds(context).await
+        crate::graphql::voting::rounds(id_account, context).await
     }
 
     /// Returns one authenticated round, including its proposal roster.
     async fn voting_round(
+        id_account: i32,
         round_id: String,
         context: &Context,
     ) -> FieldResult<crate::graphql::voting::VotingRound> {
-        crate::graphql::voting::round(round_id, context).await
+        crate::graphql::voting::round(id_account, round_id, context).await
     }
 
     /// Polls asynchronous vote and helper-share submission progress.
     async fn voting_submission_status(
+        id_account: i32,
         round_id: String,
         context: &Context,
     ) -> FieldResult<crate::graphql::voting::VotingSubmissionStatus> {
-        crate::graphql::voting::submission_status(round_id, context).await
+        crate::graphql::voting::submission_status(id_account, round_id, context).await
     }
 
     async fn accounts(

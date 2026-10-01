@@ -75,13 +75,34 @@ pub struct UnsignedTx {
     context = Context,
 )]
 impl Mutation {
+    /// Sets the authenticated static voting-config URL used by this wallet.
+    async fn set_voting_config_url(url: String, context: &Context) -> FieldResult<bool> {
+        check_admin_auth(context)?;
+        let url = url.trim();
+        if url.is_empty() {
+            return Err(juniper::FieldError::new(
+                "voting config URL cannot be empty",
+                juniper::Value::Null,
+            ));
+        }
+        if !(url.starts_with("http://") || url.starts_with("https://")) {
+            return Err(juniper::FieldError::new(
+                "voting config URL must use HTTP or HTTPS",
+                juniper::Value::Null,
+            ));
+        }
+        crate::api::db::put_prop("voting_config_url", url, &context.coin).await?;
+        Ok(true)
+    }
+
     /// Persists ballot choices and starts resumable submission in the background.
     async fn submit_vote(
+        id_account: i32,
         round_id: String,
         selections: Vec<crate::graphql::voting::VotingSelectionInput>,
         context: &Context,
     ) -> FieldResult<crate::graphql::voting::VotingSubmissionStatus> {
-        crate::graphql::voting::submit_vote(round_id, selections, context).await
+        crate::graphql::voting::submit_vote(id_account, round_id, selections, context).await
     }
 
     async fn create_account(new_account: NewAccount, context: &Context) -> FieldResult<i32> {

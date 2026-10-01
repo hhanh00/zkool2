@@ -210,10 +210,21 @@ pub fn proxy_url(transport: u8, proxy: &str) -> &str {
 
 /// Builds the wallet's reqwest client: user agent, per-request timeout, and
 /// an optional proxy URL ("http://…", "socks5h://…"; empty = direct).
+///
+/// `ZKOOL_EXTRA_ROOT_CERT_PATH` may name one PEM CA certificate. It is useful
+/// for an explicitly configured private service, such as the local HTTPS
+/// fixture used by the voting E2E test; normal wallet operation leaves it unset.
 pub fn client(proxy: &str, timeout: Duration) -> Result<reqwest::Client> {
     let mut builder = reqwest::Client::builder()
         .user_agent("zkool/1.0")
         .timeout(timeout);
+    if let Ok(path) = std::env::var("ZKOOL_EXTRA_ROOT_CERT_PATH") {
+        let pem = std::fs::read(&path)
+            .map_err(|error| anyhow!("read extra root certificate {path}: {error}"))?;
+        let certificate = reqwest::Certificate::from_pem(&pem)
+            .map_err(|error| anyhow!("parse extra root certificate {path}: {error}"))?;
+        builder = builder.add_root_certificate(certificate);
+    }
     if !proxy.is_empty() {
         builder = builder.proxy(reqwest::Proxy::all(proxy)?);
     }
