@@ -218,6 +218,13 @@ jobs:
           SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
           ZKOOL_GRAPHQL_BIN: ${{ github.workspace }}/target/release/zkool_graphql
 
+      - name: Wait for and verify the real voting tally
+        run: scripts/wait-e2e-voting-tally.sh
+        env:
+          SVOTED_GRPC: 127.0.0.1:9190
+          GRPCURL_BIN: ${{ github.workspace }}/tools/voting/grpcurl
+          VOTE_SDK_PROTO_ROOT: ${{ github.workspace }}/tools/vote-sdk/proto
+
       - name: Collect service logs
         if: always()
         run: |

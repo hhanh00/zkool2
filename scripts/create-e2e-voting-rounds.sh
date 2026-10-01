@@ -15,6 +15,7 @@ ZEBRA_RPC_URL=${ZEBRA_RPC_URL:-http://127.0.0.1:18232}
 PIR_URL=${PIR_URL:-http://127.0.0.1:3000}
 PIR_DATA_DIR=${SVOTE_PIR_DATA_DIR:?SVOTE_PIR_DATA_DIR must be set}
 SNAPSHOT_HEIGHT=${SVOTE_PIR_FORCE_SNAPSHOT_HEIGHT:?SVOTE_PIR_FORCE_SNAPSHOT_HEIGHT must be set}
+VOTE_DURATION_SECONDS=${VOTE_DURATION_SECONDS:-180}
 
 rpc() {
   curl -fsS -H 'Content-Type: application/json' \
@@ -69,7 +70,7 @@ create_round() {
     --argjson snapshot_height "$SNAPSHOT_HEIGHT" \
     --arg snapshot_blockhash "$snapshot_blockhash" \
     --arg proposals_hash "$proposals_hash" \
-    --argjson vote_end_time "$(( $(date +%s) + 3600 ))" \
+    --argjson vote_end_time "$(( $(date +%s) + VOTE_DURATION_SECONDS ))" \
     --arg nullifier_imt_root "$nullifier_root" \
     --arg nc_root "$nc_root" \
     --arg title "E2E Round $number" \
