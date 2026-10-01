@@ -13,6 +13,9 @@ jobs:
     if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      SVOTED_VERSION: v1.6.1-rc.6
+      NF_SERVER_VERSION: v0.12.2
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -48,6 +51,54 @@ jobs:
         with:
           path: target/release/zkool_graphql
           key: ${{ steps.zkool-graphql-cache.outputs.cache-primary-key }}
+
+      - name: Restore svoted and nf-server
+        id: voting-services-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: tools/voting
+          key: ${{ runner.os }}-voting-services-${{ env.SVOTED_VERSION }}-${{ env.NF_SERVER_VERSION }}
+
+      - name: Download svoted and nf-server
+        if: steps.voting-services-cache.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          mkdir -p tools/voting
+          # The Linux amd64 release currently publishes svoted in the
+          # cosmovisor archive; the standalone archive is checksum-only.
+          svoted_archive="shielded-vote-${SVOTED_VERSION}-cosmovisor-v1-linux-amd64.tar.gz"
+          svoted_url="https://github.com/valargroup/vote-sdk/releases/download/${SVOTED_VERSION}/${svoted_archive}"
+          curl --fail --location --retry 5 -o "/tmp/${svoted_archive}" "$svoted_url"
+          curl --fail --location --retry 5 \
+            -o "/tmp/${svoted_archive}.sha256" "${svoted_url}.sha256"
+          (cd /tmp && sha256sum -c "${svoted_archive}.sha256")
+          tar -xzf "/tmp/${svoted_archive}" -C tools/voting
+          test -x tools/voting/bin/svoted
+          mv tools/voting/bin/svoted tools/voting/svoted
+          rmdir tools/voting/bin
+
+          nf_url="https://github.com/valargroup/vote-nullifier-pir/releases/download/${NF_SERVER_VERSION}/nf-server-linux-amd64"
+          curl --fail --location --retry 5 -o tools/voting/nf-server "$nf_url"
+          curl --fail --location --retry 5 \
+            -o /tmp/nf-server-checksums \
+            "https://github.com/valargroup/vote-nullifier-pir/releases/download/${NF_SERVER_VERSION}/SHA256SUMS"
+          expected_nf_hash=$(awk '$2 == "nf-server-linux-amd64" { print $1 }' /tmp/nf-server-checksums)
+          test -n "$expected_nf_hash"
+          printf '%s  %s\n' "$expected_nf_hash" tools/voting/nf-server | sha256sum -c -
+          chmod +x tools/voting/nf-server
+
+      - name: Save svoted and nf-server
+        if: steps.voting-services-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: tools/voting
+          key: ${{ steps.voting-services-cache.outputs.cache-primary-key }}
+
+      - name: Add voting services to PATH
+        run: |
+          echo "$GITHUB_WORKSPACE/tools/voting" >> "$GITHUB_PATH"
+          svoted version || svoted --version
+          nf-server --version
 
       - name: Scan the real Ironwood note with pinned ZKool
         run: ./example/sh/e2e-ironwood-wallet.sh

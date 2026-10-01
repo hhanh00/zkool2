@@ -17,11 +17,11 @@ FUND=${FUND:-1}
 
 sed -i -e "s#miner_address = \"\"#miner_address = \"${MINER_ADDRESS}\"#" misc/zebra.toml
 nohup zebrad -c misc/zebra.toml start > zebrad.log 2>&1 & disown
-sleep 60
+sleep 30
 tail zebrad.log
 nohup lightwalletd --no-tls-very-insecure --data-dir=./data/regtest --grpc-bind-addr=127.0.0.1:8137 --zcash-conf-path=./misc/zebra.conf --log-file=/dev/stdout > lightwalletd.log 2>&1 &
 nohup zkool_graphql -d regtest.db -l http://localhost:8137 -n > graphql.log 2>&1 &
-sleep 60
+sleep 30
 
 curl --data-binary "{\"jsonrpc\": \"1.0\", \"id\":\"curltest\", \"method\": \"generate\", \"params\": [${BLOCKS}] }" -H 'Content-type: application/json' http://127.0.0.1:18232/
 
