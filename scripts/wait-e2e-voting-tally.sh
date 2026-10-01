@@ -16,7 +16,13 @@ query() {
 }
 
 rounds=$(query svote.v1.Query/ListRounds '{}')
-round=$(jq -ce '.rounds[] | select(.title == "E2E Round 1")' <<<"$rounds")
+if [[ -n "${E2E_VOTED_ROUND_ID:-}" ]]; then
+  voted_round_id_b64=$(printf '%s' "$E2E_VOTED_ROUND_ID" | xxd -r -p | base64 | tr -d '\n')
+  round=$(jq -ce --arg round_id "$voted_round_id_b64" \
+    '.rounds[] | select(.voteRoundId == $round_id)' <<<"$rounds")
+else
+  round=$(jq -ce '.rounds[] | select(.title == "E2E Round 1")' <<<"$rounds")
+fi
 round_id=$(jq -er '.voteRoundId' <<<"$round")
 vote_end_time=$(jq -er '.voteEndTime | tonumber' <<<"$round")
 
@@ -25,7 +31,7 @@ while (( $(date +%s) <= vote_end_time )); do
 done
 
 request=$(jq -cn --arg round_id "$round_id" '{vote_round_id: $round_id}')
-for attempt in $(seq 1 120); do
+for attempt in $(seq 1 30); do
   round_status=$(query svote.v1.Query/VoteRound "$request")
   if jq -e '.round.status == "SESSION_STATUS_FINALIZED"' <<<"$round_status" >/dev/null; then
     tally=$(query svote.v1.Query/TallyResults "$request")
@@ -68,5 +74,5 @@ for attempt in $(seq 1 120); do
   sleep 1
 done
 
-echo "E2E Round 1 did not finalize its tally" >&2
+echo "the submitted E2E vote did not finalize its tally" >&2
 exit 1

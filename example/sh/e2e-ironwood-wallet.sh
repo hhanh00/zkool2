@@ -104,9 +104,13 @@ if [[ -n "$VOTING_CONFIG_URL" ]]; then
   ' <<<"$rounds" >/dev/null
   echo "ZKool resolved two signed voting rounds with three proposals and choices each"
 
-  round_id=$(jq -er '.votingRounds[0].roundId' <<<"$rounds")
-  selections=$(jq -cn --argjson round "$rounds" '
-    $round.votingRounds[0].proposals
+  selected_round=$(jq -ce '.votingRounds[] | select(.title == "E2E Round 1")' <<<"$rounds")
+  round_id=$(jq -er '.roundId' <<<"$selected_round")
+  if [[ -n "${GITHUB_ENV:-}" ]]; then
+    printf 'E2E_VOTED_ROUND_ID=%s\n' "$round_id" >>"$GITHUB_ENV"
+  fi
+  selections=$(jq -cn --argjson round "$selected_round" '
+    $round.proposals
     | map({proposalId: .proposalId, choice: 0})
   ')
   submission=$(gql 'mutation SubmitVote($id: Int!, $round: String!, $selections: [VotingSelectionInput!]!) {
