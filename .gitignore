@@ -56,6 +56,7 @@ docs/
 ios/build/
 
 *.sh
+!example/sh/e2e-ironwood-wallet.sh
 !misc/ledger/*.sh
 .env
 /certs/
