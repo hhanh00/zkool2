@@ -95,24 +95,33 @@ impl From<VotingDriveStatus> for VotingSubmissionStatus {
     }
 }
 
-fn authorize_current_account(context: &Context, write: bool) -> FieldResult<()> {
-    let account = i32::try_from(context.coin.account)
-        .map_err(|_| FieldError::new("Account id is out of range", juniper::Value::Null))?;
-    check_auth(context, account, write)
+fn coin_for_account(
+    id_account: i32,
+    context: &Context,
+    write: bool,
+) -> FieldResult<crate::api::coin::Coin> {
+    check_auth(context, id_account, write)?;
+    let mut coin = context.coin.clone();
+    coin.account = u32::try_from(id_account)
+        .map_err(|_| FieldError::new("Account id must be non-negative", juniper::Value::Null))?;
+    Ok(coin)
 }
-
-pub async fn rounds(context: &Context) -> FieldResult<Vec<VotingRound>> {
-    authorize_current_account(context, false)?;
-    crate::api::voting::voting_round_list(&context.coin)
+pub async fn rounds(id_account: i32, context: &Context) -> FieldResult<Vec<VotingRound>> {
+    let coin = coin_for_account(id_account, context, false)?;
+    crate::api::voting::voting_round_list(&coin)
         .await?
         .into_iter()
         .map(TryInto::try_into)
         .collect()
 }
 
-pub async fn round(round_id: String, context: &Context) -> FieldResult<VotingRound> {
-    authorize_current_account(context, false)?;
-    crate::api::voting::voting_round_list(&context.coin)
+pub async fn round(
+    id_account: i32,
+    round_id: String,
+    context: &Context,
+) -> FieldResult<VotingRound> {
+    let coin = coin_for_account(id_account, context, false)?;
+    crate::api::voting::voting_round_list(&coin)
         .await?
         .into_iter()
         .find(|round| round.round_id == round_id)
@@ -121,30 +130,32 @@ pub async fn round(round_id: String, context: &Context) -> FieldResult<VotingRou
 }
 
 pub async fn submission_status(
+    id_account: i32,
     round_id: String,
     context: &Context,
 ) -> FieldResult<VotingSubmissionStatus> {
-    authorize_current_account(context, false)?;
+    let coin = coin_for_account(id_account, context, false)?;
     Ok(
-        crate::api::voting_drive::voting_drive_status(&round_id, &context.coin)
+        crate::api::voting_drive::voting_drive_status(&round_id, &coin)
             .await?
             .into(),
     )
 }
 
 pub async fn submit_vote(
+    id_account: i32,
     round_id: String,
     selections: Vec<VotingSelectionInput>,
     context: &Context,
 ) -> FieldResult<VotingSubmissionStatus> {
-    authorize_current_account(context, true)?;
+    let coin = coin_for_account(id_account, context, true)?;
     if selections.is_empty() {
         return Err("At least one voting selection is required".into());
     }
 
     // Resolve the authenticated roster rather than trusting caller-provided
     // option counts. This also supplies the display name used by the driver.
-    let round = crate::api::voting::voting_round_list(&context.coin)
+    let round = crate::api::voting::voting_round_list(&coin)
         .await?
         .into_iter()
         .find(|round| round.round_id == round_id)
@@ -187,7 +198,7 @@ pub async fn submit_vote(
             proposal_id,
             decision,
             num_options,
-            &context.coin,
+            &coin,
         )
         .await?;
     }
@@ -195,27 +206,17 @@ pub async fn submit_vote(
     // Bundle preparation is the explicit durable setup phase. The driver
     // itself is spawned and returns immediately, so chain/share delivery is
     // asynchronous and can be polled through votingSubmissionStatus.
-    crate::api::voting_drive::voting_prepare_round(
-        &round.round_id,
-        &context.coin.url,
-        &round.title,
-        &context.coin,
-    )
-    .await?;
-    crate::api::voting_drive::voting_drive_start(
-        &round.round_id,
-        &context.coin.url,
-        &round.title,
-        &context.coin,
-    )
-    .await?;
+    crate::api::voting_drive::voting_prepare_round(&round.round_id, &coin.url, &round.title, &coin)
+        .await?;
+    crate::api::voting_drive::voting_drive_start(&round.round_id, &coin.url, &round.title, &coin)
+        .await?;
 
     // The foreground driver creates the helper shares. Once it quiesces,
     // hand any durable pending shares to the retrying background tracker.
     // This task is only an in-process wake-up mechanism; the shares and their
     // confirmations remain in the sidecar and are safe to resume after a
     // server restart.
-    let tracking_coin = context.coin.clone();
+    let tracking_coin = coin.clone();
     let tracking_round_id = round.round_id.clone();
     let helper_urls = round.helper_urls.clone();
     let vote_end_time = round.vote_end_time;
@@ -246,5 +247,5 @@ pub async fn submit_vote(
         }
     });
 
-    submission_status(round.round_id, context).await
+    submission_status(id_account, round.round_id, context).await
 }
