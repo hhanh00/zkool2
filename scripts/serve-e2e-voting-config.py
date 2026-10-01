@@ -35,31 +35,56 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     else:
                         self.json({"round": round_data})
                 else:
-                    self.json({"error": "unsupported vote route"}, status=404)
+                    self.proxy_vote_api("GET")
             except subprocess.CalledProcessError as error:
                 self.json({"error": error.stderr}, status=502)
             return
-        for prefix, port in (("/pir/", 3000),):
-            if parts.path.startswith(prefix):
-                target = parts.path[len(prefix) - 1 :]
-                if parts.query:
-                    target += "?" + parts.query
-                connection = http.client.HTTPConnection("127.0.0.1", port, timeout=30)
-                try:
-                    connection.request("GET", target)
-                    response = connection.getresponse()
-                    body = response.read()
-                    self.send_response(response.status)
-                    content_type = response.getheader("Content-Type")
-                    if content_type:
-                        self.send_header("Content-Type", content_type)
-                    self.send_header("Content-Length", str(len(body)))
-                    self.end_headers()
-                    self.wfile.write(body)
-                finally:
-                    connection.close()
-                return
+        if parts.path.startswith("/pir/"):
+            self.proxy("GET", "127.0.0.1", 3000, parts.path[len("/pir"):] +
+                       (("?" + parts.query) if parts.query else ""))
+            return
         super().do_GET()
+
+    def do_POST(self):
+        parts = urlsplit(self.path)
+        if parts.path.startswith("/vote/"):
+            self.proxy_vote_api("POST")
+            return
+        if parts.path.startswith("/pir/"):
+            self.proxy("POST", "127.0.0.1", 3000, parts.path[len("/pir"):] +
+                       (("?" + parts.query) if parts.query else ""))
+            return
+        self.json({"error": "unsupported route"}, status=404)
+
+    def proxy_vote_api(self, method):
+        parts = urlsplit(self.path)
+        path = parts.path[len("/vote"):]
+        if parts.query:
+            path += "?" + parts.query
+        vote_api = urlsplit(args.vote_api)
+        self.proxy(method, vote_api.hostname, vote_api.port or 80, path)
+
+    def proxy(self, method, host, port, path):
+        length = int(self.headers.get("Content-Length", "0"))
+        body = self.rfile.read(length) if length else None
+        connection = http.client.HTTPConnection(host, port, timeout=90)
+        try:
+            headers = {}
+            content_type = self.headers.get("Content-Type")
+            if content_type:
+                headers["Content-Type"] = content_type
+            connection.request(method, path, body=body, headers=headers)
+            response = connection.getresponse()
+            response_body = response.read()
+            self.send_response(response.status)
+            content_type = response.getheader("Content-Type")
+            if content_type:
+                self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(response_body)))
+            self.end_headers()
+            self.wfile.write(response_body)
+        finally:
+            connection.close()
 
     def json(self, body, status=200):
         data = json.dumps(body).encode()
@@ -116,6 +141,7 @@ parser.add_argument("--port", type=int, default=8443)
 parser.add_argument("--grpcurl", required=True)
 parser.add_argument("--proto-root", required=True)
 parser.add_argument("--grpc", default="127.0.0.1:9190")
+parser.add_argument("--vote-api", default="http://127.0.0.1:1317")
 args = parser.parse_args()
 
 server = http.server.ThreadingHTTPServer(("127.0.0.1", args.port),

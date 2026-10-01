@@ -95,7 +95,7 @@ echo "checked-out ZKool discovered a positive Ironwood balance"
 
 if [[ -n "$VOTING_CONFIG_URL" ]]; then
   rounds=$(gql 'query VotingRounds($id: Int!) {
-    votingRounds(idAccount: $id) { title proposals { proposalId options } }
+    votingRounds(idAccount: $id) { roundId title proposals { proposalId options } }
   }' "$(jq -cn --argjson id "$account_id" '{id: $id}')")
   jq -e '
     (.votingRounds | length) == 2
@@ -103,4 +103,48 @@ if [[ -n "$VOTING_CONFIG_URL" ]]; then
     and all(.votingRounds[].proposals[]; (.options | length) == 3)
   ' <<<"$rounds" >/dev/null
   echo "ZKool resolved two signed voting rounds with three proposals and choices each"
+
+  round_id=$(jq -er '.votingRounds[0].roundId' <<<"$rounds")
+  selections=$(jq -cn --argjson round "$rounds" '
+    $round.votingRounds[0].proposals
+    | map({proposalId: .proposalId, choice: 0})
+  ')
+  submission=$(gql 'mutation SubmitVote($id: Int!, $round: String!, $selections: [VotingSelectionInput!]!) {
+    submitVote(idAccount: $id, roundId: $round, selections: $selections) {
+      roundId running completedProposals totalProposals remainingObligations
+      sharesConfirmed sharesTotal failures
+    }
+  }' "$(jq -cn \
+    --argjson id "$account_id" \
+    --arg round "$round_id" \
+    --argjson selections "$selections" \
+    '{id: $id, round: $round, selections: $selections}')")
+  jq -e '.submitVote.failures | length == 0' <<<"$submission" >/dev/null
+
+  for attempt in $(seq 1 240); do
+    status=$(gql 'query VotingSubmissionStatus($id: Int!, $round: String!) {
+      votingSubmissionStatus(idAccount: $id, roundId: $round) {
+        running completedProposals totalProposals remainingObligations
+        sharesConfirmed sharesTotal failures
+      }
+    }' "$(jq -cn --argjson id "$account_id" --arg round "$round_id" '{id: $id, round: $round}')")
+    jq . <<<"$status"
+    if jq -e '
+      .votingSubmissionStatus as $status
+      | ($status.running | not)
+      and $status.completedProposals == 3
+      and $status.totalProposals == 3
+      and $status.sharesTotal > 0
+      and $status.sharesConfirmed == $status.sharesTotal
+      and ($status.failures | length == 0)
+    ' <<<"$status" >/dev/null; then
+      echo "ZKool submitted a vote and all helper shares were confirmed"
+      break
+    fi
+    if [[ "$attempt" == 240 ]]; then
+      echo "vote submission or helper-share confirmation did not finish" >&2
+      exit 1
+    fi
+    sleep 1
+  done
 fi
