@@ -7611,7 +7611,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       roundId: dco_decode_String(arr[0]),
       title: dco_decode_String(arr[1]),
       status: dco_decode_String(arr[2]),
-      snapshotHeight: dco_decode_opt_box_autoadd_u_64(arr[3]),
+      snapshotHeight: dco_decode_u_32(arr[3]),
       bundleCount: dco_decode_u_32(arr[4]),
       action: dco_decode_String(arr[5]),
       proposals: dco_decode_list_voting_proposal_list_item(arr[6]),
@@ -9623,7 +9623,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_roundId = sse_decode_String(deserializer);
     var var_title = sse_decode_String(deserializer);
     var var_status = sse_decode_String(deserializer);
-    var var_snapshotHeight = sse_decode_opt_box_autoadd_u_64(deserializer);
+    var var_snapshotHeight = sse_decode_u_32(deserializer);
     var var_bundleCount = sse_decode_u_32(deserializer);
     var var_action = sse_decode_String(deserializer);
     var var_proposals = sse_decode_list_voting_proposal_list_item(deserializer);
@@ -11325,7 +11325,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_String(self.roundId, serializer);
     sse_encode_String(self.title, serializer);
     sse_encode_String(self.status, serializer);
-    sse_encode_opt_box_autoadd_u_64(self.snapshotHeight, serializer);
+    sse_encode_u_32(self.snapshotHeight, serializer);
     sse_encode_u_32(self.bundleCount, serializer);
     sse_encode_String(self.action, serializer);
     sse_encode_list_voting_proposal_list_item(self.proposals, serializer);

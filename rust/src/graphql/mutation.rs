@@ -75,6 +75,15 @@ pub struct UnsignedTx {
     context = Context,
 )]
 impl Mutation {
+    /// Persists ballot choices and starts resumable submission in the background.
+    async fn submit_vote(
+        round_id: String,
+        selections: Vec<crate::graphql::voting::VotingSelectionInput>,
+        context: &Context,
+    ) -> FieldResult<crate::graphql::voting::VotingSubmissionStatus> {
+        crate::graphql::voting::submit_vote(round_id, selections, context).await
+    }
+
     async fn create_account(new_account: NewAccount, context: &Context) -> FieldResult<i32> {
         check_admin_auth(context)?;
         let height = crate::api::network::get_current_height(&context.coin).await?;

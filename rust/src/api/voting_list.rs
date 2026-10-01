@@ -33,7 +33,7 @@ pub struct VotingRoundListItem {
     pub round_id: String,
     pub title: String,
     pub status: String,
-    pub snapshot_height: Option<u64>,
+    pub snapshot_height: u32,
     pub bundle_count: u32,
     pub action: String,
     pub proposals: Vec<VotingProposalListItem>,
@@ -109,6 +109,20 @@ pub async fn voting_round_list(c: &Coin) -> Result<Vec<VotingRoundListItem>> {
         .into_iter()
         .filter(|round| authenticated_ids.contains(round.round_id.as_str()))
         .collect();
+    let mut snapshot_heights = HashMap::with_capacity(rounds.len());
+    for round in &rounds {
+        let params = voting::net::fetch_round_params(&round.round_id, &config, &client).await?;
+        snapshot_heights.insert(
+            round.round_id.clone(),
+            u32::try_from(params.snapshot_height).map_err(|_| {
+                anyhow!(
+                    "snapshot height {} is out of range for round {}",
+                    params.snapshot_height,
+                    round.round_id
+                )
+            })?,
+        );
+    }
     let inputs: Vec<_> = rounds
         .iter()
         .map(|round| voting::summary::RoundInput {
@@ -168,9 +182,14 @@ pub async fn voting_round_list(c: &Coin) -> Result<Vec<VotingRoundListItem>> {
                 .collect();
             Ok(VotingRoundListItem {
                 title: round.display_title(),
+                snapshot_height: *snapshot_heights.get(&round.round_id).ok_or_else(|| {
+                    anyhow!(
+                        "missing authenticated snapshot height for round {}",
+                        round.round_id
+                    )
+                })?,
                 round_id: round.round_id,
                 status,
-                snapshot_height: summary.snapshot_height,
                 bundle_count: summary.bundle_count,
                 action: action.into(),
                 proposals,

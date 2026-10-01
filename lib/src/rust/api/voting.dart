@@ -69,7 +69,7 @@ sealed class VotingRoundListItem with _$VotingRoundListItem {
     required String roundId,
     required String title,
     required String status,
-    BigInt? snapshotHeight,
+    required int snapshotHeight,
     required int bundleCount,
     required String action,
     required List<VotingProposalListItem> proposals,
