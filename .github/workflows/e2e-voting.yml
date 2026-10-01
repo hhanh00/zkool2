@@ -101,6 +101,64 @@ jobs:
             "$GITHUB_WORKSPACE/tools/voting/svoted" --version
           "$GITHUB_WORKSPACE/tools/voting/nf-server" --version
 
+      - name: Initialize local svoted chain
+        run: |
+          set -euo pipefail
+          git clone --quiet --depth 1 --branch "$SVOTED_VERSION" \
+            https://github.com/valargroup/vote-sdk.git tools/vote-sdk
+          export PATH="$GITHUB_WORKSPACE/tools/voting:$PATH"
+          export SVOTED_HOME="$GITHUB_WORKSPACE/.svoted-ci"
+          export CHAIN_ID=svote-ci
+          export VM_PRIVKEYS="$(openssl rand -hex 32)"
+          export SVOTE_USE_DEFAULT_GENESIS_VOTE_MANAGERS=false
+          bash tools/vote-sdk/scripts/init.sh
+
+      - name: Start local svoted chain
+        run: |
+          set -euo pipefail
+          export PATH="$GITHUB_WORKSPACE/tools/voting:$PATH"
+          export SVOTED_HOME="$GITHUB_WORKSPACE/.svoted-ci"
+          export SVOTE_PIR_URL=disabled
+          nohup svoted start --home "$SVOTED_HOME" > svoted.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:1317/status >/dev/null; then
+              break
+            fi
+            if [[ "$attempt" == 60 ]]; then
+              tail -200 svoted.log >&2 || true
+              exit 1
+            fi
+            sleep 1
+          done
+
+      - name: Import regtest nullifiers into PIR
+        env:
+          NF_SERVER_BIN: ${{ github.workspace }}/tools/voting/nf-server
+          OUTPUT_ENV: ${{ github.workspace }}/pir-server.env
+          PIR_DATA_DIR: ${{ github.workspace }}/pir-data/regtest
+        run: scripts/configure-pir-server.sh
+
+      - name: Start local nf-server
+        run: |
+          set -euo pipefail
+          set -a
+          source pir-server.env
+          set +a
+          nohup "$GITHUB_WORKSPACE/tools/voting/nf-server" serve \
+            --zcash-network regtest \
+            --pir-data-dir "$SVOTE_PIR_DATA_DIR" \
+            --port "$SVOTE_PIR_PORT" > nf-server.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS "http://127.0.0.1:${SVOTE_PIR_PORT}/health" >/dev/null; then
+              break
+            fi
+            if [[ "$attempt" == 60 ]]; then
+              tail -200 nf-server.log >&2 || true
+              exit 1
+            fi
+            sleep 1
+          done
+
       - name: Scan the real Ironwood note with pinned ZKool
         run: ./example/sh/e2e-ironwood-wallet.sh
         env:
