@@ -29,27 +29,40 @@ for attempt in $(seq 1 120); do
   round_status=$(query svote.v1.Query/VoteRound "$request")
   if jq -e '.round.status == "SESSION_STATUS_FINALIZED"' <<<"$round_status" >/dev/null; then
     tally=$(query svote.v1.Query/TallyResults "$request")
+    # Session finalization is committed before the asynchronous tally results
+    # become queryable. Keep polling through that short interval.
+    if ! jq -e '.results | type == "array" and length > 0' <<<"$tally" >/dev/null; then
+      echo "svoted finalized the session; waiting for tally results"
+      sleep 1
+      continue
+    fi
     echo "Raw svoted TallyResults response:"
     jq . <<<"$tally"
-    echo "Finalized svoted tally (zatoshi):"
+    # ZKool's voting circuit encrypts the number of 0.125 ZEC ballots, not
+    # raw zatoshi. svoted currently calls this field `total_value` and labels
+    # it zatoshi in its protobuf, but the decrypted value is a ballot count.
+    echo "Finalized svoted tally (0.125 ZEC ballots):"
     jq -r '
       def proposal: (.proposalId // .proposal_id // 0 | tonumber);
       def choice: (.voteDecision // .vote_decision // 0 | tonumber);
       def total: (.totalValue // .total_value // 0 | tonumber);
       .results
       | sort_by([proposal, choice])[]
-      | "proposal=\(proposal) choice=\(choice) total_zatoshi=\(total)"
+      | "proposal=\(proposal) choice=\(choice) ballots=\(total) zatoshi=\(total * 12500000)"
     ' <<<"$tally"
     jq -e '
       def proposal: (.proposalId // .proposal_id // 0 | tonumber);
       def choice: (.voteDecision // .vote_decision // 0 | tonumber);
       def total: (.totalValue // .total_value // 0 | tonumber);
       [.results[]
-       | select(choice == 0 and total > 0)
-       | proposal]
-      | sort == [1, 2, 3]
+       | { proposal, choice, total }]
+      | sort_by([.proposal, .choice]) == [
+          { proposal: 1, choice: 0, total: 499 },
+          { proposal: 2, choice: 0, total: 499 },
+          { proposal: 3, choice: 0, total: 499 }
+        ]
     ' <<<"$tally" >/dev/null
-    echo "svoted finalized the real vote with a positive tally for choice 0 of all proposals"
+    echo "svoted finalized the real vote with 499 ballots for choice 0 of all proposals"
     exit 0
   fi
   sleep 1
