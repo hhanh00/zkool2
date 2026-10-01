@@ -16,7 +16,7 @@ jobs:
     env:
       SVOTED_VERSION: v1.6.1-rc.6
       NF_SERVER_REPOSITORY: hhanh00/vote-nullifier-pir
-      NF_SERVER_COMMIT: 01de80be9940fd2d79f2aed3fe4c0692ff7f0393
+      NF_SERVER_COMMIT: 8ce99cc667282c584c05df745a2b7b446e8665ec
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
@@ -146,7 +146,7 @@ jobs:
             --pir-data-dir "$SVOTE_PIR_DATA_DIR" \
             --port "$SVOTE_PIR_PORT" > nf-server.log 2>&1 &
           for attempt in $(seq 1 60); do
-            if curl -fsS "http://127.0.0.1:${SVOTE_PIR_PORT}/health" >/dev/null; then
+            if curl -fsS "http://127.0.0.1:${SVOTE_PIR_PORT}/root" | jq -e '.circuit_root' >/dev/null; then
               break
             fi
             if [[ "$attempt" == 60 ]]; then
