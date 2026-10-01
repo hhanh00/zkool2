@@ -61,7 +61,7 @@ for attempt in $(seq 1 30); do
       def choice: (.voteDecision // .vote_decision // 0 | tonumber);
       def total: (.totalValue // .total_value // 0 | tonumber);
       [.results[]
-       | { proposal, choice, total }]
+       | { proposal: proposal, choice: choice, total: total }]
       | sort_by([.proposal, .choice]) == [
           { proposal: 1, choice: 0, total: 499 },
           { proposal: 2, choice: 0, total: 499 },
