@@ -23,7 +23,6 @@ import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/plugin.dart' as plugin_api;
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
-// import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/src/rust/api/voting_drive.dart';
 import 'package:zkool/src/rust/api/zsa.dart';
 import 'package:zkool/utils.dart';
@@ -372,8 +371,6 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final syncInterval = (hasDb ? await getProp(key: "sync_interval", c: c) : null) ?? "30";
     final votingConfigUrl =
         (hasDb ? await getProp(key: "voting_config_url", c: c) : null) ?? "";
-    final voteNodeUrl =
-        (hasDb ? await getProp(key: "vote_node_url", c: c) : null) ?? "";
     final actionsPerSync = (hasDb ? await getProp(key: "actions_per_sync", c: c) : null) ?? "10000";
     final blockExplorer = (hasDb ? await getProp(key: "block_explorer", c: c) : null) ?? "https://cipherscan.app/tx/{txid}";
     final qrEnabled = (hasDb ? await getProp(key: "qr_enabled", c: c) : null) ?? "false";
@@ -422,7 +419,6 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       paletteName: paletteName,
       darkMode: darkMode,
       votingConfigUrl: votingConfigUrl,
-      voteNodeUrl: voteNodeUrl,
       transactionTableMode: txTableMode,
       collapsePoolBalances: collapsePoolBalances,
       currency: currency,
@@ -467,13 +463,6 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
         ));
   }
 
-  Future<void> setVoteNodeUrl(String url) async {
-    await putProp(key: "vote_node_url", value: url, c: coinContext.coin);
-    state = state.whenData((s) => s.copyWith(
-          voteNodeUrl: url,
-        ));
-  }
-
   /// Persist all settings to prefs/DB props and apply live coin changes
   /// (lwd/transport/proxy). Called once when leaving the settings page.
   Future<void> save(AppSettings settings) async {
@@ -503,7 +492,6 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     await putProp(key: "currency", value: settings.currency, c: c);
     await putProp(key: "collapse_pool_balances", value: settings.collapsePoolBalances.toString(), c: c);
     await putProp(key: "voting_config_url", value: settings.votingConfigUrl, c: c);
-    await putProp(key: "vote_node_url", value: settings.voteNodeUrl, c: c);
     coinContext.set(
       coin: c
           .setLwd(url: settings.lwd, serverType: settings.isLightNode ? 0 : 1)
@@ -593,7 +581,6 @@ sealed class AppSettings with _$AppSettings {
     required bool collapsePoolBalances,
     required String currency,
     required String votingConfigUrl,
-    required String voteNodeUrl,
   }) = _AppSettings;
 }
 
