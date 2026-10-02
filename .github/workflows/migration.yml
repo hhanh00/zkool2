@@ -3,8 +3,6 @@ name: Migration Tests
 on:
   workflow_dispatch:
   pull_request:
-    branches:
-      - main
 
 jobs:
   regtest-tools:
@@ -15,7 +13,6 @@ jobs:
 
   migration:
     needs: [zkool-graphql, regtest-tools]
-    if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
     runs-on: ubuntu-latest
     steps:
       - name: Install RUST

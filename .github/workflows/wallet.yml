@@ -3,8 +3,6 @@ name: Wallet Tests
 on:
   workflow_dispatch:
   pull_request:
-    branches:
-      - main
 
 jobs:
   regtest-tools:
@@ -15,7 +13,6 @@ jobs:
 
   build:
     needs: [zkool-graphql, regtest-tools]
-    if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
     permissions:
       contents: write
     runs-on: ubuntu-latest
