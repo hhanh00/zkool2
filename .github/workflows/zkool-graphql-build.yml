@@ -6,6 +6,8 @@ on:
 concurrency:
   group: zkool-graphql-${{ github.repository }}-${{ github.ref }}
   cancel-in-progress: false
+  # Keep all callers waiting; the default queue replaces pending runs.
+  queue: max
 
 jobs:
   build:
