@@ -41,6 +41,11 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .execute(&mut *connection)
     .await?;
 
+    // Remove the obsolete vote node setting from existing wallets.
+    sqlx::query("DELETE FROM props WHERE key = 'vote_node_url'")
+        .execute(&mut *connection)
+        .await?;
+
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS accounts(
         id_account INTEGER PRIMARY KEY,
