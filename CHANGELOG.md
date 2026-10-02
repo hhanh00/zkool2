@@ -1,5 +1,23 @@
 # Changelog
 
+## [6.32.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.31.0...zkool-v6.32.0-rc) (2026-10-02)
+
+
+### Features
+
+* **graphql:** expose voting API ([#1278](https://github.com/hhanh00/zkool2/issues/1278)) ([5e81603](https://github.com/hhanh00/zkool2/commit/5e81603e8d5ec59a59d19353ad2213ddd3f8bdac))
+
+
+### Bug Fixes
+
+* **ci:** include Dart sources and pubspec files in GraphQL cache key ([6c5e38b](https://github.com/hhanh00/zkool2/commit/6c5e38b01b775eddf299605a86a894ab12b00543))
+* **ci:** queue concurrent GraphQL build callers ([50326fc](https://github.com/hhanh00/zkool2/commit/50326fc9d07c3f931bf10c04b8852360991d2df5))
+* **ci:** refresh Nix hashes only for stable releases ([e6186de](https://github.com/hhanh00/zkool2/commit/e6186de58ae0136649c8b2a448a1dadce46469ff))
+* **ci:** scope GraphQL concurrency to build job ([3bab224](https://github.com/hhanh00/zkool2/commit/3bab224ac1b0c3ab53139c17448f9ac089f9c53b))
+* **ci:** use explicit lease for release PR updates ([46a5d96](https://github.com/hhanh00/zkool2/commit/46a5d96ff8aa3d7bf28288a0c292d9f5317eed47))
+* **nix:** automate release dependency hash updates ([75e0093](https://github.com/hhanh00/zkool2/commit/75e009333db9f46c7ccced52313d9cbd74fe608a))
+* **nix:** wrap zkool-pure binary so the GUI runs from the cache ([e931ae9](https://github.com/hhanh00/zkool2/commit/e931ae9524cff94a752fe2a2bb785a5bc46fdfa4))
+
 ## [6.31.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.30.0...zkool-v6.31.0) (2026-09-27)
 
 
