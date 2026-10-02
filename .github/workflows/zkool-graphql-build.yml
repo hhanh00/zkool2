@@ -3,14 +3,14 @@ name: Build ZKool GraphQL (reusable)
 on:
   workflow_call:
 
-concurrency:
-  group: zkool-graphql-${{ github.repository }}-${{ github.ref }}
-  cancel-in-progress: false
-  # Keep all callers waiting; the default queue replaces pending runs.
-  queue: max
-
 jobs:
   build:
+    # Release the slot as soon as the binary is cached, before caller tests run.
+    concurrency:
+      group: zkool-graphql-${{ github.repository }}-${{ github.ref }}
+      cancel-in-progress: false
+      # Keep all callers waiting; the default queue replaces pending runs.
+      queue: max
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
