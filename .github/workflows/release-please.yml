@@ -39,14 +39,25 @@ jobs:
           git fetch origin "$BRANCH"
           git checkout -B "$BRANCH" FETCH_HEAD
           echo "RELEASE_PR_BASE=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
-      - name: Install Nix
+      - name: Check release version
         if: steps.release.outputs.pr
+        id: release-version
+        run: |
+          # Inspect the proposed version after checking out the release PR.
+          VERSION=$(jq -er '.["."]' .release-please-manifest.json)
+          if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "stable=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "stable=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install Nix
+        if: steps.release.outputs.pr && steps.release-version.outputs.stable == 'true'
         uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
             experimental-features = nix-command flakes
       - name: Refresh Nix dependency hashes
-        if: steps.release.outputs.pr
+        if: steps.release.outputs.pr && steps.release-version.outputs.stable == 'true'
         run: python3 scripts/update_nix_hashes.py
       - name: Update release PR
         if: steps.release.outputs.pr
