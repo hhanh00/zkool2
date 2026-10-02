@@ -238,27 +238,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                           onChanged: onChangedVotingConfigUrl,
                         ),
                       ),
-                      // Voting is cut out of the build pending its redesign; kept for reference.
-                      /*
-                      IconButton(
-                        icon: const Icon(Icons.refresh),
-                        onPressed: () => _fetchVotingConfig(context),
-                      ),
-                      */
                     ],
-                  ),
-                ),
-                Tooltip(
-                  message: "URL of the vote commitment tree node used for "
-                      "VAN witness sync before casting votes.",
-                  child: FormBuilderTextField(
-                    name: "vote_node_url",
-                    decoration: const InputDecoration(
-                      labelText: "Vote Node URL",
-                      hintText: "https://…/vote-node",
-                    ),
-                    initialValue: settings.voteNodeUrl,
-                    onChanged: onChangedVoteNodeUrl,
                   ),
                 ),
                 Tooltip(
@@ -536,39 +516,6 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       widget.onChanged(settings);
     });
   }
-
-  void onChangedVoteNodeUrl(String? value) async {
-    if (value == null) return;
-    setState(() {
-      settings = settings.copyWith(voteNodeUrl: value);
-      widget.onChanged(settings);
-    });
-  }
-
-  // Voting is cut out of the build pending its redesign; kept for reference.
-  /*
-  Future<void> _fetchVotingConfig(BuildContext context) async {
-    try {
-      await ref.read(appSettingsProvider.notifier).setVotingConfigUrl(settings.votingConfigUrl);
-      final config = await ref
-          .read(votingConfigProvider.notifier)
-          .resolve();
-      if (!context.mounted) return;
-      if (config == null) {
-        await showMessage(
-          context,
-          "No voting config source configured. Enter a URL first.",
-        );
-        return;
-      }
-      showSnackbar(
-        "Voting config resolved: ${config.rounds.length} round(s)",
-      );
-    } on AnyhowException catch (e) {
-      if (context.mounted) await showException(context, e.message);
-    }
-  }
-  */
 
   void onChangedTransport(Set<int> selection) {
     setState(() {
