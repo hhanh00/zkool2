@@ -8,7 +8,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  zkool-graphql:
+    uses: ./.github/workflows/zkool-graphql-build.yml
+
   ironwood-wallet:
+    needs: zkool-graphql
     name: Zebra → lightwalletd → ZKool V3 note
     if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
     runs-on: ubuntu-latest
@@ -31,22 +35,10 @@ jobs:
           BLOCKS: "350"
 
       - name: Restore checked-out ZKool GraphQL
-        id: zkool-graphql-cache
         uses: actions/cache/restore@v5
         with:
           path: target/release/zkool_graphql
-          key: ${{ runner.os }}-zkool-graphql-voting-${{ hashFiles('Cargo.lock', 'rust/Cargo.toml', 'rust/src/**') }}
-
-      - name: Build checked-out ZKool GraphQL
-        if: steps.zkool-graphql-cache.outputs.cache-hit != 'true'
-        uses: ./.github/actions/build-graphql
-
-      - name: Save checked-out ZKool GraphQL
-        if: steps.zkool-graphql-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
-        with:
-          path: target/release/zkool_graphql
-          key: ${{ steps.zkool-graphql-cache.outputs.cache-primary-key }}
+          key: ${{ runner.os }}-zkool-graphql-${{ hashFiles('Cargo.lock', 'rust/Cargo.toml', 'rust/src/**') }}
 
       - name: Restore svoted and nf-server
         id: voting-services-cache

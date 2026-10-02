@@ -1,0 +1,33 @@
+name: Build ZKool GraphQL (reusable)
+
+on:
+  workflow_call:
+
+concurrency:
+  group: zkool-graphql-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Restore zkool_graphql cache
+        id: cache
+        uses: actions/cache/restore@v5
+        with:
+          path: target/release/zkool_graphql
+          key: ${{ runner.os }}-zkool-graphql-${{ hashFiles('Cargo.lock', 'rust/Cargo.toml', 'rust/src/**') }}
+
+      - name: Build zkool_graphql
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: ./.github/actions/build-graphql
+
+      - name: Save zkool_graphql cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: target/release/zkool_graphql
+          key: ${{ steps.cache.outputs.cache-primary-key }}
