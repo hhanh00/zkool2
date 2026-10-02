@@ -2,6 +2,10 @@ name: Install regtest tools
 description: Install and cache Zebra, lightwalletd, and an independent bootstrap wallet.
 
 inputs:
+  build:
+    description: Allow building missing tools (shared build job only)
+    required: false
+    default: 'false'
   zebra-version:
     description: Zebra git tag
     required: false
@@ -24,16 +28,17 @@ runs:
       with:
         path: tools/bin
         key: ${{ runner.os }}-regtest-${{ inputs.zebra-version }}-${{ inputs.lightwalletd-revision }}-${{ inputs.bootstrap-zkool-version }}
+        fail-on-cache-miss: ${{ inputs.build != 'true' }}
 
     - name: Install build dependencies
-      if: steps.cache.outputs.cache-hit != 'true'
+      if: inputs.build == 'true' && steps.cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
         sudo apt-get update
         sudo apt-get install -y clang libclang-dev
 
     - name: Build Zebra, lightwalletd, and bootstrap wallet
-      if: steps.cache.outputs.cache-hit != 'true'
+      if: inputs.build == 'true' && steps.cache.outputs.cache-hit != 'true'
       shell: bash
       env:
         ZEBRA_VERSION: ${{ inputs.zebra-version }}
@@ -65,7 +70,7 @@ runs:
 
     # Preserve successfully built tools even if a later wallet test fails.
     - name: Save regtest tools
-      if: steps.cache.outputs.cache-hit != 'true'
+      if: inputs.build == 'true' && steps.cache.outputs.cache-hit != 'true'
       uses: actions/cache/save@v5
       with:
         path: tools/bin
