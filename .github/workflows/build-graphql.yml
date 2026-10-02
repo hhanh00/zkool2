@@ -26,7 +26,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: target/release/zkool_graphql
-          key: ${{ runner.os }}-zkool-graphql-${{ hashFiles('Cargo.lock', 'rust/Cargo.toml', 'rust/src/**') }}
+          key: ${{ runner.os }}-zkool-graphql-${{ hashFiles('Cargo.lock', 'rust/Cargo.toml', 'rust/src/**', 'lib/**/*.dart', 'pubspec.yaml', 'pubspec.lock') }}
       - name: Create Release
         if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v3
