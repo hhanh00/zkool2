@@ -8,11 +8,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  regtest-tools:
+    uses: ./.github/workflows/regtest-tools-build.yml
+
   zkool-graphql:
     uses: ./.github/workflows/zkool-graphql-build.yml
 
   ironwood-wallet:
-    needs: zkool-graphql
+    needs: [zkool-graphql, regtest-tools]
     name: Zebra → lightwalletd → ZKool V3 note
     if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
     runs-on: ubuntu-latest

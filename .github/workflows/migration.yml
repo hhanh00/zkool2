@@ -7,11 +7,14 @@ on:
       - main
 
 jobs:
+  regtest-tools:
+    uses: ./.github/workflows/regtest-tools-build.yml
+
   zkool-graphql:
     uses: ./.github/workflows/zkool-graphql-build.yml
 
   migration:
-    needs: zkool-graphql
+    needs: [zkool-graphql, regtest-tools]
     if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
     runs-on: ubuntu-latest
     steps:
@@ -20,33 +23,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
-      # Same path and key as .github/actions/zebra, so this job shares the
-      # cache that the wallet tests populate rather than building its own.
-      - name: Cache zebra
-        id: cache-zebra
-        uses: actions/cache@v5
-        with:
-          path: |
-            ./tools/bin
-          key: ${{ runner.os }}-zebra-lwd-6.2.1
-
-      - name: Install zebra & lightwalletd
-        if: steps.cache-zebra.outputs.cache-hit != 'true'
-        run: |
-          sudo apt update && sudo apt install -y libclang-dev clang
-          rm -rf ./tools
-          cargo install --locked --git https://github.com/ZcashFoundation/zebra --tag v6.2.1 --features=internal-miner --root ./tools zebrad
-          git clone https://github.com/zecrocks/lightwalletd.git
-          cd lightwalletd
-          git checkout 9b69519c57785e04e92a16365483f869dd878700
-          go build -o ../tools/bin/lightwalletd .
-
-      - name: Save cache
-        if: steps.cache-zebra.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v5
-        with:
-          path: ./tools/bin
-          key: ${{ runner.os }}-zebra-lwd-6.2.1
+      - name: Restore pinned regtest tools
+        uses: ./.github/actions/install-regtest-tools
 
       - name: Restore zkool_graphql
         uses: actions/cache/restore@v5
@@ -59,7 +37,6 @@ jobs:
       - name: Add tools to PATH
         run: |
           echo "$GITHUB_WORKSPACE/target/release" >> $GITHUB_PATH
-          echo "$GITHUB_WORKSPACE/tools/bin" >> $GITHUB_PATH
 
       # Stops below the Ironwood (NU6.3) activation height of 250 and funds
       # nothing: the test needs to create legacy Orchard notes, which is only

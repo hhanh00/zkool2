@@ -1,0 +1,20 @@
+name: Build regtest tools (reusable)
+
+on:
+  workflow_call:
+
+jobs:
+  build:
+    # Cache visibility is ref-scoped. Release the lock before caller tests run.
+    concurrency:
+      group: regtest-tools-${{ github.repository }}-${{ github.ref }}
+      cancel-in-progress: false
+      queue: max
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build and cache pinned regtest tools
+        uses: ./.github/actions/install-regtest-tools
+        with:
+          build: 'true'

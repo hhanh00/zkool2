@@ -7,11 +7,14 @@ on:
       - main
 
 jobs:
+  regtest-tools:
+    uses: ./.github/workflows/regtest-tools-build.yml
+
   zkool-graphql:
     uses: ./.github/workflows/zkool-graphql-build.yml
 
   build:
-    needs: zkool-graphql
+    needs: [zkool-graphql, regtest-tools]
     if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
     permissions:
       contents: write

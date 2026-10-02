@@ -15,7 +15,7 @@ inputs:
 runs:
   using: "composite"
   steps:
-    - name: Install Zebra and lightwalletd
+    - name: Restore pinned regtest tools
       uses: ./.github/actions/install-regtest-tools
 
     - name: Start regtest, mine and shield to wallet
