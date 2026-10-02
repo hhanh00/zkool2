@@ -10,22 +10,23 @@ on:
       - zkool-v*
 
 jobs:
-  build:
+  zkool-graphql:
+    uses: ./.github/workflows/zkool-graphql-build.yml
+
+  release:
+    needs: zkool-graphql
     if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
     permissions:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - name: Install RUST
-        uses: dtolnay/rust-toolchain@stable
       - name: Checkout code
         uses: actions/checkout@v6
-      - name: Build zkool_graphql
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y pkg-config libudev-dev
-          cd rust
-          cargo build --release --bin zkool_graphql --no-default-features --features=graphql,bundled-sapling-params
+      - name: Restore zkool_graphql
+        uses: actions/cache/restore@v5
+        with:
+          path: target/release/zkool_graphql
+          key: ${{ runner.os }}-zkool-graphql-${{ hashFiles('Cargo.lock', 'rust/Cargo.toml', 'rust/src/**') }}
       - name: Create Release
         if: startsWith(github.ref_name, 'zkool-v')
         uses: softprops/action-gh-release@v3

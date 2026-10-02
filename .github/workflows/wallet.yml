@@ -7,7 +7,11 @@ on:
       - main
 
 jobs:
+  zkool-graphql:
+    uses: ./.github/workflows/zkool-graphql-build.yml
+
   build:
+    needs: zkool-graphql
     if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
     permissions:
       contents: write
@@ -24,8 +28,11 @@ jobs:
           MINER_ADDRESS: "tmQ1BiNRfsvT6eMkJ5n7nMZsbz1PGwCs1Zs"
           SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
           DESTINATION_ADDRESS: uregtest1ur83jamvhc5pwe8xzlu9d8ur4mxmny385mhlurxh5z00e6vhcf9zk0dncar334n0ucskdya9ytdrvzucprqjrhy7hd6rkklp0q6eyxp5
-      - name: Build checked-out zkool_graphql
-        uses: ./.github/actions/build-graphql
+      - name: Restore zkool_graphql
+        uses: actions/cache/restore@v5
+        with:
+          path: target/release/zkool_graphql
+          key: ${{ runner.os }}-zkool-graphql-${{ hashFiles('Cargo.lock', 'rust/Cargo.toml', 'rust/src/**') }}
       - name: Run pytest tests
         run: |
           cd tests
