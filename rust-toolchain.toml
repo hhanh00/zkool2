@@ -5,7 +5,7 @@
 # pinned until the nym/libcrux pins move to a version that compiles on newer
 # stable releases.
 [toolchain]
-channel = "1.95.0"
+channel = "1.99.0"
 # Ship the toolchain-matched rust-analyzer so IDE language support works with
 # the pinned compiler.
 components = ["rust-analyzer"]
