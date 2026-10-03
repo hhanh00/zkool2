@@ -239,6 +239,19 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
     }
   }
 
+  /// Treat proposals the user did not visit as skipped, then submit the ballot.
+  /// Skipping is distinct from choosing an abstention option: no proposal
+  /// option is recorded for these entries.
+  Future<void> _submitBallot() async {
+    for (final proposal in widget.round.proposals) {
+      if (_selections.containsKey(proposal.proposalId) || _skipped.contains(proposal.proposalId)) {
+        continue;
+      }
+      if (!await _saveSelection(proposal, const Decision.skipped())) return;
+    }
+    if (mounted) await _onBallotComplete();
+  }
+
   /// Eligibility preview plus the finality warning; the last gate before the
   /// driver is allowed to submit.
   Future<bool> _confirmSubmission(VotingEligibilityPreview? preview) async {
@@ -409,9 +422,6 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
 
   Widget _buildBallot() {
     final proposals = widget.round.proposals;
-    final ballotComplete = proposals.every(
-      (proposal) => _selections.containsKey(proposal.proposalId) || _skipped.contains(proposal.proposalId),
-    );
     final secondaryColor = Theme.of(context).colorScheme.secondary;
     return _loading
         ? const Center(child: CircularProgressIndicator())
@@ -463,9 +473,7 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
                                         }
                                         if (mounted) details.onStepContinue?.call();
                                       }
-                                    : ballotComplete
-                                        ? () => unawaited(_onBallotComplete())
-                                        : null,
+                                    : () => unawaited(_submitBallot()),
                                 child: Text(
                                   _currentStep == proposals.length - 1
                                       ? 'Submit'
@@ -698,4 +706,3 @@ class _DriveStatusView extends StatelessWidget {
     );
   }
 }
-

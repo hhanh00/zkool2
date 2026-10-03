@@ -118,7 +118,12 @@ if [[ -n "$VOTING_CONFIG_URL" ]]; then
   selections=$(jq -cn --argjson round "$selected_round" '
     $round.proposals
     | to_entries
-    | map({proposalId: .value.proposalId, choice: .key})
+    | map(
+        if .value.proposalId == 2
+        then {proposalId: .value.proposalId}
+        else {proposalId: .value.proposalId, choice: .key}
+        end
+      )
   ')
   submission=$(gql 'mutation SubmitVote($id: Int!, $round: String!, $selections: [VotingSelectionInput!]!) {
     submitVote(idAccount: $id, roundId: $round, selections: $selections) {
@@ -143,13 +148,12 @@ if [[ -n "$VOTING_CONFIG_URL" ]]; then
     if jq -e '
       .votingSubmissionStatus as $status
       | ($status.running | not)
-      and $status.completedProposals == 3
-      and $status.totalProposals == 3
-      and $status.sharesTotal > 0
+      and $status.completedProposals == 2
+      and $status.totalProposals == 2
       and $status.sharesConfirmed == $status.sharesTotal
       and ($status.failures | length == 0)
     ' <<<"$status" >/dev/null; then
-      echo "ZKool submitted a vote and all helper shares were confirmed"
+      echo "ZKool submitted choices for proposals 1 and 3, skipped proposal 2, and completed helper-share processing"
       break
     fi
     if [[ "$attempt" == 240 ]]; then
