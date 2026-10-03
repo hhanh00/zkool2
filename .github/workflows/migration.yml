@@ -46,6 +46,7 @@ jobs:
           BLOCKS: 150
           FUND: 0
           MINER_ADDRESS: "tmQ1BiNRfsvT6eMkJ5n7nMZsbz1PGwCs1Zs"
+          ZKOOL_EXPLICIT_SECURITY_FLAGS: 1
 
       - name: Run migration test
         run: |
