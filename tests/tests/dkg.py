@@ -66,6 +66,8 @@ class DkgParticipant:
                 str(self.port),
                 "-l",
                 self.lwd_url,
+                "--allow-unauthenticated",
+                "--allow-unencrypted-database",
             ],
             stdout=open(log_path, "w"),
             stderr=subprocess.STDOUT,

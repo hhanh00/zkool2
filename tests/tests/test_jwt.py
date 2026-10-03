@@ -150,6 +150,7 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             str(PORT),
             "-l",
             lwd_url,
+            "--allow-unencrypted-database",
         ]
         if with_jwt:
             cmd.extend(["-j", JWT_KEY_PATH])
