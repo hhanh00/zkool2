@@ -12,7 +12,13 @@ VOTING_CONFIG_URL=${VOTING_CONFIG_URL:-}
 
 server_pid=""
 start_server() {
-  "$ZKOOL_GRAPHQL_BIN" -d "$WALLET_DB" -l "$LIGHTWALLETD_URL" -n >"$LOG_FILE" 2>&1 &
+  "$ZKOOL_GRAPHQL_BIN" \
+    -d "$WALLET_DB" \
+    -l "$LIGHTWALLETD_URL" \
+    -n \
+    --allow-unauthenticated \
+    --allow-unencrypted-database \
+    >"$LOG_FILE" 2>&1 &
   server_pid=$!
 }
 
