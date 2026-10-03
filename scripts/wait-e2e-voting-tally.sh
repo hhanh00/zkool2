@@ -62,13 +62,12 @@ for attempt in $(seq 1 30); do
       def total: (.totalValue // .total_value // 0 | tonumber);
       [.results[]
        | { proposal: proposal, choice: choice, total: total }]
-      | sort_by([.proposal, .choice]) == [
+       | sort_by([.proposal, .choice]) == [
           { proposal: 1, choice: 0, total: 499 },
-          { proposal: 2, choice: 1, total: 499 },
           { proposal: 3, choice: 2, total: 499 }
         ]
     ' <<<"$tally" >/dev/null
-    echo "svoted finalized the real vote with 499 ballots for choices 0, 1, and 2"
+    echo "svoted finalized the real vote with 499 ballots for choices 0 and 2; proposal 2 was skipped"
     exit 0
   fi
   sleep 1

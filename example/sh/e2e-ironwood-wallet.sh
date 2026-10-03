@@ -118,7 +118,12 @@ if [[ -n "$VOTING_CONFIG_URL" ]]; then
   selections=$(jq -cn --argjson round "$selected_round" '
     $round.proposals
     | to_entries
-    | map({proposalId: .value.proposalId, choice: .key})
+    | map(
+        if .value.proposalId == 2
+        then {proposalId: .value.proposalId}
+        else {proposalId: .value.proposalId, choice: .key}
+        end
+      )
   ')
   submission=$(gql 'mutation SubmitVote($id: Int!, $round: String!, $selections: [VotingSelectionInput!]!) {
     submitVote(idAccount: $id, roundId: $round, selections: $selections) {
