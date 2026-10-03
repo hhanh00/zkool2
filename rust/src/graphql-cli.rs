@@ -51,8 +51,24 @@ pub struct Config {
     pub coin: Option<u8>,
     #[clap(short, long, value_parser)]
     pub jwt_public_key_file: Option<String>,
+    /// Start the server without JWT authentication. This grants every client full access.
+    #[clap(long, value_parser, default_missing_value = "true", num_args = 0..=1, require_equals = false)]
+    pub allow_unauthenticated: Option<bool>,
     #[clap(long, value_parser)]
     pub decode_tx: Option<String>,
+}
+
+fn validate_auth_config(
+    jwt_public_key_file: Option<&str>,
+    allow_unauthenticated: bool,
+) -> Result<()> {
+    if jwt_public_key_file.is_none() && !allow_unauthenticated {
+        anyhow::bail!(
+            "JWT authentication is required: provide --jwt-public-key-file, or explicitly pass \
+             --allow-unauthenticated to grant every client full access"
+        );
+    }
+    Ok(())
 }
 
 #[tokio::main]
@@ -82,6 +98,7 @@ async fn main() -> Result<()> {
         lwd_url,
         port,
         jwt_public_key_file,
+        allow_unauthenticated,
         no_mempool,
         zebra,
         coin,
@@ -134,6 +151,9 @@ async fn main() -> Result<()> {
     let port = port.unwrap_or(8000);
     let no_mempool = no_mempool.unwrap_or_default();
     let zebra = zebra.unwrap_or_default();
+    let allow_unauthenticated = allow_unauthenticated.unwrap_or_default();
+
+    validate_auth_config(jwt_public_key_file.as_deref(), allow_unauthenticated)?;
 
     let decoding_key = jwt_public_key_file
         .map(|path| {
@@ -142,7 +162,10 @@ async fn main() -> Result<()> {
         })
         .transpose()?;
     if decoding_key.is_none() {
-        tracing::warn!("Server is running WITHOUT authentication. Everyone has full access.");
+        tracing::warn!(
+            "Server is running WITHOUT authentication because --allow-unauthenticated was set. \
+             Everyone has full access."
+        );
     }
     let decoding_key = Arc::new(decoding_key);
 
@@ -241,4 +264,33 @@ async fn main() -> Result<()> {
     warp::serve(routes).run(([0, 0, 0, 0], port)).await;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{validate_auth_config, Config};
+    use clap::Parser;
+
+    #[test]
+    fn unauthenticated_server_requires_explicit_opt_in() {
+        let config = Config::try_parse_from(["graphql-cli"]).expect("defaults should parse");
+        assert_eq!(config.allow_unauthenticated, None);
+
+        let error = validate_auth_config(None, false).unwrap_err();
+        assert!(error.to_string().contains("JWT authentication is required"));
+    }
+
+    #[test]
+    fn jwt_key_allows_server_startup() {
+        validate_auth_config(Some("public.pem"), false).unwrap();
+    }
+
+    #[test]
+    fn allow_unauthenticated_flag_allows_server_startup() {
+        let config = Config::try_parse_from(["graphql-cli", "--allow-unauthenticated"])
+            .expect("flag should parse");
+
+        assert_eq!(config.allow_unauthenticated, Some(true));
+        validate_auth_config(None, config.allow_unauthenticated.unwrap_or_default()).unwrap();
+    }
 }
