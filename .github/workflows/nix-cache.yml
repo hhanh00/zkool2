@@ -40,7 +40,12 @@ jobs:
 
       - name: Build
         run: |
+          set -euo pipefail
           nix build --print-out-paths .#zkool-graphql .#zkool-pure | tee /tmp/paths
 
       - name: Push to Cachix
-        run: cachix push zkool $(cat /tmp/paths)
+        run: |
+          set -euo pipefail
+          # A masked build failure leaves the file empty; refuse to "push" that.
+          test -s /tmp/paths
+          cachix push zkool $(cat /tmp/paths)
