@@ -8,11 +8,10 @@ use flutter_rust_bridge::frb;
 use crate::api::coin::Coin;
 #[cfg(feature = "flutter")]
 use crate::frb_generated::StreamSink;
+use crate::migrate::step::StepOutcome;
+#[cfg(feature = "flutter")]
 use crate::migrate::{
-    plan::next_task,
-    state::MigrationState,
-    step::StepOutcome,
-    task::{MigrationTask, Pacing, TaskKind},
+    plan::next_task, state::MigrationState, task::MigrationTask, task::Pacing, task::TaskKind,
 };
 
 /// Current migration status — streamed to Flutter by run_migration().
@@ -281,6 +280,7 @@ pub async fn get_migration_status(_c: &Coin) -> Result<MigrationStatus> {
     })
 }
 
+#[cfg(feature = "flutter")]
 async fn observe_state(c: &Coin, anchor_bucket_size: u32) -> Result<MigrationState> {
     let network = c.network();
     let mut connection = c.get_connection().await?;
@@ -297,6 +297,7 @@ async fn observe_state(c: &Coin, anchor_bucket_size: u32) -> Result<MigrationSta
 
 /// Build the UI status from the same snapshot and task the runner is acting
 /// on, so the phase shown can never claim work that will not be attempted.
+#[cfg(feature = "flutter")]
 fn status_from(
     state: &MigrationState,
     task: &MigrationTask,

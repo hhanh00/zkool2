@@ -27,6 +27,7 @@ pub const ANCHOR_BUCKET_SIZE: u32 = 144;
 
 /// Zcash's target block spacing, used to scale the anchor interval to the
 /// selected migration speed.
+#[cfg(any(feature = "flutter", test))]
 const TARGET_BLOCK_SPACING_MS: u64 = 75_000;
 
 /// Fee padding embedded in each standard denomination.
@@ -84,6 +85,7 @@ pub fn is_sd(value: u64) -> bool {
 }
 
 /// Scale the anchor interval to the selected migration speed.
+#[cfg(any(feature = "flutter", test))]
 pub(crate) fn migration_anchor_bucket_size(mean_delay_ms: u64) -> u32 {
     let blocks =
         mean_delay_ms.saturating_add(TARGET_BLOCK_SPACING_MS - 1) / TARGET_BLOCK_SPACING_MS;

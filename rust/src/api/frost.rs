@@ -8,12 +8,13 @@ use sqlx::{query, sqlite::SqliteRow, Row, SqliteConnection};
 
 use crate::{
     api::coin::Coin,
-    frost::dkg::{
-        get_dkg_params, get_mailbox_account, task::DkgTask,
-    },
+    frost::dkg::{get_dkg_params, get_mailbox_account},
     sync::{synchronize_impl, DEFAULT_ACTIONS_PER_SYNC},
-    Sink,
 };
+#[cfg(feature = "flutter")]
+use crate::frost::dkg::task::DkgTask;
+#[cfg(feature = "flutter")]
+use crate::Sink;
 use std::str::FromStr;
 
 use super::pay::PcztPackage;
@@ -125,6 +126,7 @@ pub async fn do_dkg(status: StreamSink<DKGStatus>, c: &Coin) -> Result<()> {
 
 /// Map a task to the UI status it corresponds to. Publishes and waits map to
 /// their round's variants; the three finalize stages all share `Finalize`.
+#[cfg(feature = "flutter")]
 fn dkg_status_for(task: &DkgTask) -> Option<DKGStatus> {
     match task {
         DkgTask::PublishRound { round: 0 } => Some(DKGStatus::PublishRound0Pkg),
