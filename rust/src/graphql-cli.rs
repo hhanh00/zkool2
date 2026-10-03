@@ -1,4 +1,8 @@
-use std::{io::Read, sync::Arc};
+use std::{
+    io::Read,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    sync::Arc,
+};
 
 use anyhow::{Context as _, Result};
 use clap::Parser;
@@ -45,6 +49,9 @@ pub struct Config {
     pub lwd_url: Option<String>,
     #[clap(short, long, value_parser)]
     pub port: Option<u16>,
+    /// Address on which the wallet API listens.
+    #[clap(long, value_parser)]
+    pub bind_address: Option<IpAddr>,
     #[clap(short, long, value_parser, default_missing_value = "true", num_args = 0..=1, require_equals = false)]
     pub no_mempool: Option<bool>,
     /// Use zebrad/zcashd JSON-RPC backend instead of lightwalletd gRPC.
@@ -78,6 +85,10 @@ fn validate_auth_config(
         );
     }
     Ok(())
+}
+
+fn bind_address_or_default(bind_address: Option<IpAddr>) -> IpAddr {
+    bind_address.unwrap_or(IpAddr::V4(Ipv4Addr::LOCALHOST))
 }
 
 #[derive(Debug, PartialEq)]
@@ -159,6 +170,7 @@ async fn main() -> Result<()> {
         allow_unencrypted_database,
         lwd_url,
         port,
+        bind_address,
         jwt_public_key_file,
         allow_unauthenticated,
         no_mempool,
@@ -211,6 +223,7 @@ async fn main() -> Result<()> {
     let db_path = db_path.unwrap_or("zkool.db".to_string());
     let lwd_url = lwd_url.unwrap_or("https://zec.rocks".to_string());
     let port = port.unwrap_or(8000);
+    let bind_address = bind_address_or_default(bind_address);
     let no_mempool = no_mempool.unwrap_or_default();
     let zebra = zebra.unwrap_or_default();
     let allow_unauthenticated = allow_unauthenticated.unwrap_or_default();
@@ -253,7 +266,9 @@ async fn main() -> Result<()> {
     }
 
     let server_type: u8 = if zebra { 1 } else { 0 };
-    tracing::info!("db_path {db_path} lwd_url {lwd_url} port {port} zebra {zebra}");
+    tracing::info!(
+        "db_path {db_path} lwd_url {lwd_url} bind_address {bind_address} port {port} zebra {zebra}"
+    );
     let coin = Coin::new(coin)
         .open_database(db_path, database_password)
         .await?
@@ -328,15 +343,21 @@ async fn main() -> Result<()> {
             Some("/subscriptions"),
         )));
 
-    tracing::info!("Listening on 0.0.0.0:{port}");
-    warp::serve(routes).run(([0, 0, 0, 0], port)).await;
+    let listen_address = SocketAddr::new(bind_address, port);
+    tracing::info!("Listening on {listen_address}");
+    warp::serve(routes).run(listen_address).await;
 
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{database_password_source, validate_auth_config, Config, DatabasePasswordSource};
+    use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+
+    use super::{
+        bind_address_or_default, database_password_source, validate_auth_config, Config,
+        DatabasePasswordSource,
+    };
     use clap::Parser;
 
     #[test]
@@ -396,5 +417,17 @@ mod tests {
         ])
         .is_err());
         assert!(database_password_source(Some("password.txt"), true, false).is_err());
+    }
+
+    #[test]
+    fn bind_address_defaults_to_loopback_and_can_be_overridden() {
+        assert_eq!(
+            bind_address_or_default(None),
+            IpAddr::V4(Ipv4Addr::LOCALHOST)
+        );
+
+        let config = Config::try_parse_from(["graphql-cli", "--bind-address", "::"])
+            .expect("IPv6 bind address should parse");
+        assert_eq!(config.bind_address, Some(IpAddr::V6(Ipv6Addr::UNSPECIFIED)));
     }
 }
