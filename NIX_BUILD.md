@@ -81,6 +81,8 @@ or by reference, without an overlay:
 `nix build .#cargo-vendor` produces the vendored source tree used by the offline
 shell. It is a fixed-output derivation generated from `Cargo.lock`; if the Git
 dependencies change, refresh `outputHash` with the hash Nix reports on failure.
+The store name embeds the `Cargo.lock` hash so a lock change always changes the
+output path and can never be masked by a stale Cachix hit.
 
 ## The GUI app
 
@@ -93,11 +95,16 @@ pre-vendoring every fetch:
 
 - app + cargokit `build_tool` pub deps -> `packages.zkool-pub-cache` (a
   normalized, reproducible FOD; the git checkout's volatile `.git`/`hooks` and
-  pub's version-listing cache are stripped so the output is path-independent),
-- `run_build_tool.sh` is patched to `pub get --offline`,
-- cargo uses `packages.cargo-vendor` with `CARGO_NET_OFFLINE=true`,
+  pub's version-listing cache are stripped so the output is path-independent;
+  its store name embeds the `pubspec.lock` hash for the same reason as
+  `cargo-vendor` above),
+- `run_build_tool.sh` is patched to `pub get --offline` (its generated runner
+  temp dir has no `pubspec.lock`, so `--enforce-lockfile` cannot apply there; the
+  lock is enforced when `pubCache` is populated),
+- cargo uses `packages.cargo-vendor` with `CARGO_NET_OFFLINE=true`, and the
+  rustup shim passes `--locked` to cargokit's `cargo build`,
 - rustup calls are served by the `rustup` shim,
-- engine artifacts come from `pkgs.flutter`.
+- engine artifacts come from nixpkgs flutter.
 
 ```bash
 nix build .#zkool-pure
@@ -111,6 +118,25 @@ zkool
 Dependency fetching can require network access on the first build; the GUI
 compilation itself runs offline in the sandbox. Updating pub/cargo dependencies
 means refreshing the fixed-output derivation (FOD) hashes in `flake.nix`.
+
+### Version following
+
+The flake tracks the same dependency sources CI uses, and fails loudly on
+drift instead of silently building something else:
+
+- **Rust** — the toolchain is parsed from `rust-toolchain.toml`. If the pinned
+  rust-overlay does not provide that version yet, evaluation throws and
+  `nix flake update rust-overlay` fixes it.
+- **Flutter** — `FLUTTER_VERSION` is parsed from `.github/workflows/build.yml`;
+  the nixpkgs flutter must be at least that version or evaluation throws, fixed
+  by `nix flake update nixpkgs`.
+- **Locks** — `pubspec.lock` and `Cargo.lock` hashes are part of the FOD store
+  names, and dependency resolution is locked (`pub get --enforce-lockfile`,
+  `cargo build --locked`), so a lock change forces a hash refresh (see
+  release hash maintenance below) rather than re-resolving against a stale
+  cache. App and `build_tool` pub deps go through the locked `pubCache`; only
+  cargokit's generated runner (which has no lockfile of its own) resolves
+  `--offline` against that pinned cache.
 
 The installed launcher sets the library path for `librlz.so` and adds
 `xdg-user-dir` to `PATH`. Use `./result/bin/zkool` to launch the packaged app.
@@ -188,6 +214,11 @@ To run the same refresh locally on x86_64 Linux with Nix installed:
 ```bash
 python3 scripts/update_nix_hashes.py
 ```
+
+Between releases nothing refreshes the hashes automatically; instead any
+dependency drift (lock change, toolchain bump) makes `nix build` fail until the
+hashes or the flake inputs are updated. That is intentional: the failure is the
+signal that the Nix build and the checked-in dependencies disagree.
 
 The release-tag Nix workflow then builds and caches the GUI and server. Use
 `zkool-graphql` with Cachix to download the server without compiling it; there

@@ -23,6 +23,30 @@
 
         zkoolVersion = lib.removeSuffix "\n" (builtins.readFile ./version.txt);
 
+        # Flutter must never lag the CI SDK: parse FLUTTER_VERSION from
+        # build.yml (CI clones that tag) and require nixpkgs to be at least as
+        # new, forcing a `nix flake update nixpkgs` when CI bumps first.
+        ciFlutterVersion =
+          let
+            lines = lib.splitString "\n"
+              (builtins.readFile ./.github/workflows/build.yml);
+            line = builtins.head (builtins.filter
+              (lib.hasInfix "FLUTTER_VERSION:")
+              lines);
+            groups = builtins.match " *FLUTTER_VERSION: \"?([0-9]+[.][0-9]+[.][0-9]+)\"?.*" line;
+          in
+          if groups == null then
+            throw "cannot parse FLUTTER_VERSION from .github/workflows/build.yml"
+          else builtins.head groups;
+
+        flutter =
+          if lib.versionAtLeast pkgs.flutter.version ciFlutterVersion then pkgs.flutter else
+          throw ''
+            nixpkgs flutter (${pkgs.flutter.version}) is older than the CI
+            flutter (${ciFlutterVersion} from .github/workflows/build.yml).
+            Run: nix flake update nixpkgs
+          '';
+
         # Only the Cargo workspace is needed to build the Rust side. Filtering
         # keeps edits to flake.nix/docs from changing the source hash (and
         # therefore needlessly rebuilding) the Rust packages.
@@ -40,22 +64,29 @@
         # (legal for a FOD: the output is only Dart/git sources, no store
         # references), then reused offline by the sandboxed app build.
         pubCache = pkgs.stdenv.mkDerivation {
-          name = "zkool-pub-cache";
+          # FOD outputs are substituted from binary caches by store path, and
+          # the path is keyed on outputHash — not on the inputs. Suffixing the
+          # name with the pubspec.lock hash changes the path whenever the lock
+          # changes, so a stale pinned outputHash can no longer be silently
+          # satisfied by Cachix; the FOD rebuilds and fails loudly instead.
+          name = "zkool-pub-cache-${
+            builtins.substring 0 12 (builtins.hashFile "sha256" ./pubspec.lock)
+          }";
           src = ./.;
-          nativeBuildInputs = [ pkgs.flutter pkgs.git pkgs.cacert ];
+          nativeBuildInputs = [ flutter pkgs.git pkgs.cacert ];
           SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
           GIT_SSL_CAINFO = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
           outputHashMode = "recursive";
           outputHashAlgo = "sha256";
-          outputHash = "sha256-Y7GfEIONx5n9R1jnuhn0w9/FwBHxdTef9mg/FeKa+5o=";
+          outputHash = "sha256-i3m8X78D0Sn7i+23YKiKAN8ZtTm7J9lVXr5bnIK/K6Q=";
           buildCommand = ''
             export HOME="$TMPDIR"
             export PUB_CACHE="$out"
             cp -r "$src" source
             chmod -R u+w source
             cd source
-            flutter pub get
-            ( cd rust_builder/cargokit/build_tool && flutter pub get )
+            flutter pub get --enforce-lockfile
+            ( cd rust_builder/cargokit/build_tool && flutter pub get --enforce-lockfile )
 
             # Normalize for reproducibility: pub's HTTP version-listing cache
             # and the git checkouts' volatile .git metadata (config embeds the
@@ -68,13 +99,20 @@
           '';
         };
 
-        # Must match rust-toolchain.toml: 1.88-1.94 fail to compile
-        # libcrux-psq (transitive nym dep) with E0716; 1.95.0 builds cleanly.
-        rustVersion = "1.95.0";
-
-        rustToolchain = pkgs.rust-bin.stable.${rustVersion}.default.override {
-          extensions = [ "rust-analyzer" "rust-src" ];
-        };
+        # Toolchain follows rust-toolchain.toml — the same file CI uses — so
+        # a bump there cannot drift from the Nix build. History: 1.88-1.94
+        # fail to compile libcrux-psq (transitive nym dep) with E0716; 1.95.0
+        # builds cleanly.
+        rustToolchain =
+          let
+            tc = (builtins.fromTOML (builtins.readFile ./rust-toolchain.toml)).toolchain;
+          in
+          (pkgs.rust-bin.stable.${tc.channel} or (throw ''
+            rust-toolchain.toml pins rust ${tc.channel}, which the pinned
+            rust-overlay does not provide. Run: nix flake update rust-overlay
+          '')).default.override {
+            extensions = (tc.components or [ ]) ++ [ "rust-src" ];
+          };
 
         # flutter_rust_bridge_codegen is version-locked to the
         # `flutter_rust_bridge = "=2.12.0"` crate and the Dart package of the
@@ -121,6 +159,13 @@
               ;;
             run)
               shift 2
+              # cargokit issues a plain `cargo build`. Add --locked so a stale
+              # vendored tree fails loudly instead of re-resolving offline
+              # against whatever versions cargo-vendor happens to carry.
+              if [ "''${1:-}" = cargo ] && [ "''${2:-}" = build ]; then
+                shift 2
+                set -- cargo build --locked "$@"
+              fi
               exec "$@"
               ;;
           esac
@@ -158,7 +203,8 @@
           ++ lib.optionals pkgs.stdenv.hostPlatform.isLinux linuxNativeBuildInputs;
 
         # Pure (sandboxed, no-network) GUI build. All fetches are pre-vendored:
-        # pub -> pubCache, cargo -> cargo-vendor, engine -> pkgs.flutter.
+        # pub -> pubCache, cargo -> cargo-vendor, engine -> flutter (nixpkgs,
+        # required to be at least the CI FLUTTER_VERSION).
         # cargokit is made sandbox-safe by (a) running its `dart pub get` with
         # --offline against the pinned cache and (b) serving its rustup calls
         # from cargokitRustup. Being a normal derivation, referencing
@@ -170,7 +216,7 @@
           src = ./.;
           nativeBuildInputs = [
             rustToolchain
-            pkgs.flutter
+            flutter
             cargokitRustup
           ] ++ (with pkgs; [ pkg-config cmake ninja clang git perl which coreutils cacert makeWrapper ]);
           buildInputs = linuxBuildInputs;
@@ -199,11 +245,15 @@
             sed "s|directory = \"vendor\"|directory = \"${self.packages.${system}.cargo-vendor}/vendor\"|" \
               "${self.packages.${system}.cargo-vendor}/config.toml" > "$CARGO_HOME/config.toml"
 
-            # cargokit's runner resolves build_tool deps with pub: make it offline.
+            # cargokit's runner resolves build_tool deps with pub: make it
+            # offline. --enforce-lockfile cannot be used here: the runner is
+            # generated in a temp dir with only a pubspec.yaml (a path
+            # dependency on build_tool) and no pubspec.lock. build_tool's own
+            # lock is still enforced when pubCache is populated.
             substituteInPlace rust_builder/cargokit/run_build_tool.sh \
               --replace-fail 'pub get --no-precompile' 'pub get --offline --no-precompile'
 
-            flutter pub get --offline
+            flutter pub get --offline --enforce-lockfile
             flutter build linux --release --no-pub
 
             mkdir -p "$out/libexec/zkool" "$out/bin"
@@ -273,12 +323,16 @@
 
         packages = {
           cargo-vendor = pkgs.stdenv.mkDerivation {
-            name = "zkool-cargo-vendor";
+            # Cargo.lock hash in the name — same rationale as pubCache: a lock
+            # change must not be masked by a Cachix hit on the old store path.
+            name = "zkool-cargo-vendor-${
+              builtins.substring 0 12 (builtins.hashFile "sha256" ./Cargo.lock)
+            }";
             src = cargoSrc;
             nativeBuildInputs = [ rustToolchain pkgs.git pkgs.cacert ];
             outputHashMode = "recursive";
             outputHashAlgo = "sha256";
-            outputHash = "sha256-Cw1RksSwVtODd0Z/D19LXfd6gXDSvlwI9HhZkp9J4wY=";
+            outputHash = "sha256-akCtLs8ItKCvUb8Eo6sWtb2t5ksr7QiEqgOYwcWjEXs=";
             SSL_CERT_FILE = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
             GIT_SSL_CAINFO = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
             buildCommand = ''

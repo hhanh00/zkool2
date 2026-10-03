@@ -474,10 +474,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_contacts
-      sha256: "1f492c56cf0c64ce5f7eaca4c2d65bce00e3e5b4f0317e4d0acbde8cad112b4f"
+      sha256: da04f2541d03e70070370e3e2a0b11d3cc4ce7c987d39918a4dd4952e6d87ac2
       url: "https://pub.dev"
     source: hosted
-    version: "2.5.0"
+    version: "2.6.0"
   flutter_driver:
     dependency: transitive
     description: flutter
