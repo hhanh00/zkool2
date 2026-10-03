@@ -78,7 +78,8 @@ Zkool is a multi-account wallet for Zcash.
     funds before they can be spent (Zashi, Zingo, ...). Instead,
     Zkool supports address rotation for the users[^2]
 - Your wallet file can be encrypted *at rest*
-- TOR proxy and Onion services for all connections to Zcash servers
+- Selectable direct, Tor, Nym, or external proxy transports for supported
+  Zcash server connections; Tor is used only when the Tor transport is selected
 - Supports Fullnodes and Lightnodes
 
 ## What it does *not* do well
