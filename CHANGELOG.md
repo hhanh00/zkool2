@@ -1,5 +1,24 @@
 # Changelog
 
+## [6.32.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.32.0-rc...zkool-v6.32.0-rc.1) (2026-10-03)
+
+
+### Features
+
+* **graphql:** require database encryption choice ([9c7c562](https://github.com/hhanh00/zkool2/commit/9c7c56216141422cfdef7971ea779c07d18f857c))
+
+
+### Bug Fixes
+
+* **build:** gate flutter-only code to silence graphql build warnings ([b53cada](https://github.com/hhanh00/zkool2/commit/b53cada366f64063d1e471352f88506f86685030))
+* **frost:** abort signing with excess commitments ([270641e](https://github.com/hhanh00/zkool2/commit/270641e7f98de37503966413362e42130e291903))
+* **frost:** reject malformed external messages ([59cf624](https://github.com/hhanh00/zkool2/commit/59cf62406b0bd20f12c3dd200065f5bfdfbea565))
+* **graphql:** authorize frost mutations ([34170a5](https://github.com/hhanh00/zkool2/commit/34170a5b253f6f5a979d4afd4762d6e8c0a1c3a4))
+* **graphql:** bind wallet API to loopback by default ([554489c](https://github.com/hhanh00/zkool2/commit/554489c420176b15708bea3fa5eeb4f72aef250c))
+* **graphql:** require explicit unauthenticated mode ([df8dd4f](https://github.com/hhanh00/zkool2/commit/df8dd4f4dc6cfcf20c8ae58fe04f20ef20d35c69))
+* **graphql:** validate frost integer conversions ([31fdf31](https://github.com/hhanh00/zkool2/commit/31fdf319fc0b0b55500a23faa853b9034b2eb1ad))
+* **nix:** follow rust-toolchain.toml, CI flutter, and dependency locks ([#1288](https://github.com/hhanh00/zkool2/issues/1288)) ([296e2b9](https://github.com/hhanh00/zkool2/commit/296e2b961c7b97886af01d471839b2f95d54c331))
+
 ## [6.32.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.31.0...zkool-v6.32.0-rc) (2026-10-02)
 
 
