@@ -476,16 +476,30 @@ pub async fn do_sign_impl(
             return Ok(());
         }
 
-        // we are the coordinator, let's try to make the sigpackages
-        let mut tx = connection.begin().await?;
-        // Load signing key for message authentication (if available)
-        let signing_key = load_signing_key(&mut *tx, account).await?;
-        let mut recipients = vec![];
+        // We require the participants to agree on exactly t signers out of band.
+        // Receiving more commitments means that agreement was not followed, so
+        // abort instead of choosing a signing set on the participants' behalf.
+        if let Some((idx, commitments)) = commitments_vec
+            .iter()
+            .enumerate()
+            .find(|(_, commitments)| commitments.len() > dkg_params.t as usize)
+        {
+            let commitment_count = commitments.len();
+            info!(
+                "Aborting signing for input {idx}: received {commitment_count} commitments, expected exactly {}",
+                dkg_params.t
+            );
+            delete_frost_state(&mut *connection).await?;
+            anyhow::bail!(
+                "Signing aborted: received {commitment_count} commitments for input {idx}, expected exactly {}. Participants must agree on the signing set out of band",
+                dkg_params.t
+            );
+        }
 
+        // Fewer than t commitments is expected while the selected participants
+        // are still publishing theirs, so keep waiting.
         for (idx, c) in commitments_vec.iter().enumerate() {
-            // each sigpackage needs t commitments
-            // if we don't have them, bail out
-            if c.len() != dkg_params.t as usize {
+            if c.len() < dkg_params.t as usize {
                 info!(
                     "Not enough commitments for input {idx}: {}/{}",
                     c.len(),
@@ -494,6 +508,15 @@ pub async fn do_sign_impl(
                 status.send(SigningStatus::WaitingForCommitments).await;
                 return Ok(());
             }
+        }
+
+        // we are the coordinator, let's make the sigpackages
+        let mut tx = connection.begin().await?;
+        // Load signing key for message authentication (if available)
+        let signing_key = load_signing_key(&mut *tx, account).await?;
+        let mut recipients = vec![];
+
+        for (idx, c) in commitments_vec.iter().enumerate() {
             // build the sigpackage for this input and store it
             // note that it will be kept in the database only if we successfully sent it out
             // because of the db transaction
