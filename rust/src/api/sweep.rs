@@ -3,6 +3,7 @@ use tokio_util::sync::CancellationToken;
 
 #[cfg(feature = "flutter")]
 use crate::frb_generated::StreamSink;
+#[cfg(feature = "flutter")]
 use crate::{api::coin::Coin, sync::transparent_sweep};
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;

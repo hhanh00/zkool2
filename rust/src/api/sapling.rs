@@ -1,6 +1,7 @@
 use std::path::PathBuf;
-use std::time::Duration;
 use std::sync::OnceLock;
+#[cfg(not(feature = "bundled-sapling-params"))]
+use std::time::Duration;
 
 use anyhow::Result;
 #[cfg(not(feature = "bundled-sapling-params"))]
