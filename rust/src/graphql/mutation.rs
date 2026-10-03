@@ -310,6 +310,7 @@ impl Mutation {
         id_participant: i32,
         context: &Context,
     ) -> FieldResult<String> {
+        check_auth(context, message_account, true)?;
         crate::graphql::frost::dkg_start(
             name,
             threshold,
@@ -322,6 +323,7 @@ impl Mutation {
     }
 
     pub async fn dkg_cancel(context: &Context) -> FieldResult<bool> {
+        check_admin_auth(context)?;
         crate::graphql::frost::dkg_cancel(context).await
     }
 
@@ -330,10 +332,12 @@ impl Mutation {
         address: String,
         context: &Context,
     ) -> FieldResult<bool> {
+        check_admin_auth(context)?;
         crate::graphql::frost::dkg_set_address(id_participant, address, context).await
     }
 
     pub async fn do_dkg(context: &Context) -> FieldResult<bool> {
+        check_admin_auth(context)?;
         crate::graphql::frost::do_dkg(context).await
     }
 
@@ -344,6 +348,7 @@ impl Mutation {
         pczt: String,
         context: &Context,
     ) -> FieldResult<bool> {
+        check_auth(context, id_account, true)?;
         crate::graphql::frost::frost_sign(
             id_coordinator,
             id_account,
@@ -387,6 +392,7 @@ impl Mutation {
     }
 
     pub async fn frost_cancel(context: &Context) -> FieldResult<bool> {
+        check_admin_auth(context)?;
         let mut connection = context.coin.get_connection().await?;
         crate::frost::dkg::delete_frost_state(&mut connection).await?;
         Ok(true)
