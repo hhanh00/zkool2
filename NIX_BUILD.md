@@ -58,7 +58,9 @@ Server binary, mirroring `.github/workflows/build-graphql.yml`:
 
 ```bash
 nix build .#zkool-graphql
-./result/bin/zkool_graphql -d zkool.db -p 8000 -l http://localhost:8137
+./result/bin/zkool_graphql -d zkool.db -p 8000 -l http://localhost:8137 \
+  --db-password-file /path/to/db-password \
+  --jwt-public-key-file /path/to/jwt-public.pem
 ```
 
 Built with the vendored cargo sources (`cargoHash`) so it needs no network.

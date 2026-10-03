@@ -1,6 +1,6 @@
-use std::sync::Arc;
+use std::{io::Read, sync::Arc};
 
-use anyhow::Result;
+use anyhow::{Context as _, Result};
 use clap::Parser;
 use figment::providers::{Format, Serialized, Toml};
 use figment::Figment;
@@ -32,6 +32,15 @@ pub struct Config {
     pub config_path: Option<String>,
     #[clap(short, long, value_parser)]
     pub db_path: Option<String>,
+    /// Read the database encryption password from this file.
+    #[clap(long, value_parser, conflicts_with_all = ["db_password_stdin", "allow_unencrypted_database"])]
+    pub db_password_file: Option<String>,
+    /// Read the database encryption password from standard input.
+    #[clap(long, value_parser, default_missing_value = "true", num_args = 0..=1, require_equals = false, conflicts_with_all = ["db_password_file", "allow_unencrypted_database"])]
+    pub db_password_stdin: Option<bool>,
+    /// Explicitly allow opening or creating an unencrypted database.
+    #[clap(long, value_parser, default_missing_value = "true", num_args = 0..=1, require_equals = false, conflicts_with_all = ["db_password_file", "db_password_stdin"])]
+    pub allow_unencrypted_database: Option<bool>,
     #[clap(short, long, value_parser)]
     pub lwd_url: Option<String>,
     #[clap(short, long, value_parser)]
@@ -71,6 +80,56 @@ fn validate_auth_config(
     Ok(())
 }
 
+#[derive(Debug, PartialEq)]
+enum DatabasePasswordSource<'a> {
+    File(&'a str),
+    Stdin,
+    Unencrypted,
+}
+
+fn database_password_source(
+    db_password_file: Option<&str>,
+    db_password_stdin: bool,
+    allow_unencrypted_database: bool,
+) -> Result<DatabasePasswordSource<'_>> {
+    let configured_sources = usize::from(db_password_file.is_some())
+        + usize::from(db_password_stdin)
+        + usize::from(allow_unencrypted_database);
+
+    if configured_sources != 1 {
+        anyhow::bail!(
+            "exactly one database password option is required: --db-password-file <PATH>, \
+             --db-password-stdin, or --allow-unencrypted-database"
+        );
+    }
+
+    Ok(match db_password_file {
+        Some(path) => DatabasePasswordSource::File(path),
+        None if db_password_stdin => DatabasePasswordSource::Stdin,
+        None => DatabasePasswordSource::Unencrypted,
+    })
+}
+
+fn read_database_password(source: DatabasePasswordSource<'_>) -> Result<Option<String>> {
+    let password = match source {
+        DatabasePasswordSource::File(path) => std::fs::read_to_string(path)
+            .with_context(|| format!("failed to read database password file {path}"))?,
+        DatabasePasswordSource::Stdin => {
+            let mut password = String::new();
+            std::io::stdin()
+                .read_to_string(&mut password)
+                .context("failed to read database password from stdin")?;
+            password
+        }
+        DatabasePasswordSource::Unencrypted => return Ok(None),
+    };
+    let password = password.trim_end_matches(['\r', '\n']).to_string();
+    if password.is_empty() {
+        anyhow::bail!("database password must not be empty");
+    }
+    Ok(Some(password))
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     rustls::crypto::ring::default_provider()
@@ -95,6 +154,9 @@ async fn main() -> Result<()> {
         .extract()?;
     let Config {
         db_path,
+        db_password_file,
+        db_password_stdin,
+        allow_unencrypted_database,
         lwd_url,
         port,
         jwt_public_key_file,
@@ -154,6 +216,12 @@ async fn main() -> Result<()> {
     let allow_unauthenticated = allow_unauthenticated.unwrap_or_default();
 
     validate_auth_config(jwt_public_key_file.as_deref(), allow_unauthenticated)?;
+    let database_password_source = database_password_source(
+        db_password_file.as_deref(),
+        db_password_stdin.unwrap_or_default(),
+        allow_unencrypted_database.unwrap_or_default(),
+    )?;
+    let database_password = read_database_password(database_password_source)?;
 
     let decoding_key = jwt_public_key_file
         .map(|path| {
@@ -187,7 +255,7 @@ async fn main() -> Result<()> {
     let server_type: u8 = if zebra { 1 } else { 0 };
     tracing::info!("db_path {db_path} lwd_url {lwd_url} port {port} zebra {zebra}");
     let coin = Coin::new(coin)
-        .open_database(db_path, None)
+        .open_database(db_path, database_password)
         .await?
         .set_lwd(server_type, lwd_url)?;
 
@@ -268,7 +336,7 @@ async fn main() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::{validate_auth_config, Config};
+    use super::{database_password_source, validate_auth_config, Config, DatabasePasswordSource};
     use clap::Parser;
 
     #[test]
@@ -292,5 +360,41 @@ mod tests {
 
         assert_eq!(config.allow_unauthenticated, Some(true));
         validate_auth_config(None, config.allow_unauthenticated.unwrap_or_default()).unwrap();
+    }
+
+    #[test]
+    fn database_password_source_is_required() {
+        let error = database_password_source(None, false, false).unwrap_err();
+        assert!(error
+            .to_string()
+            .contains("exactly one database password option is required"));
+    }
+
+    #[test]
+    fn database_password_options_select_the_expected_source() {
+        assert_eq!(
+            database_password_source(Some("password.txt"), false, false).unwrap(),
+            DatabasePasswordSource::File("password.txt")
+        );
+        assert_eq!(
+            database_password_source(None, true, false).unwrap(),
+            DatabasePasswordSource::Stdin
+        );
+        assert_eq!(
+            database_password_source(None, false, true).unwrap(),
+            DatabasePasswordSource::Unencrypted
+        );
+    }
+
+    #[test]
+    fn database_password_options_are_mutually_exclusive() {
+        assert!(Config::try_parse_from([
+            "graphql-cli",
+            "--db-password-file",
+            "password.txt",
+            "--db-password-stdin",
+        ])
+        .is_err());
+        assert!(database_password_source(Some("password.txt"), true, false).is_err());
     }
 }
