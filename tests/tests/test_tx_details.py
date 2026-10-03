@@ -89,7 +89,17 @@ async def test_transaction_details(gql_client_factory, rpc_url, seed, zkool_bina
         env = os.environ.copy()
         env["RUST_BACKTRACE"] = "full"
         process = subprocess.Popen(
-            [zkool_binary, "-d", DB_PATH, "-p", str(PORT), "-l", lwd_url],
+            [
+                zkool_binary,
+                "-d",
+                DB_PATH,
+                "-p",
+                str(PORT),
+                "-l",
+                lwd_url,
+                "--allow-unauthenticated",
+                "--allow-unencrypted-database",
+            ],
             stdout=open(LOG_PATH, "w"),
             stderr=subprocess.STDOUT,
             env=env,

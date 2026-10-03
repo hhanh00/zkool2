@@ -125,7 +125,17 @@ async def start_zkool_instance(
     env = os.environ.copy()
     env["RUST_BACKTRACE"] = "full"
 
-    cmd = [zkool_binary, "-d", db_path, "-p", str(port), "-l", lwd_url]
+    cmd = [
+        zkool_binary,
+        "-d",
+        db_path,
+        "-p",
+        str(port),
+        "-l",
+        lwd_url,
+        "--allow-unauthenticated",
+        "--allow-unencrypted-database",
+    ]
     if zebra:
         cmd.append("--zebra")
     if coin is not None:
