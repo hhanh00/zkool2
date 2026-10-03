@@ -1,4 +1,5 @@
 use anyhow::Result;
+#[cfg(feature = "flutter")]
 use tokio::runtime::Runtime;
 pub use tokio_util::sync::CancellationToken;
 
@@ -73,6 +74,7 @@ pub enum MempoolMsg {
 
 #[cfg_attr(feature = "flutter", frb(opaque))]
 pub struct Mempool {
+    #[cfg(feature = "flutter")]
     runtime: Runtime,
     cancel_token: Option<CancellationToken>,
 }
@@ -80,12 +82,12 @@ pub struct Mempool {
 impl Mempool {
     #[cfg_attr(feature = "flutter", frb(sync))]
     pub fn new() -> Self {
-        let runtime = tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()
-            .expect("Failed to create tokio runtime");
         Mempool {
-            runtime,
+            #[cfg(feature = "flutter")]
+            runtime: tokio::runtime::Builder::new_multi_thread()
+                .enable_all()
+                .build()
+                .expect("Failed to create tokio runtime"),
             cancel_token: None,
         }
     }

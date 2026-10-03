@@ -1,18 +1,26 @@
-use std::sync::{Mutex, OnceLock};
+use std::sync::OnceLock;
 
-use tracing::{level_filters::LevelFilter, Event, Level, Subscriber};
+use tracing::level_filters::LevelFilter;
+#[cfg(feature = "flutter")]
+use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::{
-    field::MakeVisitor,
-    fmt::{
-        self,
-        format::{FmtSpan, Writer},
-    },
-    layer::{Context, Layered, SubscriberExt as _},
-    registry::LookupSpan,
+    fmt::{self, format::FmtSpan},
+    layer::Layered,
     reload,
-    util::SubscriberInitExt as _,
     EnvFilter, Layer, Registry,
 };
+
+#[cfg(feature = "flutter")]
+use tracing_subscriber::{
+    field::MakeVisitor,
+    fmt::format::Writer,
+    layer::{Context, SubscriberExt as _},
+    registry::LookupSpan,
+    util::SubscriberInitExt as _,
+};
+
+#[cfg(feature = "flutter")]
+use std::sync::Mutex;
 
 #[cfg(feature = "flutter")]
 use crate::frb_generated::StreamSink;
@@ -94,6 +102,7 @@ where
     FrbLogger {}.boxed()
 }
 
+#[cfg(feature = "flutter")]
 struct FrbLogger;
 
 #[cfg(feature = "flutter")]
