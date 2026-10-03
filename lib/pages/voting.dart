@@ -117,7 +117,7 @@ class _VotingRoundTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final details = <String>[
-      if (round.snapshotHeight case final height?) 'Snapshot height $height',
+      if (round.snapshotHeight case final height) 'Snapshot height $height',
       '${round.bundleCount} bundle${round.bundleCount == 1 ? '' : 's'}',
     ];
     // Submission truth comes from the drive registry, not the round list:
