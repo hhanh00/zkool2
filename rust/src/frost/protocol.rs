@@ -364,6 +364,11 @@ pub async fn decode_dkg_memos<R: Round>(
     account: u32,
     mailbox_account: u32,
 ) -> Result<()> {
+    let (participant_count,) =
+        sqlx::query_as::<_, (u8,)>("SELECT n FROM dkg_params WHERE account = ?")
+            .bind(account)
+            .fetch_one(&mut *conn)
+            .await?;
     let pkgs = sqlx::query("SELECT memo_bytes FROM memos WHERE account = ?")
         .bind(mailbox_account)
         .map(|row: SqliteRow| {
@@ -383,6 +388,13 @@ pub async fn decode_dkg_memos<R: Round>(
         .await?;
 
     for msg in pkgs.into_iter().flatten() {
+        if !(1..=participant_count).contains(&msg.from_id) {
+            info!(
+                "ignoring DKG memo with invalid participant id {}",
+                msg.from_id
+            );
+            continue;
+        }
         if let Ok(public) = R::Public::from_bytes(&msg.data) {
             R::store_public(conn, account, msg.from_id, &public).await?;
         }

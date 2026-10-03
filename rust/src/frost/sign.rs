@@ -270,12 +270,25 @@ pub async fn do_sign_impl(
     // commitments are privately received by the coordinator
     // the participants will not get get anything
     info!("sign: Phase 1 - Processing commitments");
+    let commitment_sighash = sighash.clone();
+    let participant_count = dkg_params.n as u16;
     decode_memos(
         connection,
         account,
         mailbox_account,
         COMMITMENT_PREFIX,
         async move |connection: &mut SqliteConnection, account, pkg: &FrostSigMessage| {
+            if pkg.sighash.as_slice() != commitment_sighash.as_slice()
+                || pkg.idx >= nsigs
+                || !(1..=participant_count).contains(&pkg.from_id)
+                || SigningCommitments::<P>::deserialize(&pkg.data).is_err()
+            {
+                info!(
+                    "sign: ignoring invalid commitment memo from participant {}",
+                    pkg.from_id
+                );
+                return Ok(());
+            }
             info!("sign: decoded commitment memo from participant {}", pkg.idx);
             sqlx::query("INSERT INTO frost_commitments(account, sighash, idx, from_id, commitment) VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING")
                 .bind(account)
@@ -405,14 +418,39 @@ pub async fn do_sign_impl(
     // Process sigpackages - there is one sigpackage per signature
     // This is for the participants other than the coordinator
     // The coordinator will produce the sigpackages
+    let sigpackage_sighash = sighash.clone();
+    let coordinator = params.coordinator as u16;
     decode_memos(
         connection,
         account,
         broadcast_account,
         SIGPACKAGE_PREFIX,
         async move |connection: &mut SqliteConnection, account, pkg: &FrostSigMessage| {
-            let randomized_sigpackage: RandomizedSigPackage =
-                bincode::decode_from_slice(&pkg.data, config::legacy()).unwrap().0;
+            if pkg.sighash.as_slice() != sigpackage_sighash.as_slice()
+                || pkg.idx >= nsigs
+                || pkg.from_id != coordinator
+            {
+                info!(
+                    "sign: ignoring invalid signing-package memo from participant {}",
+                    pkg.from_id
+                );
+                return Ok(());
+            }
+            let Ok((randomized_sigpackage, _)) =
+                bincode::decode_from_slice::<RandomizedSigPackage, _>(
+                    &pkg.data,
+                    config::legacy(),
+                )
+            else {
+                info!("sign: ignoring malformed signing-package memo");
+                return Ok(());
+            };
+            if SigningPackage::<P>::deserialize(&randomized_sigpackage.sigpackage).is_err()
+                || Randomizer::deserialize(&randomized_sigpackage.randomizer).is_err()
+            {
+                info!("sign: ignoring invalid signing-package payload");
+                return Ok(());
+            }
             sqlx::query("UPDATE frost_signatures SET sigpackage = ?1, randomizer = ?2 WHERE account = ?3 AND sighash = ?4 AND idx = ?5")
                 .bind(&randomized_sigpackage.sigpackage)
                 .bind(&randomized_sigpackage.randomizer)
@@ -647,12 +685,25 @@ pub async fn do_sign_impl(
     }
 
     // add sigshares from the mailbox
+    let sigshare_sighash = sighash.clone();
+    let participant_count = dkg_params.n as u16;
     decode_memos(
         connection,
         account,
         mailbox_account,
         SIGSHARE_PREFIX,
         async move |connection: &mut SqliteConnection, account, pkg: &FrostSigMessage| {
+            if pkg.sighash.as_slice() != sigshare_sighash.as_slice()
+                || pkg.idx >= nsigs
+                || !(1..=participant_count).contains(&pkg.from_id)
+                || SignatureShare::<P>::deserialize(&pkg.data).is_err()
+            {
+                info!(
+                    "sign: ignoring invalid signature-share memo from participant {}",
+                    pkg.from_id
+                );
+                return Ok(());
+            }
             sqlx::query("UPDATE frost_commitments SET sigshare = ?1 WHERE account = ?2 AND sighash = ?3 AND idx = ?4 AND from_id = ?5")
                 .bind(&pkg.data)
                 .bind(account)
