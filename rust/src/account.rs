@@ -104,7 +104,7 @@ pub async fn new_account(
         key = generate_seed()?;
     }
 
-    let pools = na.pools.unwrap_or(ALL_POOLS);
+    let pools = na.pools.unwrap_or_else(|| default_pools(ledger_kind));
     if pools == 0 {
         anyhow::bail!("an account must support at least one pool");
     }
@@ -473,6 +473,36 @@ pub async fn new_account(
 
     db_tx.commit().await?;
     Ok(account)
+}
+
+fn default_pools(hw: HwKind) -> u8 {
+    match hw {
+        HwKind::Zondax => POOL_TRANSPARENT | POOL_SAPLING,
+        HwKind::Official => POOL_TRANSPARENT | POOL_IRONWOOD,
+        HwKind::Software => ALL_POOLS,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::default_pools;
+    use crate::{
+        ledger::HwKind,
+        pay::pool::{ALL_POOLS, POOL_IRONWOOD, POOL_SAPLING, POOL_TRANSPARENT},
+    };
+
+    #[test]
+    fn account_pool_defaults_match_wallet_kind() {
+        assert_eq!(default_pools(HwKind::Software), ALL_POOLS);
+        assert_eq!(
+            default_pools(HwKind::Zondax),
+            POOL_TRANSPARENT | POOL_SAPLING
+        );
+        assert_eq!(
+            default_pools(HwKind::Official),
+            POOL_TRANSPARENT | POOL_IRONWOOD
+        );
+    }
 }
 
 pub fn derive_transparent_sk(tsk: &AccountPrivKey, scope: u32, dindex: u32) -> Result<Vec<u8>> {

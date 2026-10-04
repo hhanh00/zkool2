@@ -23,12 +23,14 @@ pub struct Mutation {}
 #[derive(GraphQLInputObject)]
 pub struct NewAccount {
     pub name: String,
-    pub key: String,
+    /// Omit to import the public keys from a Ledger device when `hw` is set.
+    pub key: Option<String>,
     pub passphrase: Option<String>,
     pub aindex: i32,
     pub birth: Option<i32>,
     pub pools: Option<i32>,
     pub use_internal: bool,
+    /// Hardware wallet kind: 1 for the legacy Zondax app, 2 for the Official app.
     pub hw: Option<i32>,
 }
 
@@ -111,7 +113,7 @@ impl Mutation {
         let na = crate::api::account::NewAccount {
             name: new_account.name,
             restore: false,
-            key: new_account.key,
+            key: new_account.key.unwrap_or_default(),
             passphrase: new_account.passphrase,
             fingerprint: None,
             icon: None,
