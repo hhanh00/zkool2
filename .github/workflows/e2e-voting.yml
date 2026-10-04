@@ -14,6 +14,8 @@ jobs:
 
   zkool-graphql:
     uses: ./.github/workflows/zkool-graphql-build.yml
+    with:
+      ledger-transport: zemu
 
   ironwood-wallet:
     needs: [zkool-graphql, regtest-tools]
@@ -41,7 +43,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: target/release/zkool_graphql
-          key: ${{ runner.os }}-zkool-graphql-${{ hashFiles('Cargo.lock', 'rust/Cargo.toml', 'rust/src/**', 'lib/**/*.dart', 'pubspec.yaml', 'pubspec.lock') }}
+          key: ${{ runner.os }}-zkool-graphql-zemu-${{ hashFiles('Cargo.lock', 'rust/Cargo.toml', 'rust/src/**', 'lib/**/*.dart', 'pubspec.yaml', 'pubspec.lock') }}
 
       - name: Restore svoted and nf-server
         id: voting-services-cache

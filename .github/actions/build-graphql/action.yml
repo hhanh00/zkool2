@@ -6,6 +6,10 @@ inputs:
     description: Cargo profile (release or debug)
     required: false
     default: release
+  ledger-transport:
+    description: Ledger transport to compile (ledger for HID or zemu for HTTP)
+    required: false
+    default: ledger
 
 runs:
   using: composite
@@ -20,9 +24,14 @@ runs:
       shell: bash
       env:
         BUILD_PROFILE: ${{ inputs.profile }}
+        LEDGER_TRANSPORT: ${{ inputs.ledger-transport }}
       run: |
         set -euo pipefail
-        args=(build --bin zkool_graphql --no-default-features --features=graphql,bundled-sapling-params)
+        if [[ "$LEDGER_TRANSPORT" != "ledger" && "$LEDGER_TRANSPORT" != "zemu" ]]; then
+          echo "ledger-transport must be ledger or zemu" >&2
+          exit 2
+        fi
+        args=(build --bin zkool_graphql --no-default-features --features="graphql,bundled-sapling-params,$LEDGER_TRANSPORT")
         if [[ "$BUILD_PROFILE" == "release" ]]; then
           args+=(--release)
         elif [[ "$BUILD_PROFILE" != "debug" ]]; then
