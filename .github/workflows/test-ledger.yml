@@ -5,35 +5,81 @@ on:
   pull_request:
 
 jobs:
-  emulator:
+  regtest-tools:
+    uses: ./.github/workflows/regtest-tools-build.yml
+
+  zkool-graphql:
+    uses: ./.github/workflows/zkool-graphql-build.yml
+    with:
+      ledger-transport: zemu
+
+  ledger:
+    needs: [zkool-graphql, regtest-tools]
     runs-on: ubuntu-latest
     env:
-      ZEMU_MOCK: 1
-      LEDGER_SEED: display accident enable raw glimpse engine know fog bubble price bunker minimum entry tuna joy motor rate tennis evolve october verb jelly indoor dance
+      MOCK_LEDGER_REV: 17e2ee509fcdf3520bf4517745fcd07b520484a5
+      REGTEST_SEED: invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic
+      EXPECTED_LEDGER_TRANSPARENT: tmTwitXJUdqibPLZfxUNApVTmghUJKAgJo5
+      EXPECTED_LEDGER_ADDRESS: uregtest13fry8k623g3alt5gv9akkl9kyqye9smlccnsgxjk0t7868axa5ptmr8c33szmcatw2e78pghqrq238ma0rp5djukh49pd7ntzcztm35q
     steps:
       - name: Install RUST
         uses: dtolnay/rust-toolchain@stable
+
       - name: Checkout code
         uses: actions/checkout@v6
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libudev-dev pkg-config protobuf-compiler
-      - name: Cache cargo artifacts
-        uses: Swatinem/rust-cache@v2
+
+      - name: Setup regtest
+        uses: ./.github/actions/zebra
         with:
-          workspaces: rust
+          MINER_SEED: "burger voice warrior danger satoshi you solid atom elite alcohol category layer able debate culture talk tissue language hip surge fiction paddle stove voyage"
+          MINER_ADDRESS: "tmQ1BiNRfsvT6eMkJ5n7nMZsbz1PGwCs1Zs"
+          SEED: ${{ env.REGTEST_SEED }}
+          DESTINATION_ADDRESS: ${{ env.EXPECTED_LEDGER_ADDRESS }}
+
+      - name: Restore zkool_graphql
+        uses: actions/cache/restore@v5
+        with:
+          path: target/release/zkool_graphql
+          key: ${{ runner.os }}-zkool-graphql-zemu-${{ hashFiles('Cargo.lock', 'rust/Cargo.toml', 'rust/src/**', 'lib/**/*.dart', 'pubspec.yaml', 'pubspec.lock') }}
+
       - name: Checkout mock Ledger
         uses: actions/checkout@v6
         with:
           repository: hhanh00/mock-ledger-zcash
+          ref: ${{ env.MOCK_LEDGER_REV }}
           path: mock-ledger-zcash
+
+      - name: Restore mock Ledger
+        id: mock-ledger-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: mock-ledger-zcash/target/release/mock-ledger-zcash
+          key: ${{ runner.os }}-mock-ledger-zcash-${{ env.MOCK_LEDGER_REV }}
+
+      - name: Install mock Ledger build dependencies
+        if: steps.mock-ledger-cache.outputs.cache-hit != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y protobuf-compiler
+
+      - name: Build mock Ledger
+        if: steps.mock-ledger-cache.outputs.cache-hit != 'true'
+        run: cargo build --manifest-path mock-ledger-zcash/Cargo.toml --release
+
+      - name: Save mock Ledger
+        if: steps.mock-ledger-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: mock-ledger-zcash/target/release/mock-ledger-zcash
+          key: ${{ steps.mock-ledger-cache.outputs.cache-primary-key }}
+
       - name: Start mock Ledger
         run: |
-          cargo run --manifest-path mock-ledger-zcash/Cargo.toml --release -- \
-            --seed-phrase "$LEDGER_SEED" > /tmp/mock-ledger-zcash.log 2>&1 &
+          mock-ledger-zcash/target/release/mock-ledger-zcash \
+            --network regtest \
+            --seed-phrase "$REGTEST_SEED" > /tmp/mock-ledger-zcash.log 2>&1 &
           echo $! > /tmp/mock-ledger-zcash.pid
-          for _ in $(seq 1 60); do
+          for _ in $(seq 1 30); do
             if curl --silent --fail --max-time 1 -X POST http://127.0.0.1:9999 \
               -H 'Content-Type: application/json' -d '{"apduHex": "e0c4000000"}' \
               >/tmp/mock-ledger-response.json; then
@@ -43,18 +89,16 @@ jobs:
           done
           cat /tmp/mock-ledger-zcash.log
           exit 1
-      - name: Verify mock Ledger
+
+      - name: Run Ledger binary test
         run: |
-          response=$(curl -sS --fail -m 5 -X POST http://127.0.0.1:9999 \
-            -H 'Content-Type: application/json' -d '{"apduHex": "e0c4000000"}')
-          echo "$response"
-          echo "$response" | jq -e '.data == "38302e302e309000" and .error == null'
-      - name: Run ledger tests
-        run: |
-          cd rust
-          cargo test --no-default-features --features zemu -- --ignored --nocapture ledger_app_version
-          cargo test --no-default-features --features zemu -- --ignored --nocapture ledger_get_ufvk
-          cargo test --no-default-features --features zemu -- --ignored --nocapture ledger_account_import
-      - name: Dump mock Ledger log on failure
+          cd tests
+          pip install uv
+          uv sync --all-groups
+          uv run pytest tests/test_ledger.py -v -s
+
+      - name: Dump logs on failure
         if: failure()
-        run: cat /tmp/mock-ledger-zcash.log || true
+        run: |
+          cat /tmp/mock-ledger-zcash.log || true
+          cat /tmp/graphql_ledger.log || true
