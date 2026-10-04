@@ -18,7 +18,7 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install -y libudev-dev pkg-config
+        sudo apt-get install -y libudev-dev pkg-config protobuf-compiler
 
     - name: Build zkool_graphql
       shell: bash
