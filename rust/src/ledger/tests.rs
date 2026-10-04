@@ -2,6 +2,10 @@ use crate::ledger::transport::{APDUCommand, Device, LEDGER_ZEMU};
 
 use super::*;
 
+fn mock_backend() -> bool {
+    std::env::var_os("ZEMU_MOCK").is_some()
+}
+
 /// Speculos REST API port for the device screen/buttons (see run-emulator.sh).
 fn ui_port() -> u16 {
     std::env::var("ZEMU_UI_PORT")
@@ -73,6 +77,9 @@ fn screen_text() -> String {
 /// really finished when the host gets its answer: the app needs a moment to
 /// return to ready, and APDUs sent in that window are dropped.
 fn wait_until_ready(timeout: std::time::Duration) -> bool {
+    if mock_backend() {
+        return true;
+    }
     let deadline = std::time::Instant::now() + timeout;
     while std::time::Instant::now() < deadline {
         if screen_text().to_lowercase().contains("app is ready") {
@@ -90,6 +97,9 @@ fn wait_until_ready(timeout: std::time::Duration) -> bool {
 /// and retires as soon as the app is back on the home screen, so it never
 /// outlives the interaction it was spawned for.
 fn spawn_approval_driver() {
+    if mock_backend() {
+        return;
+    }
     std::thread::spawn(|| {
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(120);
         while std::time::Instant::now() < deadline {
@@ -180,8 +190,9 @@ pub async fn ledger_get_ufvk() -> LedgerResult<()> {
 
 /// Create an Official Ledger account (hw=2, no seed phrase) against the
 /// device and check that the stored keys match the device UFVK.
-/// Needs the emulator up, seeded with EMULATOR_SEED (see ledger_get_ufvk):
-/// `ZEMU_UI_PORT=5001 cargo test --features zemu -- --ignored --nocapture ledger_account_import`
+/// Needs a backend seeded with EMULATOR_SEED (see ledger_get_ufvk). For the
+/// mock server, set `ZEMU_MOCK=1` to disable Speculos UI automation:
+/// `ZEMU_MOCK=1 cargo test --features zemu -- --ignored --nocapture ledger_account_import`
 #[tokio::test]
 #[ignore]
 pub async fn ledger_account_import() -> LedgerResult<()> {
@@ -218,7 +229,8 @@ pub async fn ledger_account_import() -> LedgerResult<()> {
         aindex: 0,
         birth: None,
         folder: String::new(),
-        pools: Some(crate::pay::pool::POOL_TRANSPARENT | crate::pay::pool::POOL_IRONWOOD),
+        // Exercise the same omitted-pools path used by the GraphQL API.
+        pools: None,
         use_internal: false,
         internal: false,
         hw: HwKind::Official as u8,

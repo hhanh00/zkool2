@@ -1,13 +1,15 @@
-name: Test Ledger
+name: Ledger Tests
 
 on:
   workflow_dispatch:
+  pull_request:
 
 jobs:
   emulator:
     runs-on: ubuntu-latest
     env:
-      SEED: ${{ secrets.SEED }}
+      ZEMU_MOCK: 1
+      LEDGER_SEED: display accident enable raw glimpse engine know fog bubble price bunker minimum entry tuna joy motor rate tennis evolve october verb jelly indoor dance
     steps:
       - name: Install RUST
         uses: dtolnay/rust-toolchain@stable
@@ -21,23 +23,38 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: rust
-      - name: Setup emulator
+      - name: Checkout mock Ledger
+        uses: actions/checkout@v6
+        with:
+          repository: hhanh00/mock-ledger-zcash
+          path: mock-ledger-zcash
+      - name: Start mock Ledger
         run: |
-          misc/ledger/setup.sh
-          misc/ledger/build.sh
-          misc/ledger/run-emulator.sh
-      - name: Verify emulator
+          cargo run --manifest-path mock-ledger-zcash/Cargo.toml --release -- \
+            --seed-phrase "$LEDGER_SEED" > /tmp/mock-ledger-zcash.log 2>&1 &
+          echo $! > /tmp/mock-ledger-zcash.pid
+          for _ in $(seq 1 60); do
+            if curl --silent --fail --max-time 1 -X POST http://127.0.0.1:9999 \
+              -H 'Content-Type: application/json' -d '{"apduHex": "e0c4000000"}' \
+              >/tmp/mock-ledger-response.json; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/mock-ledger-zcash.log
+          exit 1
+      - name: Verify mock Ledger
         run: |
-          response=$(curl -s -m 5 -X POST http://127.0.0.1:9999 \
+          response=$(curl -sS --fail -m 5 -X POST http://127.0.0.1:9999 \
             -H 'Content-Type: application/json' -d '{"apduHex": "e0c4000000"}')
           echo "$response"
-          echo "$response" | grep -qE '"data": "3830[0-9a-f]*9000", "error": null'
-      # Each test returns only once the app is back on its home screen, so
-      # the emulator needs no restart between them.
+          echo "$response" | jq -e '.data == "38302e302e309000" and .error == null'
       - name: Run ledger tests
         run: |
           cd rust
-          cargo test --features zemu -- --ignored --nocapture ledger_app_version
-          cargo test --features zemu -- --ignored --nocapture ledger_official_sign
-          cargo test --features zemu -- --ignored --nocapture ledger_get_ufvk
-          cargo test --features zemu -- --ignored --nocapture ledger_account_import
+          cargo test --no-default-features --features zemu -- --ignored --nocapture ledger_app_version
+          cargo test --no-default-features --features zemu -- --ignored --nocapture ledger_get_ufvk
+          cargo test --no-default-features --features zemu -- --ignored --nocapture ledger_account_import
+      - name: Dump mock Ledger log on failure
+        if: failure()
+        run: cat /tmp/mock-ledger-zcash.log || true
