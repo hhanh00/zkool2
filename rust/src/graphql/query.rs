@@ -16,7 +16,10 @@ use crate::graphql::data::{
 use crate::graphql::mutation::MEMPOOL;
 use crate::graphql::mutation::{Output, Payment, UnsignedTx};
 use crate::graphql::{check_admin_auth, check_auth, Context};
-use crate::pay::{pool::ALL_POOLS, TxPlan};
+use crate::pay::{
+    pool::{ALL_POOLS, POOL_IRONWOOD, POOL_ORCHARD},
+    TxPlan,
+};
 
 use crate::keys::{SaplingDiversifiedAddress, ScopeExt};
 use bigdecimal::num_bigint::BigInt;
@@ -183,6 +186,39 @@ impl Query {
             total: zats_to_zec(total as i64),
         };
         Ok(balance)
+    }
+
+    /// Export viewing keys for the selected pools (defaults to all available pools).
+    /// Transparent-only selections return an xpub. Ironwood shares Orchard's key.
+    async fn unified_full_viewing_key(
+        id_account: i32,
+        pools: Option<i32>,
+        context: &Context,
+    ) -> FieldResult<String> {
+        check_auth(context, id_account, false)?;
+        let account = u32::try_from(id_account)?;
+        let available = crate::api::account::get_account_pools(account, &context.coin).await?;
+        let pools = pools.unwrap_or(i32::from(available));
+        if pools <= 0 || pools & !i32::from(ALL_POOLS) != 0 {
+            return Err(FieldError::new(
+                "Invalid pool mask: expected 1 through 15",
+                juniper::Value::Null,
+            ));
+        }
+        let pools = pools as u8;
+        if pools & !available != 0 {
+            return Err(FieldError::new(
+                "Selected pools are unavailable for this account",
+                juniper::Value::Null,
+            ));
+        }
+        // Ironwood and Orchard use the same viewing key and UFVK receiver.
+        let key_pools = if pools & POOL_IRONWOOD != 0 {
+            (pools & !POOL_IRONWOOD) | POOL_ORCHARD
+        } else {
+            pools
+        };
+        Ok(crate::api::account::get_account_ufvk(account, key_pools, &context.coin).await?)
     }
 
     async fn address_by_account(

@@ -5,6 +5,7 @@ import os
 
 import pytest
 from gql import GraphQLRequest, gql
+from gql.transport.exceptions import TransportQueryError
 
 from utils import (
     cleanup_test_files,
@@ -81,6 +82,43 @@ async def test_import_ledger_account_via_graphql(gql_client_factory, zkool_binar
             assert int(addresses["diversifierIndex"]) == 0
             assert addresses["transparent"] == expected_transparent
             assert addresses["ironwood"] == expected_address
+
+            # Compare the device-imported viewing key with the same public key
+            # derived in software from the mock device's seed.
+            seed = os.environ["REGTEST_SEED"]
+            result = await client.execute_async(GraphQLRequest(gql("""
+                mutation ($seed: String!) {
+                    createAccount(newAccount: {
+                        name: "Software reference"
+                        key: $seed
+                        aindex: 0
+                        useInternal: false
+                        birth: 1
+                        pools: 9
+                    })
+                }
+            """), variable_values={"seed": seed}))
+            software_id = int(result["createAccount"])
+            viewing_key = gql("""
+                query ($account: Int!, $pools: Int!) {
+                    unifiedFullViewingKey(idAccount: $account, pools: $pools)
+                }
+            """)
+            for pools in (1, 4, 5, 8, 9, 12, 13):
+                device = await client.execute_async(GraphQLRequest(
+                    viewing_key, variable_values={"account": account_id, "pools": pools}
+                ))
+                software = await client.execute_async(GraphQLRequest(
+                    viewing_key, variable_values={"account": software_id, "pools": pools}
+                ))
+                assert device == software
+                assert device["unifiedFullViewingKey"].startswith(
+                    "xpub" if pools == 1 else "uviewregtest1"
+                )
+            with pytest.raises(TransportQueryError, match="unavailable"):
+                await client.execute_async(GraphQLRequest(
+                    viewing_key, variable_values={"account": account_id, "pools": 3}
+                ))
     except Exception:
         dump_server_log(log_path, "ZKOOL GRAPHQL LOG")
         raise
