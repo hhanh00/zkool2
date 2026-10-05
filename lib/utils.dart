@@ -224,8 +224,23 @@ Uint8List stringToTxId(String txid) {
   return Uint8List.fromList(bytes.reversed.toList());
 }
 
+/// Directory used to store user data (databases, vault files, ...).
+///
+/// [getApplicationDocumentsDirectory] shells out to `xdg-user-dir` on Linux and
+/// throws [MissingPlatformDirectoryException] when it is not installed, which
+/// aborts startup with a blank window. Fall back to the application support
+/// directory (`$XDG_DATA_HOME/<app>`, e.g. `~/.local/share/zkool`), which is the
+/// standard location for app data and does not rely on `xdg-user-dir`.
+Future<Directory> getAppDirectory() async {
+  try {
+    return await getApplicationDocumentsDirectory();
+  } on MissingPlatformDirectoryException {
+    return getApplicationSupportDirectory();
+  }
+}
+
 Future<String> getFullDatabasePath(String dbName) async {
-  final dbDir = await getApplicationDocumentsDirectory();
+  final dbDir = await getAppDirectory();
   final dbFilepath = '${dbDir.path}/$dbName.db';
   return dbFilepath;
 }

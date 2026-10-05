@@ -270,6 +270,7 @@
               --prefix LD_LIBRARY_PATH : "$out/libexec/zkool/lib" \
               --prefix PATH : "${lib.makeBinPath [ pkgs.xdg-user-dirs ]}"
           '';
+          meta.mainProgram = "zkool";
         };
 
         # Alternative to zkool-pure: build in the development shell and
