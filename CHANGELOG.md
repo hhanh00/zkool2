@@ -1,5 +1,34 @@
 # Changelog
 
+## [6.32.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.31.0...zkool-v6.32.0) (2026-10-06)
+
+
+### Features
+
+* **graphql:** expose account unified full viewing keys ([#1291](https://github.com/hhanh00/zkool2/issues/1291)) ([abe16a8](https://github.com/hhanh00/zkool2/commit/abe16a8a8013d05dc1d62860ecdb7daaea2dbe21))
+* **graphql:** expose voting API ([#1278](https://github.com/hhanh00/zkool2/issues/1278)) ([2906a32](https://github.com/hhanh00/zkool2/commit/2906a32afbee084cea072e66a529da625dd15561))
+* **graphql:** import Ledger accounts ([fdf108d](https://github.com/hhanh00/zkool2/commit/fdf108d98a7acec2d8a4c84bb7d8f456694f4789))
+* **graphql:** require database encryption choice ([9fb225a](https://github.com/hhanh00/zkool2/commit/9fb225aeb5b7524a748c50d9bc25977f4043cfb9))
+
+
+### Bug Fixes
+
+* **build:** gate flutter-only code to silence graphql build warnings ([4669085](https://github.com/hhanh00/zkool2/commit/4669085038bc2f1b93ae3fbe0eaf3683d6638ce5))
+* **ci:** include Dart sources and pubspec files in GraphQL cache key ([6705d10](https://github.com/hhanh00/zkool2/commit/6705d107e1801cd5dcedb15ba2092330925201b2))
+* **ci:** queue concurrent GraphQL build callers ([16f4deb](https://github.com/hhanh00/zkool2/commit/16f4deb45493059173dcac321d01c9bb419fc5db))
+* **ci:** refresh Nix hashes only for stable releases ([bba143d](https://github.com/hhanh00/zkool2/commit/bba143d88a62267117f25c691de3f89568cb6d9d))
+* **ci:** scope GraphQL concurrency to build job ([61c39c1](https://github.com/hhanh00/zkool2/commit/61c39c18b3f7766f56c0631f599a016a82b257c8))
+* **frost:** abort signing with excess commitments ([d457d3f](https://github.com/hhanh00/zkool2/commit/d457d3f19bc6f6d7027de66b013940e0c6b5c0c9))
+* **frost:** reject malformed external messages ([422292d](https://github.com/hhanh00/zkool2/commit/422292ddd246526cb4e8365eccd6cd467ed2ca27))
+* **graphql:** authorize frost mutations ([f7f8608](https://github.com/hhanh00/zkool2/commit/f7f86081eeac67dc82c587263889d65403e796bf))
+* **graphql:** bind wallet API to loopback by default ([8240bef](https://github.com/hhanh00/zkool2/commit/8240bef36233eb85107c6ee414a9a10df26f96be))
+* **graphql:** require explicit unauthenticated mode ([b895f57](https://github.com/hhanh00/zkool2/commit/b895f57f7bf8a1a10f5c5c01052b32247eca2009))
+* **graphql:** validate frost integer conversions ([47e112e](https://github.com/hhanh00/zkool2/commit/47e112e46a34c0999e248daadf4ea01eb624672c))
+* **nix:** automate release dependency hash updates ([00c0ab8](https://github.com/hhanh00/zkool2/commit/00c0ab891127f300424c5a963b059b7a809483d9))
+* **nix:** follow rust-toolchain.toml, CI flutter, and dependency locks ([#1288](https://github.com/hhanh00/zkool2/issues/1288)) ([de1b320](https://github.com/hhanh00/zkool2/commit/de1b320c1ddf29d51df695475c88c56ac200516c))
+* **nix:** wrap zkool-pure binary so the GUI runs from the cache ([34fd35c](https://github.com/hhanh00/zkool2/commit/34fd35c4c78cdd111d474b78ff2c40921d9c2d6c))
+* show startup errors instead of a blank window ([#1290](https://github.com/hhanh00/zkool2/issues/1290)) ([5cfb41c](https://github.com/hhanh00/zkool2/commit/5cfb41ca1ec63dd7253713e497fc3b59e3401a4e))
+
 ## [6.31.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.30.0...zkool-v6.31.0) (2026-09-27)
 
 
