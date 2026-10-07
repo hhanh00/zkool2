@@ -616,8 +616,8 @@ pub async fn preload_account_key_cache(
         .unwrap();
         let external_ivk = dfvk.fvk().vk.ivk();
         let internal_ivk = dfvk.to_internal_fvk().vk.ivk();
-        let external_nk = dfvk.fvk().vk.nk;
-        let internal_nk = dfvk.to_internal_fvk().vk.nk;
+        let external_nk = *dfvk.fvk().vk.nk();
+        let internal_nk = *dfvk.to_internal_fvk().vk.nk();
         sapling.insert(
             account,
             SaplingAccountKeys {

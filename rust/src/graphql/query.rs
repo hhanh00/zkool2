@@ -516,7 +516,7 @@ fn resolve_note(
             let diversifier_index: Option<u64> = ivk
                 .diversifier_index(&address)
                 .and_then(|d| d.try_into().ok());
-            let ua = UnifiedAddress::from_receivers(Some(address), None, None)
+            let ua = UnifiedAddress::from_receivers(Some(address), None, None, None, None)
                 .ok_or_else(|| "UnifiedAddress::from_receivers returned None".to_string())?;
             (Some(ua.encode(&network)), diversifier_index)
         }

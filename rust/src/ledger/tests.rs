@@ -31,10 +31,7 @@ fn ui_post(path: &str, body: &str) {
 }
 
 fn press_right() {
-    ui_post(
-        "/button/right",
-        r#"{"action": "press-and-release"}"#,
-    );
+    ui_post("/button/right", r#"{"action": "press-and-release"}"#);
 }
 
 fn press_both() {
@@ -58,7 +55,9 @@ fn screen_text() -> String {
         return String::new();
     }
     let body = String::from_utf8_lossy(&buf);
-    let Ok(json) = serde_json::from_str::<serde_json::Value>(body.split("\r\n\r\n").nth(1).unwrap_or("")) else {
+    let Ok(json) =
+        serde_json::from_str::<serde_json::Value>(body.split("\r\n\r\n").nth(1).unwrap_or(""))
+    else {
         return String::new();
     };
     json["events"]
@@ -179,7 +178,10 @@ pub async fn ledger_get_ufvk() -> LedgerResult<()> {
 
     println!("device   : {ufvk}");
     println!("expected : {expected}");
-    assert_eq!(ufvk, expected, "device UFVK does not match the seed-derived key");
+    assert_eq!(
+        ufvk, expected,
+        "device UFVK does not match the seed-derived key"
+    );
     if !wait_until_ready(std::time::Duration::from_secs(30)) {
         return Err(LedgerError::Protocol(
             "device did not return to the home screen".into(),
@@ -329,17 +331,12 @@ pub async fn ledger_app_version() -> LedgerResult<()> {
 pub async fn ledger_official_sign() -> LedgerResult<()> {
     use std::str::FromStr as _;
 
-    use orchard::{
-        note::AssetBase,
-        tree::MerkleHashOrchard,
-    };
+    use orchard::{note::AssetBase, tree::MerkleHashOrchard};
     use pczt::roles::{creator::Creator, io_finalizer::IoFinalizer};
-    use rand_core::OsRng;
+    use rand::rngs::SysRng;
+    use rand_core::UnwrapErr;
     use sqlx::Connection as _;
-    use zcash_keys::{
-        encoding::AddressCodec as _,
-        keys::UnifiedSpendingKey,
-    };
+    use zcash_keys::{encoding::AddressCodec as _, keys::UnifiedSpendingKey};
     use zcash_primitives::transaction::{
         builder::{BuildConfig, Builder, BundlePadding},
         fees::zip317::FeeRule,
@@ -381,8 +378,14 @@ pub async fn ledger_official_sign() -> LedgerResult<()> {
     // empty subtrees of each height.
     use incrementalmerkletree::Hashable as _;
     let fvk = orchard::keys::FullViewingKey::from(usk.orchard());
-    let spend_recipient = fvk.address_at(zip32::DiversifierIndex::from(0u32), orchard::keys::Scope::External);
-    let change_recipient = fvk.address_at(zip32::DiversifierIndex::from(0u32), orchard::keys::Scope::Internal);
+    let spend_recipient = fvk.address_at(
+        zip32::DiversifierIndex::from(0u32),
+        orchard::keys::Scope::External,
+    );
+    let change_recipient = fvk.address_at(
+        zip32::DiversifierIndex::from(0u32),
+        orchard::keys::Scope::Internal,
+    );
     let rho = orchard::note::Rho::from_bytes(&[9u8; 32])
         .into_option()
         .ok_or_else(|| LedgerError::Protocol("bad rho".into()))?;
@@ -404,11 +407,8 @@ pub async fn ledger_official_sign() -> LedgerResult<()> {
     let mut state = MerkleHashOrchard::empty_leaf();
     for (l, sibling) in auth_path.iter_mut().enumerate() {
         *sibling = state;
-        state = MerkleHashOrchard::combine(
-            incrementalmerkletree::Level::from(l as u8),
-            &state,
-            &state,
-        );
+        state =
+            MerkleHashOrchard::combine(incrementalmerkletree::Level::from(l as u8), &state, &state);
     }
     let merkle_path = orchard::tree::MerklePath::from_parts(0, auth_path);
     let anchor = merkle_path.root(cmx);
@@ -442,7 +442,9 @@ pub async fn ledger_official_sign() -> LedgerResult<()> {
         .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("add change: {e:?}")))?;
 
     let r = builder
-        .build_for_pczt(OsRng, &FeeRule::standard(), |_: &AssetBase| false)
+        .build_for_pczt(UnwrapErr(SysRng), &FeeRule::standard(), |_: &AssetBase| {
+            false
+        })
         .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("build_for_pczt: {e:?}")))?;
     let pczt = Creator::build_from_parts(r.pczt_parts)
         .ok_or_else(|| LedgerError::Protocol("creator returned no pczt".into()))?;
@@ -524,8 +526,8 @@ pub async fn ledger_official_sign() -> LedgerResult<()> {
         account,
         &orchard::keys::FullViewingKey::from(usk.orchard()),
     )
-        .await
-        .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("{e}")))?;
+    .await
+    .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("{e}")))?;
     crate::db::update_dindex(&mut connection, account, 0, true)
         .await
         .map_err(|e| LedgerError::Anyhow(anyhow::anyhow!("{e}")))?;

@@ -7,6 +7,8 @@ use bincode::{
 };
 use ed25519_dalek::Signer as Ed25519Signer;
 use ed25519_dalek::{Signature, SigningKey, VerifyingKey, SECRET_KEY_LENGTH};
+use ff::PrimeField as _;
+use ff_legacy::PrimeField as _;
 use frost_rerandomized::{aggregate, sign, RandomizedParams};
 use halo2_proofs::pasta::Fq;
 use pczt::{
@@ -16,8 +18,8 @@ use pczt::{
     },
     Pczt,
 };
-use rand_core::OsRng;
-use reddsa::frost::redpallas::{
+use rand_core_legacy::OsRng;
+use reddsa_legacy::frost::redpallas::{
     frost::{
         keys::{KeyPackage, PublicKeyPackage},
         round1::{SigningCommitments, SigningNonces},
@@ -547,7 +549,10 @@ pub async fn do_sign_impl(
                     .unwrap();
             }
 
-            let randomizer = Randomizer::from_scalar(alpha);
+            let randomizer = Randomizer::from_scalar(
+                pasta_curves_legacy::Fq::from_repr(alpha.to_repr())
+                    .expect("same canonical Pallas scalar encoding"),
+            );
             let sigpackage = sigpackage.serialize()?;
             sqlx::query(
                 "UPDATE frost_signatures SET sigpackage = ?1, randomizer = ?2 WHERE account = ?3 AND sighash = ?4 AND idx = ?5",
@@ -807,11 +812,15 @@ pub async fn do_sign_impl(
 
         let orchard_pk = get_orchard_pk(*pczt.global().consensus_branch_id())?;
         let pczt = Prover::new(pczt)
-            .create_sapling_proofs(sapling_prover, sapling_prover)
+            .create_sapling_proofs(
+                rand_core::UnwrapErr(rand::rngs::SysRng),
+                sapling_prover,
+                sapling_prover,
+            )
             .unwrap()
-            .create_orchard_proof(orchard_pk)
+            .create_orchard_proof(rand_core::UnwrapErr(rand::rngs::SysRng), orchard_pk)
             .unwrap()
-            .create_ironwood_proof(orchard_pk)
+            .create_ironwood_proof(rand_core::UnwrapErr(rand::rngs::SysRng), orchard_pk)
             .unwrap()
             .finish();
         info!("Proved");
@@ -823,7 +832,7 @@ pub async fn do_sign_impl(
         let (svk, ovk) = sapling_prover.verifying_keys();
         let tx_extractor = TransactionExtractor::new(pczt).with_sapling(&svk, &ovk);
         let tx = tx_extractor
-            .extract()
+            .extract(rand_core::UnwrapErr(rand::rngs::SysRng))
             .map_err(|e| anyhow::anyhow!("{:?}", e))?;
         let mut tx_bytes = vec![];
         tx.write(&mut tx_bytes).unwrap();

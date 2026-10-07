@@ -79,10 +79,16 @@ pub async fn get_account_ufvk(
         }
     }
 
-    let ufvk = Ufvk::try_from_items(items)?;
+    let ufvk = Ufvk::try_from_items(
+        zcash_address::unified::Revision::R0,
+        items
+            .into_iter()
+            .map(zcash_address::unified::Uitem::Data)
+            .collect(),
+    )?;
     let ufvk = UnifiedFullViewingKey::parse(&ufvk)?;
 
-    Ok(ufvk.encode(network))
+    Ok(ufvk.encode(network)?)
 }
 
 pub fn is_valid_phrase(phrase: &str) -> bool {

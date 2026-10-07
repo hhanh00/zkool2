@@ -163,11 +163,15 @@ pub async fn recover_ledger_seed(mnemonic: &str, aindex: u32) -> Result<Extended
 
     // Use ZIP32 derivation with path
     // 32'/85'/account'
-    let msk = sapling_crypto::zip32::ExtendedSpendingKey::master(&zip32_seed);
+    let msk = sapling_crypto::zip32::ExtendedSpendingKey::master(&zip32_seed)
+        .ok_or_else(|| anyhow::anyhow!("invalid Sapling master key"))?;
     let extsk = msk
         .derive_child(ChildIndex::hardened(32))
+        .ok_or_else(|| anyhow::anyhow!("invalid Sapling purpose child"))?
         .derive_child(ChildIndex::hardened(coin_type))
-        .derive_child(ChildIndex::hardened(aindex));
+        .ok_or_else(|| anyhow::anyhow!("invalid Sapling coin-type child"))?
+        .derive_child(ChildIndex::hardened(aindex))
+        .ok_or_else(|| anyhow::anyhow!("invalid Sapling account child"))?;
 
     Ok(extsk)
 }

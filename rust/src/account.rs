@@ -13,8 +13,8 @@ use crate::{
         store_account_transparent_sk, store_account_transparent_vk, update_dindex,
     },
     key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
-    ledger::HwKind,
     keys::{sapling_dfvk_to_fvk, ScopeExt},
+    ledger::HwKind,
     tiu,
 };
 use crate::{
@@ -25,9 +25,7 @@ use crate::{
         key::generate_seed,
     },
     db::{get_account_hw, select_account_transparent, store_account_hw, store_account_metadata},
-    pay::pool::{
-        ALL_POOLS, POOL_IRONWOOD, POOL_ORCHARD, POOL_SAPLING, POOL_TRANSPARENT,
-    },
+    pay::pool::{ALL_POOLS, POOL_IRONWOOD, POOL_ORCHARD, POOL_SAPLING, POOL_TRANSPARENT},
 };
 use secp256k1::{PublicKey, SecretKey};
 use zcash_keys::keys::{sapling::ExtendedSpendingKey, UnifiedFullViewingKey, UnifiedSpendingKey};
@@ -125,7 +123,9 @@ pub async fn new_account(
             }
             HwKind::Zondax => {
                 if pools & !(POOL_TRANSPARENT | POOL_SAPLING) != 0 {
-                    anyhow::bail!("Zondax Ledger accounts support transparent and sapling pools only");
+                    anyhow::bail!(
+                        "Zondax Ledger accounts support transparent and sapling pools only"
+                    );
                 }
             }
             _ => anyhow::bail!("unknown Ledger app"),
@@ -843,9 +843,10 @@ pub async fn get_account_full_address(
         let xvk: Vec<u8> = row.get(0);
         let address: String = row.get(1);
         let _dindex: u32 = row.get(2);
-        let fvk = DiversifiableFullViewingKey::from_bytes(&xvk.try_into().map_err(|_| {
-            anyhow!("invalid sapling xvk length for account {account}")
-        })?)
+        let fvk = DiversifiableFullViewingKey::from_bytes(
+            &xvk.try_into()
+                .map_err(|_| anyhow!("invalid sapling xvk length for account {account}"))?,
+        )
         .ok_or_else(|| anyhow!("invalid sapling xvk for account {account}"))?;
         if scope == 1 && hw == 0 {
             // we do not need to derive a diversified change address
@@ -879,7 +880,8 @@ pub async fn get_account_full_address(
     let address = match (taddress, saddress, oaddress) {
         (Some(taddress), None, None) => taddress.encode(network),
         _ => {
-            let ua = UnifiedAddress::from_receivers(oaddress, saddress, taddress).unwrap();
+            let ua =
+                UnifiedAddress::from_receivers(oaddress, saddress, taddress, None, None).unwrap();
             ua.encode(network)
         }
     };
@@ -1206,12 +1208,26 @@ pub async fn get_addresses(
         .as_ref()
         .map(|xvk| xvk.address_at(dindex, orchard::keys::Scope::External));
 
-    let ua_orchard = UnifiedAddress::from_receivers(oaddr, None, None);
+    let ua_orchard = UnifiedAddress::from_receivers(oaddr, None, None, None, None);
 
     let ua = UnifiedAddress::from_receivers(
-        if ua_pools & POOL_ORCHARD != 0 { oaddr } else { None },
-        if ua_pools & POOL_SAPLING != 0 { saddr } else { None },
-        if ua_pools & POOL_TRANSPARENT != 0 { taddr } else { None },
+        if ua_pools & POOL_ORCHARD != 0 {
+            oaddr
+        } else {
+            None
+        },
+        if ua_pools & POOL_SAPLING != 0 {
+            saddr
+        } else {
+            None
+        },
+        if ua_pools & POOL_TRANSPARENT != 0 {
+            taddr
+        } else {
+            None
+        },
+        None,
+        None,
     );
 
     // final fallback if we have a transparent address from a BIP 38 secret key

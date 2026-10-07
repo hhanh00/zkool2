@@ -5,7 +5,7 @@ use anyhow::{anyhow, Result};
 use argon2::{Algorithm, Argon2, Params, Version};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use chacha20poly1305::{aead::Aead, ChaCha20Poly1305, Key, KeyInit, Nonce};
-use rand_core::{OsRng, RngCore};
+use rand_core_legacy::{OsRng, RngCore};
 use x25519_dalek::{PublicKey, StaticSecret};
 
 use crate::api::vault::RestoredAccount;
