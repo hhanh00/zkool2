@@ -9,7 +9,9 @@ use pczt::{
     },
     Pczt,
 };
-use rand_core::{CryptoRng, OsRng, RngCore};
+use rand::rngs::SysRng;
+use rand_core::UnwrapErr;
+use rand_core::{CryptoRng, Rng};
 use redjubjub::{SpendAuth, VerificationKey, VerificationKeyBytes};
 use sapling_crypto::{
     bundle::OutputDescription,
@@ -49,7 +51,7 @@ use crate::{
 use crate::ledger::transport::Device;
 
 #[allow(clippy::too_many_arguments)]
-pub async fn sign_transaction<D: Device + Sync, S, R: RngCore + CryptoRng>(
+pub async fn sign_transaction<D: Device + Sync, S, R: Rng + CryptoRng>(
     network: &Network,
     connection: &mut SqliteConnection,
     account: u32,
@@ -106,7 +108,8 @@ where
 
         // Signing a tx with the Ledger involves several steps
         // Step 1. Send a InitTx instruction with inputs/outputs
-        sink.send(SigningEvent::Progress("Init Tx".to_string())).await;
+        sink.send(SigningEvent::Progress("Init Tx".to_string()))
+            .await;
         data.write_u8(ctin as u8)?;
         data.write_u8(ctout as u8)?;
         data.write_u8(stin as u8)?;
@@ -234,8 +237,7 @@ where
 
         // This will make the Ledger show "Please Review..."
         info!("Confirm Tx on Ledger");
-        sink
-            .send(SigningEvent::Progress("Confirm Tx on Ledger".to_string()))
+        sink.send(SigningEvent::Progress("Confirm Tx on Ledger".to_string()))
             .await;
         let init_tx = APDUCommand {
             cla: 0x85,
@@ -282,11 +284,10 @@ where
             data: vec![],
         };
         for sp in pczt.sapling().spends().iter() {
-            sink
-                .send(SigningEvent::Progress(
-                    "Extracting spend randomness".to_string(),
-                ))
-                .await;
+            sink.send(SigningEvent::Progress(
+                "Extracting spend randomness".to_string(),
+            ))
+            .await;
             let res = ledger.execute(xtract_sp.clone()).await?;
             assert_eq!(res.retcode, 0x9000);
             let data = &res.data;
@@ -313,7 +314,7 @@ where
             let recipient = fvk.vk.to_payment_address(diversifier).unwrap();
             let rseed = Rseed::BeforeZip212(Fr::from_bytes(&rcm).unwrap());
             let note = Note::from_parts(recipient, NoteValue::from_raw(value), rseed);
-            let _nf = note.nf(&fvk.vk.nk, position as u64);
+            let _nf = note.nf(fvk.vk.nk(), position as u64);
 
             // Store data for in-place modification via Updater
             spend_updates.push(SpendUpdate {
@@ -337,11 +338,10 @@ where
         for (out, memo) in pczt.sapling().outputs().iter().zip(memos.iter()) {
             let fvk = fvk.as_ref().expect("fvk present for Sapling outputs");
             let ovk = fvk.ovk;
-            sink
-                .send(SigningEvent::Progress(
-                    "Extracting output randomness".to_string(),
-                ))
-                .await;
+            sink.send(SigningEvent::Progress(
+                "Extracting output randomness".to_string(),
+            ))
+            .await;
             let res = ledger.execute(xtract_out.clone()).await?;
             assert_eq!(res.retcode, 0x9000);
             let data = &res.data;
@@ -432,13 +432,14 @@ where
             .unwrap()
             .finish();
 
-        let (pczt, _) = IoFinalizer::new(pczt).finalize_io().unwrap();
+        let (pczt, _) = IoFinalizer::new(pczt).finalize_io(&mut rng).unwrap();
 
         let pczt = if !pczt.sapling().spends().is_empty() || !pczt.sapling().outputs().is_empty() {
             let updater = Updater::new(pczt);
             let fvk = fvk.as_ref().expect("fvk present for Sapling proofs");
             let nsk = Fr::from_bytes(&nsk).unwrap();
-            let pgk = ProofGenerationKey { ak: fvk.vk.ak.clone(), nsk };
+            let pgk = ProofGenerationKey::from_parts(fvk.vk.ak().clone(), nsk)
+                .ok_or_else(|| anyhow::anyhow!("invalid Ledger Sapling proof generation key"))?;
 
             let updater = updater
                 .update_sapling_with(|mut u| {
@@ -464,9 +465,10 @@ where
         };
 
         info!("Adding proofs to PCZT");
-        sink.send(SigningEvent::Progress("Computing ZKPs".to_string())).await;
+        sink.send(SigningEvent::Progress("Computing ZKPs".to_string()))
+            .await;
         let pczt = Prover::new(pczt)
-            .create_sapling_proofs(prover, prover)
+            .create_sapling_proofs(&mut rng, prover, prover)
             .unwrap()
             .finish();
 
@@ -498,8 +500,7 @@ where
         // `None`; only fetch it when there are spends to serialize.
         let anchor = if stin > 0 {
             Some(
-                pczt
-                    .sapling()
+                pczt.sapling()
                     .anchor()
                     .expect("a Sapling bundle with spends must have an anchor"),
             )
@@ -517,10 +518,8 @@ where
                     for sin in bundle.spends() {
                         let mut data = vec![];
                         data.write_all(&sin.cv().to_bytes()).unwrap();
-                        data.write_all(
-                            anchor.as_ref().expect("anchor present for Sapling spends"),
-                        )
-                        .unwrap();
+                        data.write_all(anchor.as_ref().expect("anchor present for Sapling spends"))
+                            .unwrap();
                         data.write_all(sin.nullifier().as_ref()).unwrap();
                         let rk_bytes: [u8; 32] = VerificationKeyBytes::from(*sin.rk()).into();
                         data.write_all(&rk_bytes).unwrap();
@@ -575,11 +574,10 @@ where
         assert_eq!(sighashes.len(), 220);
         buffers.push(sighashes);
 
-        sink
-            .send(SigningEvent::Progress(
-                "Checking Tx and Signing on Ledger".to_string(),
-            ))
-            .await;
+        sink.send(SigningEvent::Progress(
+            "Checking Tx and Signing on Ledger".to_string(),
+        ))
+        .await;
         let check_sign = APDUCommand {
             cla: 0x85,
             ins: 0xA3,
@@ -595,11 +593,10 @@ where
         // Starting from the transparent inputs
         let mut tsigs = vec![];
         for _ in pczt.transparent().inputs() {
-            sink
-                .send(SigningEvent::Progress(
-                    "Getting transparent signature".to_string(),
-                ))
-                .await;
+            sink.send(SigningEvent::Progress(
+                "Getting transparent signature".to_string(),
+            ))
+            .await;
             let get_tsig = APDUCommand {
                 cla: 0x85,
                 ins: 0xA5,
@@ -617,11 +614,10 @@ where
         // And then the shielded spends
         let mut ssigs = vec![];
         for _ in pczt.sapling().spends() {
-            sink
-                .send(SigningEvent::Progress(
-                    "Getting shielded signature".to_string(),
-                ))
-                .await;
+            sink.send(SigningEvent::Progress(
+                "Getting shielded signature".to_string(),
+            ))
+            .await;
             let get_ssig = APDUCommand {
                 cla: 0x85,
                 ins: 0xA4,
@@ -720,7 +716,7 @@ where
         sapling_prover,
         sink,
         &ledger,
-        OsRng,
+        UnwrapErr(SysRng),
     )
     .await?;
     Ok(signed)

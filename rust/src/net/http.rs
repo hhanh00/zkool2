@@ -16,7 +16,7 @@ use hyper_util::{
     },
     rt::{TokioExecutor, TokioIo},
 };
-use rand::Rng;
+use rand::RngExt;
 use std::{
     pin::Pin,
     task::{Context, Poll},
@@ -245,7 +245,7 @@ pub async fn http_get<S: AsRef<str>>(
         return Err(anyhow!("GET requires at least one URL"));
     }
     let start = if policy.randomize_first {
-        rand::thread_rng().gen_range(0, urls.len())
+        rand::rng().random_range(0..urls.len())
     } else {
         0
     };

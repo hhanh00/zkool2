@@ -10,10 +10,7 @@ use pool::PoolMask;
 use serde::{Deserialize, Serialize};
 use sqlx::SqliteConnection;
 use tracing::{info, span, Level};
-use zcash_keys::{
-    address::UnifiedAddress,
-    encoding::AddressCodec as _,
-};
+use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_note_encryption::Domain;
 use zcash_primitives::transaction::{OrchardBundle, Transaction};
 use zcash_protocol::consensus::BranchId;
@@ -195,13 +192,9 @@ fn append_orchard_plan<D: Domain>(
             address: shielded_output_address(
                 network,
                 action.output().user_address().as_ref(),
-                action
-                    .output()
-                    .recipient()
-                    .as_ref()
-                    .and_then(|recipient| {
-                        UnifiedAddress::from_receivers(Some(*recipient), None, None)
-                    }),
+                action.output().recipient().as_ref().and_then(|recipient| {
+                    UnifiedAddress::from_receivers(Some(*recipient), None, None, None, None)
+                }),
             )?,
             asset_name: output_asset_name,
         });
@@ -221,7 +214,7 @@ impl TxPlan {
         let pczt = Pczt::parse(&package.pczt)
             .map_err(|error| anyhow::anyhow!("Failed to parse PCZT: {error:?}"))?;
         let is_zsa = BranchId::try_from(*pczt.global().consensus_branch_id())
-            .is_ok_and(|branch_id| branch_id == BranchId::Nu7);
+            .is_ok_and(|branch_id| branch_id == BranchId::Zsa);
         let height = *pczt.global().expiry_height();
         let mut fee = 0i64;
         let verifier = Verifier::new(pczt);
@@ -309,7 +302,13 @@ impl TxPlan {
                             network,
                             a.output().user_address().as_ref(),
                             a.output().recipient().as_ref().and_then(|recipient| {
-                                UnifiedAddress::from_receivers(Some(*recipient), None, None)
+                                UnifiedAddress::from_receivers(
+                                    Some(*recipient),
+                                    None,
+                                    None,
+                                    None,
+                                    None,
+                                )
                             }),
                         )
                         .map_err(pczt::roles::verifier::OrchardError::Custom)?,

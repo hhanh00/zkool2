@@ -12,15 +12,14 @@ path = "src/graphql-cli.rs"
 required-features = ["graphql"]
 
 [dependencies]
-zcash-trees = { git = "https://github.com/hhanh00/zcash-trees.git", rev = "bb549253717e56b765b55042eea6330c5e50299a" }
+zcash-trees = { git = "https://github.com/hhanh00/zcash-trees.git", rev = "d22252485ad69ab236ef2bc42432edf68429ee6e" }
 # Fork of upstream 67edd7eb (branch sidecar-valar-v5.1.0): the zakura-wallet-lib
 # facade is dropped and the ZSA Orchard adaptations live there. Kept in the
 # build although zkool's voting modules are cut out, so dependency breakage
 # surfaces now rather than at re-enable time.
-zcash_voting = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "d53e5dc47fd4374491914ff4e7a85d226e34a302", default-features = false, features = ["lrz"] }
-# Tree-sync HTTP transport for the voting round driver. Same git source as the
-# zcash_voting dep so the workspace [patch] override applies to it too.
-vote-commitment-tree-client = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "d53e5dc47fd4374491914ff4e7a85d226e34a302", default-features = false }
+zcash_voting = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "d0e711a93742ad099daacaab08b89bd2bf7af90b", default-features = false, features = ["lrz"] }
+# Tree-sync HTTP transport from the same pinned revision as zcash_voting.
+vote-commitment-tree-client = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "d0e711a93742ad099daacaab08b89bd2bf7af90b", default-features = false }
 # Round binding hotkey secrets are zeroized on drop.
 zeroize = "1"
 flutter_rust_bridge = { version = "=2.12.0", optional = true }
@@ -30,12 +29,17 @@ base64 = "0.22"
 bip39 = "2.1.0"
 nonempty = "0.11"
 env_logger = "0.11"
-ff = "0.13"
+ff = "0.14"
+# Retain the deployed FROST ciphersuite and serialized shares. Convert only
+# canonical scalar/signature bytes at the boundary with the updated SDK.
+ff_legacy = { package = "ff", version = "0.13" }
 hex = "0.4"
 log = "0.4"
-pasta_curves = "0.5"
-rand = "0.6"
-rand_core = "0.6"
+pasta_curves = "0.6"
+pasta_curves_legacy = { package = "pasta_curves", version = "0.5" }
+rand = "0.10"
+rand_core = "0.10"
+rand_core_legacy = { package = "rand_core", version = "0.6", features = ["getrandom"] }
 
 hickory-proto = "0.24"
 hickory-resolver = {version = "0.24", features = ["dnssec-ring"]}
@@ -83,23 +87,24 @@ tower = "0.5"
 qrcode = "0.14.1"
 raptorq = "=2.0.0"
 
-orchard = {version = "0.15.0-pre.1", features = ["unstable-frost"]}
-pczt = {version = "0.9.1", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard", "zip-233", "zsa"]}
-zcash_address = "0.13.0"
+orchard = {version = "0.16", features = ["unstable-frost"]}
+pczt = {version = "=0.10.0-pre.1", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard", "zip-233", "zsa"]}
+zcash_address = "=0.14.0-pre.1"
 zcash_encoding = "0.5"
-zcash_keys = {version = "0.16.0", features = ["sapling", "orchard", "transparent-inputs"]}
-zcash_note_encryption = "0.4"
-zcash_primitives = {version = "0.30.0", features = ["transparent-inputs", "zsa"]}
-zcash_proofs = {version = "0.30.0", features = ["download-params"]}
-zcash_protocol = {version = "0.10.0", features = ["local-consensus"]}
-zcash_script = "0.4.3"
-zcash_transparent = {version = "0.10.0", features = ["transparent-inputs"]}
-zip321 = "0.9.0-rc.1"
+zcash_keys = {version = "=0.17.0-pre.1", features = ["sapling", "orchard", "transparent-inputs"]}
+zcash_note_encryption = "0.5.1"
+zcash_primitives = {version = "=0.31.0-pre.1", features = ["transparent-inputs", "zsa"]}
+zcash_proofs = {version = "=0.31.0-pre.1", features = ["download-params"]}
+zcash_protocol = {version = "=0.11.0-pre.0", features = ["local-consensus"]}
+zcash_script = "0.6"
+zcash_transparent = {version = "=0.11.0-pre.1", features = ["transparent-inputs"]}
+zip321 = "=0.10.0-pre.1"
 
 frost-rerandomized = "2.1.0"
-incrementalmerkletree = "0.8"
-reddsa = {version = "0.5.1", features = ["frost"]}
-redjubjub = "0.8"
+incrementalmerkletree = "0.9"
+reddsa = "0.6"
+reddsa_legacy = { package = "reddsa", git = "https://github.com/ZcashFoundation/reddsa.git", rev = "975f9ca835c4b9196c81608e55192b0f711e951d", features = ["frost"] }
+redjubjub = "0.9"
 
 argon2 = "0.5"
 x25519-dalek = "2.0"
@@ -107,25 +112,25 @@ bincode = {version = "2.0", features = ["serde"]}
 byteorder = "1.5"
 #postcard = "1.1"
 bech32 = "0.11"
-bip32 = {version = "0.6.0-rc.0", default-features = false}
+bip32 = {version = "0.6", default-features = false}
 blake2b_simd = "1.0"
 bs58 = "0.5"
 chacha20 = "0.9"
 chacha20poly1305 = "0.10"
 fpdec = "0.11"
-group = "0.13"
-halo2_gadgets = "0.5"
-halo2_proofs = "0.3"
-jubjub = "0.10"
+group = "0.14"
+halo2_gadgets = "0.6"
+halo2_proofs = "0.4"
+jubjub = "0.11"
 ripemd = "0.1"
 rustls = {version = "0.23", default-features = false, features = ["ring"]}
-sapling-crypto = "0.7"
+sapling-crypto = "0.9"
 secp256k1 = "0.33"
 sha2 = "0.10"
 tonic = {version = "0.14.0", features = ["tls-webpki-roots"]}
 tonic-prost = "0.14.0"
 prost = "0.14.0"
-zip32 = "0.2"
+zip32 = "0.3"
 
 itertools = "0.14"
 tracing = "0.1"
@@ -167,7 +172,7 @@ unexpected_cfgs = {level = "warn", check-cfg = ['cfg(frb_expand)']}
 
 [dev-dependencies]
 chrono = "0.4"
-rand = "0.6"
+rand = "0.10"
 
 [features]
 default = ["flutter", "nym"]

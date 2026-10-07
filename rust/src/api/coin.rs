@@ -116,10 +116,11 @@ impl Coin {
                 nu6_2: Some(BlockHeight::from_u32(1)),
                 nu6_3: Some(BlockHeight::from_u32(250)),
                 nu7: None,
+                zsa: None,
                 orchard_mode: OrchardMode::Normal,
             }),
             3 => {
-                // ZSA regtest: NU7 active, no Ironwood (NU6.3 not active).
+                // Deployed ZSA regtest uses its own branch ID, not official NU7.
                 // Orchard protocol V2 with cross-address transfers enabled.
                 Network::ZsaRegtest(LocalNetwork {
                     overwinter: Some(BlockHeight::from_u32(1)),
@@ -132,7 +133,8 @@ impl Coin {
                     nu6_1: Some(BlockHeight::from_u32(1)),
                     nu6_2: Some(BlockHeight::from_u32(1)),
                     nu6_3: None,
-                    nu7: Some(BlockHeight::from_u32(1)),
+                    nu7: None,
+                    zsa: Some(BlockHeight::from_u32(1)),
                     orchard_mode: OrchardMode::Zsa,
                 })
             }
@@ -456,20 +458,24 @@ pub(crate) async fn open_proxied_stream(
         // so it is the recommended scheme for Tor.
         "socks5h" => {
             let stream = match &creds {
-                Some((u, p)) => tokio_socks::tcp::Socks5Stream::connect_with_password(
-                    (phost, pport),
-                    // Passing a &str target makes tokio-socks send the hostname to
-                    // the proxy as a SOCKS5 DOMAINNAME request (proxy-side DNS).
-                    (target_host, target_port),
-                    u.as_str(),
-                    p.as_str(),
-                )
-                .await?,
-                None => tokio_socks::tcp::Socks5Stream::connect(
-                    (phost, pport),
-                    (target_host, target_port),
-                )
-                .await?,
+                Some((u, p)) => {
+                    tokio_socks::tcp::Socks5Stream::connect_with_password(
+                        (phost, pport),
+                        // Passing a &str target makes tokio-socks send the hostname to
+                        // the proxy as a SOCKS5 DOMAINNAME request (proxy-side DNS).
+                        (target_host, target_port),
+                        u.as_str(),
+                        p.as_str(),
+                    )
+                    .await?
+                }
+                None => {
+                    tokio_socks::tcp::Socks5Stream::connect(
+                        (phost, pport),
+                        (target_host, target_port),
+                    )
+                    .await?
+                }
             };
             Ok(stream.into_inner())
         }
@@ -482,13 +488,15 @@ pub(crate) async fn open_proxied_stream(
                 .next()
                 .ok_or_else(|| anyhow::anyhow!("could not resolve {target_host}"))?;
             let stream = match &creds {
-                Some((u, p)) => tokio_socks::tcp::Socks5Stream::connect_with_password(
-                    (phost, pport),
-                    target_addr,
-                    u.as_str(),
-                    p.as_str(),
-                )
-                .await?,
+                Some((u, p)) => {
+                    tokio_socks::tcp::Socks5Stream::connect_with_password(
+                        (phost, pport),
+                        target_addr,
+                        u.as_str(),
+                        p.as_str(),
+                    )
+                    .await?
+                }
                 None => {
                     tokio_socks::tcp::Socks5Stream::connect((phost, pport), target_addr).await?
                 }

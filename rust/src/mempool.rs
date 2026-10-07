@@ -3,7 +3,10 @@ use crate::api::mempool::{MempoolAmount, MempoolMsg, MempoolNote, MempoolTx};
 use crate::keys::{orchard_scope_to_u8, scope_to_u8};
 use anyhow::{Context as _, Result};
 use itertools::Itertools;
-use orchard::{keys::Scope, note_encryption::{IronwoodDomain, OrchardDomain}};
+use orchard::{
+    keys::Scope,
+    note_encryption::{IronwoodDomain, OrchardDomain},
+};
 use sapling_crypto::{
     keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain,
     zip32::DiversifiableFullViewingKey,
@@ -310,7 +313,7 @@ pub async fn decode_raw_transaction(
                         {
                             let diversifier = recipient.diversifier().as_array().to_vec();
                             let ua =
-                                UnifiedAddress::from_receivers(Some(recipient), None, None).unwrap();
+                                UnifiedAddress::from_receivers(Some(recipient), None, None, None, None).unwrap();
                             let address = ua.encode(network);
                             let diversifier_index = ivk
                                 .diversifier_index(&recipient)

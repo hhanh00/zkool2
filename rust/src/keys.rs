@@ -237,11 +237,12 @@ pub fn sapling_pgk_for_scope(
 pub fn sapling_ssk_for_scope(
     scope: impl ScopeExt,
     ssk: &sapling_crypto::zip32::ExtendedSpendingKey,
-) -> sapling_crypto::zip32::ExtendedSpendingKey {
+) -> anyhow::Result<sapling_crypto::zip32::ExtendedSpendingKey> {
     if scope.is_external() {
-        ssk.clone()
+        Ok(ssk.clone())
     } else {
         ssk.derive_internal()
+            .ok_or_else(|| anyhow::anyhow!("invalid internal Sapling spending key"))
     }
 }
 

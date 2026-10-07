@@ -14,7 +14,8 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use anyhow::{ensure, Result};
 use halo2_proofs::pasta::group::ff::PrimeField as _;
-use rand_core::OsRng;
+use rand::rngs::SysRng;
+use rand_core::UnwrapErr;
 use zcash_keys::keys::UnifiedSpendingKey;
 use zcash_voting::prelude::{VotingDb, VotingHotkey};
 use zcash_voting::vote_work::{
@@ -22,8 +23,8 @@ use zcash_voting::vote_work::{
 };
 use zcash_voting::{
     delegation_pipeline::{DelegationAccountIdentity, DelegationPipeline, DelegationSigner},
-    ChainAdvancePolicy, ChainSubmissionClientConfig, HelperClient, HelperHealth, Network,
-    PirFleet, RoundHostSource,
+    ChainAdvancePolicy, ChainSubmissionClientConfig, HelperClient, HelperHealth, Network, PirFleet,
+    RoundHostSource,
 };
 use zeroize::Zeroizing;
 use zip32::AccountId;
@@ -129,7 +130,7 @@ fn sign_delegation_request(
             message: format!("account spending key derivation failed: {error}"),
         }
     })?;
-    let sk = *usk.orchard();
+    let sk = usk.orchard().clone();
     let ask = orchard::keys::SpendAuthorizingKey::from(&sk);
     let alpha = Option::<halo2_proofs::pasta::pallas::Scalar>::from(
         halo2_proofs::pasta::pallas::Scalar::from_repr(request.alpha),
@@ -138,7 +139,7 @@ fn sign_delegation_request(
         message: "delegation alpha is not a valid Pallas scalar".to_string(),
     })?;
     let rsk = ask.randomize(&alpha);
-    let sig = rsk.sign(OsRng, &request.sighash);
+    let sig = rsk.sign(UnwrapErr(SysRng), &request.sighash);
     Ok((&sig).into())
 }
 

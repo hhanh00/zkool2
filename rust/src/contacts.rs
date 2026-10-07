@@ -37,7 +37,7 @@ pub fn expand_address_to_receivers_with_pool(
     network: &Network,
 ) -> Result<Vec<(String, u8)>> {
     // Try to parse as a unified address first
-    if let Ok((net, ua)) = UnifiedAddress::decode(addr) {
+    if let Ok((net, _revision, ua)) = UnifiedAddress::decode(addr) {
         if net != network.network_type() {
             anyhow::bail!("Invalid network for address");
         }
@@ -62,6 +62,8 @@ pub fn expand_address_to_receivers_with_pool(
                         .unwrap();
                     let oaddr_ua = zcash_keys::address::UnifiedAddress::from_receivers(
                         Some(oaddr),
+                        None,
+                        None,
                         None,
                         None,
                     )

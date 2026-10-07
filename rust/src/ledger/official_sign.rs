@@ -645,9 +645,9 @@ where
 
     let orchard_pk = get_orchard_pk(*pczt.global().consensus_branch_id())?;
     let pczt = Prover::new(pczt)
-        .create_orchard_proof(orchard_pk)
+        .create_orchard_proof(rand_core::UnwrapErr(rand::rngs::SysRng), orchard_pk)
         .map_err(|error| anyhow!("orchard proof: {error:?}"))?
-        .create_ironwood_proof(&IRONWOOD_PK)
+        .create_ironwood_proof(rand_core::UnwrapErr(rand::rngs::SysRng), &IRONWOOD_PK)
         .map_err(|error| anyhow!("ironwood proof: {error:?}"))?
         .finish();
 
