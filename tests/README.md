@@ -73,3 +73,26 @@ The test writes `regtest_dkg_ui.db` into the app's Documents directory and
 temporarily overrides the `pin_lock`, `offline` and `vault` preferences,
 restoring them when it finishes. It never touches the developer's own wallet
 database.
+
+## Mock Ledger payments on Zebra regtest
+
+`tests/test_ledger.py` imports an Official Ledger account (`hw: 2`), compares
+its viewing keys with the test seed, and signs, broadcasts, and mines payments
+from both Ironwood and transparent inputs. It checks confirmed transaction
+heights and recipient balance changes.
+
+Start Zebra and lightwalletd with NU6.3 active, and fund the mock account's
+Ironwood address. Run the signing-capable `mock-ledger-zcash` with
+`--network regtest --seed-phrase "$REGTEST_SEED"`. The GraphQL binary must
+have `graphql,zemu` features enabled. Set `REGTEST_SEED`,
+`EXPECTED_LEDGER_ADDRESS`, and `EXPECTED_LEDGER_TRANSPARENT`, then run:
+
+```sh
+ZKOOL_BINARY=/absolute/path/to/zkool_graphql ZEMU_MOCK=1 \
+  uv run pytest tests/test_ledger.py -v -s
+```
+
+`ZKOOL_BINARY` defaults to `target/release/zkool_graphql`. `ZEMU_PORT`,
+`LWD_URL`, and `RPC_URL` override the mock and chain endpoints. Tests use one
+mock device session and must run serially. The Ledger CI workflow's
+`MOCK_LEDGER_REV` must point to a published signing-capable mock revision.
