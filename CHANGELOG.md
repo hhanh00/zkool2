@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.33.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.32.0...zkool-v6.33.0-rc) (2026-10-08)
+
+
+### Features
+
+* **zsa:** integrate published NU7 dependencies while preserving deployed protocol ([#1293](https://github.com/hhanh00/zkool2/issues/1293)) ([9e9ee81](https://github.com/hhanh00/zkool2/commit/9e9ee817273532c9f863003937673bb763e69801))
+
 ## [6.32.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.31.0...zkool-v6.32.0) (2026-10-06)
 
 
