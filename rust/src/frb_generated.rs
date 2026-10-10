@@ -42,7 +42,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -763790675;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1731608907;
 
 // Section: executor
 
@@ -7211,6 +7211,39 @@ fn wire__crate__api__transaction__update_historical_prices_impl(
         },
     )
 }
+fn wire__crate__api__address__validate_blockchain_address_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "validate_blockchain_address",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_address = <String>::sse_decode(&mut deserializer);
+            let api_blockchain = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(
+                    crate::api::address::validate_blockchain_address(&api_address, &api_blockchain),
+                )?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
 fn wire__crate__api__openalias__validate_openalias_name_impl(
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
     rust_vec_len_: i32,
@@ -10633,71 +10666,71 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        187 => wire__crate__api__voting_share_tracking__voting_cancel_all_share_tracking_impl(
+        188 => wire__crate__api__voting_share_tracking__voting_cancel_all_share_tracking_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        188 => wire__crate__api__voting_share_tracking__voting_cancel_share_tracking_impl(
+        189 => wire__crate__api__voting_share_tracking__voting_cancel_share_tracking_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        189 => {
+        190 => {
             wire__crate__api__voting__voting_clear_selection_impl(port, ptr, rust_vec_len, data_len)
         }
-        190 => wire__crate__api__voting_drive__voting_drive_cancel_impl(
+        191 => wire__crate__api__voting_drive__voting_drive_cancel_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        191 => wire__crate__api__voting_drive__voting_drive_cancel_all_impl(
+        192 => wire__crate__api__voting_drive__voting_drive_cancel_all_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        192 => wire__crate__api__voting_drive__voting_drive_start_impl(
+        193 => wire__crate__api__voting_drive__voting_drive_start_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        193 => wire__crate__api__voting_drive__voting_drive_status_impl(
+        194 => wire__crate__api__voting_drive__voting_drive_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        194 => {
+        195 => {
             wire__crate__api__voting__voting_load_selections_impl(port, ptr, rust_vec_len, data_len)
         }
-        195 => wire__crate__api__voting_share_tracking__voting_pending_share_rounds_impl(
+        196 => wire__crate__api__voting_share_tracking__voting_pending_share_rounds_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        196 => wire__crate__api__voting_drive__voting_prepare_round_impl(
+        197 => wire__crate__api__voting_drive__voting_prepare_round_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        197 => wire__crate__api__voting__voting_round_list_impl(port, ptr, rust_vec_len, data_len),
-        198 => {
+        198 => wire__crate__api__voting__voting_round_list_impl(port, ptr, rust_vec_len, data_len),
+        199 => {
             wire__crate__api__voting__voting_save_selection_impl(port, ptr, rust_vec_len, data_len)
         }
-        199 => wire__crate__api__voting_share_tracking__voting_start_share_tracking_impl(
+        200 => wire__crate__api__voting_share_tracking__voting_start_share_tracking_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        200 => wire__crate__api__voting_share_tracking__voting_track_shares_once_impl(
+        201 => wire__crate__api__voting_share_tracking__voting_track_shares_once_impl(
             port,
             ptr,
             rust_vec_len,
@@ -10750,9 +10783,12 @@ fn pde_ffi_dispatcher_sync_impl(
         ),
         179 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
         185 => {
-            wire__crate__api__openalias__validate_openalias_name_impl(ptr, rust_vec_len, data_len)
+            wire__crate__api__address__validate_blockchain_address_impl(ptr, rust_vec_len, data_len)
         }
         186 => {
+            wire__crate__api__openalias__validate_openalias_name_impl(ptr, rust_vec_len, data_len)
+        }
+        187 => {
             wire__crate__api__openalias__validate_zcash_address_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),

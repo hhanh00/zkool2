@@ -7,6 +7,7 @@
 // ignore_for_file: argument_type_not_assignable
 
 import 'api/account.dart';
+import 'api/address.dart';
 import 'api/coin.dart';
 import 'api/contacts.dart';
 import 'api/db.dart';

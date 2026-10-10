@@ -8,6 +8,7 @@ import 'package:zkool/store.dart';
 import 'package:zkool/services/swap_quote.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/src/rust/api/near_intents.dart';
+import 'package:zkool/src/rust/api/address.dart';
 import 'package:zkool/src/rust/near_intents.dart' as ni;
 import 'package:zkool/pages/swaps.dart';
 import 'package:zkool/pages/swap_summary.dart';
@@ -228,8 +229,7 @@ class _SwapPageState extends ConsumerState<SwapPage> {
   String? _validateRecipient(String? value) {
     final address = value?.trim() ?? '';
     if (address.isEmpty) return _outgoing ? 'Enter a receiving address' : 'Enter a refund address';
-    final pattern = _network == SwapNetwork.ethereum ? RegExp(r'^0x[0-9a-fA-F]{40}$') : RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$');
-    if (!pattern.hasMatch(address)) return 'Enter a ${_network.label} address';
+    if (!validateBlockchainAddress(address: address, blockchain: _network.name)) return 'Enter a ${_network.label} address';
     return null;
   }
 
