@@ -311,14 +311,24 @@ pub async fn assets(transport: &Transport) -> Result<Vec<SwapAsset>> {
     )
 }
 
-pub async fn quote(request_data: SwapRequest, transport: &Transport) -> Result<SwapQuoteResponse> {
-    // First version exposes ZEC out only. The request model supports future ZEC in.
+fn validate_zcash_side(request: &SwapRequest) -> Result<bool> {
+    let outgoing = request.origin_asset == ZEC_ASSET;
     ensure!(
-        request_data.origin_asset == ZEC_ASSET,
-        "Only native ZEC outgoing swaps are supported"
+        outgoing || request.destination_asset == ZEC_ASSET,
+        "Swaps must send or receive native ZEC"
     );
     use zcash_protocol::consensus::NetworkType;
-    crate::openalias::try_validate_zcash_address(&request_data.refund_to, NetworkType::Main)?;
+    let zcash_address = if outgoing {
+        &request.refund_to
+    } else {
+        &request.recipient
+    };
+    crate::openalias::try_validate_zcash_address(zcash_address, NetworkType::Main)?;
+    Ok(outgoing)
+}
+
+pub async fn quote(request_data: SwapRequest, transport: &Transport) -> Result<SwapQuoteResponse> {
+    let outgoing = validate_zcash_side(&request_data)?;
     let payload = quote_payload(&request_data)?;
     let raw_response = request(
         transport,
@@ -338,11 +348,17 @@ pub async fn quote(request_data: SwapRequest, transport: &Transport) -> Result<S
             .deposit_address
             .as_deref()
             .context("1Click did not return a deposit address")?;
-        crate::openalias::try_validate_zcash_address(address, NetworkType::Main)?;
-        ensure!(
-            response.quote.deposit_memo.is_none(),
-            "ZEC deposit unexpectedly requires a memo"
-        );
+        ensure!(!address.trim().is_empty(), "Missing deposit address");
+        if outgoing {
+            crate::openalias::try_validate_zcash_address(
+                address,
+                zcash_protocol::consensus::NetworkType::Main,
+            )?;
+            ensure!(
+                response.quote.deposit_memo.is_none(),
+                "ZEC deposit unexpectedly requires a memo"
+            );
+        }
     }
     Ok(SwapQuoteResponse {
         quote: response.quote,
@@ -553,7 +569,10 @@ mod tests {
             .bind(saved.id_swap)
             .execute(&mut db)
             .await?;
-        assert_eq!(read_swaps(&mut db, 1, false).await?[0].deadline, request.deadline);
+        assert_eq!(
+            read_swaps(&mut db, 1, false).await?[0].deadline,
+            request.deadline
+        );
         Ok(())
     }
 
@@ -777,6 +796,27 @@ mod tests {
             refund_to: "refund".into(),
             deadline: "2026-10-10T12:00:00Z".into(),
         }
+    }
+    #[test]
+    fn validates_zcash_refund_for_outgoing_and_recipient_for_incoming() {
+        let address = "t1VmmGiyjVNeCjxDZzg7vZmd99WyzVby9yC";
+        let mut request = sample();
+        request.refund_to = address.into();
+        assert!(validate_zcash_side(&request).unwrap());
+        request.origin_asset = "usdt".into();
+        request.destination_asset = ZEC_ASSET.into();
+        request.refund_to = "external-refund".into();
+        request.recipient = address.into();
+        assert!(!validate_zcash_side(&request).unwrap());
+        let payload = quote_payload(&request).unwrap();
+        assert_eq!(payload["originAsset"], "usdt");
+        assert_eq!(payload["destinationAsset"], ZEC_ASSET);
+        assert_eq!(payload["refundTo"], "external-refund");
+        request.recipient = "invalid".into();
+        assert!(validate_zcash_side(&request).is_err());
+        request.recipient = address.into();
+        request.destination_asset = "eth".into();
+        assert!(validate_zcash_side(&request).is_err());
     }
     #[test]
     fn exact_output_preserves_base_units_and_omits_fees() {

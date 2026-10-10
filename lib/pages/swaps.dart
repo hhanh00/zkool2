@@ -98,7 +98,8 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
                               child: Text(_showCompleted ? 'No swaps yet.' : 'No swaps in progress.', textAlign: TextAlign.center))
                         ]
                       : visible.map((swap) {
-                          final matches = assets.where((asset) => asset.assetId == swap.destinationAsset);
+                          final externalAsset = swap.originAsset == 'nep141:zec.omft.near' ? swap.destinationAsset : swap.originAsset;
+                          final matches = assets.where((asset) => asset.assetId == externalAsset);
                           return _SwapTile(swap: swap, asset: matches.isEmpty ? null : matches.first);
                         }).toList(),
                 ));
@@ -116,6 +117,11 @@ class _SwapTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final outgoing = swap.originAsset == 'nep141:zec.omft.near';
+    final originSymbol = outgoing ? 'ZEC' : asset?.symbol;
+    final destinationSymbol = outgoing ? asset?.symbol : 'ZEC';
+    final originDecimals = outgoing ? 8 : asset?.decimals;
+    final destinationDecimals = outgoing ? asset?.decimals : 8;
     final status = switch (swap.status) {
       'KNOWN_DEPOSIT_TX' => 'Deposit sent',
       'PENDING_DEPOSIT' => 'Waiting for deposit',
@@ -136,6 +142,8 @@ class _SwapTile extends StatelessWidget {
     } catch (_) {
       // Older or incomplete snapshots still display their exact base units.
     }
+    if (originDecimals != null) amountIn ??= swapDecimalAmount(swap.amountIn, originDecimals);
+    if (destinationDecimals != null) amountOut ??= swapDecimalAmount(swap.amountOut, destinationDecimals);
     return ExpansionTile(
       leading: Icon(switch (swap.status) {
         'SUCCESS' => Icons.check_circle_outline,
@@ -143,9 +151,9 @@ class _SwapTile extends StatelessWidget {
         'REFUNDED' => Icons.undo,
         _ => Icons.currency_exchange,
       }),
-      title: Text('ZEC → ${asset?.symbol ?? 'Receiving asset'}'),
+      title: Text('${originSymbol ?? 'Sending asset'} → ${destinationSymbol ?? 'Receiving asset'}'),
       subtitle: Text(
-          '$status\nQuoted: ${amountIn == null ? '${swap.amountIn} base units' : '$amountIn ZEC'} → ${amountOut ?? '${swap.amountOut} base units'}${asset == null ? '' : ' ${asset!.symbol}'}'),
+          '$status\nQuoted: ${amountIn == null ? '${swap.amountIn} base units' : '$amountIn ${originSymbol ?? ''}'} → ${amountOut == null ? '${swap.amountOut} base units' : '$amountOut ${destinationSymbol ?? ''}'}'),
       childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       expandedCrossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -153,12 +161,12 @@ class _SwapTile extends StatelessWidget {
             'Minimum received',
             swap.minAmountOut == null
                 ? 'Unavailable'
-                : asset == null
+                : destinationDecimals == null
                     ? '${swap.minAmountOut} base units'
-                    : '${swapDecimalAmount(swap.minAmountOut!, asset!.decimals)} ${asset!.symbol}'),
+                    : '${swapDecimalAmount(swap.minAmountOut!, destinationDecimals)} $destinationSymbol'),
         _detail('Slippage tolerance', '${swapDecimalAmount(swap.slippageTolerance.toString(), 2)}%'),
         _detail('Receive asset', swap.destinationAsset),
-        if (asset != null) _detail('Receiving network', asset!.blockchain),
+        if (asset != null) _detail(outgoing ? 'Receiving network' : 'Deposit network', asset!.blockchain),
         _detail('Receiving address', swap.recipient),
         _detail('Deposit address', swap.depositAddress),
         if (swap.depositMemo != null) _detail('Deposit memo', swap.depositMemo!),

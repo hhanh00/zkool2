@@ -11,8 +11,12 @@ class SwapSummaryPage extends ConsumerWidget {
   final SavedSwap swap;
   final String symbol;
   final int decimals;
+  final String originSymbol;
+  final int originDecimals;
+  final String? depositNetwork;
 
-  const SwapSummaryPage({required this.swap, required this.symbol, required this.decimals, super.key});
+  const SwapSummaryPage(
+      {required this.swap, required this.symbol, required this.decimals, this.originSymbol = 'ZEC', this.originDecimals = 8, this.depositNetwork, super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -32,9 +36,12 @@ class SwapSummaryPage extends ConsumerWidget {
             ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.currency_exchange),
-                title: Text('ZEC → $symbol'),
-                subtitle: const Text('Swap created. Awaiting deposit.')),
-            ListTile(contentPadding: EdgeInsets.zero, title: const Text('You send'), subtitle: Text('${swapDecimalAmount(swap.amountIn, 8)} ZEC')),
+                title: Text('$originSymbol → $symbol'),
+                subtitle: Text(depositNetwork == null ? 'Swap created. Awaiting deposit.' : 'Send the deposit from your $depositNetwork wallet.')),
+            ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('You send'),
+                subtitle: Text('${swapDecimalAmount(swap.amountIn, originDecimals)} $originSymbol')),
             ListTile(
                 contentPadding: EdgeInsets.zero, title: const Text('You receive'), subtitle: Text('${swapDecimalAmount(swap.amountOut, decimals)} $symbol')),
             ListTile(contentPadding: EdgeInsets.zero, title: const Text('Receiving address'), subtitle: SelectableText(swap.recipient)),
@@ -51,6 +58,8 @@ class SwapSummaryPage extends ConsumerWidget {
                 title: const Text('Swap deadline'),
                 subtitle: Text(exactTimeToString(swapDeadline(swap).millisecondsSinceEpoch ~/ 1000))),
             ListTile(contentPadding: EdgeInsets.zero, title: const Text('Deposit address'), subtitle: SelectableText(swap.depositAddress)),
+            if (depositNetwork != null) ListTile(contentPadding: EdgeInsets.zero, title: const Text('Deposit network'), subtitle: Text(depositNetwork!)),
+            ListTile(contentPadding: EdgeInsets.zero, title: const Text('Refund address'), subtitle: SelectableText(swap.refundTo)),
             if (swap.depositMemo != null)
               ListTile(contentPadding: EdgeInsets.zero, title: const Text('Deposit memo'), subtitle: SelectableText(swap.depositMemo!)),
           ],

@@ -22,30 +22,42 @@ Future<SwapReviewQuote> loadSwapQuote(SwapDraft draft, Coin coin) async {
   if (matches.length != 1) throw StateError('Unable to identify ${draft.asset.symbol} on ${draft.network.label}.');
   final asset = matches.single;
   final addresses = await getAddresses(uaPools: 0, c: coin);
-  final refund = addresses.taddr;
-  if (refund == null || refund.isEmpty) throw StateError('This account needs a transparent Zcash refund address.');
+  final walletAddress = addresses.taddr;
+  if (walletAddress == null || walletAddress.isEmpty) throw StateError('This account needs a transparent Zcash address.');
   final deadline = DateTime.now().toUtc().add(const Duration(minutes: 10));
-  final request = ni.SwapRequest(
-    dry: true,
-    swapType: draft.amountMode == SwapAmountMode.send ? ni.SwapType.exactInput : ni.SwapType.exactOutput,
-    originAsset: 'nep141:zec.omft.near',
-    destinationAsset: asset.assetId,
-    amount: swapBaseUnits(draft.amount, draft.amountMode == SwapAmountMode.send ? 8 : asset.decimals),
-    slippageTolerance: draft.slippageTolerance,
-    recipient: draft.recipient,
-    refundTo: refund,
-    deadline: deadline.toIso8601String(),
-  );
+  final request = buildSwapRequest(draft, asset.assetId, asset.decimals, walletAddress, deadline);
   final response = await nearIntentsQuote(request: request, c: coin);
   final quote = response.quote;
+  final outgoing = draft.direction == SwapDirection.sendZec;
+  final originDecimals = outgoing ? 8 : asset.decimals;
+  final destinationDecimals = outgoing ? asset.decimals : 8;
   return SwapReviewQuote(
     request: request,
-    destinationDecimals: asset.decimals,
-    amountIn: swapDecimalAmount(quote.amountIn, 8),
-    amountOut: swapDecimalAmount(quote.amountOut, asset.decimals),
-    minimumReceived: quote.minAmountOut == null ? 'Unavailable' : swapDecimalAmount(quote.minAmountOut!, asset.decimals),
+    destinationDecimals: destinationDecimals,
+    originDecimals: originDecimals,
+    amountIn: swapDecimalAmount(quote.amountIn, originDecimals),
+    amountOut: swapDecimalAmount(quote.amountOut, destinationDecimals),
+    minimumReceived: quote.minAmountOut == null ? 'Unavailable' : swapDecimalAmount(quote.minAmountOut!, destinationDecimals),
     estimatedCostUsd: swapEstimatedCostUsd(quote.amountInUsd, quote.amountOutUsd),
     expiresAt: deadline,
+  );
+}
+
+ni.SwapRequest buildSwapRequest(SwapDraft draft, String assetId, int assetDecimals, String walletAddress, DateTime deadline) {
+  final outgoing = draft.direction == SwapDirection.sendZec;
+  final originDecimals = outgoing ? 8 : assetDecimals;
+  final destinationDecimals = outgoing ? assetDecimals : 8;
+  if (!outgoing && (draft.refundTo == null || draft.refundTo!.isEmpty)) throw StateError('Enter a refund address.');
+  return ni.SwapRequest(
+    dry: true,
+    swapType: draft.amountMode == SwapAmountMode.send ? ni.SwapType.exactInput : ni.SwapType.exactOutput,
+    originAsset: outgoing ? 'nep141:zec.omft.near' : assetId,
+    destinationAsset: outgoing ? assetId : 'nep141:zec.omft.near',
+    amount: swapBaseUnits(draft.amount, draft.amountMode == SwapAmountMode.send ? originDecimals : destinationDecimals),
+    slippageTolerance: draft.slippageTolerance,
+    recipient: outgoing ? draft.recipient : walletAddress,
+    refundTo: outgoing ? walletAddress : draft.refundTo!,
+    deadline: deadline.toUtc().toIso8601String(),
   );
 }
 

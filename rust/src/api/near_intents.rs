@@ -57,7 +57,8 @@ pub async fn near_intents_record_deposit(id_swap: i64, tx_hash: String, c: &Coin
         let mut connection = c.get_connection().await?;
         let result = sqlx::query(
             "UPDATE swaps SET deposit_tx_hash = ?, updated_at = unixepoch()
-            WHERE id_swap = ? AND account = ? AND (deposit_tx_hash IS NULL OR deposit_tx_hash = ?)",
+            WHERE id_swap = ? AND account = ? AND origin_asset = 'nep141:zec.omft.near'
+            AND (deposit_tx_hash IS NULL OR deposit_tx_hash = ?)",
         )
         .bind(&tx_hash)
         .bind(id_swap)
@@ -67,7 +68,7 @@ pub async fn near_intents_record_deposit(id_swap: i64, tx_hash: String, c: &Coin
         .await?;
         ensure!(
             result.rows_affected() == 1,
-            "Swap not found or already funded by another transaction"
+            "Swap not found, not a ZEC deposit, or already funded by another transaction"
         );
         crate::near_intents::swap_status_snapshot(&mut connection, id_swap, c.account)
             .await?
