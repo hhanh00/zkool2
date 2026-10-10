@@ -94,7 +94,7 @@ pub async fn get_ufvk<D: Device>(ledger: &D, network: &Network, aindex: u32) -> 
     let ufvk = String::from_utf8(payload).map_err(|_| LedgerError::Protocol("invalid utf8 in vk response".into()))?;
     let uvk = UnifiedFullViewingKey::decode(network, &ufvk)
         .map_err(|_| LedgerError::Protocol("device returned an invalid UFVK".into()))?;
-    if uvk.orchard().is_none() || uvk.transparent().is_none() {
+    if uvk.orchard().is_none() || uvk.p2pkh().is_none() {
         return Err(LedgerError::Protocol(
             "device UFVK is missing the orchard or transparent receiver".into(),
         ));
