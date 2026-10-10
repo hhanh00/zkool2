@@ -38,22 +38,36 @@ enum SwapAsset {
 
 enum SwapAmountMode { send, receive }
 
+enum SwapDirection { sendZec, receiveZec }
+
 class SwapDraft {
   final SwapAsset asset;
   final SwapNetwork network;
   final SwapAmountMode amountMode;
   final String amount;
   final String recipient;
+  final String? refundTo;
   final int slippageTolerance;
+  final SwapDirection direction;
+  String get originSymbol => direction == SwapDirection.sendZec ? 'ZEC' : asset.symbol;
+  String get destinationSymbol => direction == SwapDirection.sendZec ? asset.symbol : 'ZEC';
 
   const SwapDraft(
-      {required this.asset, required this.network, required this.amountMode, required this.amount, required this.recipient, this.slippageTolerance = 100});
+      {required this.asset,
+      required this.network,
+      required this.amountMode,
+      required this.amount,
+      required this.recipient,
+      this.slippageTolerance = 100,
+      this.direction = SwapDirection.sendZec,
+      this.refundTo});
 }
 
 /// A displayed quote contains decimal strings, never floating-point amounts.
 class SwapReviewQuote {
   final ni.SwapRequest? request;
   final int? destinationDecimals;
+  final int? originDecimals;
   final String amountIn;
   final String amountOut;
   final String minimumReceived;
@@ -67,6 +81,7 @@ class SwapReviewQuote {
       this.estimatedCostUsd,
       required this.expiresAt,
       this.request,
+      this.originDecimals,
       this.destinationDecimals});
 }
 
@@ -85,6 +100,10 @@ class _SwapPageState extends ConsumerState<SwapPage> {
   SwapAsset _asset = SwapAsset.usdt;
   SwapNetwork _network = SwapNetwork.solana;
   SwapAmountMode _amountMode = SwapAmountMode.send;
+  SwapDirection _direction = SwapDirection.sendZec;
+  bool get _outgoing => _direction == SwapDirection.sendZec;
+  String get _originSymbol => _outgoing ? 'ZEC' : _asset.symbol;
+  String get _destinationSymbol => _outgoing ? _asset.symbol : 'ZEC';
 
   @override
   Widget build(BuildContext context) {
@@ -101,12 +120,24 @@ class _SwapPageState extends ConsumerState<SwapPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const ListTile(contentPadding: EdgeInsets.zero, leading: Icon(Icons.currency_exchange), title: Text('From ZEC'), subtitle: Text('Zcash')),
+              FormBuilderDropdown<SwapDirection>(
+                name: 'direction',
+                initialValue: _direction,
+                decoration: const InputDecoration(labelText: 'Swap direction'),
+                items: const [
+                  DropdownMenuItem(value: SwapDirection.sendZec, child: Text('Send ZEC')),
+                  DropdownMenuItem(value: SwapDirection.receiveZec, child: Text('Receive ZEC')),
+                ],
+                onChanged: (direction) {
+                  if (direction == null) return;
+                  setState(() => _direction = direction);
+                },
+              ),
               const Gap(16),
               FormBuilderDropdown<SwapAsset>(
                 name: 'asset',
                 initialValue: _asset,
-                decoration: const InputDecoration(labelText: 'Receive asset'),
+                decoration: InputDecoration(labelText: _outgoing ? 'Receive asset' : 'Send asset'),
                 items: SwapAsset.values.map((asset) => DropdownMenuItem(value: asset, child: Text(asset.symbol))).toList(),
                 onChanged: (asset) {
                   if (asset == null || asset == _asset) return;
@@ -122,7 +153,7 @@ class _SwapPageState extends ConsumerState<SwapPage> {
                 key: ValueKey(('network', _asset)),
                 name: 'network',
                 initialValue: _network,
-                decoration: const InputDecoration(labelText: 'Receiving network'),
+                decoration: InputDecoration(labelText: _outgoing ? 'Receiving network' : 'Sending network'),
                 items: _asset.networks.map((network) => DropdownMenuItem(value: network, child: Text(network.label))).toList(),
                 onChanged: (network) {
                   if (network == null) return;
@@ -136,8 +167,8 @@ class _SwapPageState extends ConsumerState<SwapPage> {
                 initialValue: _amountMode,
                 decoration: const InputDecoration(labelText: 'Set amount to'),
                 items: [
-                  const DropdownMenuItem(value: SwapAmountMode.send, child: Text('Send ZEC')),
-                  DropdownMenuItem(value: SwapAmountMode.receive, child: Text('Receive ${_asset.symbol}')),
+                  DropdownMenuItem(value: SwapAmountMode.send, child: Text('Send $_originSymbol')),
+                  DropdownMenuItem(value: SwapAmountMode.receive, child: Text('Receive $_destinationSymbol')),
                 ],
                 onChanged: (mode) {
                   if (mode == null || mode == _amountMode) return;
@@ -145,24 +176,27 @@ class _SwapPageState extends ConsumerState<SwapPage> {
                 },
               ),
               const Gap(16),
-              if (_amountMode == SwapAmountMode.send)
+              if ((_amountMode == SwapAmountMode.send) == _outgoing)
                 InputAmount(
-                  key: const ValueKey(SwapAmountMode.send),
+                  key: ValueKey(('zecAmount', _direction, _amountMode)),
                   name: 'amount',
                   showFx: false,
                   label: 'Amount in ZEC',
                 )
               else
                 FormBuilderTextField(
-                  key: ValueKey(('amount', _asset)),
+                  key: ValueKey(('amount', _asset, _direction, _amountMode)),
                   name: 'amount',
                   decoration: InputDecoration(labelText: 'Amount in ${_asset.symbol}'),
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 ),
               const Gap(16),
               FormBuilderTextField(
+                key: ValueKey(('address', _direction)),
                 name: 'recipient',
-                decoration: InputDecoration(labelText: '${_asset.symbol} receiving address', helperText: 'Address on ${_network.label}'),
+                decoration: InputDecoration(
+                    labelText: _outgoing ? '${_asset.symbol} receiving address' : '${_asset.symbol} refund address',
+                    helperText: _outgoing ? 'Address on ${_network.label}' : 'Address on ${_network.label}. ZEC will be received in this account.'),
                 autocorrect: false,
                 enableSuggestions: false,
                 validator: _validateRecipient,
@@ -193,7 +227,7 @@ class _SwapPageState extends ConsumerState<SwapPage> {
 
   String? _validateRecipient(String? value) {
     final address = value?.trim() ?? '';
-    if (address.isEmpty) return 'Enter a receiving address';
+    if (address.isEmpty) return _outgoing ? 'Enter a receiving address' : 'Enter a refund address';
     final pattern = _network == SwapNetwork.ethereum ? RegExp(r'^0x[0-9a-fA-F]{40}$') : RegExp(r'^[1-9A-HJ-NP-Za-km-z]{32,44}$');
     if (!pattern.hasMatch(address)) return 'Enter a ${_network.label} address';
     return null;
@@ -204,18 +238,20 @@ class _SwapPageState extends ConsumerState<SwapPage> {
     if (!form.saveAndValidate()) return;
     final amount = (form.value['amount'] as String?)?.trim() ?? '';
     // Keep parsing local and exact. No money is sent from this frontend step.
-    final decimals = _amountMode == SwapAmountMode.send ? 8 : _asset.decimals;
+    final decimals = (_amountMode == SwapAmountMode.send) == _outgoing ? 8 : _asset.decimals;
     final normalized = normalizeCryptoAmount(amount, decimals: decimals);
     if (normalized == null) {
       form.fields['amount']?.invalidate('Enter a positive amount with at most $decimals decimals');
       return;
     }
     final draft = SwapDraft(
+        direction: _direction,
         asset: _asset,
         network: _network,
         amountMode: _amountMode,
         amount: normalized,
-        recipient: (form.value['recipient'] as String).trim(),
+        recipient: _outgoing ? (form.value['recipient'] as String).trim() : '',
+        refundTo: _outgoing ? null : (form.value['recipient'] as String).trim(),
         slippageTolerance: swapSlippageBasisPoints(form.value['slippage'] as String));
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => SwapReviewPage(draft: draft, quoteLoader: widget.quoteLoader)));
   }
@@ -239,8 +275,11 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
 
   Future<void> _confirmAndSubmit() async {
     final quote = _displayedQuote!;
-    final confirmed =
-        await confirmDialog(context, title: 'Confirm swap', message: 'Are you sure you want to send this ZEC → ${widget.draft.asset.symbol} swap?');
+    final confirmed = await confirmDialog(context,
+        title: 'Confirm swap',
+        message: widget.draft.direction == SwapDirection.sendZec
+            ? 'Are you sure you want to send this ZEC → ${widget.draft.asset.symbol} swap?'
+            : 'Create a ${widget.draft.asset.symbol} → ZEC swap? Send the deposit from your ${widget.draft.network.label} wallet.');
     if (!confirmed) return;
     if (!DateTime.now().isBefore(quote.expiresAt)) {
       if (mounted) setState(_refresh);
@@ -253,7 +292,13 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
     if (mounted) {
       ref.invalidate(savedSwapsProvider);
       Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
-        builder: (_) => SwapSummaryPage(swap: saved, symbol: widget.draft.asset.symbol, decimals: quote.destinationDecimals!),
+        builder: (_) => SwapSummaryPage(
+            swap: saved,
+            symbol: widget.draft.destinationSymbol,
+            decimals: quote.destinationDecimals!,
+            originSymbol: widget.draft.originSymbol,
+            originDecimals: quote.originDecimals!,
+            depositNetwork: widget.draft.direction == SwapDirection.receiveZec ? widget.draft.network.label : null),
       ));
     } else {
       showSnackbar('Swap created successfully (background)');
@@ -312,16 +357,16 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ListTile(contentPadding: EdgeInsets.zero, title: Text('ZEC → ${draft.asset.symbol}')),
-            _row('From', 'Zcash'),
-            _row('To', draft.network.label),
+            ListTile(contentPadding: EdgeInsets.zero, title: Text('${draft.originSymbol} → ${draft.destinationSymbol}')),
+            _row('From', draft.direction == SwapDirection.sendZec ? 'Zcash' : draft.network.label),
+            _row('To', draft.direction == SwapDirection.sendZec ? draft.network.label : 'Zcash'),
             _row('Slippage tolerance', '${swapDecimalAmount(draft.slippageTolerance.toString(), 2)}%'),
             _row(draft.amountMode == SwapAmountMode.send ? 'You send' : 'You receive',
-                '${draft.amount} ${draft.amountMode == SwapAmountMode.send ? 'ZEC' : draft.asset.symbol}'),
+                '${draft.amount} ${draft.amountMode == SwapAmountMode.send ? draft.originSymbol : draft.destinationSymbol}'),
             const Gap(16),
-            Text('Receiving address', style: Theme.of(context).textTheme.labelLarge),
+            Text(draft.direction == SwapDirection.sendZec ? 'Receiving address' : 'Refund address', style: Theme.of(context).textTheme.labelLarge),
             const Gap(8),
-            SelectableText(draft.recipient),
+            SelectableText(draft.direction == SwapDirection.sendZec ? draft.recipient : draft.refundTo!),
             const Gap(24),
             FutureBuilder<SwapReviewQuote>(
               future: _quote,
@@ -334,12 +379,14 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
                 final quote = snapshot.requireData;
                 _displayedQuote = quote;
                 return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  _row('You send', '${quote.amountIn} ZEC'),
-                  _row('You receive', '${quote.amountOut} ${draft.asset.symbol}'),
-                  _row('Minimum received', quote.minimumReceived == 'Unavailable' ? 'Unavailable' : '${quote.minimumReceived} ${draft.asset.symbol}'),
+                  if (draft.direction == SwapDirection.receiveZec && quote.request != null)
+                    ListTile(contentPadding: EdgeInsets.zero, title: const Text('Zcash receiving address'), subtitle: SelectableText(quote.request!.recipient)),
+                  _row('You send', '${quote.amountIn} ${draft.originSymbol}'),
+                  _row('You receive', '${quote.amountOut} ${draft.destinationSymbol}'),
+                  _row('Minimum received', quote.minimumReceived == 'Unavailable' ? 'Unavailable' : '${quote.minimumReceived} ${draft.destinationSymbol}'),
                   _row('Estimated swap cost', quote.estimatedCostUsd == null ? 'Unavailable' : '${quote.estimatedCostUsd} USD'),
-                  const Text(
-                      'Based on quoted USD values. Includes fees, spread and price impact; may include a refundable slippage buffer. Zcash network fee is extra.'),
+                  Text(
+                      'Based on quoted USD values. Includes fees, spread and price impact; may include a refundable slippage buffer. ${draft.direction == SwapDirection.sendZec ? 'Zcash' : draft.network.label} network fee is extra.'),
                   _row('Quote expires', exactTimeToString(quote.expiresAt.millisecondsSinceEpoch ~/ 1000)),
                   TextButton(onPressed: _submitting ? null : () => setState(_refresh), child: const Text('Refresh quote')),
                   ElevatedButton(onPressed: _submitting || quote.request == null ? null : _confirm, child: const Text('Confirm swap')),

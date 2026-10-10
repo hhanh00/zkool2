@@ -1,7 +1,34 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:zkool/services/swap_quote.dart';
+import 'package:zkool/pages/swap.dart';
+import 'package:zkool/src/rust/near_intents.dart' as ni;
 
 void main() {
+  test('swap requests use the correct assets, addresses and amount units in both directions', () {
+    for (final direction in SwapDirection.values) {
+      for (final mode in SwapAmountMode.values) {
+        final outgoing = direction == SwapDirection.sendZec;
+        final draft = SwapDraft(
+            asset: SwapAsset.usdt,
+            network: SwapNetwork.solana,
+            direction: direction,
+            amountMode: mode,
+            amount: '1.25',
+            recipient: outgoing ? 'external' : '',
+            refundTo: outgoing ? null : 'external',
+            slippageTolerance: 25);
+        final request = buildSwapRequest(draft, 'usdt', 6, 'wallet', DateTime.utc(2026, 10, 10));
+        expect(request.originAsset, outgoing ? 'nep141:zec.omft.near' : 'usdt');
+        expect(request.destinationAsset, outgoing ? 'usdt' : 'nep141:zec.omft.near');
+        expect(request.recipient, outgoing ? 'external' : 'wallet');
+        expect(request.refundTo, outgoing ? 'wallet' : 'external');
+        expect(request.amount, (mode == SwapAmountMode.send) == outgoing ? '125000000' : '1250000');
+        expect(request.swapType, mode == SwapAmountMode.send ? ni.SwapType.exactInput : ni.SwapType.exactOutput);
+        expect(request.slippageTolerance, 25);
+        expect(request.dry, isTrue);
+      }
+    }
+  });
   test('slippage converts percentages to basis points without rounding', () {
     expect(swapSlippageBasisPoints('1'), 100);
     expect(swapSlippageBasisPoints('0.25'), 25);
