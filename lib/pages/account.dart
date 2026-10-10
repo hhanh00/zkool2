@@ -229,6 +229,8 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                   await GoRouter.of(context).push("/viewing_keys", extra: account.account.id);
                 case "edit_account":
                   await GoRouter.of(context).push("/account/edit", extra: [account.account]);
+                case "swap":
+                  await GoRouter.of(context).push("/swap");
                 case "market_price":
                   await GoRouter.of(context).push("/market");
                 case "update_fx":
@@ -248,6 +250,11 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              if (settings.expertMode)
+                const PopupMenuItem<String>(
+                  value: "swap",
+                  child: Text("Swap"),
+                ),
               const PopupMenuItem<String>(
                 value: "account_manager",
                 child: Text("Account Manager"),
