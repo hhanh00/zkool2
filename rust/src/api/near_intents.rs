@@ -35,6 +35,51 @@ pub async fn near_intents_quote(request: SwapRequest, c: &Coin) -> Result<SwapQu
     crate::near_intents::quote(request, &transport(c)).await
 }
 
+/// Create a deposit quote and persist it before any wallet payment is prepared.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn near_intents_create_swap(mut request: SwapRequest, c: &Coin) -> Result<SavedSwap> {
+    ensure!(c.account != 0, "Select an account");
+    request.dry = false;
+    let response = near_intents_quote(request.clone(), c).await?;
+    let mut connection = c.get_connection().await?;
+    crate::near_intents::save_swap(&mut connection, c.account, &request, &response).await
+}
+
+/// Persist an already broadcast deposit before notifying the provider. Retrying
+/// notification never sends another wallet transaction.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn near_intents_record_deposit(id_swap: i64, tx_hash: String, c: &Coin) -> Result<()> {
+    ensure!(
+        tx_hash.len() == 64 && tx_hash.bytes().all(|b| b.is_ascii_hexdigit()),
+        "Invalid Zcash transaction hash"
+    );
+    let address = {
+        let mut connection = c.get_connection().await?;
+        let result = sqlx::query(
+            "UPDATE swaps SET deposit_tx_hash = ?, updated_at = unixepoch()
+            WHERE id_swap = ? AND account = ? AND (deposit_tx_hash IS NULL OR deposit_tx_hash = ?)",
+        )
+        .bind(&tx_hash)
+        .bind(id_swap)
+        .bind(c.account)
+        .bind(&tx_hash)
+        .execute(&mut *connection)
+        .await?;
+        ensure!(
+            result.rows_affected() == 1,
+            "Swap not found or already funded by another transaction"
+        );
+        crate::near_intents::swap_status_snapshot(&mut connection, id_swap, c.account)
+            .await?
+            .0
+    };
+    near_intents_submit_deposit(address, tx_hash, c).await?;
+    let mut connection = c.get_connection().await?;
+    sqlx::query("UPDATE swaps SET deposit_submitted_at = COALESCE(deposit_submitted_at, unixepoch()), updated_at = unixepoch() WHERE id_swap = ? AND account = ?")
+        .bind(id_swap).bind(c.account).execute(&mut *connection).await?;
+    Ok(())
+}
+
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn near_intents_status(
     deposit_address: String,

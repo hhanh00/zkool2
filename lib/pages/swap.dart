@@ -7,6 +7,11 @@ import 'package:zkool/validators.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/services/swap_quote.dart';
 import 'package:zkool/widgets/error_display.dart';
+import 'package:zkool/src/rust/api/near_intents.dart';
+import 'package:zkool/src/rust/near_intents.dart' as ni;
+import 'package:zkool/pages/swaps.dart';
+import 'package:zkool/pages/swap_summary.dart';
+import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/input_amount.dart';
 
 /// Destination networks offered by the initial frontend.
@@ -39,19 +44,30 @@ class SwapDraft {
   final SwapAmountMode amountMode;
   final String amount;
   final String recipient;
+  final int slippageTolerance;
 
-  const SwapDraft({required this.asset, required this.network, required this.amountMode, required this.amount, required this.recipient});
+  const SwapDraft(
+      {required this.asset, required this.network, required this.amountMode, required this.amount, required this.recipient, this.slippageTolerance = 100});
 }
 
 /// A displayed quote contains decimal strings, never floating-point amounts.
 class SwapReviewQuote {
+  final ni.SwapRequest? request;
+  final int? destinationDecimals;
   final String amountIn;
   final String amountOut;
   final String minimumReceived;
   final String? estimatedCostUsd;
   final DateTime expiresAt;
 
-  const SwapReviewQuote({required this.amountIn, required this.amountOut, required this.minimumReceived, this.estimatedCostUsd, required this.expiresAt});
+  const SwapReviewQuote(
+      {required this.amountIn,
+      required this.amountOut,
+      required this.minimumReceived,
+      this.estimatedCostUsd,
+      required this.expiresAt,
+      this.request,
+      this.destinationDecimals});
 }
 
 typedef SwapQuoteLoader = Future<SwapReviewQuote> Function(SwapDraft draft);
@@ -73,15 +89,6 @@ class _SwapPageState extends ConsumerState<SwapPage> {
   @override
   Widget build(BuildContext context) {
     if (ref.watch(lifecycleProvider).value ?? false) return PinLock();
-    if (!(ref.watch(appSettingsProvider).value?.expertMode ?? false)) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Swap')),
-        body: const Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('Enable expert mode in Settings to use swaps.'),
-        ),
-      );
-    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Swap'),
@@ -160,6 +167,21 @@ class _SwapPageState extends ConsumerState<SwapPage> {
                 enableSuggestions: false,
                 validator: _validateRecipient,
               ),
+              const Gap(16),
+              FormBuilderTextField(
+                name: 'slippage',
+                initialValue: '1',
+                decoration: const InputDecoration(labelText: 'Slippage tolerance', suffixText: '%'),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (value) {
+                  try {
+                    swapSlippageBasisPoints(value ?? '');
+                    return null;
+                  } on FormatException {
+                    return 'Enter 0–100% with at most 2 decimals';
+                  }
+                },
+              ),
               const Gap(24),
               ElevatedButton.icon(onPressed: _review, label: const Text('Next'), icon: const Icon(Icons.arrow_forward)),
             ],
@@ -188,8 +210,13 @@ class _SwapPageState extends ConsumerState<SwapPage> {
       form.fields['amount']?.invalidate('Enter a positive amount with at most $decimals decimals');
       return;
     }
-    final draft =
-        SwapDraft(asset: _asset, network: _network, amountMode: _amountMode, amount: normalized, recipient: (form.value['recipient'] as String).trim());
+    final draft = SwapDraft(
+        asset: _asset,
+        network: _network,
+        amountMode: _amountMode,
+        amount: normalized,
+        recipient: (form.value['recipient'] as String).trim(),
+        slippageTolerance: swapSlippageBasisPoints(form.value['slippage'] as String));
     Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => SwapReviewPage(draft: draft, quoteLoader: widget.quoteLoader)));
   }
 }
@@ -205,6 +232,60 @@ class SwapReviewPage extends ConsumerStatefulWidget {
 
 class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
   Future<SwapReviewQuote>? _quote;
+  SwapReviewQuote? _displayedQuote;
+  bool _submitting = false;
+  String _submitStep = '';
+  late final _coin = coinContext.coin;
+
+  Future<void> _confirmAndSubmit() async {
+    final quote = _displayedQuote!;
+    final confirmed =
+        await confirmDialog(context, title: 'Confirm swap', message: 'Are you sure you want to send this ZEC → ${widget.draft.asset.symbol} swap?');
+    if (!confirmed) return;
+    if (!DateTime.now().isBefore(quote.expiresAt)) {
+      if (mounted) setState(_refresh);
+      return;
+    }
+    if (mounted) setState(() => _submitStep = 'Creating swap...');
+    final saved = await nearIntentsCreateSwap(request: quote.request!, c: _coin);
+    // TODO: Prepare, sign and broadcast the deposit, then notify 1Click.
+    // This dialog is the final confirmation, as in transaction sending.
+    if (mounted) {
+      ref.invalidate(savedSwapsProvider);
+      Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
+        builder: (_) => SwapSummaryPage(swap: saved, symbol: widget.draft.asset.symbol, decimals: quote.destinationDecimals!),
+      ));
+    } else {
+      showSnackbar('Swap created successfully (background)');
+    }
+  }
+
+  Future<void> _confirm() async {
+    if (_submitting || _displayedQuote?.request == null) return;
+    if (!DateTime.now().isBefore(_displayedQuote!.expiresAt)) {
+      setState(_refresh);
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _submitStep = 'Preparing...';
+    });
+    try {
+      await _confirmAndSubmit();
+    } catch (error) {
+      if (mounted) {
+        await showException(context, error.toString());
+      } else {
+        showSnackbar('Swap submission failed: $error');
+      }
+    } finally {
+      if (mounted)
+        setState(() {
+          _submitting = false;
+          _submitStep = '';
+        });
+    }
+  }
 
   @override
   void initState() {
@@ -213,28 +294,18 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
   }
 
   void _refresh() {
+    _displayedQuote = null;
     final loader = widget.quoteLoader;
-    final coin = coinContext.coin.copyWith(account: ref.read(selectedAccountIdProvider));
-    _quote = Future.sync(() => loader != null ? loader(widget.draft) : loadSwapQuote(widget.draft, coin));
+    _quote = Future.sync(() => loader != null ? loader(widget.draft) : loadSwapQuote(widget.draft, _coin));
   }
 
   @override
   Widget build(BuildContext context) {
     if (ref.watch(lifecycleProvider).value ?? false) return PinLock();
-    if (!(ref.watch(appSettingsProvider).value?.expertMode ?? false)) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Swap')),
-        body: const Padding(
-          padding: EdgeInsets.all(16),
-          child: Text('Enable expert mode in Settings to use swaps.'),
-        ),
-      );
-    }
     final draft = widget.draft;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Review swap'),
-        actions: [const IconButton(tooltip: 'Next', onPressed: null, icon: Icon(Icons.arrow_forward))],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -244,6 +315,7 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
             ListTile(contentPadding: EdgeInsets.zero, title: Text('ZEC → ${draft.asset.symbol}')),
             _row('From', 'Zcash'),
             _row('To', draft.network.label),
+            _row('Slippage tolerance', '${swapDecimalAmount(draft.slippageTolerance.toString(), 2)}%'),
             _row(draft.amountMode == SwapAmountMode.send ? 'You send' : 'You receive',
                 '${draft.amount} ${draft.amountMode == SwapAmountMode.send ? 'ZEC' : draft.asset.symbol}'),
             const Gap(16),
@@ -260,19 +332,27 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
                   return ErrorCard(error: snapshot.error!, onRetry: () => setState(_refresh));
                 }
                 final quote = snapshot.requireData;
+                _displayedQuote = quote;
                 return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   _row('You send', '${quote.amountIn} ZEC'),
                   _row('You receive', '${quote.amountOut} ${draft.asset.symbol}'),
                   _row('Minimum received', quote.minimumReceived == 'Unavailable' ? 'Unavailable' : '${quote.minimumReceived} ${draft.asset.symbol}'),
                   _row('Estimated swap cost', quote.estimatedCostUsd == null ? 'Unavailable' : '${quote.estimatedCostUsd} USD'),
-                  const Text('Based on quoted USD values. Includes fees, spread and price impact; may include a refundable slippage buffer. Zcash network fee is extra.'),
-                  _row('Quote expires', '${quote.expiresAt.toLocal()}'),
-                  TextButton(onPressed: () => setState(_refresh), child: const Text('Refresh quote')),
+                  const Text(
+                      'Based on quoted USD values. Includes fees, spread and price impact; may include a refundable slippage buffer. Zcash network fee is extra.'),
+                  _row('Quote expires', exactTimeToString(quote.expiresAt.millisecondsSinceEpoch ~/ 1000)),
+                  TextButton(onPressed: _submitting ? null : () => setState(_refresh), child: const Text('Refresh quote')),
+                  ElevatedButton(onPressed: _submitting || quote.request == null ? null : _confirm, child: const Text('Confirm swap')),
                 ]);
               },
             ),
             const Gap(24),
-            ElevatedButton.icon(onPressed: null, label: const Text('Next'), icon: const Icon(Icons.arrow_forward)),
+            if (_submitting) ...[
+              const LinearProgressIndicator(),
+              const Gap(8),
+              Text(_submitStep),
+              const Text('Submission continues in the background if this page is closed.'),
+            ],
           ],
         ),
       ),

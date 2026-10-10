@@ -63,6 +63,17 @@ pub(crate) async fn read_swaps(
     .await?;
     rows.into_iter()
         .map(|row| {
+            let quote_response: String = row.try_get("quote_response")?;
+            // Older rows stored the address lifetime instead of the requested
+            // swap deadline. Recover the request from the provider snapshot.
+            let deadline = serde_json::from_str::<serde_json::Value>(&quote_response)
+                .ok()
+                .and_then(|response| {
+                    response["quoteRequest"]["deadline"]
+                        .as_str()
+                        .map(str::to_owned)
+                })
+                .unwrap_or(row.try_get("deadline")?);
             Ok(SavedSwap {
                 id_swap: row.try_get("id_swap")?,
                 account: row.try_get("account")?,
@@ -73,7 +84,7 @@ pub(crate) async fn read_swaps(
                 slippage_tolerance: row.try_get("slippage_tolerance")?,
                 recipient: row.try_get("recipient")?,
                 refund_to: row.try_get("refund_to")?,
-                deadline: row.try_get("deadline")?,
+                deadline,
                 amount_in: row.try_get("amount_in")?,
                 amount_out: row.try_get("amount_out")?,
                 min_amount_in: row.try_get("min_amount_in")?,
@@ -82,7 +93,7 @@ pub(crate) async fn read_swaps(
                 deposit_memo: row.try_get("deposit_memo")?,
                 deposit_tx_hash: row.try_get("deposit_tx_hash")?,
                 deposit_submitted_at: row.try_get("deposit_submitted_at")?,
-                quote_response: row.try_get("quote_response")?,
+                quote_response,
                 status: row.try_get("status")?,
                 status_response: row.try_get("status_response")?,
                 last_checked_at: row.try_get("last_checked_at")?,
@@ -386,6 +397,52 @@ pub(crate) async fn swap_status_snapshot(
     .context("Swap not found for the current account")
 }
 
+pub(crate) async fn save_swap(
+    connection: &mut sqlx::SqliteConnection,
+    account: u32,
+    request: &SwapRequest,
+    response: &SwapQuoteResponse,
+) -> Result<SavedSwap> {
+    ensure!(!request.dry, "Preview quotes cannot be saved as swaps");
+    let quote = &response.quote;
+    let address = quote
+        .deposit_address
+        .as_deref()
+        .context("Missing deposit address")?;
+    let result = sqlx::query(
+        "INSERT INTO swaps(account, origin_asset, destination_asset, swap_type,
+        amount, slippage_tolerance, recipient, refund_to, deadline, amount_in, amount_out,
+        min_amount_in, min_amount_out, deposit_address, deposit_memo, quote_response)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .bind(account)
+    .bind(&request.origin_asset)
+    .bind(&request.destination_asset)
+    .bind(match request.swap_type {
+        SwapType::ExactInput => "EXACT_INPUT",
+        SwapType::ExactOutput => "EXACT_OUTPUT",
+    })
+    .bind(&request.amount)
+    .bind(request.slippage_tolerance)
+    .bind(&request.recipient)
+    .bind(&request.refund_to)
+    .bind(&request.deadline)
+    .bind(&quote.amount_in)
+    .bind(&quote.amount_out)
+    .bind(&quote.min_amount_in)
+    .bind(&quote.min_amount_out)
+    .bind(address)
+    .bind(&quote.deposit_memo)
+    .bind(&response.raw_response)
+    .execute(&mut *connection)
+    .await?;
+    read_swaps(connection, account, false)
+        .await?
+        .into_iter()
+        .find(|swap| swap.id_swap == result.last_insert_rowid())
+        .context("Saved swap not found")
+}
+
 pub(crate) async fn persist_swap_status(
     connection: &mut sqlx::SqliteConnection,
     id_swap: i64,
@@ -454,6 +511,51 @@ pub async fn submit_deposit(
 mod tests {
     use super::*;
     use sqlx::Connection;
+
+    #[tokio::test]
+    async fn confirmed_quote_persists_request_and_provider_snapshot() -> Result<()> {
+        let mut db = sqlx::SqliteConnection::connect("sqlite::memory:").await?;
+        sqlx::raw_sql(
+            "CREATE TABLE accounts(id_account INTEGER PRIMARY KEY);
+            INSERT INTO accounts VALUES (1);",
+        )
+        .execute(&mut db)
+        .await?;
+        sqlx::raw_sql(include_str!("db/swaps.sql"))
+            .execute(&mut db)
+            .await?;
+        let mut request = sample();
+        let raw = r#"{"quote":{"amountIn":"123456789","amountOut":"600000000","depositAddress":"deposit","deadline":"2026-10-13T12:00:00Z","minAmountOut":"590000000"},"signature":"provider-signature"}"#;
+        let response = SwapQuoteResponse {
+            quote: decode(&serde_json::from_str::<serde_json::Value>(raw)?["quote"].to_string())?,
+            raw_response: raw.into(),
+        };
+        assert!(save_swap(&mut db, 1, &request, &response).await.is_err());
+        request.dry = false;
+        let saved = save_swap(&mut db, 1, &request, &response).await?;
+        assert_eq!(saved.account, 1);
+        assert_eq!(saved.swap_type, "EXACT_OUTPUT");
+        assert_eq!(saved.amount, request.amount);
+        assert_eq!(saved.deadline, request.deadline);
+        assert_eq!(saved.amount_in, "123456789");
+        assert_eq!(saved.amount_out, "600000000");
+        assert_eq!(saved.min_amount_out.as_deref(), Some("590000000"));
+        assert_eq!(saved.recipient, request.recipient);
+        assert_eq!(saved.refund_to, request.refund_to);
+        assert_eq!(saved.quote_response, raw);
+        assert!(saved.status.is_none() && saved.deposit_tx_hash.is_none());
+        assert!(save_swap(&mut db, 1, &request, &response).await.is_err());
+        let mut legacy_response: serde_json::Value = serde_json::from_str(raw)?;
+        legacy_response["quoteRequest"] = serde_json::json!({"deadline": request.deadline});
+        sqlx::query("UPDATE swaps SET deadline = ?, quote_response = ? WHERE id_swap = ?")
+            .bind("2026-10-13T12:00:00Z")
+            .bind(legacy_response.to_string())
+            .bind(saved.id_swap)
+            .execute(&mut db)
+            .await?;
+        assert_eq!(read_swaps(&mut db, 1, false).await?[0].deadline, request.deadline);
+        Ok(())
+    }
 
     #[test]
     fn token_prices_accept_numbers_strings_null_and_missing() {

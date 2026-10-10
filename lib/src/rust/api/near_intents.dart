@@ -8,6 +8,8 @@ import '../near_intents.dart';
 import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These functions are ignored because they are not marked as `pub`: `transport`
+
 Future<List<SavedSwap>> nearIntentsListSwaps(
         {required bool pendingOnly, required Coin c}) =>
     RustLib.instance.api.crateApiNearIntentsNearIntentsListSwaps(
@@ -21,6 +23,21 @@ Future<SwapQuoteResponse> nearIntentsQuote(
     RustLib.instance.api
         .crateApiNearIntentsNearIntentsQuote(request: request, c: c);
 
+/// Create a deposit quote and persist it before any wallet payment is prepared.
+Future<SavedSwap> nearIntentsCreateSwap(
+        {required SwapRequest request, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiNearIntentsNearIntentsCreateSwap(request: request, c: c);
+
+/// Persist an already broadcast deposit before notifying the provider. Retrying
+/// notification never sends another wallet transaction.
+Future<void> nearIntentsRecordDeposit(
+        {required PlatformInt64 idSwap,
+        required String txHash,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiNearIntentsNearIntentsRecordDeposit(
+        idSwap: idSwap, txHash: txHash, c: c);
+
 Future<SwapStatus> nearIntentsStatus(
         {required String depositAddress,
         String? depositMemo,
@@ -28,6 +45,8 @@ Future<SwapStatus> nearIntentsStatus(
     RustLib.instance.api.crateApiNearIntentsNearIntentsStatus(
         depositAddress: depositAddress, depositMemo: depositMemo, c: c);
 
+/// Refresh a saved swap owned by the current account. Provider failures leave
+/// the saved snapshot untouched, and concurrent updates are checked on write.
 Future<SwapStatus> nearIntentsRefreshSwapStatus(
         {required PlatformInt64 idSwap, required Coin c}) =>
     RustLib.instance.api

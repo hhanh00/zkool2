@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/services/swap_quote.dart' show swapDeadline, swapDecimalAmount;
 import 'package:zkool/src/rust/api/near_intents.dart';
 import 'package:zkool/src/rust/near_intents.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 
 final savedSwapsProvider = FutureProvider.autoDispose<List<SavedSwap>>((ref) {
@@ -44,6 +46,9 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
       for (final swap in swaps) {
         if (!mounted || ref.read(selectedAccountIdProvider) != coin.account) break;
         try {
+          if (swap.depositTxHash != null && swap.depositSubmittedAt == null) {
+            await nearIntentsRecordDeposit(idSwap: swap.idSwap, txHash: swap.depositTxHash!, c: coin);
+          }
           await nearIntentsRefreshSwapStatus(idSwap: swap.idSwap, c: coin);
         } catch (e) {
           error ??= e;
@@ -65,11 +70,6 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
   @override
   Widget build(BuildContext context) {
     if (ref.watch(lifecycleProvider).value ?? false) return PinLock();
-    if (!(ref.watch(appSettingsProvider).value?.expertMode ?? false)) {
-      return Scaffold(
-          appBar: AppBar(title: const Text('Swaps')),
-          body: const Padding(padding: EdgeInsets.all(16), child: Text('Enable expert mode in Settings to use swaps.')));
-    }
     final swaps = ref.watch(savedSwapsProvider);
     final assets = ref.watch(swapAssetsProvider).value ?? <SwapAsset>[];
     return Scaffold(
@@ -149,6 +149,14 @@ class _SwapTile extends StatelessWidget {
       childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       expandedCrossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        _detail(
+            'Minimum received',
+            swap.minAmountOut == null
+                ? 'Unavailable'
+                : asset == null
+                    ? '${swap.minAmountOut} base units'
+                    : '${swapDecimalAmount(swap.minAmountOut!, asset!.decimals)} ${asset!.symbol}'),
+        _detail('Slippage tolerance', '${swapDecimalAmount(swap.slippageTolerance.toString(), 2)}%'),
         _detail('Receive asset', swap.destinationAsset),
         if (asset != null) _detail('Receiving network', asset!.blockchain),
         _detail('Receiving address', swap.recipient),
@@ -156,7 +164,7 @@ class _SwapTile extends StatelessWidget {
         if (swap.depositMemo != null) _detail('Deposit memo', swap.depositMemo!),
         if (swap.depositTxHash != null) _detail('Deposit transaction', swap.depositTxHash!),
         _detail('Refund address', swap.refundTo),
-        _detail('Deadline', swap.deadline),
+        _detail('Deadline', exactTimeToString(swapDeadline(swap).millisecondsSinceEpoch ~/ 1000)),
       ],
     );
   }
