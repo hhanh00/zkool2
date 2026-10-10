@@ -1,3 +1,4 @@
+import 'package:zkool/services/continuation_context.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -21,6 +22,7 @@ import 'package:zkool/pages/raptor.dart';
 import 'package:zkool/pages/receive.dart';
 import 'package:zkool/pages/send.dart';
 import 'package:zkool/pages/swap.dart';
+import 'package:zkool/pages/swap_summary.dart';
 import 'package:zkool/pages/swaps.dart';
 import 'package:zkool/pages/splash.dart';
 import 'package:zkool/pages/tx.dart';
@@ -102,7 +104,12 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
             return Send2Page(recipients, recipientPaysFee: recipientPaysFee);
           },
         ),
-        GoRoute(path: '/tx', builder: (context, state) => TxPage(state.extra as PcztPackage)),
+        GoRoute(
+            path: '/tx',
+            builder: (context, state) {
+              final extra = state.extra;
+              return extra is TxPageArgs ? TxPage(extra.pczt, continuation: extra.continuation) : TxPage(extra as PcztPackage);
+            }),
         GoRoute(path: '/tx_view', builder: (context, state) => TxViewPage(state.extra as int)),
         GoRoute(path: '/log', builder: (context, state) => LogviewPage()),
         GoRoute(path: '/scanner', builder: (context, state) => ScannerPage(validator: state.extra as String? Function(String?))),
@@ -115,6 +122,28 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
         ),
         GoRoute(path: '/splash', builder: (context, state) => SplashPage()),
         GoRoute(path: '/swap', builder: (context, state) => const SwapPage()),
+        GoRoute(
+          path: '/swap/review',
+          builder: (context, state) {
+            final (draft, quoteLoader) = state.extra as (SwapDraft, SwapQuoteLoader?);
+            return SwapReviewPage(draft: draft, quoteLoader: quoteLoader);
+          },
+        ),
+        GoRoute(
+          path: '/swap/summary',
+          builder: (context, state) {
+            final args = state.extra as SwapSummaryArgs;
+            return SwapSummaryPage(
+              swap: args.swap,
+              symbol: args.symbol,
+              decimals: args.decimals,
+              originSymbol: args.originSymbol,
+              originDecimals: args.originDecimals,
+              depositNetwork: args.depositNetwork,
+              notificationError: args.notificationError,
+            );
+          },
+        ),
         GoRoute(path: '/swaps', builder: (context, state) => const SwapsPage()),
         GoRoute(path: '/market', builder: (context, state) => MarketPrice()),
         GoRoute(path: '/mempool', builder: (context, state) => MempoolPage()),

@@ -1,7 +1,12 @@
+import 'package:zkool/services/continuation_context.dart';
+import 'package:zkool/pages/swap_summary.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:gap/gap.dart';
+import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/validators.dart';
 import 'package:zkool/store.dart';
@@ -11,7 +16,6 @@ import 'package:zkool/src/rust/api/near_intents.dart';
 import 'package:zkool/src/rust/api/address.dart';
 import 'package:zkool/src/rust/near_intents.dart' as ni;
 import 'package:zkool/pages/swaps.dart';
-import 'package:zkool/pages/swap_summary.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/input_amount.dart';
 
@@ -253,7 +257,7 @@ class _SwapPageState extends ConsumerState<SwapPage> {
         recipient: _outgoing ? (form.value['recipient'] as String).trim() : '',
         refundTo: _outgoing ? null : (form.value['recipient'] as String).trim(),
         slippageTolerance: swapSlippageBasisPoints(form.value['slippage'] as String));
-    Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => SwapReviewPage(draft: draft, quoteLoader: widget.quoteLoader)));
+    GoRouter.of(context).push('/swap/review', extra: (draft, widget.quoteLoader));
   }
 }
 
@@ -269,6 +273,7 @@ class SwapReviewPage extends ConsumerStatefulWidget {
 class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
   Future<SwapReviewQuote>? _quote;
   SwapReviewQuote? _displayedQuote;
+  ni.SavedSwap? _createdSwap;
   bool _submitting = false;
   String _submitStep = '';
   late final _coin = coinContext.coin;
@@ -281,33 +286,36 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
             ? 'Are you sure you want to send this ZEC → ${widget.draft.asset.symbol} swap?'
             : 'Create a ${widget.draft.asset.symbol} → ZEC swap? Send the deposit from your ${widget.draft.network.label} wallet.');
     if (!confirmed) return;
-    if (!DateTime.now().isBefore(quote.expiresAt)) {
+    if (_createdSwap == null && !DateTime.now().isBefore(quote.expiresAt)) {
       if (mounted) setState(_refresh);
       return;
     }
     if (mounted) setState(() => _submitStep = 'Creating swap...');
-    final saved = await nearIntentsCreateSwap(request: quote.request!, c: _coin);
-    // TODO: Prepare, sign and broadcast the deposit, then notify 1Click.
-    // This dialog is the final confirmation, as in transaction sending.
-    if (mounted) {
+    final saved = _createdSwap ??= await nearIntentsCreateSwap(request: quote.request!, c: _coin);
+    final SwapSummaryArgs summary = (
+      swap: saved,
+      symbol: widget.draft.destinationSymbol,
+      decimals: quote.destinationDecimals!,
+      originSymbol: widget.draft.originSymbol,
+      originDecimals: quote.originDecimals!,
+      notificationError: null,
+      depositNetwork: widget.draft.direction == SwapDirection.receiveZec ? widget.draft.network.label : null,
+    );
+    if (widget.draft.direction == SwapDirection.sendZec) {
+      if (mounted) setState(() => _submitStep = 'Preparing deposit...');
+      final pczt = await nearIntentsPrepareSwap(idSwap: saved.idSwap, c: _coin);
+      if (!mounted) return;
       ref.invalidate(savedSwapsProvider);
-      Navigator.of(context).pushReplacement(MaterialPageRoute<void>(
-        builder: (_) => SwapSummaryPage(
-            swap: saved,
-            symbol: widget.draft.destinationSymbol,
-            decimals: quote.destinationDecimals!,
-            originSymbol: widget.draft.originSymbol,
-            originDecimals: quote.originDecimals!,
-            depositNetwork: widget.draft.direction == SwapDirection.receiveZec ? widget.draft.network.label : null),
-      ));
-    } else {
-      showSnackbar('Swap created successfully (background)');
+      unawaited(GoRouter.of(context).pushReplacement<void>('/tx', extra: TxPageArgs(pczt, SwapContext(summary))));
+    } else if (mounted) {
+      ref.invalidate(savedSwapsProvider);
+      unawaited(GoRouter.of(context).pushReplacement<void>('/swap/summary', extra: summary));
     }
   }
 
   Future<void> _confirm() async {
     if (_submitting || _displayedQuote?.request == null) return;
-    if (!DateTime.now().isBefore(_displayedQuote!.expiresAt)) {
+    if (_createdSwap == null && !DateTime.now().isBefore(_displayedQuote!.expiresAt)) {
       setState(_refresh);
       return;
     }
@@ -388,7 +396,7 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
                   Text(
                       'Based on quoted USD values. Includes fees, spread and price impact; may include a refundable slippage buffer. ${draft.direction == SwapDirection.sendZec ? 'Zcash' : draft.network.label} network fee is extra.'),
                   _row('Quote expires', exactTimeToString(quote.expiresAt.millisecondsSinceEpoch ~/ 1000)),
-                  TextButton(onPressed: _submitting ? null : () => setState(_refresh), child: const Text('Refresh quote')),
+                  TextButton(onPressed: _submitting || _createdSwap != null ? null : () => setState(_refresh), child: const Text('Refresh quote')),
                   ElevatedButton(onPressed: _submitting || quote.request == null ? null : _confirm, child: const Text('Confirm swap')),
                 ]);
               },
