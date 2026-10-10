@@ -5,6 +5,8 @@ import 'package:gap/gap.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/validators.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/services/swap_quote.dart';
+import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/widgets/input_amount.dart';
 
 /// Destination networks offered by the initial frontend.
@@ -46,10 +48,10 @@ class SwapReviewQuote {
   final String amountIn;
   final String amountOut;
   final String minimumReceived;
-  final String fees;
+  final String? estimatedCostUsd;
   final DateTime expiresAt;
 
-  const SwapReviewQuote({required this.amountIn, required this.amountOut, required this.minimumReceived, required this.fees, required this.expiresAt});
+  const SwapReviewQuote({required this.amountIn, required this.amountOut, required this.minimumReceived, this.estimatedCostUsd, required this.expiresAt});
 }
 
 typedef SwapQuoteLoader = Future<SwapReviewQuote> Function(SwapDraft draft);
@@ -212,7 +214,8 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
 
   void _refresh() {
     final loader = widget.quoteLoader;
-    if (loader != null) _quote = Future.sync(() => loader(widget.draft));
+    final coin = coinContext.coin.copyWith(account: ref.read(selectedAccountIdProvider));
+    _quote = Future.sync(() => loader != null ? loader(widget.draft) : loadSwapQuote(widget.draft, coin));
   }
 
   @override
@@ -254,17 +257,15 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
                 if (_quote == null) return const Text('A quote is required before this swap can be confirmed.');
                 if (snapshot.connectionState != ConnectionState.done) return const Center(child: CircularProgressIndicator());
                 if (snapshot.hasError) {
-                  return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                    const Text('Unable to get a quote. Please try again.'),
-                    TextButton(onPressed: () => setState(_refresh), child: const Text('Retry')),
-                  ]);
+                  return ErrorCard(error: snapshot.error!, onRetry: () => setState(_refresh));
                 }
                 final quote = snapshot.requireData;
                 return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   _row('You send', '${quote.amountIn} ZEC'),
                   _row('You receive', '${quote.amountOut} ${draft.asset.symbol}'),
-                  _row('Minimum received', '${quote.minimumReceived} ${draft.asset.symbol}'),
-                  _row('Swap fees', quote.fees),
+                  _row('Minimum received', quote.minimumReceived == 'Unavailable' ? 'Unavailable' : '${quote.minimumReceived} ${draft.asset.symbol}'),
+                  _row('Estimated swap cost', quote.estimatedCostUsd == null ? 'Unavailable' : '${quote.estimatedCostUsd} USD'),
+                  const Text('Based on quoted USD values. Includes fees, spread and price impact; may include a refundable slippage buffer. Zcash network fee is extra.'),
                   _row('Quote expires', '${quote.expiresAt.toLocal()}'),
                   TextButton(onPressed: () => setState(_refresh), child: const Text('Refresh quote')),
                 ]);

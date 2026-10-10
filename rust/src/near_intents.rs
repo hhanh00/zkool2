@@ -102,8 +102,24 @@ pub struct SwapAsset {
     pub decimals: i32,
     pub blockchain: String,
     pub symbol: String,
+    #[serde(default, deserialize_with = "deserialize_price")]
     pub price: Option<String>,
     pub contract_address: Option<String>,
+}
+
+// Provider prices may be JSON numbers or strings. Keep the public API string
+// representation; transfer amounts still require exact integer strings.
+fn deserialize_price<'de, D: serde::Deserializer<'de>>(
+    deserializer: D,
+) -> std::result::Result<Option<String>, D::Error> {
+    match Option::<serde_json::Value>::deserialize(deserializer)? {
+        None => Ok(None),
+        Some(serde_json::Value::String(value)) => Ok(Some(value)),
+        Some(serde_json::Value::Number(value)) => Ok(Some(value.to_string())),
+        Some(_) => Err(serde::de::Error::custom(
+            "Expected a numeric or string price",
+        )),
+    }
 }
 
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
@@ -438,6 +454,29 @@ pub async fn submit_deposit(
 mod tests {
     use super::*;
     use sqlx::Connection;
+
+    #[test]
+    fn token_prices_accept_numbers_strings_null_and_missing() {
+        for (price, expected) in [
+            (Some(serde_json::json!(5.27)), Some("5.27")),
+            (Some(serde_json::json!(1)), Some("1")),
+            (Some(serde_json::json!("5.27")), Some("5.27")),
+            (Some(serde_json::Value::Null), None),
+            (None, None),
+        ] {
+            let mut token = serde_json::json!({"assetId": "zec", "decimals": 8,
+                "blockchain": "zec", "symbol": "ZEC"});
+            if let Some(price) = price {
+                token["price"] = price;
+            }
+            let assets: Vec<SwapAsset> = decode(&serde_json::json!([token]).to_string()).unwrap();
+            assert_eq!(assets[0].price.as_deref(), expected);
+        }
+        let token =
+            r#"[{"assetId":"zec","decimals":8,"blockchain":"zec","symbol":"ZEC","price":true}]"#;
+        assert!(decode::<Vec<SwapAsset>>(token).is_err());
+        assert!(decode::<SwapQuote>(r#"{"amountIn":5.27,"amountOut":"1"}"#).is_err());
+    }
 
     #[tokio::test]
     async fn list_saved_swaps_filters_account_and_pending_in_stable_order() -> Result<()> {
