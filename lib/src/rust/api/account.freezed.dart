@@ -844,6 +844,7 @@ mixin _$AccountUpdate {
   int get folder;
   bool? get hidden;
   bool? get enabled;
+  bool? get useInternal;
 
   /// Create a copy of AccountUpdate
   /// with the given fields replaced by the non-null parameter values.
@@ -865,7 +866,9 @@ mixin _$AccountUpdate {
             (identical(other.birth, birth) || other.birth == birth) &&
             (identical(other.folder, folder) || other.folder == folder) &&
             (identical(other.hidden, hidden) || other.hidden == hidden) &&
-            (identical(other.enabled, enabled) || other.enabled == enabled));
+            (identical(other.enabled, enabled) || other.enabled == enabled) &&
+            (identical(other.useInternal, useInternal) ||
+                other.useInternal == useInternal));
   }
 
   @override
@@ -878,11 +881,12 @@ mixin _$AccountUpdate {
       birth,
       folder,
       hidden,
-      enabled);
+      enabled,
+      useInternal);
 
   @override
   String toString() {
-    return 'AccountUpdate(coin: $coin, id: $id, name: $name, icon: $icon, birth: $birth, folder: $folder, hidden: $hidden, enabled: $enabled)';
+    return 'AccountUpdate(coin: $coin, id: $id, name: $name, icon: $icon, birth: $birth, folder: $folder, hidden: $hidden, enabled: $enabled, useInternal: $useInternal)';
   }
 }
 
@@ -900,7 +904,8 @@ abstract mixin class $AccountUpdateCopyWith<$Res> {
       int? birth,
       int folder,
       bool? hidden,
-      bool? enabled});
+      bool? enabled,
+      bool? useInternal});
 }
 
 /// @nodoc
@@ -924,6 +929,7 @@ class _$AccountUpdateCopyWithImpl<$Res>
     Object? folder = null,
     Object? hidden = freezed,
     Object? enabled = freezed,
+    Object? useInternal = freezed,
   }) {
     return _then(_self.copyWith(
       coin: null == coin
@@ -957,6 +963,10 @@ class _$AccountUpdateCopyWithImpl<$Res>
       enabled: freezed == enabled
           ? _self.enabled
           : enabled // ignore: cast_nullable_to_non_nullable
+              as bool?,
+      useInternal: freezed == useInternal
+          ? _self.useInternal
+          : useInternal // ignore: cast_nullable_to_non_nullable
               as bool?,
     ));
   }
@@ -1053,16 +1063,32 @@ extension AccountUpdatePatterns on AccountUpdate {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(int coin, int id, String? name, Uint8List? icon,
-            int? birth, int folder, bool? hidden, bool? enabled)?
+    TResult Function(
+            int coin,
+            int id,
+            String? name,
+            Uint8List? icon,
+            int? birth,
+            int folder,
+            bool? hidden,
+            bool? enabled,
+            bool? useInternal)?
         $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _AccountUpdate() when $default != null:
-        return $default(_that.coin, _that.id, _that.name, _that.icon,
-            _that.birth, _that.folder, _that.hidden, _that.enabled);
+        return $default(
+            _that.coin,
+            _that.id,
+            _that.name,
+            _that.icon,
+            _that.birth,
+            _that.folder,
+            _that.hidden,
+            _that.enabled,
+            _that.useInternal);
       case _:
         return orElse();
     }
@@ -1083,15 +1109,31 @@ extension AccountUpdatePatterns on AccountUpdate {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(int coin, int id, String? name, Uint8List? icon,
-            int? birth, int folder, bool? hidden, bool? enabled)
+    TResult Function(
+            int coin,
+            int id,
+            String? name,
+            Uint8List? icon,
+            int? birth,
+            int folder,
+            bool? hidden,
+            bool? enabled,
+            bool? useInternal)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _AccountUpdate():
-        return $default(_that.coin, _that.id, _that.name, _that.icon,
-            _that.birth, _that.folder, _that.hidden, _that.enabled);
+        return $default(
+            _that.coin,
+            _that.id,
+            _that.name,
+            _that.icon,
+            _that.birth,
+            _that.folder,
+            _that.hidden,
+            _that.enabled,
+            _that.useInternal);
     }
   }
 
@@ -1109,15 +1151,31 @@ extension AccountUpdatePatterns on AccountUpdate {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(int coin, int id, String? name, Uint8List? icon,
-            int? birth, int folder, bool? hidden, bool? enabled)?
+    TResult? Function(
+            int coin,
+            int id,
+            String? name,
+            Uint8List? icon,
+            int? birth,
+            int folder,
+            bool? hidden,
+            bool? enabled,
+            bool? useInternal)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _AccountUpdate() when $default != null:
-        return $default(_that.coin, _that.id, _that.name, _that.icon,
-            _that.birth, _that.folder, _that.hidden, _that.enabled);
+        return $default(
+            _that.coin,
+            _that.id,
+            _that.name,
+            _that.icon,
+            _that.birth,
+            _that.folder,
+            _that.hidden,
+            _that.enabled,
+            _that.useInternal);
       case _:
         return null;
     }
@@ -1135,7 +1193,8 @@ class _AccountUpdate implements AccountUpdate {
       this.birth,
       required this.folder,
       this.hidden,
-      this.enabled});
+      this.enabled,
+      this.useInternal});
 
   @override
   final int coin;
@@ -1153,6 +1212,8 @@ class _AccountUpdate implements AccountUpdate {
   final bool? hidden;
   @override
   final bool? enabled;
+  @override
+  final bool? useInternal;
 
   /// Create a copy of AccountUpdate
   /// with the given fields replaced by the non-null parameter values.
@@ -1174,7 +1235,9 @@ class _AccountUpdate implements AccountUpdate {
             (identical(other.birth, birth) || other.birth == birth) &&
             (identical(other.folder, folder) || other.folder == folder) &&
             (identical(other.hidden, hidden) || other.hidden == hidden) &&
-            (identical(other.enabled, enabled) || other.enabled == enabled));
+            (identical(other.enabled, enabled) || other.enabled == enabled) &&
+            (identical(other.useInternal, useInternal) ||
+                other.useInternal == useInternal));
   }
 
   @override
@@ -1187,11 +1250,12 @@ class _AccountUpdate implements AccountUpdate {
       birth,
       folder,
       hidden,
-      enabled);
+      enabled,
+      useInternal);
 
   @override
   String toString() {
-    return 'AccountUpdate(coin: $coin, id: $id, name: $name, icon: $icon, birth: $birth, folder: $folder, hidden: $hidden, enabled: $enabled)';
+    return 'AccountUpdate(coin: $coin, id: $id, name: $name, icon: $icon, birth: $birth, folder: $folder, hidden: $hidden, enabled: $enabled, useInternal: $useInternal)';
   }
 }
 
@@ -1211,7 +1275,8 @@ abstract mixin class _$AccountUpdateCopyWith<$Res>
       int? birth,
       int folder,
       bool? hidden,
-      bool? enabled});
+      bool? enabled,
+      bool? useInternal});
 }
 
 /// @nodoc
@@ -1235,6 +1300,7 @@ class __$AccountUpdateCopyWithImpl<$Res>
     Object? folder = null,
     Object? hidden = freezed,
     Object? enabled = freezed,
+    Object? useInternal = freezed,
   }) {
     return _then(_AccountUpdate(
       coin: null == coin
@@ -1268,6 +1334,10 @@ class __$AccountUpdateCopyWithImpl<$Res>
       enabled: freezed == enabled
           ? _self.enabled
           : enabled // ignore: cast_nullable_to_non_nullable
+              as bool?,
+      useInternal: freezed == useInternal
+          ? _self.useInternal
+          : useInternal // ignore: cast_nullable_to_non_nullable
               as bool?,
     ));
   }

@@ -144,6 +144,7 @@ impl Mutation {
             folder: 0,
             hidden: None,
             enabled: None,
+            use_internal: None,
         };
         crate::api::account::update_account(&ua, &context.coin).await?;
         Ok(true)

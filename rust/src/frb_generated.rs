@@ -7830,6 +7830,7 @@ impl SseDecode for crate::api::account::AccountUpdate {
         let mut var_folder = <u32>::sse_decode(deserializer);
         let mut var_hidden = <Option<bool>>::sse_decode(deserializer);
         let mut var_enabled = <Option<bool>>::sse_decode(deserializer);
+        let mut var_useInternal = <Option<bool>>::sse_decode(deserializer);
         return crate::api::account::AccountUpdate {
             coin: var_coin,
             id: var_id,
@@ -7839,6 +7840,7 @@ impl SseDecode for crate::api::account::AccountUpdate {
             folder: var_folder,
             hidden: var_hidden,
             enabled: var_enabled,
+            use_internal: var_useInternal,
         };
     }
 }
@@ -10240,6 +10242,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::AccountUpdate {
             self.folder.into_into_dart().into_dart(),
             self.hidden.into_into_dart().into_dart(),
             self.enabled.into_into_dart().into_dart(),
+            self.use_internal.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -11801,6 +11804,7 @@ impl SseEncode for crate::api::account::AccountUpdate {
         <u32>::sse_encode(self.folder, serializer);
         <Option<bool>>::sse_encode(self.hidden, serializer);
         <Option<bool>>::sse_encode(self.enabled, serializer);
+        <Option<bool>>::sse_encode(self.use_internal, serializer);
     }
 }
 

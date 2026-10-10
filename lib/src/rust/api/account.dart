@@ -217,6 +217,7 @@ sealed class AccountUpdate with _$AccountUpdate {
     required int folder,
     bool? hidden,
     bool? enabled,
+    bool? useInternal,
   }) = _AccountUpdate;
 }
 
