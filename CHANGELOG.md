@@ -1,5 +1,21 @@
 # Changelog
 
+## [6.33.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.33.0-rc...zkool-v6.33.0-rc.1) (2026-10-10)
+
+
+### Features
+
+* allow editing account internal change setting ([715efce](https://github.com/hhanh00/zkool2/commit/715efce609bfaa110ce4bbe5dab07f957d53cfd3))
+* confirm account edits when leaving the form ([34ea7ba](https://github.com/hhanh00/zkool2/commit/34ea7ba42d2a7754f907f25ecfced8c525cf7094))
+* default to internal change for new and recovered accounts ([84ec619](https://github.com/hhanh00/zkool2/commit/84ec61963bc6377aea1547abd976fa086667a5dd))
+
+
+### Bug Fixes
+
+* **ci:** run builds on release-please pull requests ([213a304](https://github.com/hhanh00/zkool2/commit/213a3040d162a45f860a91e734339af39a450936))
+* replace deprecated transparent viewing key accessors ([bebc0a3](https://github.com/hhanh00/zkool2/commit/bebc0a329f1e6bdf94b97373100d53c427f0ea2e))
+* resolve account page async lint notices ([7046d9a](https://github.com/hhanh00/zkool2/commit/7046d9a4b42eae854cd8d5fc25a8b2cb5f323973))
+
 ## [6.33.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.32.0...zkool-v6.33.0-rc) (2026-10-08)
 
 
