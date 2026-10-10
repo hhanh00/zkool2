@@ -421,6 +421,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       try {
         String message = "Please wait while we create the account";
         if (ledger && !isSeed) message += "\nConfirm on your Ledger device";
+        if (!mounted) return;
         dialog = showLoadingDialog(context, message);
         final account = await newAccount(
             na: NewAccount(
@@ -453,11 +454,11 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         await ref.read(getAccountsProvider.future);
 
         await coinContext.setAccount(account: account);
-        ref.read(selectedAccountIdProvider.notifier).set(account);
+        await ref.read(selectedAccountIdProvider.notifier).set(account);
         c = coinContext.coin;
 
         if ((key.isNotEmpty && await hasTransparentPubKey(c: c)) || ledger) {
-          await showTransparentScan(ref, context);
+          if (mounted) await showTransparentScan(ref, context);
         }
 
         final seed = await getAccountSeed(account: account, c: c);
@@ -487,7 +488,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         }
         if (mounted) GoRouter.of(context).pop();
       } on AnyhowException catch (e) {
-        await showException(context, e.message);
+        if (mounted) await showException(context, e.message);
         dialog?.dismiss();
       }
     }
