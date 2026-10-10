@@ -1,0 +1,68 @@
+import 'package:decimal/decimal.dart';
+import 'package:zkool/pages/swap.dart';
+import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/coin.dart';
+import 'package:zkool/src/rust/api/near_intents.dart';
+import 'package:zkool/src/rust/near_intents.dart' as ni;
+
+/// Preview only: requesting a quote does not create a deposit or send funds.
+Future<SwapReviewQuote> loadSwapQuote(SwapDraft draft, Coin coin) async {
+  if (coin.coin != 0) throw StateError('Swaps require a Zcash mainnet wallet.');
+  final assets = await nearIntentsAssets(c: coin);
+  final networks = draft.network == SwapNetwork.solana ? {'sol', 'solana'} : {'eth', 'ethereum'};
+  final matches = assets.where((asset) => asset.symbol.toUpperCase() == draft.asset.symbol && networks.contains(asset.blockchain.toLowerCase())).toList();
+  if (matches.length != 1) throw StateError('Unable to identify ${draft.asset.symbol} on ${draft.network.label}.');
+  final asset = matches.single;
+  final addresses = await getAddresses(uaPools: 0, c: coin);
+  final refund = addresses.taddr;
+  if (refund == null || refund.isEmpty) throw StateError('This account needs a transparent Zcash refund address.');
+  final deadline = DateTime.now().toUtc().add(const Duration(minutes: 10));
+  final response = await nearIntentsQuote(
+    request: ni.SwapRequest(
+      dry: true,
+      swapType: draft.amountMode == SwapAmountMode.send ? ni.SwapType.exactInput : ni.SwapType.exactOutput,
+      originAsset: 'nep141:zec.omft.near',
+      destinationAsset: asset.assetId,
+      amount: swapBaseUnits(draft.amount, draft.amountMode == SwapAmountMode.send ? 8 : asset.decimals),
+      slippageTolerance: 100,
+      recipient: draft.recipient,
+      refundTo: refund,
+      deadline: deadline.toIso8601String(),
+    ), c: coin,
+  );
+  final quote = response.quote;
+  return SwapReviewQuote(
+    amountIn: swapDecimalAmount(quote.amountIn, 8),
+    amountOut: swapDecimalAmount(quote.amountOut, asset.decimals),
+    minimumReceived: quote.minAmountOut == null ? 'Unavailable' : swapDecimalAmount(quote.minAmountOut!, asset.decimals),
+    estimatedCostUsd: swapEstimatedCostUsd(quote.amountInUsd, quote.amountOutUsd),
+    expiresAt: quote.deadline == null ? deadline : DateTime.parse(quote.deadline!),
+  );
+}
+
+String? swapEstimatedCostUsd(String? amountInUsd, String? amountOutUsd) {
+  if (amountInUsd == null || amountOutUsd == null) return null;
+  final input = Decimal.tryParse(amountInUsd);
+  final output = Decimal.tryParse(amountOutUsd);
+  if (input == null || output == null || input < Decimal.zero || output < Decimal.zero) return null;
+  return (input - output).toString();
+}
+
+String swapBaseUnits(String amount, int decimals) {
+  if (decimals < 0 || decimals > 255 || !RegExp(r'^\d+(\.\d+)?$').hasMatch(amount)) throw FormatException('Invalid amount');
+  final parts = amount.split('.');
+  final fraction = parts.length == 2 ? parts[1] : '';
+  if (fraction.length > decimals) throw FormatException('Amount has too many decimal places');
+  final units = BigInt.parse('${parts[0]}${fraction.padRight(decimals, '0')}');
+  if (units <= BigInt.zero) throw FormatException('Amount must be positive');
+  return units.toString();
+}
+
+String swapDecimalAmount(String units, int decimals) {
+  if (decimals < 0 || decimals > 255 || !RegExp(r'^\d+$').hasMatch(units)) throw FormatException('Invalid quote amount');
+  final digits = BigInt.parse(units).toString().padLeft(decimals + 1, '0');
+  if (decimals == 0) return digits;
+  final split = digits.length - decimals;
+  final fraction = digits.substring(split).replaceFirst(RegExp(r'0+$'), '');
+  return fraction.isEmpty ? digits.substring(0, split) : '${digits.substring(0, split)}.$fraction';
+}
