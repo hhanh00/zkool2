@@ -1,5 +1,19 @@
 # Changelog
 
+## [6.33.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.33.0-rc.1...zkool-v6.33.0-rc.2) (2026-10-10)
+
+
+### Features
+
+* add initial NEAR Intents swap flow ([cbe3129](https://github.com/hhanh00/zkool2/commit/cbe31291a96bff1749b2e04fb63048834dc069fd))
+* **db:** add persistent swap history schema ([44b253c](https://github.com/hhanh00/zkool2/commit/44b253c8185a30a7f7d61afcd9169f36b586c2a7))
+* **swaps:** add current swaps page and navigation ([0dd5bc3](https://github.com/hhanh00/zkool2/commit/0dd5bc360d352579c95244f11ca56afa2341180b))
+* **swaps:** create swaps with confirmation and summary ([c3b0866](https://github.com/hhanh00/zkool2/commit/c3b0866f30ddacecc389bc26679c9b8923ab394d))
+* **swaps:** expose saved swaps and status refresh APIs ([7022daa](https://github.com/hhanh00/zkool2/commit/7022daadb9f5479a68839492b54c172eb77e67ac))
+* **swaps:** support receiving ZEC from external assets ([6d91f99](https://github.com/hhanh00/zkool2/commit/6d91f999506cef92c0950f2db0080928518c1e2d))
+* **swaps:** validate addresses with pinned multichain library ([ee0c4e2](https://github.com/hhanh00/zkool2/commit/ee0c4e219db27e1146ae86e3487ec998cb41eed5))
+* **swaps:** wire quote previews and estimated swap costs ([a3b0564](https://github.com/hhanh00/zkool2/commit/a3b0564ce5f06e98aa47fa0ae89589d20d6a1afa))
+
 ## [6.33.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.33.0-rc...zkool-v6.33.0-rc.1) (2026-10-10)
 
 
