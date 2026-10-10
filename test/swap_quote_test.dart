@@ -2,6 +2,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:zkool/services/swap_quote.dart';
 
 void main() {
+  test('slippage converts percentages to basis points without rounding', () {
+    expect(swapSlippageBasisPoints('1'), 100);
+    expect(swapSlippageBasisPoints('0.25'), 25);
+    expect(swapSlippageBasisPoints('0'), 0);
+    expect(swapSlippageBasisPoints('100'), 10000);
+    for (final value in ['', '-1', '100.01', '0.001', 'NaN']) {
+      expect(() => swapSlippageBasisPoints(value), throwsFormatException);
+    }
+  });
   test('estimated cost uses exact USD subtraction and preserves negative differences', () {
     expect(swapEstimatedCostUsd('100.123456', '99.1'), '1.023456');
     expect(swapEstimatedCostUsd('1', '1.01'), '-0.01');

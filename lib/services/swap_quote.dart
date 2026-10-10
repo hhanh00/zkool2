@@ -1,9 +1,17 @@
+import 'dart:convert';
+
 import 'package:decimal/decimal.dart';
 import 'package:zkool/pages/swap.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/near_intents.dart';
 import 'package:zkool/src/rust/near_intents.dart' as ni;
+
+DateTime swapDeadline(ni.SavedSwap swap) {
+  final response = jsonDecode(swap.quoteResponse) as Map<String, dynamic>;
+  final request = response['quoteRequest'] as Map<String, dynamic>?;
+  return DateTime.parse(request?['deadline'] as String? ?? swap.deadline);
+}
 
 /// Preview only: requesting a quote does not create a deposit or send funds.
 Future<SwapReviewQuote> loadSwapQuote(SwapDraft draft, Coin coin) async {
@@ -17,26 +25,27 @@ Future<SwapReviewQuote> loadSwapQuote(SwapDraft draft, Coin coin) async {
   final refund = addresses.taddr;
   if (refund == null || refund.isEmpty) throw StateError('This account needs a transparent Zcash refund address.');
   final deadline = DateTime.now().toUtc().add(const Duration(minutes: 10));
-  final response = await nearIntentsQuote(
-    request: ni.SwapRequest(
-      dry: true,
-      swapType: draft.amountMode == SwapAmountMode.send ? ni.SwapType.exactInput : ni.SwapType.exactOutput,
-      originAsset: 'nep141:zec.omft.near',
-      destinationAsset: asset.assetId,
-      amount: swapBaseUnits(draft.amount, draft.amountMode == SwapAmountMode.send ? 8 : asset.decimals),
-      slippageTolerance: 100,
-      recipient: draft.recipient,
-      refundTo: refund,
-      deadline: deadline.toIso8601String(),
-    ), c: coin,
+  final request = ni.SwapRequest(
+    dry: true,
+    swapType: draft.amountMode == SwapAmountMode.send ? ni.SwapType.exactInput : ni.SwapType.exactOutput,
+    originAsset: 'nep141:zec.omft.near',
+    destinationAsset: asset.assetId,
+    amount: swapBaseUnits(draft.amount, draft.amountMode == SwapAmountMode.send ? 8 : asset.decimals),
+    slippageTolerance: draft.slippageTolerance,
+    recipient: draft.recipient,
+    refundTo: refund,
+    deadline: deadline.toIso8601String(),
   );
+  final response = await nearIntentsQuote(request: request, c: coin);
   final quote = response.quote;
   return SwapReviewQuote(
+    request: request,
+    destinationDecimals: asset.decimals,
     amountIn: swapDecimalAmount(quote.amountIn, 8),
     amountOut: swapDecimalAmount(quote.amountOut, asset.decimals),
     minimumReceived: quote.minAmountOut == null ? 'Unavailable' : swapDecimalAmount(quote.minAmountOut!, asset.decimals),
     estimatedCostUsd: swapEstimatedCostUsd(quote.amountInUsd, quote.amountOutUsd),
-    expiresAt: quote.deadline == null ? deadline : DateTime.parse(quote.deadline!),
+    expiresAt: deadline,
   );
 }
 
@@ -46,6 +55,16 @@ String? swapEstimatedCostUsd(String? amountInUsd, String? amountOutUsd) {
   final output = Decimal.tryParse(amountOutUsd);
   if (input == null || output == null || input < Decimal.zero || output < Decimal.zero) return null;
   return (input - output).toString();
+}
+
+int swapSlippageBasisPoints(String value) {
+  final percent = value.trim();
+  if (!RegExp(r'^\d+(\.\d{1,2})?$').hasMatch(percent)) throw const FormatException('Invalid slippage');
+  final parts = percent.split('.');
+  final fraction = parts.length == 2 ? parts[1] : '';
+  final bps = BigInt.parse('${parts[0]}${fraction.padRight(2, '0')}');
+  if (bps > BigInt.from(10000)) throw const FormatException('Invalid slippage');
+  return bps.toInt();
 }
 
 String swapBaseUnits(String amount, int decimals) {
