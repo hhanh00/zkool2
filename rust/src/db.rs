@@ -130,6 +130,11 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     .execute(&mut *connection)
     .await?;
 
+    // Additive wallet-local history; does not change the IOAccount export format.
+    sqlx::raw_sql(include_str!("db/swaps.sql"))
+        .execute(&mut *connection)
+        .await?;
+
     migrate_headers(connection).await?;
 
     sqlx::query(
@@ -1349,6 +1354,12 @@ pub async fn get_account_fingerprint(
 pub async fn delete_account(connection: &mut SqliteConnection, account: u32) -> Result<()> {
     let mut tx = connection.begin().await?;
 
+    // Also clean up when the connection does not enforce foreign keys.
+    sqlx::query("DELETE FROM swaps WHERE account = ?")
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+
     sqlx::query("DELETE FROM dkg_params WHERE account = ?")
         .bind(account)
         .execute(&mut *tx)
@@ -2208,6 +2219,68 @@ pub async fn max_spendable(connection: &mut SqliteConnection, account: u32) -> R
     .fetch_one(connection)
     .await?;
     Ok(amount.unwrap_or_default())
+}
+
+#[cfg(test)]
+mod swap_schema_tests {
+    use super::*;
+
+    async fn insert_swap(
+        db: &mut SqliteConnection,
+        account: i64,
+        address: &str,
+        amount: &str,
+    ) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO swaps(account, origin_asset, destination_asset, swap_type,
+            amount, slippage_tolerance, recipient, refund_to, deadline, amount_in,
+            amount_out, deposit_address, quote_response)
+            VALUES (?, 'nep141:zec.omft.near', 'eth', 'EXACT_OUTPUT', ?, 100,
+            'recipient', 'refund', '2026-10-10T12:00:00Z', '100000000', ?, ?, '{}')",
+        )
+        .bind(account)
+        .bind(amount)
+        .bind(amount)
+        .bind(address)
+        .execute(db)
+        .await?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn upgrade_preserves_history_and_account_deletion_is_scoped() -> Result<()> {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        create_schema(&mut db).await?;
+        sqlx::query(
+            "INSERT INTO accounts(id_account, name, aindex, dindex, def_dindex,
+            birth, position, use_internal, hidden, saved) VALUES
+            (1, 'one', 0, 0, 0, 0, 0, 0, 0, 0), (2, 'two', 1, 0, 0, 0, 1, 0, 0, 0)",
+        )
+        .execute(&mut db)
+        .await?;
+        let amount = "123456789012345678901234567890";
+        insert_swap(&mut db, 1, "deposit-one", amount).await?;
+        insert_swap(&mut db, 2, "deposit-two", "1").await?;
+        sqlx::query("UPDATE swaps SET status = 'FUTURE_PROVIDER_STATE' WHERE account = 1")
+            .execute(&mut db)
+            .await?;
+        create_schema(&mut db).await?;
+        let row: (String, String) =
+            sqlx::query_as("SELECT amount_out, status FROM swaps WHERE account = 1")
+                .fetch_one(&mut db)
+                .await?;
+        assert_eq!(row, (amount.into(), "FUTURE_PROVIDER_STATE".into()));
+        assert!(insert_swap(&mut db, 1, "deposit-one", "1").await.is_err());
+        for invalid in ["", "0", "000", "-1", "1.2", "1e8"] {
+            assert!(insert_swap(&mut db, 1, "invalid", invalid).await.is_err());
+        }
+        delete_account(&mut db, 1).await?;
+        let remaining: Vec<(i64,)> = sqlx::query_as("SELECT account FROM swaps")
+            .fetch_all(&mut db)
+            .await?;
+        assert_eq!(remaining, vec![(2,)]);
+        Ok(())
+    }
 }
 
 #[cfg(test)]
