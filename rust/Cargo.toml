@@ -25,6 +25,7 @@ zeroize = "1"
 flutter_rust_bridge = { version = "=2.12.0", optional = true }
 
 anyhow = "1.0.97"
+wallet-address-validator-kit = { git = "https://github.com/devdasx/wallet-address-validator-kit.git", rev = "f90b04c5c2b23979b3811b276d379cad5d1cf5f0" }
 base64 = "0.22"
 bip39 = "2.1.0"
 nonempty = "0.11"

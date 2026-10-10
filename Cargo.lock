@@ -9766,6 +9766,7 @@ dependencies = [
  "uuid",
  "vcard4",
  "vote-commitment-tree-client",
+ "wallet-address-validator-kit",
  "warp",
  "webpki-roots 1.0.9",
  "x25519-dalek",
@@ -13712,6 +13713,14 @@ checksum = "29790946404f91d9c5d06f9874efddea1dc06c5efe94541a7d6863108e3a5e4b"
 dependencies = [
  "same-file",
  "winapi-util",
+]
+
+[[package]]
+name = "wallet-address-validator-kit"
+version = "0.2.1"
+source = "git+https://github.com/devdasx/wallet-address-validator-kit.git?rev=f90b04c5c2b23979b3811b276d379cad5d1cf5f0#f90b04c5c2b23979b3811b276d379cad5d1cf5f0"
+dependencies = [
+ "sha2 0.10.9",
 ]
 
 [[package]]

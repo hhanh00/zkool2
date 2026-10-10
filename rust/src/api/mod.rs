@@ -1,4 +1,5 @@
 pub mod account;
+pub mod address;
 pub mod coin;
 pub mod contacts;
 pub mod db;
