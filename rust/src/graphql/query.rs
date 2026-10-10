@@ -39,6 +39,25 @@ pub struct AccountFilter {
 #[graphql_object]
 #[graphql(context = Context)]
 impl Query {
+    async fn near_intents_assets(
+        context: &Context,
+    ) -> FieldResult<Vec<crate::near_intents::SwapAsset>> {
+        check_admin_auth(context)?;
+        Ok(crate::near_intents::assets(&context.coin).await?)
+    }
+
+    async fn near_intents_status(
+        deposit_address: String,
+        deposit_memo: Option<String>,
+        context: &Context,
+    ) -> FieldResult<crate::near_intents::SwapStatus> {
+        check_admin_auth(context)?;
+        Ok(
+            crate::near_intents::status(&deposit_address, deposit_memo.as_deref(), &context.coin)
+                .await?,
+        )
+    }
+
     fn api_version() -> &'static str {
         "1.0"
     }

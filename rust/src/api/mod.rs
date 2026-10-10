@@ -8,6 +8,7 @@ pub mod issuance;
 pub mod key;
 pub mod mempool;
 pub mod migrate;
+pub mod near_intents;
 pub mod network;
 pub mod openalias;
 pub mod pay;

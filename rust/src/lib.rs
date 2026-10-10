@@ -26,6 +26,7 @@ pub mod lwd;
 pub mod memo;
 pub mod mempool;
 pub mod migrate;
+pub mod near_intents;
 pub mod net;
 pub mod openalias;
 pub mod pay;

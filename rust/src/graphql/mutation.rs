@@ -77,6 +77,26 @@ pub struct UnsignedTx {
     context = Context,
 )]
 impl Mutation {
+    /// Preview with dry=true, then create a deposit quote with dry=false.
+    async fn near_intents_quote(
+        request: crate::near_intents::SwapRequest,
+        context: &Context,
+    ) -> FieldResult<crate::near_intents::SwapQuoteResponse> {
+        check_admin_auth(context)?;
+        Ok(crate::near_intents::quote(request, &context.coin).await?)
+    }
+
+    /// Notify the provider after sending ZEC through the normal payment API.
+    async fn near_intents_submit_deposit(
+        deposit_address: String,
+        tx_hash: String,
+        context: &Context,
+    ) -> FieldResult<bool> {
+        check_admin_auth(context)?;
+        crate::near_intents::submit_deposit(&deposit_address, &tx_hash, &context.coin).await?;
+        Ok(true)
+    }
+
     /// Sets the authenticated static voting-config URL used by this wallet.
     async fn set_voting_config_url(url: String, context: &Context) -> FieldResult<bool> {
         check_admin_auth(context)?;
