@@ -40,6 +40,7 @@ import 'package:zkool/store.dart';
 import 'package:zkool/widgets/scanner.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
+final accountEditPageKey = GlobalKey<AccountEditPageState>();
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
 GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLocation}) => GoRouter(
@@ -62,7 +63,8 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
         ),
         GoRoute(
           path: '/account/edit',
-          builder: (context, state) => AccountEditPage(state.extra as List<Account>),
+          builder: (context, state) => AccountEditPage(state.extra as List<Account>, key: accountEditPageKey),
+          onExit: (context, state) => accountEditPageKey.currentState?.confirmLeave() ?? true,
         ),
         GoRoute(
           path: '/account/new',
