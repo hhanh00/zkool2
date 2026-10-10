@@ -42,7 +42,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1455524393;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -306374182;
 
 // Section: executor
 
@@ -4840,6 +4840,250 @@ fn wire__crate__api__account__max_spendable_impl(
         },
     )
 }
+fn wire__crate__api__near_intents__near_intents_assets_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "near_intents_assets",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::near_intents::near_intents_assets(&api_c).await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__near_intents__near_intents_list_swaps_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "near_intents_list_swaps",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_pending_only = <bool>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok = crate::api::near_intents::near_intents_list_swaps(
+                            api_pending_only,
+                            &api_c,
+                        )
+                        .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__near_intents__near_intents_quote_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "near_intents_quote",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_request = <crate::near_intents::SwapRequest>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok =
+                            crate::api::near_intents::near_intents_quote(api_request, &api_c)
+                                .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__near_intents__near_intents_refresh_swap_status_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "near_intents_refresh_swap_status",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_id_swap = <i64>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok = crate::api::near_intents::near_intents_refresh_swap_status(
+                            api_id_swap,
+                            &api_c,
+                        )
+                        .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__near_intents__near_intents_status_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "near_intents_status",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_deposit_address = <String>::sse_decode(&mut deserializer);
+            let api_deposit_memo = <Option<String>>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok = crate::api::near_intents::near_intents_status(
+                            api_deposit_address,
+                            api_deposit_memo,
+                            &api_c,
+                        )
+                        .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__near_intents__near_intents_submit_deposit_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "near_intents_submit_deposit",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_deposit_address = <String>::sse_decode(&mut deserializer);
+            let api_tx_hash = <String>::sse_decode(&mut deserializer);
+            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let output_ok = crate::api::near_intents::near_intents_submit_deposit(
+                            api_deposit_address,
+                            api_tx_hash,
+                            &api_c,
+                        )
+                        .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__account__new_account_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -8390,6 +8634,44 @@ impl SseDecode for Vec<crate::api::vault::RestoredAccount> {
     }
 }
 
+impl SseDecode for Vec<crate::near_intents::SavedSwap> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::near_intents::SavedSwap>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::near_intents::SwapAsset> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::near_intents::SwapAsset>::sse_decode(deserializer));
+        }
+        return ans_;
+    }
+}
+
+impl SseDecode for Vec<crate::near_intents::SwapTransaction> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut len_ = <i32>::sse_decode(deserializer);
+        let mut ans_ = Vec::with_capacity(len_ as usize);
+        for idx_ in 0..len_ {
+            ans_.push(<crate::near_intents::SwapTransaction>::sse_decode(
+                deserializer,
+            ));
+        }
+        return ans_;
+    }
+}
+
 impl SseDecode for Vec<crate::api::account::TAddressTxCount> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -8915,6 +9197,17 @@ impl SseDecode for Option<crate::api::account::Seed> {
     }
 }
 
+impl SseDecode for Option<crate::near_intents::SwapDetails> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        if (<bool>::sse_decode(deserializer)) {
+            return Some(<crate::near_intents::SwapDetails>::sse_decode(deserializer));
+        } else {
+            return None;
+        }
+    }
+}
+
 impl SseDecode for Option<u32> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -9170,6 +9463,64 @@ impl SseDecode for crate::api::sapling::SaplingParamsStatus {
     }
 }
 
+impl SseDecode for crate::near_intents::SavedSwap {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_idSwap = <i64>::sse_decode(deserializer);
+        let mut var_account = <u32>::sse_decode(deserializer);
+        let mut var_originAsset = <String>::sse_decode(deserializer);
+        let mut var_destinationAsset = <String>::sse_decode(deserializer);
+        let mut var_swapType = <String>::sse_decode(deserializer);
+        let mut var_amount = <String>::sse_decode(deserializer);
+        let mut var_slippageTolerance = <i32>::sse_decode(deserializer);
+        let mut var_recipient = <String>::sse_decode(deserializer);
+        let mut var_refundTo = <String>::sse_decode(deserializer);
+        let mut var_deadline = <String>::sse_decode(deserializer);
+        let mut var_amountIn = <String>::sse_decode(deserializer);
+        let mut var_amountOut = <String>::sse_decode(deserializer);
+        let mut var_minAmountIn = <Option<String>>::sse_decode(deserializer);
+        let mut var_minAmountOut = <Option<String>>::sse_decode(deserializer);
+        let mut var_depositAddress = <String>::sse_decode(deserializer);
+        let mut var_depositMemo = <Option<String>>::sse_decode(deserializer);
+        let mut var_depositTxHash = <Option<String>>::sse_decode(deserializer);
+        let mut var_depositSubmittedAt = <Option<i64>>::sse_decode(deserializer);
+        let mut var_quoteResponse = <String>::sse_decode(deserializer);
+        let mut var_status = <Option<String>>::sse_decode(deserializer);
+        let mut var_statusResponse = <Option<String>>::sse_decode(deserializer);
+        let mut var_lastCheckedAt = <Option<i64>>::sse_decode(deserializer);
+        let mut var_completedAt = <Option<i64>>::sse_decode(deserializer);
+        let mut var_createdAt = <i64>::sse_decode(deserializer);
+        let mut var_updatedAt = <i64>::sse_decode(deserializer);
+        return crate::near_intents::SavedSwap {
+            id_swap: var_idSwap,
+            account: var_account,
+            origin_asset: var_originAsset,
+            destination_asset: var_destinationAsset,
+            swap_type: var_swapType,
+            amount: var_amount,
+            slippage_tolerance: var_slippageTolerance,
+            recipient: var_recipient,
+            refund_to: var_refundTo,
+            deadline: var_deadline,
+            amount_in: var_amountIn,
+            amount_out: var_amountOut,
+            min_amount_in: var_minAmountIn,
+            min_amount_out: var_minAmountOut,
+            deposit_address: var_depositAddress,
+            deposit_memo: var_depositMemo,
+            deposit_tx_hash: var_depositTxHash,
+            deposit_submitted_at: var_depositSubmittedAt,
+            quote_response: var_quoteResponse,
+            status: var_status,
+            status_response: var_statusResponse,
+            last_checked_at: var_lastCheckedAt,
+            completed_at: var_completedAt,
+            created_at: var_createdAt,
+            updated_at: var_updatedAt,
+        };
+    }
+}
+
 impl SseDecode for crate::api::account::Seed {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -9247,6 +9598,155 @@ impl SseDecode for crate::api::frost::SigningStatus {
                 unimplemented!("");
             }
         }
+    }
+}
+
+impl SseDecode for crate::near_intents::SwapAsset {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_assetId = <String>::sse_decode(deserializer);
+        let mut var_decimals = <i32>::sse_decode(deserializer);
+        let mut var_blockchain = <String>::sse_decode(deserializer);
+        let mut var_symbol = <String>::sse_decode(deserializer);
+        let mut var_price = <Option<String>>::sse_decode(deserializer);
+        let mut var_contractAddress = <Option<String>>::sse_decode(deserializer);
+        return crate::near_intents::SwapAsset {
+            asset_id: var_assetId,
+            decimals: var_decimals,
+            blockchain: var_blockchain,
+            symbol: var_symbol,
+            price: var_price,
+            contract_address: var_contractAddress,
+        };
+    }
+}
+
+impl SseDecode for crate::near_intents::SwapDetails {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_amountIn = <Option<String>>::sse_decode(deserializer);
+        let mut var_amountOut = <Option<String>>::sse_decode(deserializer);
+        let mut var_refundedAmount = <Option<String>>::sse_decode(deserializer);
+        let mut var_originChainTxHashes =
+            <Vec<crate::near_intents::SwapTransaction>>::sse_decode(deserializer);
+        let mut var_destinationChainTxHashes =
+            <Vec<crate::near_intents::SwapTransaction>>::sse_decode(deserializer);
+        return crate::near_intents::SwapDetails {
+            amount_in: var_amountIn,
+            amount_out: var_amountOut,
+            refunded_amount: var_refundedAmount,
+            origin_chain_tx_hashes: var_originChainTxHashes,
+            destination_chain_tx_hashes: var_destinationChainTxHashes,
+        };
+    }
+}
+
+impl SseDecode for crate::near_intents::SwapQuote {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_depositAddress = <Option<String>>::sse_decode(deserializer);
+        let mut var_depositMemo = <Option<String>>::sse_decode(deserializer);
+        let mut var_amountIn = <String>::sse_decode(deserializer);
+        let mut var_amountOut = <String>::sse_decode(deserializer);
+        let mut var_minAmountIn = <Option<String>>::sse_decode(deserializer);
+        let mut var_minAmountOut = <Option<String>>::sse_decode(deserializer);
+        let mut var_amountInFormatted = <Option<String>>::sse_decode(deserializer);
+        let mut var_amountOutFormatted = <Option<String>>::sse_decode(deserializer);
+        let mut var_amountInUsd = <Option<String>>::sse_decode(deserializer);
+        let mut var_amountOutUsd = <Option<String>>::sse_decode(deserializer);
+        let mut var_deadline = <Option<String>>::sse_decode(deserializer);
+        let mut var_timeEstimate = <Option<i32>>::sse_decode(deserializer);
+        return crate::near_intents::SwapQuote {
+            deposit_address: var_depositAddress,
+            deposit_memo: var_depositMemo,
+            amount_in: var_amountIn,
+            amount_out: var_amountOut,
+            min_amount_in: var_minAmountIn,
+            min_amount_out: var_minAmountOut,
+            amount_in_formatted: var_amountInFormatted,
+            amount_out_formatted: var_amountOutFormatted,
+            amount_in_usd: var_amountInUsd,
+            amount_out_usd: var_amountOutUsd,
+            deadline: var_deadline,
+            time_estimate: var_timeEstimate,
+        };
+    }
+}
+
+impl SseDecode for crate::near_intents::SwapQuoteResponse {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_quote = <crate::near_intents::SwapQuote>::sse_decode(deserializer);
+        let mut var_rawResponse = <String>::sse_decode(deserializer);
+        return crate::near_intents::SwapQuoteResponse {
+            quote: var_quote,
+            raw_response: var_rawResponse,
+        };
+    }
+}
+
+impl SseDecode for crate::near_intents::SwapRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_dry = <bool>::sse_decode(deserializer);
+        let mut var_swapType = <crate::near_intents::SwapType>::sse_decode(deserializer);
+        let mut var_originAsset = <String>::sse_decode(deserializer);
+        let mut var_destinationAsset = <String>::sse_decode(deserializer);
+        let mut var_amount = <String>::sse_decode(deserializer);
+        let mut var_slippageTolerance = <i32>::sse_decode(deserializer);
+        let mut var_recipient = <String>::sse_decode(deserializer);
+        let mut var_refundTo = <String>::sse_decode(deserializer);
+        let mut var_deadline = <String>::sse_decode(deserializer);
+        return crate::near_intents::SwapRequest {
+            dry: var_dry,
+            swap_type: var_swapType,
+            origin_asset: var_originAsset,
+            destination_asset: var_destinationAsset,
+            amount: var_amount,
+            slippage_tolerance: var_slippageTolerance,
+            recipient: var_recipient,
+            refund_to: var_refundTo,
+            deadline: var_deadline,
+        };
+    }
+}
+
+impl SseDecode for crate::near_intents::SwapStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_status = <String>::sse_decode(deserializer);
+        let mut var_swapDetails =
+            <Option<crate::near_intents::SwapDetails>>::sse_decode(deserializer);
+        let mut var_rawResponse = <String>::sse_decode(deserializer);
+        return crate::near_intents::SwapStatus {
+            status: var_status,
+            swap_details: var_swapDetails,
+            raw_response: var_rawResponse,
+        };
+    }
+}
+
+impl SseDecode for crate::near_intents::SwapTransaction {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut var_hash = <String>::sse_decode(deserializer);
+        let mut var_explorerUrl = <Option<String>>::sse_decode(deserializer);
+        return crate::near_intents::SwapTransaction {
+            hash: var_hash,
+            explorer_url: var_explorerUrl,
+        };
+    }
+}
+
+impl SseDecode for crate::near_intents::SwapType {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <i32>::sse_decode(deserializer);
+        return match inner {
+            0 => crate::near_intents::SwapType::ExactInput,
+            1 => crate::near_intents::SwapType::ExactOutput,
+            _ => unreachable!("Invalid variant for SwapType: {}", inner),
+        };
     }
 }
 
@@ -9915,159 +10415,195 @@ fn pde_ffi_dispatcher_primary_impl(
         120 => wire__crate__api__account__lock_note_impl(port, ptr, rust_vec_len, data_len),
         121 => wire__crate__api__account__lock_recent_notes_impl(port, ptr, rust_vec_len, data_len),
         122 => wire__crate__api__account__max_spendable_impl(port, ptr, rust_vec_len, data_len),
-        123 => wire__crate__api__account__new_account_impl(port, ptr, rust_vec_len, data_len),
-        124 => wire__crate__api__pay__pack_transaction_impl(port, ptr, rust_vec_len, data_len),
-        125 => wire__crate__api__plugin__parse_memo_with_plugins_impl(
+        123 => wire__crate__api__near_intents__near_intents_assets_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        127 => wire__crate__api__pay__prepare_impl(port, ptr, rust_vec_len, data_len),
-        128 => wire__crate__api__pay__prepare_migration_impl(port, ptr, rust_vec_len, data_len),
-        129 => wire__crate__api__account__print_keys_impl(port, ptr, rust_vec_len, data_len),
-        130 => wire__crate__api__db__put_prop_impl(port, ptr, rust_vec_len, data_len),
-        131 => wire__crate__api__network__query_lwd_list_impl(port, ptr, rust_vec_len, data_len),
-        132 => wire__crate__api__account__receivers_default_impl(port, ptr, rust_vec_len, data_len),
-        134 => wire__crate__api__account__remove_account_impl(port, ptr, rust_vec_len, data_len),
-        135 => wire__crate__api__plugin__remove_plugin_impl(port, ptr, rust_vec_len, data_len),
-        136 => wire__crate__api__account__rename_category_impl(port, ptr, rust_vec_len, data_len),
-        137 => wire__crate__api__db__rename_db_impl(port, ptr, rust_vec_len, data_len),
-        138 => wire__crate__api__account__rename_folder_impl(port, ptr, rust_vec_len, data_len),
-        139 => wire__crate__api__account__reorder_account_impl(port, ptr, rust_vec_len, data_len),
-        140 => wire__crate__api__frost__reset_sign_impl(port, ptr, rust_vec_len, data_len),
-        141 => wire__crate__api__account__reset_sync_impl(port, ptr, rust_vec_len, data_len),
-        142 => {
+        124 => wire__crate__api__near_intents__near_intents_list_swaps_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        125 => wire__crate__api__near_intents__near_intents_quote_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        126 => wire__crate__api__near_intents__near_intents_refresh_swap_status_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        127 => wire__crate__api__near_intents__near_intents_status_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        128 => wire__crate__api__near_intents__near_intents_submit_deposit_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        129 => wire__crate__api__account__new_account_impl(port, ptr, rust_vec_len, data_len),
+        130 => wire__crate__api__pay__pack_transaction_impl(port, ptr, rust_vec_len, data_len),
+        131 => wire__crate__api__plugin__parse_memo_with_plugins_impl(
+            port,
+            ptr,
+            rust_vec_len,
+            data_len,
+        ),
+        133 => wire__crate__api__pay__prepare_impl(port, ptr, rust_vec_len, data_len),
+        134 => wire__crate__api__pay__prepare_migration_impl(port, ptr, rust_vec_len, data_len),
+        135 => wire__crate__api__account__print_keys_impl(port, ptr, rust_vec_len, data_len),
+        136 => wire__crate__api__db__put_prop_impl(port, ptr, rust_vec_len, data_len),
+        137 => wire__crate__api__network__query_lwd_list_impl(port, ptr, rust_vec_len, data_len),
+        138 => wire__crate__api__account__receivers_default_impl(port, ptr, rust_vec_len, data_len),
+        140 => wire__crate__api__account__remove_account_impl(port, ptr, rust_vec_len, data_len),
+        141 => wire__crate__api__plugin__remove_plugin_impl(port, ptr, rust_vec_len, data_len),
+        142 => wire__crate__api__account__rename_category_impl(port, ptr, rust_vec_len, data_len),
+        143 => wire__crate__api__db__rename_db_impl(port, ptr, rust_vec_len, data_len),
+        144 => wire__crate__api__account__rename_folder_impl(port, ptr, rust_vec_len, data_len),
+        145 => wire__crate__api__account__reorder_account_impl(port, ptr, rust_vec_len, data_len),
+        146 => wire__crate__api__frost__reset_sign_impl(port, ptr, rust_vec_len, data_len),
+        147 => wire__crate__api__account__reset_sync_impl(port, ptr, rust_vec_len, data_len),
+        148 => {
             wire__crate__api__openalias__resolve_openalias_impl(port, ptr, rust_vec_len, data_len)
         }
-        143 => wire__crate__api__openalias__resolve_openalias_all_impl(
+        149 => wire__crate__api__openalias__resolve_openalias_all_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        144 => wire__crate__api__openalias__resolve_openalias_raw_impl(
+        150 => wire__crate__api__openalias__resolve_openalias_raw_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        145 => wire__crate__api__sync__rewind_sync_impl(port, ptr, rust_vec_len, data_len),
-        146 => wire__crate__api__pay__send_impl(port, ptr, rust_vec_len, data_len),
-        147 => wire__crate__api__zsa__set_asset_name_impl(port, ptr, rust_vec_len, data_len),
-        148 => wire__crate__api__frost__set_dkg_address_impl(port, ptr, rust_vec_len, data_len),
-        149 => wire__crate__api__frost__set_dkg_params_impl(port, ptr, rust_vec_len, data_len),
-        152 => wire__crate__api__plugin__set_plugin_enabled_impl(port, ptr, rust_vec_len, data_len),
-        153 => {
+        151 => wire__crate__api__sync__rewind_sync_impl(port, ptr, rust_vec_len, data_len),
+        152 => wire__crate__api__pay__send_impl(port, ptr, rust_vec_len, data_len),
+        153 => wire__crate__api__zsa__set_asset_name_impl(port, ptr, rust_vec_len, data_len),
+        154 => wire__crate__api__frost__set_dkg_address_impl(port, ptr, rust_vec_len, data_len),
+        155 => wire__crate__api__frost__set_dkg_params_impl(port, ptr, rust_vec_len, data_len),
+        158 => wire__crate__api__plugin__set_plugin_enabled_impl(port, ptr, rust_vec_len, data_len),
+        159 => {
             wire__crate__api__transaction__set_tx_category_impl(port, ptr, rust_vec_len, data_len)
         }
-        154 => wire__crate__api__transaction__set_tx_price_impl(port, ptr, rust_vec_len, data_len),
-        155 => wire__crate__api__transaction__set_user_memo_impl(port, ptr, rust_vec_len, data_len),
-        156 => wire__crate__api__account__show_ledger_sapling_address_impl(
+        160 => wire__crate__api__transaction__set_tx_price_impl(port, ptr, rust_vec_len, data_len),
+        161 => wire__crate__api__transaction__set_user_memo_impl(port, ptr, rust_vec_len, data_len),
+        162 => wire__crate__api__account__show_ledger_sapling_address_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        157 => wire__crate__api__account__show_ledger_transparent_address_impl(
+        163 => wire__crate__api__account__show_ledger_transparent_address_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        158 => wire__crate__api__account__sign_ledger_transaction_impl(
+        164 => wire__crate__api__account__sign_ledger_transaction_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        159 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
-        160 => wire__crate__api__migrate__step_migration_impl(port, ptr, rust_vec_len, data_len),
-        161 => wire__crate__api__pay__store_pending_tx_impl(port, ptr, rust_vec_len, data_len),
-        162 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
-        164 => wire__crate__api__account__toggle_all_notes_impl(port, ptr, rust_vec_len, data_len),
-        166 => {
+        165 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
+        166 => wire__crate__api__migrate__step_migration_impl(port, ptr, rust_vec_len, data_len),
+        167 => wire__crate__api__pay__store_pending_tx_impl(port, ptr, rust_vec_len, data_len),
+        168 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
+        170 => wire__crate__api__account__toggle_all_notes_impl(port, ptr, rust_vec_len, data_len),
+        172 => {
             wire__crate__api__account__tx_account_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        167 => wire__crate__api__account__tx_memo_default_impl(port, ptr, rust_vec_len, data_len),
-        168 => wire__crate__api__account__tx_note_default_impl(port, ptr, rust_vec_len, data_len),
-        169 => wire__crate__api__account__tx_output_default_impl(port, ptr, rust_vec_len, data_len),
-        170 => wire__crate__api__account__tx_spend_default_impl(port, ptr, rust_vec_len, data_len),
-        172 => wire__crate__api__account__unlock_all_notes_impl(port, ptr, rust_vec_len, data_len),
-        173 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
-        174 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
-        175 => wire__crate__api__contacts__update_contact_impl(port, ptr, rust_vec_len, data_len),
-        176 => wire__crate__api__transaction__update_historical_prices_impl(
+        173 => wire__crate__api__account__tx_memo_default_impl(port, ptr, rust_vec_len, data_len),
+        174 => wire__crate__api__account__tx_note_default_impl(port, ptr, rust_vec_len, data_len),
+        175 => wire__crate__api__account__tx_output_default_impl(port, ptr, rust_vec_len, data_len),
+        176 => wire__crate__api__account__tx_spend_default_impl(port, ptr, rust_vec_len, data_len),
+        178 => wire__crate__api__account__unlock_all_notes_impl(port, ptr, rust_vec_len, data_len),
+        179 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
+        180 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
+        181 => wire__crate__api__contacts__update_contact_impl(port, ptr, rust_vec_len, data_len),
+        182 => wire__crate__api__transaction__update_historical_prices_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        179 => wire__crate__api__voting_share_tracking__voting_cancel_all_share_tracking_impl(
+        185 => wire__crate__api__voting_share_tracking__voting_cancel_all_share_tracking_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        180 => wire__crate__api__voting_share_tracking__voting_cancel_share_tracking_impl(
+        186 => wire__crate__api__voting_share_tracking__voting_cancel_share_tracking_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        181 => {
+        187 => {
             wire__crate__api__voting__voting_clear_selection_impl(port, ptr, rust_vec_len, data_len)
         }
-        182 => wire__crate__api__voting_drive__voting_drive_cancel_impl(
+        188 => wire__crate__api__voting_drive__voting_drive_cancel_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        183 => wire__crate__api__voting_drive__voting_drive_cancel_all_impl(
+        189 => wire__crate__api__voting_drive__voting_drive_cancel_all_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        184 => wire__crate__api__voting_drive__voting_drive_start_impl(
+        190 => wire__crate__api__voting_drive__voting_drive_start_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        185 => wire__crate__api__voting_drive__voting_drive_status_impl(
+        191 => wire__crate__api__voting_drive__voting_drive_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        186 => {
+        192 => {
             wire__crate__api__voting__voting_load_selections_impl(port, ptr, rust_vec_len, data_len)
         }
-        187 => wire__crate__api__voting_share_tracking__voting_pending_share_rounds_impl(
+        193 => wire__crate__api__voting_share_tracking__voting_pending_share_rounds_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        188 => wire__crate__api__voting_drive__voting_prepare_round_impl(
+        194 => wire__crate__api__voting_drive__voting_prepare_round_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        189 => wire__crate__api__voting__voting_round_list_impl(port, ptr, rust_vec_len, data_len),
-        190 => {
+        195 => wire__crate__api__voting__voting_round_list_impl(port, ptr, rust_vec_len, data_len),
+        196 => {
             wire__crate__api__voting__voting_save_selection_impl(port, ptr, rust_vec_len, data_len)
         }
-        191 => wire__crate__api__voting_share_tracking__voting_start_share_tracking_impl(
+        197 => wire__crate__api__voting_share_tracking__voting_start_share_tracking_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        192 => wire__crate__api__voting_share_tracking__voting_track_shares_once_impl(
+        198 => wire__crate__api__voting_share_tracking__voting_track_shares_once_impl(
             port,
             ptr,
             rust_vec_len,
@@ -10108,21 +10644,21 @@ fn pde_ffi_dispatcher_sync_impl(
         106 => {
             wire__crate__api__key__is_valid_transparent_address_impl(ptr, rust_vec_len, data_len)
         }
-        126 => wire__crate__api__pay__parse_payment_uri_impl(ptr, rust_vec_len, data_len),
-        133 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
-        150 => wire__crate__api__init__set_expert_mode_impl(ptr, rust_vec_len, data_len),
-        151 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
-        163 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
-        165 => wire__crate__api__openalias__try_validate_zcash_address_impl(
+        132 => wire__crate__api__pay__parse_payment_uri_impl(ptr, rust_vec_len, data_len),
+        139 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
+        156 => wire__crate__api__init__set_expert_mode_impl(ptr, rust_vec_len, data_len),
+        157 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
+        169 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
+        171 => wire__crate__api__openalias__try_validate_zcash_address_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        171 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
-        177 => {
+        177 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
+        183 => {
             wire__crate__api__openalias__validate_openalias_name_impl(ptr, rust_vec_len, data_len)
         }
-        178 => {
+        184 => {
             wire__crate__api__openalias__validate_zcash_address_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -11078,6 +11614,50 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::sapling::SaplingParamsStatus>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::near_intents::SavedSwap {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.id_swap.into_into_dart().into_dart(),
+            self.account.into_into_dart().into_dart(),
+            self.origin_asset.into_into_dart().into_dart(),
+            self.destination_asset.into_into_dart().into_dart(),
+            self.swap_type.into_into_dart().into_dart(),
+            self.amount.into_into_dart().into_dart(),
+            self.slippage_tolerance.into_into_dart().into_dart(),
+            self.recipient.into_into_dart().into_dart(),
+            self.refund_to.into_into_dart().into_dart(),
+            self.deadline.into_into_dart().into_dart(),
+            self.amount_in.into_into_dart().into_dart(),
+            self.amount_out.into_into_dart().into_dart(),
+            self.min_amount_in.into_into_dart().into_dart(),
+            self.min_amount_out.into_into_dart().into_dart(),
+            self.deposit_address.into_into_dart().into_dart(),
+            self.deposit_memo.into_into_dart().into_dart(),
+            self.deposit_tx_hash.into_into_dart().into_dart(),
+            self.deposit_submitted_at.into_into_dart().into_dart(),
+            self.quote_response.into_into_dart().into_dart(),
+            self.status.into_into_dart().into_dart(),
+            self.status_response.into_into_dart().into_dart(),
+            self.last_checked_at.into_into_dart().into_dart(),
+            self.completed_at.into_into_dart().into_dart(),
+            self.created_at.into_into_dart().into_dart(),
+            self.updated_at.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::near_intents::SavedSwap
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::near_intents::SavedSwap>
+    for crate::near_intents::SavedSwap
+{
+    fn into_into_dart(self) -> crate::near_intents::SavedSwap {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::api::account::Seed {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -11153,6 +11733,198 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::frost::SigningStatus>
     for crate::api::frost::SigningStatus
 {
     fn into_into_dart(self) -> crate::api::frost::SigningStatus {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::near_intents::SwapAsset {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.asset_id.into_into_dart().into_dart(),
+            self.decimals.into_into_dart().into_dart(),
+            self.blockchain.into_into_dart().into_dart(),
+            self.symbol.into_into_dart().into_dart(),
+            self.price.into_into_dart().into_dart(),
+            self.contract_address.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::near_intents::SwapAsset
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::near_intents::SwapAsset>
+    for crate::near_intents::SwapAsset
+{
+    fn into_into_dart(self) -> crate::near_intents::SwapAsset {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::near_intents::SwapDetails {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.amount_in.into_into_dart().into_dart(),
+            self.amount_out.into_into_dart().into_dart(),
+            self.refunded_amount.into_into_dart().into_dart(),
+            self.origin_chain_tx_hashes.into_into_dart().into_dart(),
+            self.destination_chain_tx_hashes
+                .into_into_dart()
+                .into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::near_intents::SwapDetails
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::near_intents::SwapDetails>
+    for crate::near_intents::SwapDetails
+{
+    fn into_into_dart(self) -> crate::near_intents::SwapDetails {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::near_intents::SwapQuote {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.deposit_address.into_into_dart().into_dart(),
+            self.deposit_memo.into_into_dart().into_dart(),
+            self.amount_in.into_into_dart().into_dart(),
+            self.amount_out.into_into_dart().into_dart(),
+            self.min_amount_in.into_into_dart().into_dart(),
+            self.min_amount_out.into_into_dart().into_dart(),
+            self.amount_in_formatted.into_into_dart().into_dart(),
+            self.amount_out_formatted.into_into_dart().into_dart(),
+            self.amount_in_usd.into_into_dart().into_dart(),
+            self.amount_out_usd.into_into_dart().into_dart(),
+            self.deadline.into_into_dart().into_dart(),
+            self.time_estimate.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::near_intents::SwapQuote
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::near_intents::SwapQuote>
+    for crate::near_intents::SwapQuote
+{
+    fn into_into_dart(self) -> crate::near_intents::SwapQuote {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::near_intents::SwapQuoteResponse {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.quote.into_into_dart().into_dart(),
+            self.raw_response.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::near_intents::SwapQuoteResponse
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::near_intents::SwapQuoteResponse>
+    for crate::near_intents::SwapQuoteResponse
+{
+    fn into_into_dart(self) -> crate::near_intents::SwapQuoteResponse {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::near_intents::SwapRequest {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.dry.into_into_dart().into_dart(),
+            self.swap_type.into_into_dart().into_dart(),
+            self.origin_asset.into_into_dart().into_dart(),
+            self.destination_asset.into_into_dart().into_dart(),
+            self.amount.into_into_dart().into_dart(),
+            self.slippage_tolerance.into_into_dart().into_dart(),
+            self.recipient.into_into_dart().into_dart(),
+            self.refund_to.into_into_dart().into_dart(),
+            self.deadline.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::near_intents::SwapRequest
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::near_intents::SwapRequest>
+    for crate::near_intents::SwapRequest
+{
+    fn into_into_dart(self) -> crate::near_intents::SwapRequest {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::near_intents::SwapStatus {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.status.into_into_dart().into_dart(),
+            self.swap_details.into_into_dart().into_dart(),
+            self.raw_response.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::near_intents::SwapStatus
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::near_intents::SwapStatus>
+    for crate::near_intents::SwapStatus
+{
+    fn into_into_dart(self) -> crate::near_intents::SwapStatus {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::near_intents::SwapTransaction {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        [
+            self.hash.into_into_dart().into_dart(),
+            self.explorer_url.into_into_dart().into_dart(),
+        ]
+        .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
+    for crate::near_intents::SwapTransaction
+{
+}
+impl flutter_rust_bridge::IntoIntoDart<crate::near_intents::SwapTransaction>
+    for crate::near_intents::SwapTransaction
+{
+    fn into_into_dart(self) -> crate::near_intents::SwapTransaction {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::near_intents::SwapType {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            Self::ExactInput => 0.into_dart(),
+            Self::ExactOutput => 1.into_dart(),
+            _ => unreachable!(),
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::near_intents::SwapType {}
+impl flutter_rust_bridge::IntoIntoDart<crate::near_intents::SwapType>
+    for crate::near_intents::SwapType
+{
+    fn into_into_dart(self) -> crate::near_intents::SwapType {
         self
     }
 }
@@ -12245,6 +13017,36 @@ impl SseEncode for Vec<crate::api::vault::RestoredAccount> {
     }
 }
 
+impl SseEncode for Vec<crate::near_intents::SavedSwap> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::near_intents::SavedSwap>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::near_intents::SwapAsset> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::near_intents::SwapAsset>::sse_encode(item, serializer);
+        }
+    }
+}
+
+impl SseEncode for Vec<crate::near_intents::SwapTransaction> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(self.len() as _, serializer);
+        for item in self {
+            <crate::near_intents::SwapTransaction>::sse_encode(item, serializer);
+        }
+    }
+}
+
 impl SseEncode for Vec<crate::api::account::TAddressTxCount> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -12634,6 +13436,16 @@ impl SseEncode for Option<crate::api::account::Seed> {
     }
 }
 
+impl SseEncode for Option<crate::near_intents::SwapDetails> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.is_some(), serializer);
+        if let Some(value) = self {
+            <crate::near_intents::SwapDetails>::sse_encode(value, serializer);
+        }
+    }
+}
+
 impl SseEncode for Option<u32> {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -12817,6 +13629,37 @@ impl SseEncode for crate::api::sapling::SaplingParamsStatus {
     }
 }
 
+impl SseEncode for crate::near_intents::SavedSwap {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i64>::sse_encode(self.id_swap, serializer);
+        <u32>::sse_encode(self.account, serializer);
+        <String>::sse_encode(self.origin_asset, serializer);
+        <String>::sse_encode(self.destination_asset, serializer);
+        <String>::sse_encode(self.swap_type, serializer);
+        <String>::sse_encode(self.amount, serializer);
+        <i32>::sse_encode(self.slippage_tolerance, serializer);
+        <String>::sse_encode(self.recipient, serializer);
+        <String>::sse_encode(self.refund_to, serializer);
+        <String>::sse_encode(self.deadline, serializer);
+        <String>::sse_encode(self.amount_in, serializer);
+        <String>::sse_encode(self.amount_out, serializer);
+        <Option<String>>::sse_encode(self.min_amount_in, serializer);
+        <Option<String>>::sse_encode(self.min_amount_out, serializer);
+        <String>::sse_encode(self.deposit_address, serializer);
+        <Option<String>>::sse_encode(self.deposit_memo, serializer);
+        <Option<String>>::sse_encode(self.deposit_tx_hash, serializer);
+        <Option<i64>>::sse_encode(self.deposit_submitted_at, serializer);
+        <String>::sse_encode(self.quote_response, serializer);
+        <Option<String>>::sse_encode(self.status, serializer);
+        <Option<String>>::sse_encode(self.status_response, serializer);
+        <Option<i64>>::sse_encode(self.last_checked_at, serializer);
+        <Option<i64>>::sse_encode(self.completed_at, serializer);
+        <i64>::sse_encode(self.created_at, serializer);
+        <i64>::sse_encode(self.updated_at, serializer);
+    }
+}
+
 impl SseEncode for crate::api::account::Seed {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -12887,6 +13730,109 @@ impl SseEncode for crate::api::frost::SigningStatus {
                 unimplemented!("");
             }
         }
+    }
+}
+
+impl SseEncode for crate::near_intents::SwapAsset {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.asset_id, serializer);
+        <i32>::sse_encode(self.decimals, serializer);
+        <String>::sse_encode(self.blockchain, serializer);
+        <String>::sse_encode(self.symbol, serializer);
+        <Option<String>>::sse_encode(self.price, serializer);
+        <Option<String>>::sse_encode(self.contract_address, serializer);
+    }
+}
+
+impl SseEncode for crate::near_intents::SwapDetails {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Option<String>>::sse_encode(self.amount_in, serializer);
+        <Option<String>>::sse_encode(self.amount_out, serializer);
+        <Option<String>>::sse_encode(self.refunded_amount, serializer);
+        <Vec<crate::near_intents::SwapTransaction>>::sse_encode(
+            self.origin_chain_tx_hashes,
+            serializer,
+        );
+        <Vec<crate::near_intents::SwapTransaction>>::sse_encode(
+            self.destination_chain_tx_hashes,
+            serializer,
+        );
+    }
+}
+
+impl SseEncode for crate::near_intents::SwapQuote {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <Option<String>>::sse_encode(self.deposit_address, serializer);
+        <Option<String>>::sse_encode(self.deposit_memo, serializer);
+        <String>::sse_encode(self.amount_in, serializer);
+        <String>::sse_encode(self.amount_out, serializer);
+        <Option<String>>::sse_encode(self.min_amount_in, serializer);
+        <Option<String>>::sse_encode(self.min_amount_out, serializer);
+        <Option<String>>::sse_encode(self.amount_in_formatted, serializer);
+        <Option<String>>::sse_encode(self.amount_out_formatted, serializer);
+        <Option<String>>::sse_encode(self.amount_in_usd, serializer);
+        <Option<String>>::sse_encode(self.amount_out_usd, serializer);
+        <Option<String>>::sse_encode(self.deadline, serializer);
+        <Option<i32>>::sse_encode(self.time_estimate, serializer);
+    }
+}
+
+impl SseEncode for crate::near_intents::SwapQuoteResponse {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <crate::near_intents::SwapQuote>::sse_encode(self.quote, serializer);
+        <String>::sse_encode(self.raw_response, serializer);
+    }
+}
+
+impl SseEncode for crate::near_intents::SwapRequest {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <bool>::sse_encode(self.dry, serializer);
+        <crate::near_intents::SwapType>::sse_encode(self.swap_type, serializer);
+        <String>::sse_encode(self.origin_asset, serializer);
+        <String>::sse_encode(self.destination_asset, serializer);
+        <String>::sse_encode(self.amount, serializer);
+        <i32>::sse_encode(self.slippage_tolerance, serializer);
+        <String>::sse_encode(self.recipient, serializer);
+        <String>::sse_encode(self.refund_to, serializer);
+        <String>::sse_encode(self.deadline, serializer);
+    }
+}
+
+impl SseEncode for crate::near_intents::SwapStatus {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.status, serializer);
+        <Option<crate::near_intents::SwapDetails>>::sse_encode(self.swap_details, serializer);
+        <String>::sse_encode(self.raw_response, serializer);
+    }
+}
+
+impl SseEncode for crate::near_intents::SwapTransaction {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <String>::sse_encode(self.hash, serializer);
+        <Option<String>>::sse_encode(self.explorer_url, serializer);
+    }
+}
+
+impl SseEncode for crate::near_intents::SwapType {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <i32>::sse_encode(
+            match self {
+                crate::near_intents::SwapType::ExactInput => 0,
+                crate::near_intents::SwapType::ExactOutput => 1,
+                _ => {
+                    unimplemented!("");
+                }
+            },
+            serializer,
+        );
     }
 }
 

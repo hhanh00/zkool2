@@ -13,6 +13,7 @@ import 'api/issuance.dart';
 import 'api/key.dart';
 import 'api/mempool.dart';
 import 'api/migrate.dart';
+import 'api/near_intents.dart';
 import 'api/network.dart';
 import 'api/openalias.dart';
 import 'api/pay.dart';
@@ -33,6 +34,7 @@ import 'dart:ffi' as ffi;
 import 'frb_generated.dart';
 import 'io.dart';
 import 'lib.dart';
+import 'near_intents.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated_io.dart';
 import 'pay.dart';
 
@@ -226,6 +228,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SigningEvent dco_decode_box_autoadd_signing_event(dynamic raw);
 
   @protected
+  SwapDetails dco_decode_box_autoadd_swap_details(dynamic raw);
+
+  @protected
+  SwapRequest dco_decode_box_autoadd_swap_request(dynamic raw);
+
+  @protected
   int dco_decode_box_autoadd_u_32(dynamic raw);
 
   @protected
@@ -359,6 +367,15 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<RestoredAccount> dco_decode_list_restored_account(dynamic raw);
 
   @protected
+  List<SavedSwap> dco_decode_list_saved_swap(dynamic raw);
+
+  @protected
+  List<SwapAsset> dco_decode_list_swap_asset(dynamic raw);
+
+  @protected
+  List<SwapTransaction> dco_decode_list_swap_transaction(dynamic raw);
+
+  @protected
   List<TAddressTxCount> dco_decode_list_t_address_tx_count(dynamic raw);
 
   @protected
@@ -463,6 +480,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Seed? dco_decode_opt_box_autoadd_seed(dynamic raw);
 
   @protected
+  SwapDetails? dco_decode_opt_box_autoadd_swap_details(dynamic raw);
+
+  @protected
   int? dco_decode_opt_box_autoadd_u_32(dynamic raw);
 
   @protected
@@ -517,6 +537,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SaplingParamsStatus dco_decode_sapling_params_status(dynamic raw);
 
   @protected
+  SavedSwap dco_decode_saved_swap(dynamic raw);
+
+  @protected
   Seed dco_decode_seed(dynamic raw);
 
   @protected
@@ -524,6 +547,30 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SigningStatus dco_decode_signing_status(dynamic raw);
+
+  @protected
+  SwapAsset dco_decode_swap_asset(dynamic raw);
+
+  @protected
+  SwapDetails dco_decode_swap_details(dynamic raw);
+
+  @protected
+  SwapQuote dco_decode_swap_quote(dynamic raw);
+
+  @protected
+  SwapQuoteResponse dco_decode_swap_quote_response(dynamic raw);
+
+  @protected
+  SwapRequest dco_decode_swap_request(dynamic raw);
+
+  @protected
+  SwapStatus dco_decode_swap_status(dynamic raw);
+
+  @protected
+  SwapTransaction dco_decode_swap_transaction(dynamic raw);
+
+  @protected
+  SwapType dco_decode_swap_type(dynamic raw);
 
   @protected
   SyncHeight dco_decode_sync_height(dynamic raw);
@@ -774,6 +821,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  SwapDetails sse_decode_box_autoadd_swap_details(SseDeserializer deserializer);
+
+  @protected
+  SwapRequest sse_decode_box_autoadd_swap_request(SseDeserializer deserializer);
+
+  @protected
   int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
 
   @protected
@@ -913,6 +966,16 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  List<SavedSwap> sse_decode_list_saved_swap(SseDeserializer deserializer);
+
+  @protected
+  List<SwapAsset> sse_decode_list_swap_asset(SseDeserializer deserializer);
+
+  @protected
+  List<SwapTransaction> sse_decode_list_swap_transaction(
+      SseDeserializer deserializer);
+
+  @protected
   List<TAddressTxCount> sse_decode_list_t_address_tx_count(
       SseDeserializer deserializer);
 
@@ -1022,6 +1085,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Seed? sse_decode_opt_box_autoadd_seed(SseDeserializer deserializer);
 
   @protected
+  SwapDetails? sse_decode_opt_box_autoadd_swap_details(
+      SseDeserializer deserializer);
+
+  @protected
   int? sse_decode_opt_box_autoadd_u_32(SseDeserializer deserializer);
 
   @protected
@@ -1079,6 +1146,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
+  SavedSwap sse_decode_saved_swap(SseDeserializer deserializer);
+
+  @protected
   Seed sse_decode_seed(SseDeserializer deserializer);
 
   @protected
@@ -1086,6 +1156,31 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SigningStatus sse_decode_signing_status(SseDeserializer deserializer);
+
+  @protected
+  SwapAsset sse_decode_swap_asset(SseDeserializer deserializer);
+
+  @protected
+  SwapDetails sse_decode_swap_details(SseDeserializer deserializer);
+
+  @protected
+  SwapQuote sse_decode_swap_quote(SseDeserializer deserializer);
+
+  @protected
+  SwapQuoteResponse sse_decode_swap_quote_response(
+      SseDeserializer deserializer);
+
+  @protected
+  SwapRequest sse_decode_swap_request(SseDeserializer deserializer);
+
+  @protected
+  SwapStatus sse_decode_swap_status(SseDeserializer deserializer);
+
+  @protected
+  SwapTransaction sse_decode_swap_transaction(SseDeserializer deserializer);
+
+  @protected
+  SwapType sse_decode_swap_type(SseDeserializer deserializer);
 
   @protected
   SyncHeight sse_decode_sync_height(SseDeserializer deserializer);
@@ -1352,6 +1447,14 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SigningEvent self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_swap_details(
+      SwapDetails self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_swap_request(
+      SwapRequest self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
 
   @protected
@@ -1502,6 +1605,18 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       List<RestoredAccount> self, SseSerializer serializer);
 
   @protected
+  void sse_encode_list_saved_swap(
+      List<SavedSwap> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_swap_asset(
+      List<SwapAsset> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_swap_transaction(
+      List<SwapTransaction> self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_t_address_tx_count(
       List<TAddressTxCount> self, SseSerializer serializer);
 
@@ -1617,6 +1732,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_opt_box_autoadd_seed(Seed? self, SseSerializer serializer);
 
   @protected
+  void sse_encode_opt_box_autoadd_swap_details(
+      SwapDetails? self, SseSerializer serializer);
+
+  @protected
   void sse_encode_opt_box_autoadd_u_32(int? self, SseSerializer serializer);
 
   @protected
@@ -1679,6 +1798,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SaplingParamsStatus self, SseSerializer serializer);
 
   @protected
+  void sse_encode_saved_swap(SavedSwap self, SseSerializer serializer);
+
+  @protected
   void sse_encode_seed(Seed self, SseSerializer serializer);
 
   @protected
@@ -1686,6 +1808,32 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_signing_status(SigningStatus self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_swap_asset(SwapAsset self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_swap_details(SwapDetails self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_swap_quote(SwapQuote self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_swap_quote_response(
+      SwapQuoteResponse self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_swap_request(SwapRequest self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_swap_status(SwapStatus self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_swap_transaction(
+      SwapTransaction self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_swap_type(SwapType self, SseSerializer serializer);
 
   @protected
   void sse_encode_sync_height(SyncHeight self, SseSerializer serializer);

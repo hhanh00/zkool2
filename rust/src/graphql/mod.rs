@@ -10,6 +10,7 @@ pub mod frost;
 pub mod jwt;
 pub mod mutation;
 pub mod query;
+pub mod swaps;
 pub mod subs;
 pub mod voting;
 
