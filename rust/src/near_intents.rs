@@ -289,10 +289,42 @@ async fn request(
         (status, bytes)
     };
     if !(200..300).contains(&status) {
-        // Do not echo provider bodies: they may contain recipient/refund addresses.
-        bail!("1Click request failed with HTTP {status}");
+        bail!("{}", response_error(status, &bytes));
     }
     String::from_utf8(bytes).context("Invalid 1Click response encoding")
+}
+
+fn response_error(status: u16, bytes: &[u8]) -> String {
+    let body = String::from_utf8_lossy(bytes);
+    let body = body.trim();
+    let json = serde_json::from_str::<serde_json::Value>(body).ok();
+    let detail = json.as_ref().and_then(|value| {
+        let message = value.get("message").or_else(|| value.get("error"))?;
+        match message {
+            serde_json::Value::String(message) if !message.trim().is_empty() => {
+                Some(message.clone())
+            }
+            serde_json::Value::Array(messages) => {
+                let messages = messages
+                    .iter()
+                    .filter_map(|message| message.as_str())
+                    .collect::<Vec<_>>()
+                    .join("; ");
+                if messages.is_empty() {
+                    None
+                } else {
+                    Some(messages)
+                }
+            }
+            _ => None,
+        }
+    });
+    let detail = detail.as_deref().unwrap_or(body);
+    if detail.is_empty() {
+        format!("1Click request failed with HTTP {status} (empty response body)")
+    } else {
+        format!("1Click request failed with HTTP {status}: {detail}")
+    }
 }
 
 fn decode<T: DeserializeOwned>(response: &str) -> Result<T> {
@@ -527,6 +559,37 @@ pub async fn submit_deposit(
 mod tests {
     use super::*;
     use sqlx::Connection;
+
+    #[test]
+    fn provider_errors_preserve_reasons() {
+        assert_eq!(
+            response_error(400, br#"{"message":"Amount is too low","statusCode":400}"#),
+            "1Click request failed with HTTP 400: Amount is too low"
+        );
+        assert_eq!(
+            response_error(
+                400,
+                br#"{"message":["Invalid recipient","Invalid refund address"]}"#
+            ),
+            "1Click request failed with HTTP 400: Invalid recipient; Invalid refund address"
+        );
+        assert_eq!(
+            response_error(400, br#"{"error":"No route available"}"#),
+            "1Click request failed with HTTP 400: No route available"
+        );
+        assert_eq!(
+            response_error(502, b" upstream unavailable "),
+            "1Click request failed with HTTP 502: upstream unavailable"
+        );
+        assert_eq!(
+            response_error(400, br#"{"reason":"Unknown format"}"#),
+            "1Click request failed with HTTP 400: {\"reason\":\"Unknown format\"}"
+        );
+        assert_eq!(
+            response_error(400, b""),
+            "1Click request failed with HTTP 400 (empty response body)"
+        );
+    }
 
     #[tokio::test]
     async fn confirmed_quote_persists_request_and_provider_snapshot() -> Result<()> {
