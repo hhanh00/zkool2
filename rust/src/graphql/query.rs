@@ -56,14 +56,17 @@ impl Query {
             account: id_account as u32,
             ..context.coin.clone()
         };
-        Ok(crate::near_intents::list_swaps(pending_only.unwrap_or(false), &coin).await?)
+        Ok(
+            crate::api::near_intents::near_intents_list_swaps(pending_only.unwrap_or(false), &coin)
+                .await?,
+        )
     }
 
     async fn near_intents_assets(
         context: &Context,
     ) -> FieldResult<Vec<crate::near_intents::SwapAsset>> {
         check_admin_auth(context)?;
-        Ok(crate::near_intents::assets(&context.coin).await?)
+        Ok(crate::api::near_intents::near_intents_assets(&context.coin).await?)
     }
 
     async fn near_intents_status(
@@ -72,10 +75,12 @@ impl Query {
         context: &Context,
     ) -> FieldResult<crate::near_intents::SwapStatus> {
         check_admin_auth(context)?;
-        Ok(
-            crate::near_intents::status(&deposit_address, deposit_memo.as_deref(), &context.coin)
-                .await?,
+        Ok(crate::api::near_intents::near_intents_status(
+            deposit_address,
+            deposit_memo,
+            &context.coin,
         )
+        .await?)
     }
 
     fn api_version() -> &'static str {
