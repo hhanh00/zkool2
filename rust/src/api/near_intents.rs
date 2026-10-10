@@ -3,7 +3,7 @@ pub use crate::near_intents::{
     SavedSwap, SwapAsset, SwapDetails, SwapQuote, SwapQuoteResponse, SwapRequest, SwapStatus,
     SwapTransaction, SwapType,
 };
-use anyhow::{ensure, Result};
+use anyhow::{ensure, Context, Result};
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 
@@ -43,6 +43,72 @@ pub async fn near_intents_create_swap(mut request: SwapRequest, c: &Coin) -> Res
     let response = near_intents_quote(request.clone(), c).await?;
     let mut connection = c.get_connection().await?;
     crate::near_intents::save_swap(&mut connection, c.account, &request, &response).await
+}
+
+async fn saved_swap(id_swap: i64, c: &Coin) -> Result<SavedSwap> {
+    let mut connection = c.get_connection().await?;
+    crate::near_intents::read_swaps(&mut connection, c.account, false)
+        .await?
+        .into_iter()
+        .find(|s| s.id_swap == id_swap)
+        .context("Swap not found for the current account")
+}
+
+/// Prepare the exact saved deposit for the normal transaction UI.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn near_intents_prepare_swap(id_swap: i64, c: &Coin) -> Result<crate::api::pay::PcztPackage> {
+    use zcash_protocol::consensus::{NetworkType, Parameters};
+    ensure!(c.account != 0 && c.network().network_type() == NetworkType::Main, "Select a Zcash mainnet account");
+    let swap = saved_swap(id_swap, c).await?;
+    ensure!(swap.deposit_tx_hash.is_none(), "Swap deposit already sent");
+    let recipient = funding_recipient(&swap)?;
+    ensure_swap_deadline(&swap, c).await?;
+    crate::api::pay::prepare(&[recipient], crate::api::pay::PaymentOptions {
+        src_pools: 15, recipient_pays_fee: false, smart_transparent: false, category: None,
+    }, c).await
+}
+
+async fn ensure_swap_deadline(swap: &SavedSwap, c: &Coin) -> Result<()> {
+    let mut connection = c.get_connection().await?;
+    let valid: Option<bool> = sqlx::query_scalar("SELECT julianday(?) > julianday('now')")
+        .bind(&swap.deadline)
+        .fetch_one(&mut *connection)
+        .await?;
+    ensure!(
+        valid == Some(true),
+        "Swap deadline has passed; create a new quote"
+    );
+    Ok(())
+}
+
+fn funding_recipient(swap: &SavedSwap) -> Result<crate::pay::Recipient> {
+    ensure!(
+        swap.origin_asset == crate::near_intents::ZEC_ASSET,
+        "Not a ZEC deposit"
+    );
+    ensure!(
+        swap.completed_at.is_none()
+            && matches!(swap.status.as_deref(), None | Some("PENDING_DEPOSIT")),
+        "Swap is already processing or complete"
+    );
+    ensure!(
+        swap.deposit_memo.is_none(),
+        "ZEC deposit unexpectedly requires a memo"
+    );
+    crate::openalias::try_validate_zcash_address(
+        &swap.deposit_address,
+        zcash_protocol::consensus::NetworkType::Main,
+    )?;
+    let amount: u64 = swap.amount_in.parse().context("Invalid deposit amount")?;
+    ensure!(
+        (1..=2_100_000_000_000_000).contains(&amount),
+        "Invalid ZEC deposit amount"
+    );
+    Ok(crate::pay::Recipient {
+        address: swap.deposit_address.clone(),
+        amount,
+        ..Default::default()
+    })
 }
 
 /// Persist an already broadcast deposit before notifying the provider. Retrying
@@ -121,4 +187,60 @@ pub async fn near_intents_submit_deposit(
     c: &Coin,
 ) -> Result<()> {
     crate::near_intents::submit_deposit(&deposit_address, &tx_hash, &transport(c)).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use sqlx::Connection;
+
+    #[tokio::test]
+    async fn funding_uses_exact_quoted_deposit_and_rejects_ineligible_swaps() -> Result<()> {
+        let mut db = sqlx::SqliteConnection::connect("sqlite::memory:").await?;
+        sqlx::raw_sql("CREATE TABLE accounts(id_account INTEGER PRIMARY KEY); INSERT INTO accounts VALUES (1);")
+            .execute(&mut db).await?;
+        sqlx::raw_sql(include_str!("../db/swaps.sql"))
+            .execute(&mut db)
+            .await?;
+        let request = SwapRequest {
+            dry: false,
+            swap_type: SwapType::ExactOutput,
+            origin_asset: crate::near_intents::ZEC_ASSET.into(),
+            destination_asset: "usdt".into(),
+            amount: "5000000".into(),
+            slippage_tolerance: 100,
+            recipient: "external".into(),
+            refund_to: "wallet".into(),
+            deadline: "2099-01-01T00:00:00Z".into(),
+        };
+        let quote: SwapQuote = serde_json::from_str(
+            r#"{"amountIn":"437166","amountOut":"5000000","depositAddress":"t1VmmGiyjVNeCjxDZzg7vZmd99WyzVby9yC"}"#,
+        )?;
+        let mut swap = crate::near_intents::save_swap(
+            &mut db,
+            1,
+            &request,
+            &SwapQuoteResponse {
+                quote,
+                raw_response: "{}".into(),
+            },
+        )
+        .await?;
+        let recipient = funding_recipient(&swap)?;
+        assert_eq!(recipient.amount, 437166); // deposit, not requested USDT amount
+        assert_eq!(recipient.address, swap.deposit_address);
+        assert!(recipient.asset_base.is_empty()); // native ZEC
+        assert!(recipient.memo_bytes.is_none());
+        for amount in ["0", "1.5", "-1", "18446744073709551616", "2100000000000001"] {
+            swap.amount_in = amount.into();
+            assert!(funding_recipient(&swap).is_err());
+        }
+        swap.amount_in = "437166".into();
+        swap.status = Some("PROCESSING".into());
+        assert!(funding_recipient(&swap).is_err());
+        swap.status = None;
+        swap.origin_asset = "usdt".into();
+        assert!(funding_recipient(&swap).is_err());
+        Ok(())
+    }
 }

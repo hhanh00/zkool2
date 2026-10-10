@@ -4,11 +4,13 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import '../lib.dart';
 import '../near_intents.dart';
 import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'pay.dart';
 
-// These functions are ignored because they are not marked as `pub`: `transport`
+// These functions are ignored because they are not marked as `pub`: `ensure_swap_deadline`, `funding_recipient`, `saved_swap`, `transport`
 
 Future<List<SavedSwap>> nearIntentsListSwaps(
         {required bool pendingOnly, required Coin c}) =>
@@ -28,6 +30,12 @@ Future<SavedSwap> nearIntentsCreateSwap(
         {required SwapRequest request, required Coin c}) =>
     RustLib.instance.api
         .crateApiNearIntentsNearIntentsCreateSwap(request: request, c: c);
+
+/// Prepare the exact saved deposit for the normal transaction UI.
+Future<PcztPackage> nearIntentsPrepareSwap(
+        {required PlatformInt64 idSwap, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiNearIntentsNearIntentsPrepareSwap(idSwap: idSwap, c: c);
 
 /// Persist an already broadcast deposit before notifying the provider. Retrying
 /// notification never sends another wallet transaction.

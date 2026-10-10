@@ -9,6 +9,8 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:zkool/main.dart';
+import 'package:zkool/services/continuation_context.dart';
+import 'package:zkool/pages/swaps.dart';
 import 'package:zkool/pages/raptor.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/mempool.dart';
@@ -20,7 +22,8 @@ import 'package:zkool/widgets/error_display.dart';
 
 class TxPage extends ConsumerStatefulWidget {
   final PcztPackage pczt;
-  const TxPage(this.pczt, {super.key});
+  final ContinuationContext? continuation;
+  const TxPage(this.pczt, {this.continuation, super.key});
 
   @override
   ConsumerState<TxPage> createState() => TxPageState();
@@ -224,6 +227,7 @@ class TxPageState extends ConsumerState<TxPage> {
       }
 
       if (txidHex != null) {
+        if (mounted) setState(() => txId = result);
         await storePendingTx(
           height: txPlan.height,
           txid: txidHex,
@@ -231,8 +235,17 @@ class TxPageState extends ConsumerState<TxPage> {
           category: pczt.category,
           c: c,
         );
+        switch (widget.continuation) {
+          case SwapContext continuation:
+            final summary = await continuation.complete(result, c);
+            if (mounted) {
+              ref.invalidate(savedSwapsProvider);
+              unawaited(GoRouter.of(context).pushReplacement<void>('/swap/summary', extra: summary));
+            }
+          case null:
+            break;
+        }
         if (mounted) {
-          setState(() => txId = result);
           showSnackbar("Transaction broadcasted successfully");
         } else {
           showSnackbar("Transaction sent successfully (background)");
@@ -255,6 +268,7 @@ class TxPageState extends ConsumerState<TxPage> {
   }
 
   void onSend() async {
+    if (_sending || txId != null) return;
     setState(() {
       _sending = true;
       _sendStep = "Preparing...";
@@ -294,7 +308,7 @@ class TxPageState extends ConsumerState<TxPage> {
         data: pcztData,
       );
       final appSettings = await ref.read(appSettingsProvider.future);
-      if (path != null && appSettings.qrSettings.enabled) await showAnimatedQR(context, ref, path);
+      if (mounted && path != null && appSettings.qrSettings.enabled) await showAnimatedQR(context, ref, path);
     } on AnyhowException catch (e) {
       if (!mounted) return;
       await showException(context, e.message);
