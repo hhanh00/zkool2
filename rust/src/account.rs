@@ -201,7 +201,7 @@ pub async fn new_account(
         let dindex: u32 = 0;
         if pools & POOL_TRANSPARENT != 0 {
             let tvk = uvk
-                .transparent()
+                .p2pkh()
                 .ok_or_else(|| anyhow!("device viewing key has no transparent key"))?;
             init_account_transparent(&mut db_tx, account, birth).await?;
             store_account_transparent_vk(&mut db_tx, account, tvk).await?;
@@ -420,7 +420,7 @@ pub async fn new_account(
         let (ua, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
         let dindex: u32 = di.try_into()?;
 
-        match uvk.transparent() {
+        match uvk.p2pkh() {
             Some(tvk) if pools & POOL_TRANSPARENT != 0 => {
                 init_account_transparent(&mut db_tx, account, birth).await?;
                 store_account_transparent_vk(&mut db_tx, account, tvk).await?;

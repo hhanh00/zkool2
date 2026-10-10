@@ -99,7 +99,7 @@ pub fn get_key_pools(key: &str, c: &Coin) -> Result<u8> {
         let mut pools = 0;
         let ufvk = UnifiedFullViewingKey::decode(network, key)
             .map_err(|_| anyhow::anyhow!("Invalid UFVK"))?;
-        if ufvk.transparent().is_some() {
+        if ufvk.p2pkh().is_some() {
             pools |= 1;
         }
         if ufvk.sapling().is_some() {
