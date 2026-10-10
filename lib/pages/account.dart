@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:bubble/bubble.dart';
 import 'package:convert/convert.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -223,30 +224,37 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
             onSelected: (String result) async {
               switch (result) {
                 case "account_manager":
-                  GoRouter.of(context).push("/accounts");
+                  await GoRouter.of(context).push("/accounts");
                 case "backup":
-                  GoRouter.of(context).push("/viewing_keys", extra: account.account.id);
+                  await GoRouter.of(context).push("/viewing_keys", extra: account.account.id);
                 case "edit_account":
-                  GoRouter.of(context).push("/account/edit", extra: [account.account]);
+                  await GoRouter.of(context).push("/account/edit", extra: [account.account]);
+                case "swap":
+                  await GoRouter.of(context).push("/swaps");
                 case "market_price":
-                  GoRouter.of(context).push("/market");
+                  await GoRouter.of(context).push("/market");
                 case "update_fx":
                   onUpdateAllTxPrices();
                 case "toggle_tx_view":
-                  ref.read(appSettingsProvider.notifier).setTransactionViewMode(!(ref.read(appSettingsProvider).value?.transactionTableMode ?? false));
+                  await ref.read(appSettingsProvider.notifier).setTransactionViewMode(!(ref.read(appSettingsProvider).value?.transactionTableMode ?? false));
                 case "charts":
-                  GoRouter.of(context).push("/chart");
+                  await GoRouter.of(context).push("/chart");
                 case "migration":
-                  GoRouter.of(context).push("/migrate");
+                  await GoRouter.of(context).push("/migrate");
                 case "voting":
-                  GoRouter.of(context).push("/voting");
+                  await GoRouter.of(context).push("/voting");
                 case "settings":
-                  GoRouter.of(context).push("/settings");
+                  await GoRouter.of(context).push("/settings");
                 default:
                   onExport(int.parse(result));
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+              if (settings.expertMode)
+                const PopupMenuItem<String>(
+                  value: "swap",
+                  child: Text("Swaps"),
+                ),
               const PopupMenuItem<String>(
                 value: "account_manager",
                 child: Text("Account Manager"),
@@ -460,15 +468,16 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
 
   void onUpdateAllTxPrices() async {
     final settings = await ref.read(appSettingsProvider.future);
+    if (!mounted) return;
     final confirmed =
         await confirmDialog(context, title: "Fetch Tx Market Price", message: "Do you want to retrieve historical ZEC prices for your past transactions?");
     if (confirmed) {
       if (!mounted) return;
-      showDialog(
+      unawaited(showDialog<void>(
         context: context,
         barrierDismissible: false,
         builder: (_) => const Center(child: CircularProgressIndicator()),
-      );
+      ));
       try {
         final n = await fillMissingTxPrices(c: c, api: settings.coingecko, currency: settings.currency);
         if (mounted) {
@@ -583,7 +592,27 @@ class AccountEditPage extends ConsumerStatefulWidget {
 
 class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAware {
   late final c = coinContext.coin;
-  late List<Account> accounts = widget.accounts;
+  late final List<Account> _savedAccounts = List.of(widget.accounts);
+  late final List<Account> accounts = _savedAccounts;
+  late final Map<String, dynamic> _initialValues = {
+    "name": accounts.length == 1 ? accounts.first.name : "(Multiple)",
+    "birth": accounts.length == 1 ? accounts.first.birth : null,
+    "icon": accounts.length == 1 ? accounts.first.icon : null,
+    "enabled": _commonValue((a) => a.enabled),
+    "hidden": _commonValue((a) => a.hidden),
+    "useInternal": _commonValue((a) => a.useInternal),
+    "folder": _commonValue((a) => a.folder.id),
+  };
+
+  T? _commonValue<T>(T Function(Account) value) {
+    final first = value(accounts.first);
+    return accounts.every((a) => value(a) == first) ? first : null;
+  }
+  Future<bool>? _pendingExit;
+  bool _allowExit = false;
+  late final _birthController = TextEditingController(
+    text: _savedAccounts.length == 1 ? _savedAccounts.first.birth.toString() : "",
+  );
   final formKey = GlobalKey<FormBuilderState>(debugLabel: "formKey");
   List<Folder>? folders;
 
@@ -598,7 +627,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
     super.initState();
     Future(() async {
       final folders = await ref.read(getFoldersProvider.future);
-      setState(() => this.folders = folders);
+      if (mounted) setState(() => this.folders = folders);
     });
   }
 
@@ -612,9 +641,10 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
   }
 
   @override
-  void didUpdateWidget(covariant AccountEditPage oldWidget) {
-    accounts = widget.accounts;
-    super.didUpdateWidget(oldWidget);
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    _birthController.dispose();
+    super.dispose();
   }
 
   @override
@@ -625,7 +655,6 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
     if (folders == null) return SizedBox.expand();
 
     final account = accounts.length == 1 ? accounts.first : null;
-    final folder = accounts.first.folder;
     final folderOptions = [DropdownMenuItem(value: 0, child: Text("No Folder"))] +
         folders!
             .map(
@@ -660,6 +689,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: FormBuilder(
           key: formKey,
+          initialValue: _initialValues,
           child: Column(
             children: [
               Row(
@@ -670,25 +700,36 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
                       child: FormBuilderTextField(
                         name: 'name',
                         decoration: InputDecoration(labelText: 'Name'),
-                        initialValue: account?.name ?? "(Multiple)",
                         readOnly: account == null,
-                        onChanged: (account != null) ? onEditName : null,
                       ),
                     ),
                   ),
-                  if (account != null) Tooltip(message: "Edit Account Icon", child: account.avatar(onTap: (_) => onEditIcon())),
+                  if (account != null)
+                    FormBuilderField<Uint8List>(
+                      name: "icon",
+                      builder: (field) => Tooltip(
+                        message: "Edit Account Icon",
+                        child: account.copyWith(icon: field.value).avatar(onTap: (_) => onEditIcon()),
+                      ),
+                    ),
                 ],
               ),
               Tooltip(
                 message: "Edit Height at the creation of the account",
-                child: FormBuilderTextField(
+                child: FormBuilderField<int>(
                   name: 'birth',
-                  decoration: InputDecoration(labelText: 'Birth Height'),
-                  initialValue: account?.birth.toString() ?? "",
-                  keyboardType: TextInputType.number,
-                  readOnly: account == null,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  onChanged: (account != null) ? onEditBirth : null,
+                  validator: account == null ? null : (height) =>
+                      height == null || height < 0 || height > 0xffffffff
+                          ? "Enter a valid birth height"
+                          : null,
+                  builder: (field) => TextField(
+                    controller: _birthController,
+                    decoration: InputDecoration(labelText: 'Birth Height', errorText: field.errorText),
+                    keyboardType: TextInputType.number,
+                    readOnly: account == null,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    onChanged: account == null ? null : (value) => field.didChange(int.tryParse(value)),
+                  ),
                 ),
               ),
               Tooltip(
@@ -696,9 +737,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
                 child: FormBuilderCheckbox(
                   name: "enabled",
                   title: Text("Enabled"),
-                  initialValue: accounts.every((a) => a.enabled == accounts[0].enabled) ? accounts[0].enabled : null,
                   tristate: account == null,
-                  onChanged: onEditEnabled,
                 ),
               ),
               Tooltip(
@@ -706,18 +745,23 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
                 child: FormBuilderCheckbox(
                   name: "hidden",
                   title: Text("Hidden"),
-                  initialValue: accounts.every((a) => a.hidden == accounts[0].hidden) ? accounts[0].hidden : null,
                   tristate: account == null,
-                  onChanged: onEditHidden,
+                ),
+              ),
+              Tooltip(
+                message: "Use an internal address for change (ZIP 316). Ledger accounts have a fixed change setting",
+                child: FormBuilderCheckbox(
+                  name: "useInternal",
+                  title: Text("Use Internal Change"),
+                  tristate: account == null,
+                  enabled: accounts.every((a) => a.hw != 1 && a.hw != 2),
                 ),
               ),
               Tooltip(
                 message: "Assign Account to Folder",
                 child: FormBuilderDropdown<int>(
                   name: "folder",
-                  initialValue: accounts.every((a) => a.folder.id == folder.id) ? folder.id : null,
                   items: folderOptions,
-                  onChanged: onEditFolder,
                 ),
               ),
             ],
@@ -727,151 +771,119 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
     );
   }
 
-  void onEditName(String? name) async {
-    assert(accounts.length == 1);
-    if (name != null) {
-      accounts[0] = accounts[0].copyWith(name: name);
-      await updateAccount(
-        update: AccountUpdate(
-          coin: accounts[0].coin,
-          id: accounts[0].id,
-          name: name,
-          folder: accounts[0].folder.id,
-        ),
-        c: c,
-      );
-      final a = accounts[0];
-      final seed = a.seed;
-      if (seed != null) {
-        final settings = await ref.read(appSettingsProvider.future);
-        if (settings.vault)
-          await ref.read(vaultProvider.notifier).storeAccount(
-                name: name,
-                seed: seed,
-                aindex: a.aindex,
-                useInternal: a.useInternal,
-                birthHeight: a.birth,
-              );
+  Future<void> _updateVaultAccount(Account account) async {
+    final settings = await ref.read(appSettingsProvider.future);
+    if (!settings.vault) return;
+    final seed = await getAccountSeed(account: account.id, c: c);
+    if (seed == null) return;
+    await ref.read(vaultProvider.notifier).storeAccount(
+          name: account.name,
+          seed: seed.mnemonic,
+          aindex: account.aindex,
+          useInternal: account.useInternal,
+          birthHeight: account.birth,
+        );
+  }
+
+  Set<String> get _changedFields {
+    final fields = formKey.currentState?.fields;
+    if (fields == null) return {};
+    return fields.entries.where((entry) {
+      final value = entry.value.value;
+      final initial = _initialValues[entry.key];
+      return value is Uint8List || initial is Uint8List
+          ? !listEquals(value as Uint8List?, initial as Uint8List?)
+          : value != initial;
+    }).map((entry) => entry.key).toSet();
+  }
+
+  Future<bool> confirmLeave() {
+    return _pendingExit ??= _confirmLeave().whenComplete(() => _pendingExit = null);
+  }
+
+  Future<bool> _confirmLeave() async {
+    final changed = _changedFields;
+    if (_allowExit || changed.isEmpty) return true;
+    final resetsSync = changed.contains("birth") || changed.contains("useInternal");
+    final save = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text("Unsaved account changes"),
+        content: Text(resetsSync
+            ? "Save your changes before leaving? Changing birth height or internal change will clear the affected accounts' sync data and reset them to their birth height. You will need to resync. Your funds will not be lost."
+            : "Save your account changes before leaving?"),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(), child: Text("Stay")),
+          TextButton(onPressed: () => Navigator.of(dialogContext).pop(false), child: Text("Leave without saving")),
+          FilledButton(onPressed: () => Navigator.of(dialogContext).pop(true), child: Text("Save and leave")),
+        ],
+      ),
+    );
+    if (save == null || !mounted) return false;
+    if (!save) {
+      _allowExit = true;
+      return true;
+    }
+    if (!(formKey.currentState?.saveAndValidate() ?? false)) return false;
+    final values = formKey.currentState!.value;
+    try {
+      for (var i = 0; i < accounts.length; i++) {
+        final saved = accounts[i];
+        final folderId = values["folder"] as int?;
+        final a = saved.copyWith(
+          name: accounts.length == 1 ? values["name"] as String : saved.name,
+          birth: accounts.length == 1 ? values["birth"] as int : saved.birth,
+          icon: accounts.length == 1 ? values["icon"] as Uint8List? : saved.icon,
+          enabled: values["enabled"] as bool? ?? saved.enabled,
+          hidden: values["hidden"] as bool? ?? saved.hidden,
+          useInternal: values["useInternal"] as bool? ?? saved.useInternal,
+          folder: folderId == null ? saved.folder : folders!.firstWhere(
+            (f) => f.id == folderId, orElse: () => Folder(id: 0, name: "")),
+        );
+        if (a == saved) continue;
+        final birthChanged = a.birth != saved.birth;
+        final internalChanged = a.useInternal != saved.useInternal;
+        await updateAccount(
+          update: AccountUpdate(
+            coin: a.coin,
+            id: a.id,
+            name: a.name != saved.name ? a.name : null,
+            icon: !listEquals(a.icon, saved.icon) ? a.icon ?? Uint8List(0) : null,
+            birth: birthChanged ? a.birth : null,
+            folder: a.folder.id,
+            enabled: a.enabled != saved.enabled ? a.enabled : null,
+            hidden: a.hidden != saved.hidden ? a.hidden : null,
+            useInternal: internalChanged ? a.useInternal : null,
+          ),
+          c: c,
+        );
+        if (a.name != saved.name || birthChanged || internalChanged) await _updateVaultAccount(a);
+        if (birthChanged || internalChanged) {
+          await resetSync(id: a.id, c: c);
+          ref.invalidate(syncStateAccountProvider(a.id));
+        }
+        ref.invalidate(accountProvider(a.id));
       }
       ref.invalidate(getAccountsProvider);
-      ref.invalidate(accountProvider(accounts[0].id));
-      setState(() {});
+      _allowExit = true;
+      return true;
+    } catch (error, stack) {
+      if (mounted) await showException(context, error.toString(), stackTrace: stack);
+      return false;
     }
   }
 
   void onEditIcon() async {
     final icon = await pickImage();
-    var changed = false;
     Uint8List? bytes;
     if (icon != null) {
       bytes = await icon.readAsBytes();
-      changed = true;
     } else {
+      if (!mounted) return;
       final remove = await confirmDialog(context, title: "Reset Icon", message: "Do you want to remove the current icon?");
-      if (remove) {
-        bytes = Uint8List(0);
-        changed = true;
-      }
+      if (!remove) return;
     }
-    if (changed) {
-      accounts[0] = accounts[0].copyWith(icon: bytes?.isNotEmpty == true ? bytes : null);
-      await updateAccount(
-        update: AccountUpdate(
-          coin: accounts[0].coin,
-          id: accounts[0].id,
-          icon: bytes,
-          folder: accounts[0].folder.id,
-        ),
-        c: c,
-      );
-      ref.invalidate(accountProvider(accounts[0].id));
-      setState(() {});
-    }
-  }
-
-  void onEditBirth(String? birth) async {
-    if (birth != null && birth.isNotEmpty) {
-      final bh = int.parse(birth);
-      accounts[0] = accounts[0].copyWith(birth: bh);
-      await updateAccount(
-        update: AccountUpdate(
-          coin: accounts[0].coin,
-          id: accounts[0].id,
-          birth: bh,
-          folder: accounts[0].folder.id,
-        ),
-        c: c,
-      );
-      final a = accounts[0];
-      final seed = await getAccountSeed(account: a.id, c: c);
-      if (seed != null) {
-        final settings = await ref.read(appSettingsProvider.future);
-        if (settings.vault)
-          await ref.read(vaultProvider.notifier).storeAccount(
-                name: a.name,
-                seed: seed.mnemonic,
-                aindex: a.aindex,
-                useInternal: a.useInternal,
-                birthHeight: bh,
-              );
-      }
-      ref.invalidate(accountProvider(accounts[0].id));
-      setState(() {});
-    }
-  }
-
-  void onEditEnabled(bool? v) async {
-    if (v == null) return;
-    for (var i = 0; i < accounts.length; i++) {
-      accounts[i] = accounts[i].copyWith(enabled: v);
-      await updateAccount(
-        update: AccountUpdate(
-          coin: accounts[i].coin,
-          id: accounts[i].id,
-          enabled: v,
-          folder: accounts[i].folder.id,
-        ),
-        c: c,
-      );
-      ref.invalidate(accountProvider(accounts[i].id));
-    }
-    setState(() {});
-  }
-
-  void onEditHidden(bool? v) async {
-    if (v == null) return;
-    for (var i = 0; i < accounts.length; i++) {
-      accounts[i] = accounts[i].copyWith(hidden: v);
-      await updateAccount(
-        update: AccountUpdate(
-          coin: accounts[i].coin,
-          id: accounts[i].id,
-          hidden: v,
-          folder: accounts[i].folder.id,
-        ),
-        c: c,
-      );
-      ref.invalidate(accountProvider(accounts[i].id));
-    }
-    setState(() {});
-  }
-
-  void onEditFolder(int? v) async {
-    if (v == null) return;
-    final folders = ref.read(getFoldersProvider).requireValue;
-    for (var i = 0; i < accounts.length; i++) {
-      accounts[i] = accounts[i].copyWith(folder: folders.firstWhere((f) => f.id == v, orElse: () => Folder(id: 0, name: "")));
-      await updateAccount(
-        update: AccountUpdate(
-          coin: accounts[i].coin,
-          id: accounts[i].id,
-          folder: v,
-        ),
-        c: c,
-      );
-      ref.invalidate(accountProvider(accounts[i].id));
-    }
-    setState(() {});
+    if (mounted) formKey.currentState?.fields["icon"]?.didChange(bytes);
   }
 
   void onExport() async {

@@ -1,4 +1,5 @@
 pub mod account;
+pub mod address;
 pub mod coin;
 pub mod contacts;
 pub mod db;
@@ -8,6 +9,7 @@ pub mod issuance;
 pub mod key;
 pub mod mempool;
 pub mod migrate;
+pub mod near_intents;
 pub mod network;
 pub mod openalias;
 pub mod pay;

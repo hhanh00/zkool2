@@ -2,8 +2,8 @@ use std::collections::BTreeMap;
 
 use anyhow::{Context, Result};
 use ed25519_dalek::{SigningKey, VerifyingKey, SECRET_KEY_LENGTH};
-use rand_core::OsRng;
-use reddsa::frost::redpallas::{
+use rand_core_legacy::OsRng;
+use reddsa_legacy::frost::redpallas::{
     keys::dkg::{self, round1, round2},
     Identifier,
 };
@@ -11,7 +11,10 @@ use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::info;
 
 use crate::{
-    api::{coin::Network, frost::{get_funding_account, DKGParams}},
+    api::{
+        coin::Network,
+        frost::{get_funding_account, DKGParams},
+    },
     db::delete_account,
     frost::{Broadcast, FrostBytes, PerPeer, Round},
     Client,
@@ -609,4 +612,3 @@ pub async fn delete_frost_state(connection: &mut SqliteConnection) -> Result<()>
     }
     Ok(())
 }
-

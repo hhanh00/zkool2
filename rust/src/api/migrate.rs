@@ -256,10 +256,12 @@ async fn execute(
 /// per cycle; the caller logs it if and when it is actually served.
 #[cfg(feature = "flutter")]
 fn sample_delay(mean_delay_ms: u64) -> u64 {
-    use rand_core::{OsRng, RngCore};
+    use rand::rngs::SysRng;
+    use rand_core::Rng;
+    use rand_core::UnwrapErr;
 
     let mean = mean_delay_ms as f64;
-    let u = (OsRng.next_u32() as f64 + 1.0) / (u32::MAX as f64 + 2.0);
+    let u = (UnwrapErr(SysRng).next_u32() as f64 + 1.0) / (u32::MAX as f64 + 2.0);
     ((-mean * u.ln()) as u64).min(mean_delay_ms * 4)
 }
 

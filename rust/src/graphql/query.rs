@@ -39,6 +39,50 @@ pub struct AccountFilter {
 #[graphql_object]
 #[graphql(context = Context)]
 impl Query {
+    /// Saved swaps for the specified account, newest first. No provider requests.
+    async fn near_intents_list_swaps(
+        id_account: i32,
+        pending_only: Option<bool>,
+        context: &Context,
+    ) -> FieldResult<Vec<crate::near_intents::SavedSwap>> {
+        if id_account <= 0 {
+            return Err(juniper::FieldError::new(
+                "Invalid account ID",
+                juniper::Value::Null,
+            ));
+        }
+        check_auth(context, id_account, false)?;
+        let coin = Coin {
+            account: id_account as u32,
+            ..context.coin.clone()
+        };
+        Ok(
+            crate::api::near_intents::near_intents_list_swaps(pending_only.unwrap_or(false), &coin)
+                .await?,
+        )
+    }
+
+    async fn near_intents_assets(
+        context: &Context,
+    ) -> FieldResult<Vec<crate::near_intents::SwapAsset>> {
+        check_admin_auth(context)?;
+        Ok(crate::api::near_intents::near_intents_assets(&context.coin).await?)
+    }
+
+    async fn near_intents_status(
+        deposit_address: String,
+        deposit_memo: Option<String>,
+        context: &Context,
+    ) -> FieldResult<crate::near_intents::SwapStatus> {
+        check_admin_auth(context)?;
+        Ok(crate::api::near_intents::near_intents_status(
+            deposit_address,
+            deposit_memo,
+            &context.coin,
+        )
+        .await?)
+    }
+
     fn api_version() -> &'static str {
         "1.0"
     }
@@ -530,7 +574,7 @@ fn resolve_note(
             let diversifier_index: Option<u64> = ivk
                 .diversifier_index(&address)
                 .and_then(|d| d.try_into().ok());
-            let ua = UnifiedAddress::from_receivers(Some(address), None, None)
+            let ua = UnifiedAddress::from_receivers(Some(address), None, None, None, None)
                 .ok_or_else(|| "UnifiedAddress::from_receivers returned None".to_string())?;
             (Some(ua.encode(&network)), diversifier_index)
         }

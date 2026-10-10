@@ -42,7 +42,8 @@ def seed():
 @pytest.fixture(scope="session")
 def zkool_binary():
     """Path to zkool_graphql binary."""
-    return os.path.join(os.path.dirname(__file__), "..", "..", "target", "release", "zkool_graphql")
+    default = os.path.join(os.path.dirname(__file__), "..", "..", "target", "release", "zkool_graphql")
+    return os.getenv("ZKOOL_BINARY", default)
 
 
 @pytest.fixture

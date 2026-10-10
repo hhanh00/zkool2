@@ -255,6 +255,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                               message: "Check if you want this account to use an internal address for the change like Zashi (ZIP 316)",
                               child: FormBuilderSwitch(
                                 name: "useInternal",
+                                initialValue: true,
                                 title: const Text("Use Internal Change"),
                               ),
                             ),
@@ -400,7 +401,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       final String? passphrase = formData?["passphrase"];
       final String? aindex = formData?["aindex"];
       final String? birth = formData?["birth"];
-      final bool useInternal = ledger ? ledgerApp == 1 : formData?["useInternal"] ?? false;
+      final bool useInternal = ledger ? ledgerApp == 1 : formData?["useInternal"] ?? true;
       final int? pools = formData!["pools"];
 
       final icon = iconBytes;
@@ -420,6 +421,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       try {
         String message = "Please wait while we create the account";
         if (ledger && !isSeed) message += "\nConfirm on your Ledger device";
+        if (!mounted) return;
         dialog = showLoadingDialog(context, message);
         final account = await newAccount(
             na: NewAccount(
@@ -452,11 +454,11 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         await ref.read(getAccountsProvider.future);
 
         await coinContext.setAccount(account: account);
-        ref.read(selectedAccountIdProvider.notifier).set(account);
+        await ref.read(selectedAccountIdProvider.notifier).set(account);
         c = coinContext.coin;
 
         if ((key.isNotEmpty && await hasTransparentPubKey(c: c)) || ledger) {
-          await showTransparentScan(ref, context);
+          if (mounted) await showTransparentScan(ref, context);
         }
 
         final seed = await getAccountSeed(account: account, c: c);
@@ -486,7 +488,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         }
         if (mounted) GoRouter.of(context).pop();
       } on AnyhowException catch (e) {
-        await showException(context, e.message);
+        if (mounted) await showException(context, e.message);
         dialog?.dismiss();
       }
     }

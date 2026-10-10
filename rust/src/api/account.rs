@@ -9,7 +9,7 @@ use csv_async::AsyncWriter;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 use sapling_crypto::{zip32::sapling_derive_internal_fvk, PaymentAddress};
-use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
+use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
 use zcash_address::unified::{Container, Encoding};
 use zcash_keys::{
     address::UnifiedAddress,
@@ -106,7 +106,7 @@ pub fn ua_from_ufvk(ufvk: &str, di: Option<u32>, c: &Coin) -> Result<String> {
 pub fn receivers_from_ua(ua: &str, c: &Coin) -> Result<Receivers> {
     let network = c.network();
 
-    let (net, ua) = zcash_address::unified::Address::decode(ua)?;
+    let (net, _revision, ua) = zcash_address::unified::Address::decode(ua)?;
     if net != network.network_type() {
         anyhow::bail!("Invalid Network");
     }
@@ -130,7 +130,8 @@ pub fn receivers_from_ua(ua: &str, c: &Coin) -> Result<Receivers> {
                 let oaddr = orchard::Address::from_raw_address_bytes(&o)
                     .into_option()
                     .unwrap();
-                let oaddr = UnifiedAddress::from_receivers(Some(oaddr), None, None).unwrap();
+                let oaddr =
+                    UnifiedAddress::from_receivers(Some(oaddr), None, None, None, None).unwrap();
                 receivers.oaddr = Some(oaddr.encode(&network));
             }
             _ => {}
@@ -194,6 +195,28 @@ pub async fn update_account(update: &AccountUpdate, c: &Coin) -> Result<()> {
             .bind(update.id)
             .execute(&mut *connection)
             .await?;
+    }
+    if let Some(use_internal) = update.use_internal {
+        let hw = HwKind::from_hw(get_account_hw(&mut connection, update.id).await?);
+        anyhow::ensure!(
+            !hw.is_ledger() || use_internal == (hw == HwKind::Official),
+            "Ledger accounts have a fixed internal change setting"
+        );
+        let mut tx = connection.begin().await?;
+        sqlx::query("UPDATE accounts SET use_internal = ? WHERE id_account = ?")
+            .bind(use_internal)
+            .bind(update.id)
+            .execute(&mut *tx)
+            .await?;
+        if use_internal {
+            crate::account::backfill_account_transparent_change_addresses(
+                &c.network(),
+                &mut tx,
+                update.id,
+            )
+            .await?;
+        }
+        tx.commit().await?;
     }
     match update.folder {
         0 => {
@@ -298,6 +321,7 @@ pub struct AccountUpdate {
     pub folder: u32,
     pub hidden: Option<bool>,
     pub enabled: Option<bool>,
+    pub use_internal: Option<bool>,
 }
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
@@ -488,7 +512,7 @@ pub async fn fetch_address_tx_count(
             let dfvk_bytes = dfvk.to_bytes();
             let dk_bytes: [u8; 32] = dfvk_bytes[96..128].try_into().ok()?;
             let dk = sapling_crypto::zip32::DiversifierKey::from_bytes(dk_bytes);
-            let (int_fvk, int_dk) = sapling_derive_internal_fvk(dfvk.fvk(), &dk);
+            let (int_fvk, int_dk) = sapling_derive_internal_fvk(dfvk.fvk(), &dk)?;
             let mut ivk_bytes = [0u8; 64];
             ivk_bytes[..32].copy_from_slice(int_dk.as_bytes());
             ivk_bytes[32..].copy_from_slice(&int_fvk.vk.ivk().to_repr());
@@ -556,7 +580,7 @@ pub async fn fetch_address_tx_count(
                         let addr = fvk.address_at(d as u64, s);
                         o_addr_raw = Some(addr);
                         Some(
-                            UnifiedAddress::from_receivers(Some(addr), None, None)
+                            UnifiedAddress::from_receivers(Some(addr), None, None, None, None)
                                 .unwrap()
                                 .encode(&network),
                         )
@@ -568,9 +592,9 @@ pub async fn fetch_address_tx_count(
                 };
 
                 if aggregate {
-                    if let Some(ua) =
-                        UnifiedAddress::from_receivers(o_addr_raw, s_addr_raw, t_addr_raw)
-                    {
+                    if let Some(ua) = UnifiedAddress::from_receivers(
+                        o_addr_raw, s_addr_raw, t_addr_raw, None, None,
+                    ) {
                         results.push(TAddressTxCount {
                             pool: 0,
                             address: ua.encode(&network),
@@ -708,7 +732,7 @@ pub async fn print_keys(id: u32, c: &Coin) -> Result<()> {
     if uvk.orchard().is_some() {
         println!("Has Orchard");
     }
-    let uvk = uvk.encode(&network);
+    let uvk = uvk.encode(&network)?;
     println!("Unified Full Viewing Key: {}", uvk);
 
     Ok(())

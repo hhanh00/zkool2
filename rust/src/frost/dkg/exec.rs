@@ -15,7 +15,7 @@
 
 use anyhow::{bail, Context, Result};
 use orchard::keys::{FullViewingKey, Scope};
-use reddsa::frost::redpallas::{
+use reddsa_legacy::frost::redpallas::{
     frost::keys::PublicKeyPackage,
     keys::{dkg, EvenY},
 };
@@ -27,15 +27,15 @@ use crate::{
     account::{get_account_seed, get_orchard_vk},
     api::{coin::Network, frost::DKGParams},
     db::{delete_account, init_account_orchard, store_account_metadata, store_account_orchard_vk},
-    frost::{Dispatch, FrostBytes, FrostMessage, P, RouteCtx},
+    frost::{Dispatch, FrostBytes, FrostMessage, RouteCtx, P},
     Client,
 };
 
+use super::state::{DkgState, PendingPublish};
 use super::{
     delete_frost_state, get_addresses, get_coordinator_broadcast_account, get_mailbox_account,
     publish, DkgInit, DkgRound0, DkgRound1, DkgRound2, Round,
 };
-use super::state::{DkgState, PendingPublish};
 
 /// EnsureAccounts: create the private mailbox and the shared broadcast
 /// account if missing. Both helpers are create-if-missing and idempotent.
@@ -74,7 +74,15 @@ pub async fn publish_round(
     if !state.rounds[round as usize].secret_present {
         stage(connection, round, account, state).await?;
     }
-    publish_staged(network, connection, client, account, height, state.params.id).await
+    publish_staged(
+        network,
+        connection,
+        client,
+        account,
+        height,
+        state.params.id,
+    )
+    .await
 }
 
 /// Produce the round's package and commit it — secret plus outgoing bytes —
@@ -115,8 +123,7 @@ async fn stage(
                 .state0
                 .as_ref()
                 .context("round 1 input not reconstructed")?;
-            let (secret, outgoing) =
-                DkgRound1::produce(input).context("round 1 produce failed")?;
+            let (secret, outgoing) = DkgRound1::produce(input).context("round 1 produce failed")?;
             let recipients = outgoing.into_recipients(&route_ctx)?;
             let mut tx = connection.begin().await?;
             <DkgRound1 as Round>::store_secret(&mut *tx, account, &secret).await?;
@@ -128,8 +135,7 @@ async fn stage(
                 .state1
                 .as_ref()
                 .context("round 2 input not reconstructed")?;
-            let (secret, outgoing) =
-                DkgRound2::produce(input).context("round 2 produce failed")?;
+            let (secret, outgoing) = DkgRound2::produce(input).context("round 2 produce failed")?;
             let recipients = outgoing.into_recipients(&route_ctx)?;
             let mut tx = connection.begin().await?;
             <DkgRound2 as Round>::store_secret(&mut *tx, account, &secret).await?;
@@ -278,12 +284,10 @@ pub async fn create_frost_account(
     fvkb[0..32].copy_from_slice(&pkb);
     let shared_fvk = FullViewingKey::from_bytes(&fvkb).expect("Failed to create shared FVK");
 
-    let (name,) = sqlx::query_as::<_, (String,)>(
-        "SELECT name FROM dkg_params WHERE account = ?",
-    )
-    .bind(account)
-    .fetch_one(&mut *connection)
-    .await?;
+    let (name,) = sqlx::query_as::<_, (String,)>("SELECT name FROM dkg_params WHERE account = ?")
+        .bind(account)
+        .fetch_one(&mut *connection)
+        .await?;
 
     let mut tx = connection.begin().await?;
     let frost_account =
@@ -310,7 +314,7 @@ pub async fn shared_address(
         .await?
         .context("frost account vk not found")?;
     let address = fvk.address_at(0u64, Scope::External);
-    let ua = UnifiedAddress::from_receivers(Some(address), None, None).unwrap();
+    let ua = UnifiedAddress::from_receivers(Some(address), None, None, None, None).unwrap();
     Ok(ua.encode(network))
 }
 
@@ -331,10 +335,10 @@ pub async fn complete_finalize(
         sqlx::query(sqlx::AssertSqlSafe(format!(
             "UPDATE {table} SET account = ?1 WHERE account = ?2"
         )))
-            .bind(frost_account)
-            .bind(funding_account)
-            .execute(&mut *connection)
-            .await?;
+        .bind(frost_account)
+        .bind(funding_account)
+        .execute(&mut *connection)
+        .await?;
     }
     // 2. The mailbox seed under the frost account, while the mailbox exists.
     if let Some(mailbox) = mailbox {

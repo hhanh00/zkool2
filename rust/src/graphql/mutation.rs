@@ -77,6 +77,58 @@ pub struct UnsignedTx {
     context = Context,
 )]
 impl Mutation {
+    /// Refresh the provider status and persist it for a saved swap.
+    async fn near_intents_refresh_swap_status(
+        id_account: i32,
+        id_swap: juniper::ID,
+        context: &Context,
+    ) -> FieldResult<crate::near_intents::SwapStatus> {
+        if id_account <= 0 {
+            return Err(juniper::FieldError::new(
+                "Invalid account ID",
+                juniper::Value::Null,
+            ));
+        }
+        check_auth(context, id_account, true)?;
+        let id_swap: i64 = id_swap.parse()?;
+        if id_swap <= 0 {
+            return Err(juniper::FieldError::new(
+                "Invalid swap ID",
+                juniper::Value::Null,
+            ));
+        }
+        let coin = crate::api::coin::Coin {
+            account: id_account as u32,
+            ..context.coin.clone()
+        };
+        Ok(crate::api::near_intents::near_intents_refresh_swap_status(id_swap, &coin).await?)
+    }
+
+    /// Preview with dry=true, then create a deposit quote with dry=false.
+    async fn near_intents_quote(
+        request: crate::near_intents::SwapRequest,
+        context: &Context,
+    ) -> FieldResult<crate::near_intents::SwapQuoteResponse> {
+        check_admin_auth(context)?;
+        Ok(crate::api::near_intents::near_intents_quote(request, &context.coin).await?)
+    }
+
+    /// Notify the provider after sending ZEC through the normal payment API.
+    async fn near_intents_submit_deposit(
+        deposit_address: String,
+        tx_hash: String,
+        context: &Context,
+    ) -> FieldResult<bool> {
+        check_admin_auth(context)?;
+        crate::api::near_intents::near_intents_submit_deposit(
+            deposit_address,
+            tx_hash,
+            &context.coin,
+        )
+        .await?;
+        Ok(true)
+    }
+
     /// Sets the authenticated static voting-config URL used by this wallet.
     async fn set_voting_config_url(url: String, context: &Context) -> FieldResult<bool> {
         check_admin_auth(context)?;
@@ -144,6 +196,7 @@ impl Mutation {
             folder: 0,
             hidden: None,
             enabled: None,
+            use_internal: None,
         };
         crate::api::account::update_account(&ua, &context.coin).await?;
         Ok(true)

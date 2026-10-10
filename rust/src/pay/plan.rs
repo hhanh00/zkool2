@@ -19,7 +19,9 @@ use pczt::{
     },
     Pczt,
 };
-use rand_core::{OsRng, RngCore};
+use rand::rngs::SysRng;
+use rand_core::Rng;
+use rand_core::UnwrapErr;
 use ripemd::Ripemd160;
 use sapling_crypto::PaymentAddress;
 use secp256k1::{PublicKey, SecretKey};
@@ -31,8 +33,8 @@ use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_note_encryption::Domain;
 use zcash_primitives::transaction::{
     builder::{BuildConfig, Builder, BundlePadding},
-    TxVersion,
     fees::zip317::FeeRule,
+    TxVersion,
 };
 use zcash_proofs::prover::LocalTxProver;
 use zcash_protocol::{
@@ -139,7 +141,7 @@ fn build_zsa_builder(info: &IssuanceInfo, oaddress: orchard::Address) -> Result<
         oaddress,
         NoteValue::from_raw(info.amount),
         info.first_issuance,
-        &mut OsRng,
+        &mut UnwrapErr(SysRng),
     )
     .map_err(|e| anyhow!("Failed to add issue output: {e:?}"))?;
     if info.finalize {
@@ -339,7 +341,7 @@ pub(crate) fn plan_outputs(inp: PlanInputs) -> Result<PlanOutputs> {
         let notes = if groups.is_empty() {
             vec![]
         } else {
-            let i = OsRng.next_u32() as usize % groups.len();
+            let i = UnwrapErr(SysRng).next_u32() as usize % groups.len();
             groups[i].clone()
         };
         let max = notes.iter().map(|n| n.amount).sum::<u64>();
@@ -357,7 +359,7 @@ pub(crate) fn plan_outputs(inp: PlanInputs) -> Result<PlanOutputs> {
     let ironwood_active =
         network.is_nu_active(NetworkUpgrade::Nu6_3, BlockHeight::from_u32(height));
     let orchard_note_version =
-        if BranchId::for_height(network, BlockHeight::from_u32(height)) == BranchId::Nu7 {
+        if BranchId::for_height(network, BlockHeight::from_u32(height)) == BranchId::Zsa {
             orchard::NoteVersion::V3ZSA
         } else {
             orchard::NoteVersion::V2
@@ -1123,7 +1125,11 @@ pub async fn plan_transaction(
         builder.set_zsa_builder(zsa);
     }
 
-    let r = builder.build_for_pczt(OsRng, &FeeRule::standard(), |_asset: &AssetBase| false)?;
+    let r = builder.build_for_pczt(
+        UnwrapErr(SysRng),
+        &FeeRule::standard(),
+        |_asset: &AssetBase| false,
+    )?;
     let sapling_meta = &r.sapling_meta;
     let ironwood_meta = &r.ironwood_meta;
 
@@ -1201,7 +1207,7 @@ pub async fn plan_transaction(
         .unwrap();
 
     let updater =
-        if BranchId::for_height(network, BlockHeight::from_u32(target_height)) == BranchId::Nu7 {
+        if BranchId::for_height(network, BlockHeight::from_u32(target_height)) == BranchId::Zsa {
             updater.update_orchard_zsa_with(|u| attach_orchard_asset_names(u, &asset_names))
         } else {
             updater.update_orchard_with(|u| attach_orchard_asset_names(u, &asset_names))
@@ -1218,13 +1224,15 @@ pub async fn plan_transaction(
             .address_at(dindex, Scope::External);
         let zsa_builder = build_zsa_builder(info, oaddress)?;
         Issuer::new(pczt)
-            .build_awaiting_sighash(zsa_builder, OsRng)
+            .build_awaiting_sighash(zsa_builder, UnwrapErr(SysRng))
             .map_err(|e| anyhow!("Issuer (phase 1) failed: {e:?}"))?
     } else {
         pczt
     };
 
-    let (pczt, shielded_sighash) = IoFinalizer::new(pczt).finalize_io().unwrap();
+    let (pczt, shielded_sighash) = IoFinalizer::new(pczt)
+        .finalize_io(UnwrapErr(SysRng))
+        .unwrap();
     info!("IO Finalized");
 
     // Issuer phase 2: sign the issue bundle
@@ -1309,10 +1317,11 @@ pub async fn sign_transaction(
     let osak = osk.map(|osk| SpendAuthorizingKey::from(&osk));
 
     let updater = Updater::new(pczt);
-    let pgk = ssk.clone().map(|ssk| ssk.expsk.proof_generation_key());
+    let pgk = ssk.as_ref().map(|ssk| ssk.expsk().proof_generation_key());
     let internal_pgk = ssk
         .clone()
-        .map(|ssk| ssk.derive_internal().expsk.proof_generation_key());
+        .map(|ssk| sapling_ssk_for_scope(1u8, &ssk).map(|key| key.expsk().proof_generation_key()))
+        .transpose()?;
     let updater = updater
         .update_sapling_with(|mut u| {
             for bundle_index in sapling_indices.iter() {
@@ -1424,27 +1433,38 @@ pub async fn sign_transaction(
         info!("signing sapling {index}");
         let spend = &sbundle.spends()[*bundle_index];
         let scope = u32::from_le_bytes(spend.proprietary()["scope"].clone().try_into().unwrap());
-        let ssk = ssk.as_ref().map(|ssk| sapling_ssk_for_scope(scope, ssk));
-        let Some(sk) = ssk.as_ref().map(|sk| &sk.expsk.ask) else {
+        let ssk = ssk
+            .as_ref()
+            .map(|ssk| sapling_ssk_for_scope(scope, ssk))
+            .transpose()?;
+        let Some(sk) = ssk.as_ref().map(|sk| sk.expsk().ask()) else {
             return Err(Error::NoSigningKey.into());
         };
-        signer.sign_sapling(*bundle_index, sk).unwrap();
+        signer
+            .sign_sapling(UnwrapErr(SysRng), *bundle_index, sk)
+            .unwrap();
     }
     for (index, bundle_index) in orchard_indices.iter().enumerate() {
         info!("signing orchard {index}");
         let Some(osak) = osak.as_ref() else {
             return Err(Error::NoSigningKey.into());
         };
-        signer.sign_orchard(*bundle_index, osak).map_err(|e| {
-            anyhow!("failed to sign Orchard action {bundle_index} (selected spend {index}): {e:?}")
-        })?;
+        signer
+            .sign_orchard(UnwrapErr(SysRng), *bundle_index, osak)
+            .map_err(|e| {
+                anyhow!(
+                    "failed to sign Orchard action {bundle_index} (selected spend {index}): {e:?}"
+                )
+            })?;
     }
     for (index, bundle_index) in ironwood_indices.iter().enumerate() {
         info!("signing ironwood {index}");
         let Some(osak) = osak.as_ref() else {
             return Err(Error::NoSigningKey.into());
         };
-        signer.sign_ironwood(*bundle_index, osak).unwrap();
+        signer
+            .sign_ironwood(UnwrapErr(SysRng), *bundle_index, osak)
+            .unwrap();
     }
     let pczt = signer.finish();
 
@@ -1454,11 +1474,11 @@ pub async fn sign_transaction(
     let sapling_prover = get_sapling_prover().await?;
 
     let pczt = Prover::new(pczt)
-        .create_sapling_proofs(sapling_prover, sapling_prover)
+        .create_sapling_proofs(UnwrapErr(SysRng), sapling_prover, sapling_prover)
         .map_err(|error| anyhow!("failed to create Sapling proofs: {error:?}"))?
-        .create_orchard_proof(orchard_pk)
+        .create_orchard_proof(UnwrapErr(SysRng), orchard_pk)
         .map_err(|error| anyhow!("failed to create Orchard proof: {error:?}"))?
-        .create_ironwood_proof(&IRONWOOD_PK)
+        .create_ironwood_proof(UnwrapErr(SysRng), &IRONWOOD_PK)
         .map_err(|error| anyhow!("failed to create Ironwood proof: {error:?}"))?
         .finish();
     info!("Proved");
@@ -1495,7 +1515,7 @@ pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
     let sapling_prover = get_sapling_prover().await?;
     let (svk, ovk) = sapling_prover.verifying_keys();
     let tx_extractor = TransactionExtractor::new(pczt).with_sapling(&svk, &ovk);
-    match tx_extractor.extract() {
+    match tx_extractor.extract(UnwrapErr(SysRng)) {
         Ok(tx) => {
             if let Some(bundle) = tx.sapling_bundle() {
                 let vb: i64 = (*bundle.value_balance()).into();
@@ -1721,8 +1741,8 @@ enum OrchardProvingKeyKind {
 
 fn orchard_proving_key_kind(branch_id: BranchId) -> OrchardProvingKeyKind {
     match branch_id {
-        BranchId::Nu7 => OrchardProvingKeyKind::Zsa,
-        BranchId::Nu6_3 => OrchardProvingKeyKind::Ironwood,
+        BranchId::Zsa => OrchardProvingKeyKind::Zsa,
+        BranchId::Nu6_3 | BranchId::Nu7 => OrchardProvingKeyKind::Ironwood,
         _ => OrchardProvingKeyKind::Vanilla,
     }
 }
@@ -1758,9 +1778,29 @@ mod tests {
     #[test]
     fn zsa_selects_zsa_orchard_proving_key() {
         assert_eq!(
-            orchard_proving_key_kind(BranchId::Nu7),
+            orchard_proving_key_kind(BranchId::Zsa),
             OrchardProvingKeyKind::Zsa,
         );
+    }
+
+    #[test]
+    fn official_nu7_selects_ironwood_not_zsa() {
+        assert_eq!(
+            orchard_proving_key_kind(BranchId::Nu7),
+            OrchardProvingKeyKind::Ironwood,
+        );
+    }
+
+    #[test]
+    fn coin_three_retains_deployed_zsa_branch_id() {
+        let zsa_network = crate::api::coin::Coin::new(Some(3)).network();
+        let branch = BranchId::for_height(
+            &zsa_network,
+            zcash_protocol::consensus::BlockHeight::from_u32(1),
+        );
+        assert_eq!(branch, BranchId::Zsa);
+        assert_eq!(u32::from(branch), 0x7719_0ad8);
+        assert_ne!(branch, BranchId::Nu7);
     }
 
     #[test]
@@ -1815,23 +1855,29 @@ mod tests {
 
         /// Orchard-only unified address.
         fn ua_orchard() -> String {
-            UnifiedAddress::from_receivers(Some(orchard_addr()), None, None)
+            UnifiedAddress::from_receivers(Some(orchard_addr()), None, None, None, None)
                 .unwrap()
                 .encode(&net())
         }
 
         /// Sapling-only unified address (still a UA container).
         fn ua_sapling() -> String {
-            UnifiedAddress::from_receivers(None, Some(sapling_addr()), None)
+            UnifiedAddress::from_receivers(None, Some(sapling_addr()), None, None, None)
                 .unwrap()
                 .encode(&net())
         }
 
         /// Mixed unified address carrying Orchard + Sapling receivers.
         fn ua_mixed() -> String {
-            UnifiedAddress::from_receivers(Some(orchard_addr()), Some(sapling_addr()), None)
-                .unwrap()
-                .encode(&net())
+            UnifiedAddress::from_receivers(
+                Some(orchard_addr()),
+                Some(sapling_addr()),
+                None,
+                None,
+                None,
+            )
+            .unwrap()
+            .encode(&net())
         }
 
         fn note(id: u32, pool: u8, amount: u64, height: u32) -> InputNote {
@@ -1907,7 +1953,11 @@ mod tests {
         // Broad invariants every feasible plan must satisfy — the cheapest way
         // to catch the "subtle" over/under-spend bugs.
         fn assert_plan_balances(out: &PlanOutputs) {
-            let total_output: u64 = out.recipient_states.iter().map(|r| r.recipient.amount).sum();
+            let total_output: u64 = out
+                .recipient_states
+                .iter()
+                .map(|r| r.recipient.amount)
+                .sum();
             let total_input = total_selected(out);
             assert!(
                 total_input >= total_output + out.fee,
@@ -1982,11 +2032,7 @@ mod tests {
             // (bit 1) forces the output into the Sapling pool.
             let mut r = recipient(&ua_mixed(), 100_000);
             r.pools = Some(0b0010);
-            let input = plan_inputs(
-                &n,
-                pools(vec![note(1, 2, 1_000_000, 100)]),
-                vec![r],
-            );
+            let input = plan_inputs(&n, pools(vec![note(1, 2, 1_000_000, 100)]), vec![r]);
             let out = plan_outputs(input).unwrap();
             assert_eq!(out.recipient_states[0].pool_mask.to_best_pool(), Some(1));
         }
@@ -2038,10 +2084,7 @@ mod tests {
             let ids = [2u32];
             let mut input = plan_inputs(
                 &n,
-                pools(vec![
-                    note(1, 2, 1_000_000, 100),
-                    note(2, 2, 1_000_000, 100),
-                ]),
+                pools(vec![note(1, 2, 1_000_000, 100), note(2, 2, 1_000_000, 100)]),
                 vec![recipient(S_ADDR, 100_000)],
             );
             input.preselected = Some(&ids);
@@ -2085,7 +2128,10 @@ mod tests {
             input.recipient_pays_fee = true;
             let out = plan_outputs(input).unwrap();
             assert_eq!(total_selected(&out), 1_000_000);
-            assert_eq!(out.recipient_states[0].recipient.amount, 1_000_000 - out.fee);
+            assert_eq!(
+                out.recipient_states[0].recipient.amount,
+                1_000_000 - out.fee
+            );
             assert_eq!(out.change, 0);
             assert_plan_balances(&out);
         }
@@ -2157,7 +2203,10 @@ mod tests {
                 let mut i = plan_inputs(
                     &n,
                     pools(vec![note(1, 2, 5_000_000, 100)]),
-                    vec![recipient(S_ADDR, 1_000_000), recipient(&ua_orchard(), 500_000)],
+                    vec![
+                        recipient(S_ADDR, 1_000_000),
+                        recipient(&ua_orchard(), 500_000),
+                    ],
                 );
                 i.recipient_pays_fee = true;
                 i
@@ -2262,7 +2311,11 @@ mod tests {
             let pools = fetch_unspent_notes_by_pool(&mut conn, 1).await.unwrap();
 
             let ids: Vec<u32> = pools.iter().flatten().map(|n| n.id).collect();
-            assert_eq!(ids, vec![4, 1, 6], "only unspent, unlocked, own-account notes");
+            assert_eq!(
+                ids,
+                vec![4, 1, 6],
+                "only unspent, unlocked, own-account notes"
+            );
 
             // Grouped by pool.
             assert_eq!(pools[0].iter().map(|n| n.id).collect::<Vec<_>>(), vec![4]);

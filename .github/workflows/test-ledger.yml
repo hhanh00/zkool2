@@ -22,7 +22,7 @@ jobs:
     needs: [zkool-graphql, regtest-tools]
     runs-on: ubuntu-latest
     env:
-      MOCK_LEDGER_REV: 17e2ee509fcdf3520bf4517745fcd07b520484a5
+      MOCK_LEDGER_REV: 2068989dace0cb4dc36a08a9b863a2e437621b4a
       REGTEST_SEED: invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic
       EXPECTED_LEDGER_TRANSPARENT: tmTwitXJUdqibPLZfxUNApVTmghUJKAgJo5
       EXPECTED_LEDGER_ADDRESS: uregtest13fry8k623g3alt5gv9akkl9kyqye9smlccnsgxjk0t7868axa5ptmr8c33szmcatw2e78pghqrq238ma0rp5djukh49pd7ntzcztm35q

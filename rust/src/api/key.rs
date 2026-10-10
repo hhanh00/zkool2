@@ -1,7 +1,9 @@
 use anyhow::Result;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
-use rand_core::{OsRng, RngCore as _};
+use rand::rngs::SysRng;
+use rand_core::Rng as _;
+use rand_core::UnwrapErr;
 use zcash_keys::keys::UnifiedFullViewingKey;
 
 use crate::{
@@ -12,7 +14,7 @@ use crate::{
 #[cfg_attr(feature = "flutter", frb(sync))]
 pub fn generate_seed() -> Result<String> {
     let mut entropy = [0u8; 32];
-    OsRng.fill_bytes(&mut entropy);
+    UnwrapErr(SysRng).fill_bytes(&mut entropy);
     let m = bip39::Mnemonic::from_entropy(&entropy)?;
     Ok(m.to_string())
 }
@@ -97,7 +99,7 @@ pub fn get_key_pools(key: &str, c: &Coin) -> Result<u8> {
         let mut pools = 0;
         let ufvk = UnifiedFullViewingKey::decode(network, key)
             .map_err(|_| anyhow::anyhow!("Invalid UFVK"))?;
-        if ufvk.transparent().is_some() {
+        if ufvk.p2pkh().is_some() {
             pools |= 1;
         }
         if ufvk.sapling().is_some() {

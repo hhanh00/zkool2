@@ -1,5 +1,42 @@
 # Changelog
 
+## [6.33.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.33.0-rc.1...zkool-v6.33.0-rc.2) (2026-10-10)
+
+
+### Features
+
+* add initial NEAR Intents swap flow ([cbe3129](https://github.com/hhanh00/zkool2/commit/cbe31291a96bff1749b2e04fb63048834dc069fd))
+* **db:** add persistent swap history schema ([44b253c](https://github.com/hhanh00/zkool2/commit/44b253c8185a30a7f7d61afcd9169f36b586c2a7))
+* **swaps:** add current swaps page and navigation ([0dd5bc3](https://github.com/hhanh00/zkool2/commit/0dd5bc360d352579c95244f11ca56afa2341180b))
+* **swaps:** create swaps with confirmation and summary ([c3b0866](https://github.com/hhanh00/zkool2/commit/c3b0866f30ddacecc389bc26679c9b8923ab394d))
+* **swaps:** expose saved swaps and status refresh APIs ([7022daa](https://github.com/hhanh00/zkool2/commit/7022daadb9f5479a68839492b54c172eb77e67ac))
+* **swaps:** support receiving ZEC from external assets ([6d91f99](https://github.com/hhanh00/zkool2/commit/6d91f999506cef92c0950f2db0080928518c1e2d))
+* **swaps:** validate addresses with pinned multichain library ([ee0c4e2](https://github.com/hhanh00/zkool2/commit/ee0c4e219db27e1146ae86e3487ec998cb41eed5))
+* **swaps:** wire quote previews and estimated swap costs ([a3b0564](https://github.com/hhanh00/zkool2/commit/a3b0564ce5f06e98aa47fa0ae89589d20d6a1afa))
+
+## [6.33.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.33.0-rc...zkool-v6.33.0-rc.1) (2026-10-10)
+
+
+### Features
+
+* allow editing account internal change setting ([715efce](https://github.com/hhanh00/zkool2/commit/715efce609bfaa110ce4bbe5dab07f957d53cfd3))
+* confirm account edits when leaving the form ([34ea7ba](https://github.com/hhanh00/zkool2/commit/34ea7ba42d2a7754f907f25ecfced8c525cf7094))
+* default to internal change for new and recovered accounts ([84ec619](https://github.com/hhanh00/zkool2/commit/84ec61963bc6377aea1547abd976fa086667a5dd))
+
+
+### Bug Fixes
+
+* **ci:** run builds on release-please pull requests ([213a304](https://github.com/hhanh00/zkool2/commit/213a3040d162a45f860a91e734339af39a450936))
+* replace deprecated transparent viewing key accessors ([bebc0a3](https://github.com/hhanh00/zkool2/commit/bebc0a329f1e6bdf94b97373100d53c427f0ea2e))
+* resolve account page async lint notices ([7046d9a](https://github.com/hhanh00/zkool2/commit/7046d9a4b42eae854cd8d5fc25a8b2cb5f323973))
+
+## [6.33.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.32.0...zkool-v6.33.0-rc) (2026-10-08)
+
+
+### Features
+
+* **zsa:** integrate published NU7 dependencies while preserving deployed protocol ([#1293](https://github.com/hhanh00/zkool2/issues/1293)) ([9e9ee81](https://github.com/hhanh00/zkool2/commit/9e9ee817273532c9f863003937673bb763e69801))
+
 ## [6.32.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.31.0...zkool-v6.32.0) (2026-10-06)
 
 

@@ -17,10 +17,6 @@ debug = 1
 debug = 0
 
 [patch.crates-io]
-# zcash_script pins bip32 =0.6.0-pre.1, which holds sha2 at a superseded
-# pre-release and blocks sqlx 0.9. Patch sections only apply from the
-# workspace root, so this is repeated here. Drop once upstream moves.
-zcash_script = { git = "https://github.com/hhanh00/zcash_script.git", rev = "49545c0268966fbbc155133f5c2e775bc1e97f57" }
 # nym pins sqlx ^0.8.6, which cannot coexist with libsqlite3-sys 0.35.
 # nymtech/nym#7164 moves it to 0.9; drop when that merges and publishes.
 nym-smolmix = { git = "https://github.com/nymtech/nym.git", rev = "88f21f017710f5e832b1489fcb273bd81e1e0786" }
@@ -33,48 +29,47 @@ nym-network-defaults = { git = "https://github.com/nymtech/nym.git", rev = "88f2
 # with the rand pin relaxed to ^0.8.5.
 jwt-simple = { git = "https://github.com/rachyandco/rust-jwt-simple", rev = "e8177eab707d27d7ea94b6799204e48e11b65e19" }
 
+# Published integration branches pinned to immutable revisions.
 # -- ZSA support branches --
-orchard = { git = "https://github.com/zcash-shielded-assets/orchard.git", rev = "4cf06bc19e52d1e8e43438cdbdd703ac2565bff6" }
-sapling-crypto = { git = "https://github.com/zcash-shielded-assets/sapling-crypto", rev = "4c47c84845436aa1b650bd5367ed4de67421cc0d" }
-zcash_note_encryption = { git = "https://github.com/zcash-shielded-assets/zcash_note_encryption", rev = "bc7a9370e1a7253cf496f24aa0bd4d0e49c3977e" }
+orchard = { git = "https://github.com/zcash-shielded-assets/orchard.git", rev = "60697dd60ecbc14c7d8953316cea479944e605b8" }
+sapling-crypto = { git = "https://github.com/zcash-shielded-assets/sapling-crypto.git", rev = "8f2e47e0d7a3db15507825f4c49a540779c6082e" }
+zcash_note_encryption = { git = "https://github.com/zcash-shielded-assets/zcash_note_encryption.git", rev = "54d2360c3b16561d7c00167dc0af7358251469c9" }
 
 # -- lrz ZSA branch --
-pczt = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
-zcash_client_backend = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
+pczt = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "53813b3a76546eabf2d1260d89436be7492a52dd" }
+zcash_client_backend = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "53813b3a76546eabf2d1260d89436be7492a52dd" }
 # zcash_voting 5.1.0 reaches zcash_client_sqlite through zakura-wallet-lib
 # (WalletDb/AccountUuid, ~29 uses), which drags zcash_pool_migration. The
 # crates.io copies are mainline-shaped and do not build against the ZSA
 # Orchard/pczt line; the ZSA branch already carries adapted versions of both,
 # they were simply missing from this list. pool_migration follows as an
 # in-repo path dep of client_sqlite.
-zcash_client_sqlite = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
-zcash_address = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
-zcash_encoding = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
-zcash_keys = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
-zcash_primitives = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
-zcash_proofs = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
-zcash_protocol = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
-zcash_transparent = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
-zip321 = { git = "https://github.com/zcash-shielded-assets/librustzcash", rev = "85ec4a30a6f2b3f3e6b8f70c575f456b3a5cc029" }
+zcash_client_sqlite = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "53813b3a76546eabf2d1260d89436be7492a52dd" }
+zcash_address = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "53813b3a76546eabf2d1260d89436be7492a52dd" }
+zcash_encoding = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "53813b3a76546eabf2d1260d89436be7492a52dd" }
+zcash_keys = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "53813b3a76546eabf2d1260d89436be7492a52dd" }
+zcash_primitives = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "53813b3a76546eabf2d1260d89436be7492a52dd" }
+zcash_proofs = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "53813b3a76546eabf2d1260d89436be7492a52dd" }
+zcash_protocol = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "53813b3a76546eabf2d1260d89436be7492a52dd" }
+zcash_transparent = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "53813b3a76546eabf2d1260d89436be7492a52dd" }
+zip321 = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "53813b3a76546eabf2d1260d89436be7492a52dd" }
 
 # -- remaining transitive deps --
-reddsa = { git = "https://github.com/ZcashFoundation/reddsa.git", rev = "975f9ca835c4b9196c81608e55192b0f711e951d" }
-sinsemilla = { git = "https://github.com/zcash/sinsemilla", rev = "aabb707e862bc3d7b803c77d14e5a771bcee3e8c" }
 zcash_spec = { git = "https://github.com/zcash-shielded-assets/zcash_spec", rev = "d5e84264d2ad0646b587a837f4e2424ca64d3a05" }
-halo2_gadgets = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "dcdbd1df2b30fd8d709c1a7c4ad9c4e091789d00" }
-halo2_proofs = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "dcdbd1df2b30fd8d709c1a7c4ad9c4e091789d00" }
-halo2_poseidon = { git = "https://github.com/zcash-shielded-assets/halo2", rev = "dcdbd1df2b30fd8d709c1a7c4ad9c4e091789d00" }
+halo2_gadgets = { git = "https://github.com/zcash-shielded-assets/halo2.git", rev = "0e3f1ea9dcba44fa4cd213b3f06b2aee3fc6e90e" }
+halo2_proofs = { git = "https://github.com/zcash-shielded-assets/halo2.git", rev = "0e3f1ea9dcba44fa4cd213b3f06b2aee3fc6e90e" }
+halo2_poseidon = { git = "https://github.com/zcash-shielded-assets/halo2.git", rev = "0e3f1ea9dcba44fa4cd213b3f06b2aee3fc6e90e" }
 # 0.12.1 release source + the ZSA-orchard note API shim (from_parts asset
 # arg), matching the chain's verifier. Branch feat/zsa-orchard-0.12: a merge
 # of upstream v0.12.1 into the 0.10 shim line, so 44033690 stays reachable.
 # zcash_voting 5.1.0 pins voting-circuits =0.12.1, which the 0.10 patch no
 # longer satisfied -- cargo silently dropped it and resolved stock 0.12.1.
-voting-circuits = { git = "https://github.com/hhanh00/voting-circuits.git", rev = "0da886cbfaf748b3cb3caf168d1c5ee16318fd94" }
+voting-circuits = { git = "https://github.com/hhanh00/voting-circuits.git", rev = "f117ad8eb502385aec46d94585aae55be059c342" }
 # 0.12.x routes Orchard through this facade, which voting-circuits depends on
 # by path. It must resolve to the same source here, or zcash_voting's
 # crates.io copy and voting-circuits' path copy become two distinct crates and
 # the Orchard types stop unifying across the boundary.
-voting-crypto-deps = { git = "https://github.com/hhanh00/voting-circuits.git", rev = "0da886cbfaf748b3cb3caf168d1c5ee16318fd94" }
+voting-crypto-deps = { git = "https://github.com/hhanh00/voting-circuits.git", rev = "f117ad8eb502385aec46d94585aae55be059c342" }
 
 # -- Ledger emulator transport --
 # Branch feat/zemu-timeout off 8e3e28f (last commit carrying the crate,
@@ -82,4 +77,3 @@ voting-crypto-deps = { git = "https://github.com/hhanh00/voting-circuits.git", r
 # timeout to 120s (env ZEMU_TIMEOUT_SECS): GET_VK blocks on the
 # on-device review, which always exceeds 5s.
 ledger-transport-zemu = { git = "https://github.com/hhanh00/ledger-rs", rev = "75cec634d11c29f110d098a34d13e1c22eab895e" }
-
