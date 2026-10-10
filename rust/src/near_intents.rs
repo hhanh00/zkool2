@@ -4,7 +4,13 @@ use anyhow::{bail, ensure, Context, Result};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::time::Duration;
 
-use crate::{api::coin::Coin, net::http};
+use crate::net::http;
+
+/// HTTP routing settings supplied by the API layer.
+pub struct Transport {
+    pub mode: u8,
+    pub proxy: String,
+}
 
 const BASE_URL: &str = "https://1click.chaindefuser.com";
 pub const ZEC_ASSET: &str = "nep141:zec.omft.near";
@@ -41,12 +47,7 @@ pub struct SavedSwap {
     pub updated_at: i64,
 }
 
-pub async fn list_swaps(pending_only: bool, c: &Coin) -> Result<Vec<SavedSwap>> {
-    let mut connection = c.get_connection().await?;
-    read_swaps(&mut connection, c.account, pending_only).await
-}
-
-async fn read_swaps(
+pub(crate) async fn read_swaps(
     connection: &mut sqlx::SqliteConnection,
     account: u32,
     pending_only: bool,
@@ -221,23 +222,28 @@ fn quote_payload(request: &SwapRequest) -> Result<serde_json::Value> {
 }
 
 /// No automatic POST retries: a timed-out quote may already have been created.
-async fn request(c: &Coin, method: hyper::Method, url: &str, body: Vec<u8>) -> Result<String> {
+async fn request(
+    transport: &Transport,
+    method: hyper::Method,
+    url: &str,
+    body: Vec<u8>,
+) -> Result<String> {
     let timeout = Duration::from_secs(30);
     let headers = [("Content-Type".to_owned(), "application/json".to_owned())];
-    let (status, bytes) = if c.transport == 1 {
+    let (status, bytes) = if transport.mode == 1 {
         let response =
             http::tor_request(method, url, body, &headers, timeout, MAX_RESPONSE).await?;
         (response.status, response.body)
     } else {
         ensure!(
-            c.transport == 0 || c.transport == 3,
+            transport.mode == 0 || transport.mode == 3,
             "1Click HTTP does not support the selected transport"
         );
         ensure!(
-            c.transport != 3 || !c.proxy.is_empty(),
+            transport.mode != 3 || !transport.proxy.is_empty(),
             "External proxy is not configured"
         );
-        let client = http::client(http::proxy_url(c.transport, &c.proxy), timeout)?;
+        let client = http::client(http::proxy_url(transport.mode, &transport.proxy), timeout)?;
         let mut response = client
             .request(method, url)
             .header("Content-Type", "application/json")
@@ -266,10 +272,10 @@ fn decode<T: DeserializeOwned>(response: &str) -> Result<T> {
     serde_json::from_str(response).context("Invalid 1Click response")
 }
 
-pub async fn assets(c: &Coin) -> Result<Vec<SwapAsset>> {
+pub async fn assets(transport: &Transport) -> Result<Vec<SwapAsset>> {
     decode(
         &request(
-            c,
+            transport,
             hyper::Method::GET,
             &format!("{BASE_URL}/v0/tokens"),
             vec![],
@@ -278,21 +284,17 @@ pub async fn assets(c: &Coin) -> Result<Vec<SwapAsset>> {
     )
 }
 
-pub async fn quote(request_data: SwapRequest, c: &Coin) -> Result<SwapQuoteResponse> {
+pub async fn quote(request_data: SwapRequest, transport: &Transport) -> Result<SwapQuoteResponse> {
     // First version exposes ZEC out only. The request model supports future ZEC in.
     ensure!(
         request_data.origin_asset == ZEC_ASSET,
         "Only native ZEC outgoing swaps are supported"
     );
-    use zcash_protocol::consensus::{NetworkType, Parameters};
-    ensure!(
-        c.network().network_type() == NetworkType::Main,
-        "1Click requires Zcash mainnet"
-    );
+    use zcash_protocol::consensus::NetworkType;
     crate::openalias::try_validate_zcash_address(&request_data.refund_to, NetworkType::Main)?;
     let payload = quote_payload(&request_data)?;
     let raw_response = request(
-        c,
+        transport,
         hyper::Method::POST,
         &format!("{BASE_URL}/v0/quote"),
         serde_json::to_vec(&payload)?,
@@ -324,7 +326,7 @@ pub async fn quote(request_data: SwapRequest, c: &Coin) -> Result<SwapQuoteRespo
 pub async fn status(
     deposit_address: &str,
     deposit_memo: Option<&str>,
-    c: &Coin,
+    transport: &Transport,
 ) -> Result<SwapStatus> {
     ensure!(
         !deposit_address.trim().is_empty(),
@@ -336,7 +338,7 @@ pub async fn status(
     if let Some(memo) = deposit_memo {
         url.query_pairs_mut().append_pair("depositMemo", memo);
     }
-    let raw_response = request(c, hyper::Method::GET, url.as_str(), vec![]).await?;
+    let raw_response = request(transport, hyper::Method::GET, url.as_str(), vec![]).await?;
     #[derive(Deserialize)]
     #[serde(rename_all = "camelCase")]
     struct Response {
@@ -351,43 +353,24 @@ pub async fn status(
     })
 }
 
-/// Refresh one saved swap owned by the current account. HTTP failures leave the
-/// database untouched; no database connection is held during the network call.
-/// Quote amounts remain the original quote, while actual settlement amounts and
-/// transaction hashes are retained in status_response.
-pub async fn refresh_swap_status(id_swap: i64, c: &Coin) -> Result<SwapStatus> {
-    let (deposit_address, deposit_memo, previous_response): (
-        String,
-        Option<String>,
-        Option<String>,
-    ) = {
-        let mut connection = c.get_connection().await?;
-        sqlx::query_as(
-            "SELECT deposit_address, deposit_memo, status_response
-            FROM swaps WHERE id_swap = ? AND account = ?",
-        )
-        .bind(id_swap)
-        .bind(c.account)
-        .fetch_optional(&mut *connection)
-        .await?
-        .context("Swap not found for the current account")?
-    };
-    let current = status(&deposit_address, deposit_memo.as_deref(), c).await?;
-    let mut connection = c.get_connection().await?;
-    persist_swap_status(
-        &mut connection,
-        id_swap,
-        c.account,
-        &deposit_address,
-        deposit_memo.as_deref(),
-        previous_response.as_deref(),
-        &current,
+/// Read the snapshot used to guard against concurrent refreshes.
+pub(crate) async fn swap_status_snapshot(
+    connection: &mut sqlx::SqliteConnection,
+    id_swap: i64,
+    account: u32,
+) -> Result<(String, Option<String>, Option<String>)> {
+    sqlx::query_as(
+        "SELECT deposit_address, deposit_memo, status_response
+        FROM swaps WHERE id_swap = ? AND account = ?",
     )
-    .await?;
-    Ok(current)
+    .bind(id_swap)
+    .bind(account)
+    .fetch_optional(connection)
+    .await?
+    .context("Swap not found for the current account")
 }
 
-async fn persist_swap_status(
+pub(crate) async fn persist_swap_status(
     connection: &mut sqlx::SqliteConnection,
     id_swap: i64,
     account: u32,
@@ -426,7 +409,11 @@ async fn persist_swap_status(
 }
 
 /// Notifies 1Click about an already broadcast deposit; this does not send funds.
-pub async fn submit_deposit(deposit_address: &str, tx_hash: &str, c: &Coin) -> Result<()> {
+pub async fn submit_deposit(
+    deposit_address: &str,
+    tx_hash: &str,
+    transport: &Transport,
+) -> Result<()> {
     ensure!(
         !deposit_address.trim().is_empty(),
         "Missing deposit address"
@@ -436,7 +423,7 @@ pub async fn submit_deposit(deposit_address: &str, tx_hash: &str, c: &Coin) -> R
         "Invalid Zcash transaction hash"
     );
     request(
-        c,
+        transport,
         hyper::Method::POST,
         &format!("{BASE_URL}/v0/deposit/submit"),
         serde_json::to_vec(

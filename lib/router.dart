@@ -21,6 +21,7 @@ import 'package:zkool/pages/raptor.dart';
 import 'package:zkool/pages/receive.dart';
 import 'package:zkool/pages/send.dart';
 import 'package:zkool/pages/swap.dart';
+import 'package:zkool/pages/swaps.dart';
 import 'package:zkool/pages/splash.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/tx_view.dart';
@@ -114,6 +115,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
         ),
         GoRoute(path: '/splash', builder: (context, state) => SplashPage()),
         GoRoute(path: '/swap', builder: (context, state) => const SwapPage()),
+        GoRoute(path: '/swaps', builder: (context, state) => const SwapsPage()),
         GoRoute(path: '/market', builder: (context, state) => MarketPrice()),
         GoRoute(path: '/mempool', builder: (context, state) => MempoolPage()),
         GoRoute(path: '/mempool_view', builder: (context, state) => MempoolTxViewPage(state.extra as Uint8List)),

@@ -101,7 +101,7 @@ impl Mutation {
             account: id_account as u32,
             ..context.coin.clone()
         };
-        Ok(crate::near_intents::refresh_swap_status(id_swap, &coin).await?)
+        Ok(crate::api::near_intents::near_intents_refresh_swap_status(id_swap, &coin).await?)
     }
 
     /// Preview with dry=true, then create a deposit quote with dry=false.
@@ -110,7 +110,7 @@ impl Mutation {
         context: &Context,
     ) -> FieldResult<crate::near_intents::SwapQuoteResponse> {
         check_admin_auth(context)?;
-        Ok(crate::near_intents::quote(request, &context.coin).await?)
+        Ok(crate::api::near_intents::near_intents_quote(request, &context.coin).await?)
     }
 
     /// Notify the provider after sending ZEC through the normal payment API.
@@ -120,7 +120,12 @@ impl Mutation {
         context: &Context,
     ) -> FieldResult<bool> {
         check_admin_auth(context)?;
-        crate::near_intents::submit_deposit(&deposit_address, &tx_hash, &context.coin).await?;
+        crate::api::near_intents::near_intents_submit_deposit(
+            deposit_address,
+            tx_hash,
+            &context.coin,
+        )
+        .await?;
         Ok(true)
     }
 
