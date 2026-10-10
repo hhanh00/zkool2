@@ -255,6 +255,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                               message: "Check if you want this account to use an internal address for the change like Zashi (ZIP 316)",
                               child: FormBuilderSwitch(
                                 name: "useInternal",
+                                initialValue: true,
                                 title: const Text("Use Internal Change"),
                               ),
                             ),
@@ -400,7 +401,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       final String? passphrase = formData?["passphrase"];
       final String? aindex = formData?["aindex"];
       final String? birth = formData?["birth"];
-      final bool useInternal = ledger ? ledgerApp == 1 : formData?["useInternal"] ?? false;
+      final bool useInternal = ledger ? ledgerApp == 1 : formData?["useInternal"] ?? true;
       final int? pools = formData!["pools"];
 
       final icon = iconBytes;
