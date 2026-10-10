@@ -39,6 +39,26 @@ pub struct AccountFilter {
 #[graphql_object]
 #[graphql(context = Context)]
 impl Query {
+    /// Saved swaps for the specified account, newest first. No provider requests.
+    async fn near_intents_list_swaps(
+        id_account: i32,
+        pending_only: Option<bool>,
+        context: &Context,
+    ) -> FieldResult<Vec<crate::near_intents::SavedSwap>> {
+        if id_account <= 0 {
+            return Err(juniper::FieldError::new(
+                "Invalid account ID",
+                juniper::Value::Null,
+            ));
+        }
+        check_auth(context, id_account, false)?;
+        let coin = Coin {
+            account: id_account as u32,
+            ..context.coin.clone()
+        };
+        Ok(crate::near_intents::list_swaps(pending_only.unwrap_or(false), &coin).await?)
+    }
+
     async fn near_intents_assets(
         context: &Context,
     ) -> FieldResult<Vec<crate::near_intents::SwapAsset>> {

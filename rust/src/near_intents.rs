@@ -10,6 +10,89 @@ const BASE_URL: &str = "https://1click.chaindefuser.com";
 pub const ZEC_ASSET: &str = "nep141:zec.omft.near";
 const MAX_RESPONSE: usize = 4 * 1024 * 1024;
 
+/// Persisted quote and latest provider snapshot. Amounts are base-unit strings;
+/// timestamps are Unix seconds. Listing never contacts the provider.
+#[derive(Clone, Debug)]
+pub struct SavedSwap {
+    pub id_swap: i64,
+    pub account: u32,
+    pub origin_asset: String,
+    pub destination_asset: String,
+    pub swap_type: String,
+    pub amount: String,
+    pub slippage_tolerance: i32,
+    pub recipient: String,
+    pub refund_to: String,
+    pub deadline: String,
+    pub amount_in: String,
+    pub amount_out: String,
+    pub min_amount_in: Option<String>,
+    pub min_amount_out: Option<String>,
+    pub deposit_address: String,
+    pub deposit_memo: Option<String>,
+    pub deposit_tx_hash: Option<String>,
+    pub deposit_submitted_at: Option<i64>,
+    pub quote_response: String,
+    pub status: Option<String>,
+    pub status_response: Option<String>,
+    pub last_checked_at: Option<i64>,
+    pub completed_at: Option<i64>,
+    pub created_at: i64,
+    pub updated_at: i64,
+}
+
+pub async fn list_swaps(pending_only: bool, c: &Coin) -> Result<Vec<SavedSwap>> {
+    let mut connection = c.get_connection().await?;
+    read_swaps(&mut connection, c.account, pending_only).await
+}
+
+async fn read_swaps(
+    connection: &mut sqlx::SqliteConnection,
+    account: u32,
+    pending_only: bool,
+) -> Result<Vec<SavedSwap>> {
+    use sqlx::Row;
+    let rows = sqlx::query(
+        "SELECT * FROM swaps WHERE account = ?
+        AND (NOT ? OR completed_at IS NULL) ORDER BY created_at DESC, id_swap DESC",
+    )
+    .bind(account)
+    .bind(pending_only)
+    .fetch_all(connection)
+    .await?;
+    rows.into_iter()
+        .map(|row| {
+            Ok(SavedSwap {
+                id_swap: row.try_get("id_swap")?,
+                account: row.try_get("account")?,
+                origin_asset: row.try_get("origin_asset")?,
+                destination_asset: row.try_get("destination_asset")?,
+                swap_type: row.try_get("swap_type")?,
+                amount: row.try_get("amount")?,
+                slippage_tolerance: row.try_get("slippage_tolerance")?,
+                recipient: row.try_get("recipient")?,
+                refund_to: row.try_get("refund_to")?,
+                deadline: row.try_get("deadline")?,
+                amount_in: row.try_get("amount_in")?,
+                amount_out: row.try_get("amount_out")?,
+                min_amount_in: row.try_get("min_amount_in")?,
+                min_amount_out: row.try_get("min_amount_out")?,
+                deposit_address: row.try_get("deposit_address")?,
+                deposit_memo: row.try_get("deposit_memo")?,
+                deposit_tx_hash: row.try_get("deposit_tx_hash")?,
+                deposit_submitted_at: row.try_get("deposit_submitted_at")?,
+                quote_response: row.try_get("quote_response")?,
+                status: row.try_get("status")?,
+                status_response: row.try_get("status_response")?,
+                last_checked_at: row.try_get("last_checked_at")?,
+                completed_at: row.try_get("completed_at")?,
+                created_at: row.try_get("created_at")?,
+                updated_at: row.try_get("updated_at")?,
+            })
+        })
+        .collect()
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "graphql", derive(juniper::GraphQLObject))]
@@ -268,6 +351,80 @@ pub async fn status(
     })
 }
 
+/// Refresh one saved swap owned by the current account. HTTP failures leave the
+/// database untouched; no database connection is held during the network call.
+/// Quote amounts remain the original quote, while actual settlement amounts and
+/// transaction hashes are retained in status_response.
+pub async fn refresh_swap_status(id_swap: i64, c: &Coin) -> Result<SwapStatus> {
+    let (deposit_address, deposit_memo, previous_response): (
+        String,
+        Option<String>,
+        Option<String>,
+    ) = {
+        let mut connection = c.get_connection().await?;
+        sqlx::query_as(
+            "SELECT deposit_address, deposit_memo, status_response
+            FROM swaps WHERE id_swap = ? AND account = ?",
+        )
+        .bind(id_swap)
+        .bind(c.account)
+        .fetch_optional(&mut *connection)
+        .await?
+        .context("Swap not found for the current account")?
+    };
+    let current = status(&deposit_address, deposit_memo.as_deref(), c).await?;
+    let mut connection = c.get_connection().await?;
+    persist_swap_status(
+        &mut connection,
+        id_swap,
+        c.account,
+        &deposit_address,
+        deposit_memo.as_deref(),
+        previous_response.as_deref(),
+        &current,
+    )
+    .await?;
+    Ok(current)
+}
+
+async fn persist_swap_status(
+    connection: &mut sqlx::SqliteConnection,
+    id_swap: i64,
+    account: u32,
+    deposit_address: &str,
+    deposit_memo: Option<&str>,
+    previous_response: Option<&str>,
+    current: &SwapStatus,
+) -> Result<()> {
+    // INCOMPLETE_DEPOSIT may still need refund tracking. New provider states
+    // also stay open rather than silently dropping out of the pending index.
+    let completed = matches!(current.status.as_str(), "SUCCESS" | "REFUNDED" | "FAILED");
+    let result = sqlx::query(
+        "UPDATE swaps SET status = ?, status_response = ?,
+        last_checked_at = unixepoch(), updated_at = unixepoch(),
+        completed_at = CASE WHEN ? THEN COALESCE(completed_at, unixepoch()) ELSE NULL END
+        WHERE id_swap = ? AND account = ? AND deposit_address = ?
+        AND deposit_memo IS ? AND status_response IS ?",
+    )
+    .bind(&current.status)
+    .bind(&current.raw_response)
+    .bind(completed)
+    .bind(id_swap)
+    .bind(account)
+    .bind(deposit_address)
+    .bind(deposit_memo)
+    .bind(previous_response)
+    .execute(connection)
+    .await?;
+    // Compare the snapshot read before HTTP, so a slower concurrent refresh
+    // cannot overwrite a newer response (or a deleted/replaced row).
+    ensure!(
+        result.rows_affected() == 1,
+        "Swap changed during status refresh; retry"
+    );
+    Ok(())
+}
+
 /// Notifies 1Click about an already broadcast deposit; this does not send funds.
 pub async fn submit_deposit(deposit_address: &str, tx_hash: &str, c: &Coin) -> Result<()> {
     ensure!(
@@ -293,6 +450,193 @@ pub async fn submit_deposit(deposit_address: &str, tx_hash: &str, c: &Coin) -> R
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sqlx::Connection;
+
+    #[tokio::test]
+    async fn list_saved_swaps_filters_account_and_pending_in_stable_order() -> Result<()> {
+        let mut db = sqlx::SqliteConnection::connect("sqlite::memory:").await?;
+        sqlx::raw_sql(
+            "CREATE TABLE accounts(id_account INTEGER PRIMARY KEY);
+            INSERT INTO accounts VALUES (1), (2);",
+        )
+        .execute(&mut db)
+        .await?;
+        sqlx::raw_sql(include_str!("db/swaps.sql"))
+            .execute(&mut db)
+            .await?;
+        for (id, account, created, completed) in [
+            (1, 1, 10, None),
+            (2, 1, 20, Some(30)),
+            (3, 1, 20, None),
+            (4, 2, 40, None),
+        ] {
+            sqlx::query(
+                "INSERT INTO swaps(id_swap, account, origin_asset, destination_asset,
+                swap_type, amount, slippage_tolerance, recipient, refund_to, deadline,
+                amount_in, amount_out, deposit_address, quote_response, created_at, completed_at)
+                VALUES (?, ?, 'zec', 'eth', 'EXACT_INPUT', '100', 100, 'recipient',
+                'refund', 'deadline', '100', '123456789012345678901234567890', ?, '{}', ?, ?)",
+            )
+            .bind(id)
+            .bind(account)
+            .bind(format!("deposit-{id}"))
+            .bind(created)
+            .bind(completed)
+            .execute(&mut db)
+            .await?;
+        }
+        let all = read_swaps(&mut db, 1, false).await?;
+        assert_eq!(
+            all.iter().map(|s| s.id_swap).collect::<Vec<_>>(),
+            vec![3, 2, 1]
+        );
+        assert_eq!(all[0].amount_out, "123456789012345678901234567890");
+        assert!(all[0].status.is_none() && all[0].deposit_memo.is_none());
+        let pending = read_swaps(&mut db, 1, true).await?;
+        assert_eq!(
+            pending.iter().map(|s| s.id_swap).collect::<Vec<_>>(),
+            vec![3, 1]
+        );
+        assert_eq!(read_swaps(&mut db, 2, false).await?[0].id_swap, 4);
+        assert!(read_swaps(&mut db, 99, false).await?.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn saved_status_tracks_completion_and_rejects_stale_or_wrong_account_updates(
+    ) -> Result<()> {
+        let mut db = sqlx::SqliteConnection::connect("sqlite::memory:").await?;
+        sqlx::raw_sql(
+            "CREATE TABLE accounts(id_account INTEGER PRIMARY KEY);
+            INSERT INTO accounts VALUES (1), (2);",
+        )
+        .execute(&mut db)
+        .await?;
+        sqlx::raw_sql(include_str!("db/swaps.sql"))
+            .execute(&mut db)
+            .await?;
+        sqlx::query(
+            "INSERT INTO swaps(id_swap, account, origin_asset, destination_asset,
+            swap_type, amount, slippage_tolerance, recipient, refund_to, deadline,
+            amount_in, amount_out, deposit_address, deposit_memo, quote_response, updated_at)
+            VALUES (1, 1, 'zec', 'eth', 'EXACT_INPUT', '100', 100, 'recipient',
+            'refund', 'deadline', '100', '200', 'deposit', 'memo', 'original quote', 1)",
+        )
+        .execute(&mut db)
+        .await?;
+        let mut previous: Option<String> = None;
+        for state in [
+            "KNOWN_DEPOSIT_TX",
+            "PENDING_DEPOSIT",
+            "INCOMPLETE_DEPOSIT",
+            "PROCESSING",
+            "NEW_STATE",
+            "SUCCESS",
+            "REFUNDED",
+            "FAILED",
+        ] {
+            let raw = serde_json::json!({"status": state, "swapDetails": {
+                "amountOut": "190", "destinationChainTxHashes": [{"hash": "destination"}]
+            }})
+            .to_string();
+            let current = SwapStatus {
+                status: state.into(),
+                swap_details: None,
+                raw_response: raw.clone(),
+            };
+            assert!(persist_swap_status(
+                &mut db,
+                1,
+                2,
+                "deposit",
+                Some("memo"),
+                previous.as_deref(),
+                &current
+            )
+            .await
+            .is_err());
+            assert!(persist_swap_status(
+                &mut db,
+                1,
+                1,
+                "deposit",
+                None,
+                previous.as_deref(),
+                &current
+            )
+            .await
+            .is_err());
+            persist_swap_status(
+                &mut db,
+                1,
+                1,
+                "deposit",
+                Some("memo"),
+                previous.as_deref(),
+                &current,
+            )
+            .await?;
+            let row: (String, String, Option<i64>, i64, i64, String, String) = sqlx::query_as(
+                "SELECT status, status_response, completed_at, last_checked_at,
+                updated_at, amount_out, quote_response FROM swaps WHERE id_swap = 1",
+            )
+            .fetch_one(&mut db)
+            .await?;
+            assert_eq!(row.0, state);
+            assert_eq!(row.1, raw);
+            assert_eq!(
+                row.2.is_some(),
+                matches!(state, "SUCCESS" | "REFUNDED" | "FAILED")
+            );
+            assert!(row.3 > 1 && row.4 >= row.3);
+            assert_eq!(row.5, "200");
+            assert_eq!(row.6, "original quote");
+            // An older in-flight result cannot replace the new snapshot.
+            assert!(persist_swap_status(
+                &mut db,
+                1,
+                1,
+                "deposit",
+                Some("memo"),
+                previous.as_deref(),
+                &current
+            )
+            .await
+            .is_err());
+            previous = Some(raw);
+        }
+        // Polling an already finished swap retains its first completion time.
+        sqlx::query("UPDATE swaps SET completed_at = 123 WHERE id_swap = 1")
+            .execute(&mut db)
+            .await?;
+        let current = SwapStatus {
+            status: "FAILED".into(),
+            swap_details: None,
+            raw_response: previous.clone().unwrap(),
+        };
+        persist_swap_status(
+            &mut db,
+            1,
+            1,
+            "deposit",
+            Some("memo"),
+            previous.as_deref(),
+            &current,
+        )
+        .await?;
+        let (completed,): (i64,) =
+            sqlx::query_as("SELECT completed_at FROM swaps WHERE id_swap = 1")
+                .fetch_one(&mut db)
+                .await?;
+        assert_eq!(completed, 123);
+        assert!(
+            persist_swap_status(&mut db, 99, 1, "deposit", Some("memo"), None, &current)
+                .await
+                .is_err()
+        );
+        Ok(())
+    }
+
     fn sample() -> SwapRequest {
         SwapRequest {
             dry: true,

@@ -1,11 +1,16 @@
 use crate::api::coin::Coin;
 pub use crate::near_intents::{
-    SwapAsset, SwapDetails, SwapQuote, SwapQuoteResponse, SwapRequest, SwapStatus, SwapTransaction,
-    SwapType,
+    SavedSwap, SwapAsset, SwapDetails, SwapQuote, SwapQuoteResponse, SwapRequest, SwapStatus,
+    SwapTransaction, SwapType,
 };
 use anyhow::Result;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
+
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn near_intents_list_swaps(pending_only: bool, c: &Coin) -> Result<Vec<SavedSwap>> {
+    crate::near_intents::list_swaps(pending_only, c).await
+}
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn near_intents_assets(c: &Coin) -> Result<Vec<SwapAsset>> {
@@ -24,6 +29,11 @@ pub async fn near_intents_status(
     c: &Coin,
 ) -> Result<SwapStatus> {
     crate::near_intents::status(&deposit_address, deposit_memo.as_deref(), c).await
+}
+
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn near_intents_refresh_swap_status(id_swap: i64, c: &Coin) -> Result<SwapStatus> {
+    crate::near_intents::refresh_swap_status(id_swap, c).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
