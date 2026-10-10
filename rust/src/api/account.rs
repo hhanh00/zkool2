@@ -9,7 +9,7 @@ use csv_async::AsyncWriter;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 use sapling_crypto::{zip32::sapling_derive_internal_fvk, PaymentAddress};
-use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
+use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
 use zcash_address::unified::{Container, Encoding};
 use zcash_keys::{
     address::UnifiedAddress,
@@ -196,6 +196,28 @@ pub async fn update_account(update: &AccountUpdate, c: &Coin) -> Result<()> {
             .execute(&mut *connection)
             .await?;
     }
+    if let Some(use_internal) = update.use_internal {
+        let hw = HwKind::from_hw(get_account_hw(&mut connection, update.id).await?);
+        anyhow::ensure!(
+            !hw.is_ledger() || use_internal == (hw == HwKind::Official),
+            "Ledger accounts have a fixed internal change setting"
+        );
+        let mut tx = connection.begin().await?;
+        sqlx::query("UPDATE accounts SET use_internal = ? WHERE id_account = ?")
+            .bind(use_internal)
+            .bind(update.id)
+            .execute(&mut *tx)
+            .await?;
+        if use_internal {
+            crate::account::backfill_account_transparent_change_addresses(
+                &c.network(),
+                &mut tx,
+                update.id,
+            )
+            .await?;
+        }
+        tx.commit().await?;
+    }
     match update.folder {
         0 => {
             sqlx::query("UPDATE accounts SET folder = NULL WHERE id_account = ?")
@@ -299,6 +321,7 @@ pub struct AccountUpdate {
     pub folder: u32,
     pub hidden: Option<bool>,
     pub enabled: Option<bool>,
+    pub use_internal: Option<bool>,
 }
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]

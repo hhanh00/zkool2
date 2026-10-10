@@ -712,6 +712,17 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
                 ),
               ),
               Tooltip(
+                message: "Use an internal address for change (ZIP 316). Ledger accounts have a fixed change setting",
+                child: FormBuilderCheckbox(
+                  name: "useInternal",
+                  title: Text("Use Internal Change"),
+                  initialValue: accounts.every((a) => a.useInternal == accounts[0].useInternal) ? accounts[0].useInternal : null,
+                  tristate: account == null,
+                  enabled: accounts.every((a) => a.hw != 1 && a.hw != 2),
+                  onChanged: onEditUseInternal,
+                ),
+              ),
+              Tooltip(
                 message: "Assign Account to Folder",
                 child: FormBuilderDropdown<int>(
                   name: "folder",
@@ -727,6 +738,20 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
     );
   }
 
+  Future<void> _updateVaultAccount(Account account) async {
+    final settings = await ref.read(appSettingsProvider.future);
+    if (!settings.vault) return;
+    final seed = await getAccountSeed(account: account.id, c: c);
+    if (seed == null) return;
+    await ref.read(vaultProvider.notifier).storeAccount(
+          name: account.name,
+          seed: seed.mnemonic,
+          aindex: account.aindex,
+          useInternal: account.useInternal,
+          birthHeight: account.birth,
+        );
+  }
+
   void onEditName(String? name) async {
     assert(accounts.length == 1);
     if (name != null) {
@@ -740,19 +765,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
         ),
         c: c,
       );
-      final a = accounts[0];
-      final seed = a.seed;
-      if (seed != null) {
-        final settings = await ref.read(appSettingsProvider.future);
-        if (settings.vault)
-          await ref.read(vaultProvider.notifier).storeAccount(
-                name: name,
-                seed: seed,
-                aindex: a.aindex,
-                useInternal: a.useInternal,
-                birthHeight: a.birth,
-              );
-      }
+      await _updateVaultAccount(accounts[0]);
       ref.invalidate(getAccountsProvider);
       ref.invalidate(accountProvider(accounts[0].id));
       setState(() {});
@@ -802,19 +815,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
         ),
         c: c,
       );
-      final a = accounts[0];
-      final seed = await getAccountSeed(account: a.id, c: c);
-      if (seed != null) {
-        final settings = await ref.read(appSettingsProvider.future);
-        if (settings.vault)
-          await ref.read(vaultProvider.notifier).storeAccount(
-                name: a.name,
-                seed: seed.mnemonic,
-                aindex: a.aindex,
-                useInternal: a.useInternal,
-                birthHeight: bh,
-              );
-      }
+      await _updateVaultAccount(accounts[0]);
       ref.invalidate(accountProvider(accounts[0].id));
       setState(() {});
     }
@@ -836,6 +837,22 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
       ref.invalidate(accountProvider(accounts[i].id));
     }
     setState(() {});
+  }
+
+  void onEditUseInternal(bool? v) async {
+    if (v == null) return;
+    for (var i = 0; i < accounts.length; i++) {
+      final a = accounts[i];
+      await updateAccount(
+        update: AccountUpdate(coin: a.coin, id: a.id, folder: a.folder.id, useInternal: v),
+        c: c,
+      );
+      accounts[i] = a.copyWith(useInternal: v);
+      await _updateVaultAccount(accounts[i]);
+      ref.invalidate(accountProvider(a.id));
+    }
+    ref.invalidate(getAccountsProvider);
+    if (mounted) setState(() {});
   }
 
   void onEditHidden(bool? v) async {

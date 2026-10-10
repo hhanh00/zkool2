@@ -6165,8 +6165,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   AccountUpdate dco_decode_account_update(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 8)
-      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
+    if (arr.length != 9)
+      throw Exception('unexpected arr length: expect 9 but see ${arr.length}');
     return AccountUpdate(
       coin: dco_decode_u_8(arr[0]),
       id: dco_decode_u_32(arr[1]),
@@ -6176,6 +6176,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       folder: dco_decode_u_32(arr[5]),
       hidden: dco_decode_opt_box_autoadd_bool(arr[6]),
       enabled: dco_decode_opt_box_autoadd_bool(arr[7]),
+      useInternal: dco_decode_opt_box_autoadd_bool(arr[8]),
     );
   }
 
@@ -7901,6 +7902,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_folder = sse_decode_u_32(deserializer);
     var var_hidden = sse_decode_opt_box_autoadd_bool(deserializer);
     var var_enabled = sse_decode_opt_box_autoadd_bool(deserializer);
+    var var_useInternal = sse_decode_opt_box_autoadd_bool(deserializer);
     return AccountUpdate(
         coin: var_coin,
         id: var_id,
@@ -7909,7 +7911,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         birth: var_birth,
         folder: var_folder,
         hidden: var_hidden,
-        enabled: var_enabled);
+        enabled: var_enabled,
+        useInternal: var_useInternal);
   }
 
   @protected
@@ -9968,6 +9971,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.folder, serializer);
     sse_encode_opt_box_autoadd_bool(self.hidden, serializer);
     sse_encode_opt_box_autoadd_bool(self.enabled, serializer);
+    sse_encode_opt_box_autoadd_bool(self.useInternal, serializer);
   }
 
   @protected

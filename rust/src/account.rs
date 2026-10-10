@@ -1163,21 +1163,32 @@ pub async fn backfill_transparent_change_addresses(
     .fetch_all(&mut *connection)
     .await?;
     for account in accounts {
-        let (xsk, xvk) = get_transparent_keys(connection, account).await?;
-        if xvk.is_none() && xsk.is_none() {
-            continue;
-        }
-        let indexes: Vec<u32> = sqlx::query(
-            "SELECT dindex FROM transparent_address_accounts WHERE account = ? AND scope = 0",
-        )
-        .bind(account)
-        .map(|row: SqliteRow| row.get(0))
-        .fetch_all(&mut *connection)
-        .await?;
-        for dindex in indexes {
-            if derive_and_store_transparent(network, connection, account, 1, dindex).await? {
-                added += 1;
-            }
+        added += backfill_account_transparent_change_addresses(network, connection, account).await?;
+    }
+    Ok(added)
+}
+
+/// Materialize missing internal change addresses for one account.
+pub async fn backfill_account_transparent_change_addresses(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<usize> {
+    let (xsk, xvk) = get_transparent_keys(connection, account).await?;
+    if xvk.is_none() && xsk.is_none() {
+        return Ok(0);
+    }
+    let indexes: Vec<u32> = sqlx::query(
+        "SELECT dindex FROM transparent_address_accounts WHERE account = ? AND scope = 0",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| row.get(0))
+    .fetch_all(&mut *connection)
+    .await?;
+    let mut added = 0;
+    for dindex in indexes {
+        if ensure_internal_change_address(network, connection, account, dindex).await? {
+            added += 1;
         }
     }
     Ok(added)
