@@ -224,25 +224,25 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
             onSelected: (String result) async {
               switch (result) {
                 case "account_manager":
-                  GoRouter.of(context).push("/accounts");
+                  await GoRouter.of(context).push("/accounts");
                 case "backup":
-                  GoRouter.of(context).push("/viewing_keys", extra: account.account.id);
+                  await GoRouter.of(context).push("/viewing_keys", extra: account.account.id);
                 case "edit_account":
-                  GoRouter.of(context).push("/account/edit", extra: [account.account]);
+                  await GoRouter.of(context).push("/account/edit", extra: [account.account]);
                 case "market_price":
-                  GoRouter.of(context).push("/market");
+                  await GoRouter.of(context).push("/market");
                 case "update_fx":
                   onUpdateAllTxPrices();
                 case "toggle_tx_view":
-                  ref.read(appSettingsProvider.notifier).setTransactionViewMode(!(ref.read(appSettingsProvider).value?.transactionTableMode ?? false));
+                  await ref.read(appSettingsProvider.notifier).setTransactionViewMode(!(ref.read(appSettingsProvider).value?.transactionTableMode ?? false));
                 case "charts":
-                  GoRouter.of(context).push("/chart");
+                  await GoRouter.of(context).push("/chart");
                 case "migration":
-                  GoRouter.of(context).push("/migrate");
+                  await GoRouter.of(context).push("/migrate");
                 case "voting":
-                  GoRouter.of(context).push("/voting");
+                  await GoRouter.of(context).push("/voting");
                 case "settings":
-                  GoRouter.of(context).push("/settings");
+                  await GoRouter.of(context).push("/settings");
                 default:
                   onExport(int.parse(result));
               }
@@ -461,15 +461,16 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
 
   void onUpdateAllTxPrices() async {
     final settings = await ref.read(appSettingsProvider.future);
+    if (!mounted) return;
     final confirmed =
         await confirmDialog(context, title: "Fetch Tx Market Price", message: "Do you want to retrieve historical ZEC prices for your past transactions?");
     if (confirmed) {
       if (!mounted) return;
-      showDialog(
+      unawaited(showDialog<void>(
         context: context,
         barrierDismissible: false,
         builder: (_) => const Center(child: CircularProgressIndicator()),
-      );
+      ));
       try {
         final n = await fillMissingTxPrices(c: c, api: settings.coingecko, currency: settings.currency);
         if (mounted) {
