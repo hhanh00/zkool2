@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Refresh release dependency hashes; run on x86_64 Linux with Nix installed."""
+"""Refresh or verify dependency hashes with Nix; release CI uses x86_64 Linux."""
 
 from pathlib import Path
+import argparse
 import re
 import subprocess
 
@@ -37,10 +38,27 @@ def build(target):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--verify", action="store_true",
+                        help="Verify existing hashes without modifying flake.nix")
+    parser.add_argument("--pub", action="store_true", help="Refresh Dart dependencies")
+    parser.add_argument("--cargo", action="store_true", help="Refresh both Rust dependency hashes")
+    args = parser.parse_args()
+    # No flags retains the manual refresh-all behavior.
+    targets = TARGETS if not (args.pub or args.cargo) else tuple(
+        entry for index, entry in enumerate(TARGETS)
+        if (args.pub if index == 0 else args.cargo)
+    )
+    if args.verify:
+        for _, _, target in targets:
+            print(f"Verifying {target}", flush=True)
+            if build(target).returncode != 0:
+                raise RuntimeError(f"Verification failed for {target}")
+        return
     original = FLAKE.read_text()
     source = original
     try:
-        for marker, attribute, target in TARGETS:
+        for marker, attribute, target in targets:
             print(f"Refreshing {target}", flush=True)
             FLAKE.write_text(replace_hash(source, marker, attribute, FAKE_HASH))
             result = build(target)
@@ -51,8 +69,6 @@ def main():
                 raise RuntimeError(f"Expected a dependency hash mismatch for {target}")
             source = replace_hash(source, marker, attribute, hashes[0])
             FLAKE.write_text(source)
-            if build(target).returncode != 0:
-                raise RuntimeError(f"Verification failed for {target}")
     except BaseException:
         FLAKE.write_text(original)
         raise
