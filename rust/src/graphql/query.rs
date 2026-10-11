@@ -23,7 +23,7 @@ use crate::pay::{
 
 use crate::keys::{SaplingDiversifiedAddress, ScopeExt};
 use bigdecimal::num_bigint::BigInt;
-use bigdecimal::{BigDecimal, FromPrimitive};
+use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
 use chrono::{DateTime, NaiveDateTime};
 use juniper::{graphql_object, FieldError, FieldResult, GraphQLInputObject};
 use sqlx::{query, sqlite::SqliteRow, Row};
@@ -311,16 +311,30 @@ impl Query {
         Ok(vec![])
     }
 
-    async fn notes_by_account(id_account: i32, context: &Context) -> FieldResult<Vec<Note>> {
+    async fn notes_by_account(
+        id_account: i32,
+        diversifier_indices: Option<Vec<BigDecimal>>,
+        context: &Context,
+    ) -> FieldResult<Vec<Note>> {
         check_auth(context, id_account, false)?;
         let network = context.coin.network();
         let mut conn = context.coin.get_connection().await?;
         let ufvk = crate::key::get_account_ufvk(&network, &mut conn, id_account as u32, 7).await?;
         let ufvk = UnifiedFullViewingKey::decode(&network, &ufvk)?;
 
+        let indices: Option<Vec<i64>> = diversifier_indices
+            .map(|list| list.into_iter().filter_map(|bd| bd.to_i64()).collect());
+
         let notes = crate::db::get_notes(&mut conn, id_account as u32).await?;
         let notes: Vec<_> = notes
             .into_iter()
+            .filter(|n| match &indices {
+                None => true,
+                Some(indices) => n
+                    .diversifier_index
+                    .as_ref()
+                    .is_some_and(|di| indices.contains(di)),
+            })
             .map(|n| resolve_note(&network, &ufvk, n))
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| format!("Failed to resolve note: {e}"))?;
