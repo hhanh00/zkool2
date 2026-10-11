@@ -82,6 +82,7 @@ sealed class SyncState with _$SyncState {
     required int height,
     required int time,
     required List<Account> accounts,
+    @Default(false) bool cancelling,
   }) = _SyncState;
 }
 
@@ -798,6 +799,15 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     );
   }
 
+  Future<void> cancelSynchronization() async {
+    if (!syncInProgress || state.cancelling) return;
+    state = state.copyWith(cancelling: true);
+    _pendingAutoSyncHeight = null;
+    _forceNextAutoSync = false;
+    // This signals Rust; the sync mutation owns cleanup once Rust exits.
+    await cancelSync();
+  }
+
   Future<void> startSynchronize(
     List<Account> accounts, {
     int? currentHeight,
@@ -808,12 +818,13 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     final settings = ref.read(appSettingsProvider).requireValue;
     if (settings.offline) return;
 
-    syncInProgress = true;
     retryCount = 0;
     final completer = Completer<void>();
     var requestedHeight = currentHeight;
 
     while (true) {
+      late int retryDelay;
+      syncInProgress = true;
       try {
         logger.i("Starting Synchronization");
         if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
@@ -821,6 +832,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
         }
         final syncHeight = requestedHeight ?? await blockHeightService.fetchCurrent();
         requestedHeight = null;
+        if (state.cancelling) return;
 
         begin(accounts, syncHeight);
 
@@ -852,13 +864,8 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
 
         await done.future;
 
-        // Sync completed successfully
-        end();
-        syncInProgress = false;
-        await syncProgressSubscription?.cancel();
-        syncProgressSubscription = null;
-        ref.invalidate(getAccountsProvider);
-        ref.invalidate(accountProvider);
+        // Rust cancellation closes normally, just like a successful sync.
+        if (state.cancelling) return;
         if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
           showSnackbar("Synchronization Completed");
         }
@@ -869,7 +876,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
             for (final account in accounts) {
               await fetchTxDetails(account: account.id, c: c);
             }
-            ref.invalidate(accountProvider);
+            if (ref.mounted) ref.invalidate(accountProvider);
           } on AnyhowException catch (e) {
             logger.e("Error fetching tx details: $e");
           }
@@ -880,22 +887,26 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
       } on AnyhowException catch (e) {
         retryCount++;
         final maxDelay = pow(2, min(retryCount, 10)).toInt();
-        final delay = 30 + Random().nextInt(maxDelay);
-        logger.e("Sync error: $e\n\nRetrying in $delay seconds (attempt $retryCount)");
+        retryDelay = 30 + Random().nextInt(maxDelay);
+        logger.e("Sync error: $e\n\nRetrying in $retryDelay seconds (attempt $retryCount)");
 
         final context = navigatorKey.currentContext;
         if (context != null && context.mounted) {
           await ErrorDialog.show(
             context,
             error: e,
-            customMessage: "Sync error (attempt $retryCount of ~10). Retrying in $delay seconds...",
+            customMessage: "Sync error (attempt $retryCount of ~10). Retrying in $retryDelay seconds...",
           );
         }
-
-        await Future.delayed(Duration(seconds: delay));
       } finally {
+        end();
         syncInProgress = false;
+        ref.invalidate(getAccountsProvider);
+        ref.invalidate(accountProvider);
+        await syncProgressSubscription?.cancel();
+        syncProgressSubscription = null;
       }
+      await Future.delayed(Duration(seconds: retryDelay));
     }
   }
 

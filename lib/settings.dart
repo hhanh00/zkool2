@@ -16,7 +16,6 @@ import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/network.dart' show isValidNymUrl;
 import 'package:zkool/src/rust/api/init.dart';
 import 'package:zkool/src/rust/api/sapling.dart';
-import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -113,6 +112,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final cancelling = ref.watch(synchronizerProvider).cancelling;
 
     return Scaffold(
       appBar: AppBar(
@@ -272,11 +272,13 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     ),
                     IconButton(
                       tooltip: "This will cancel the current sync and disable AutoSync",
-                      onPressed: onCancelSync,
+                      onPressed: cancelling ? null : onCancelSync,
                       icon: Icon(Icons.cancel),
                     ),
                   ],
                 ),
+                if (cancelling)
+                  const Text("Cancelling Synchronization"),
                 Gap(8),
                 Tooltip(
                   message: "Ask for device pin when app opens",
@@ -450,7 +452,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     final confirmed = await confirmDialog(context, title: "Cancel Sync", message: "Do you want to cancel the current sync? AutoSync will be disabled too");
     if (!confirmed) return;
     formKey.currentState!.fields["autosync"]!.didChange("0");
-    await cancelSync();
+    await ref.read(synchronizerProvider.notifier).cancelSynchronization();
   }
 
   void onChangedDatabaseName(String? value) async {

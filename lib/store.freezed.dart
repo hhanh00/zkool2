@@ -19,6 +19,7 @@ mixin _$SyncState {
   int get height;
   int get time;
   List<Account> get accounts;
+  bool get cancelling;
 
   /// Create a copy of SyncState
   /// with the given fields replaced by the non-null parameter values.
@@ -36,16 +37,18 @@ mixin _$SyncState {
             (identical(other.end, end) || other.end == end) &&
             (identical(other.height, height) || other.height == height) &&
             (identical(other.time, time) || other.time == time) &&
-            const DeepCollectionEquality().equals(other.accounts, accounts));
+            const DeepCollectionEquality().equals(other.accounts, accounts) &&
+            (identical(other.cancelling, cancelling) ||
+                other.cancelling == cancelling));
   }
 
   @override
   int get hashCode => Object.hash(runtimeType, start, end, height, time,
-      const DeepCollectionEquality().hash(accounts));
+      const DeepCollectionEquality().hash(accounts), cancelling);
 
   @override
   String toString() {
-    return 'SyncState(start: $start, end: $end, height: $height, time: $time, accounts: $accounts)';
+    return 'SyncState(start: $start, end: $end, height: $height, time: $time, accounts: $accounts, cancelling: $cancelling)';
   }
 }
 
@@ -54,7 +57,13 @@ abstract mixin class $SyncStateCopyWith<$Res> {
   factory $SyncStateCopyWith(SyncState value, $Res Function(SyncState) _then) =
       _$SyncStateCopyWithImpl;
   @useResult
-  $Res call({int start, int end, int height, int time, List<Account> accounts});
+  $Res call(
+      {int start,
+      int end,
+      int height,
+      int time,
+      List<Account> accounts,
+      bool cancelling});
 }
 
 /// @nodoc
@@ -74,6 +83,7 @@ class _$SyncStateCopyWithImpl<$Res> implements $SyncStateCopyWith<$Res> {
     Object? height = null,
     Object? time = null,
     Object? accounts = null,
+    Object? cancelling = null,
   }) {
     return _then(_self.copyWith(
       start: null == start
@@ -96,6 +106,10 @@ class _$SyncStateCopyWithImpl<$Res> implements $SyncStateCopyWith<$Res> {
           ? _self.accounts
           : accounts // ignore: cast_nullable_to_non_nullable
               as List<Account>,
+      cancelling: null == cancelling
+          ? _self.cancelling
+          : cancelling // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -191,16 +205,16 @@ extension SyncStatePatterns on SyncState {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(
-            int start, int end, int height, int time, List<Account> accounts)?
+    TResult Function(int start, int end, int height, int time,
+            List<Account> accounts, bool cancelling)?
         $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _SyncState() when $default != null:
-        return $default(
-            _that.start, _that.end, _that.height, _that.time, _that.accounts);
+        return $default(_that.start, _that.end, _that.height, _that.time,
+            _that.accounts, _that.cancelling);
       case _:
         return orElse();
     }
@@ -221,15 +235,15 @@ extension SyncStatePatterns on SyncState {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(
-            int start, int end, int height, int time, List<Account> accounts)
+    TResult Function(int start, int end, int height, int time,
+            List<Account> accounts, bool cancelling)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _SyncState():
-        return $default(
-            _that.start, _that.end, _that.height, _that.time, _that.accounts);
+        return $default(_that.start, _that.end, _that.height, _that.time,
+            _that.accounts, _that.cancelling);
     }
   }
 
@@ -247,15 +261,15 @@ extension SyncStatePatterns on SyncState {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(
-            int start, int end, int height, int time, List<Account> accounts)?
+    TResult? Function(int start, int end, int height, int time,
+            List<Account> accounts, bool cancelling)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _SyncState() when $default != null:
-        return $default(
-            _that.start, _that.end, _that.height, _that.time, _that.accounts);
+        return $default(_that.start, _that.end, _that.height, _that.time,
+            _that.accounts, _that.cancelling);
       case _:
         return null;
     }
@@ -270,7 +284,8 @@ class _SyncState implements SyncState {
       required this.end,
       required this.height,
       required this.time,
-      required final List<Account> accounts})
+      required final List<Account> accounts,
+      this.cancelling = false})
       : _accounts = accounts;
 
   @override
@@ -289,6 +304,10 @@ class _SyncState implements SyncState {
     return EqualUnmodifiableListView(_accounts);
   }
 
+  @override
+  @JsonKey()
+  final bool cancelling;
+
   /// Create a copy of SyncState
   /// with the given fields replaced by the non-null parameter values.
   @override
@@ -306,16 +325,18 @@ class _SyncState implements SyncState {
             (identical(other.end, end) || other.end == end) &&
             (identical(other.height, height) || other.height == height) &&
             (identical(other.time, time) || other.time == time) &&
-            const DeepCollectionEquality().equals(other._accounts, _accounts));
+            const DeepCollectionEquality().equals(other._accounts, _accounts) &&
+            (identical(other.cancelling, cancelling) ||
+                other.cancelling == cancelling));
   }
 
   @override
   int get hashCode => Object.hash(runtimeType, start, end, height, time,
-      const DeepCollectionEquality().hash(_accounts));
+      const DeepCollectionEquality().hash(_accounts), cancelling);
 
   @override
   String toString() {
-    return 'SyncState(start: $start, end: $end, height: $height, time: $time, accounts: $accounts)';
+    return 'SyncState(start: $start, end: $end, height: $height, time: $time, accounts: $accounts, cancelling: $cancelling)';
   }
 }
 
@@ -327,7 +348,13 @@ abstract mixin class _$SyncStateCopyWith<$Res>
       __$SyncStateCopyWithImpl;
   @override
   @useResult
-  $Res call({int start, int end, int height, int time, List<Account> accounts});
+  $Res call(
+      {int start,
+      int end,
+      int height,
+      int time,
+      List<Account> accounts,
+      bool cancelling});
 }
 
 /// @nodoc
@@ -347,6 +374,7 @@ class __$SyncStateCopyWithImpl<$Res> implements _$SyncStateCopyWith<$Res> {
     Object? height = null,
     Object? time = null,
     Object? accounts = null,
+    Object? cancelling = null,
   }) {
     return _then(_SyncState(
       start: null == start
@@ -369,6 +397,10 @@ class __$SyncStateCopyWithImpl<$Res> implements _$SyncStateCopyWith<$Res> {
           ? _self._accounts
           : accounts // ignore: cast_nullable_to_non_nullable
               as List<Account>,
+      cancelling: null == cancelling
+          ? _self.cancelling
+          : cancelling // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
