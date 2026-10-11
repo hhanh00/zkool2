@@ -9913,9 +9913,11 @@ impl SseDecode for crate::near_intents::SwapQuoteResponse {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_quote = <crate::near_intents::SwapQuote>::sse_decode(deserializer);
         let mut var_rawResponse = <String>::sse_decode(deserializer);
+        let mut var_apiKeyConfigured = <bool>::sse_decode(deserializer);
         return crate::near_intents::SwapQuoteResponse {
             quote: var_quote,
             raw_response: var_rawResponse,
+            api_key_configured: var_apiKeyConfigured,
         };
     }
 }
@@ -12092,6 +12094,7 @@ impl flutter_rust_bridge::IntoDart for crate::near_intents::SwapQuoteResponse {
         [
             self.quote.into_into_dart().into_dart(),
             self.raw_response.into_into_dart().into_dart(),
+            self.api_key_configured.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -14053,6 +14056,7 @@ impl SseEncode for crate::near_intents::SwapQuoteResponse {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <crate::near_intents::SwapQuote>::sse_encode(self.quote, serializer);
         <String>::sse_encode(self.raw_response, serializer);
+        <bool>::sse_encode(self.api_key_configured, serializer);
     }
 }
 

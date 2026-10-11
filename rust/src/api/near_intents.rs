@@ -237,6 +237,7 @@ mod tests {
             1,
             &request,
             &SwapQuoteResponse {
+                api_key_configured: true,
                 quote,
                 raw_response: "{}".into(),
             },
