@@ -12,7 +12,7 @@ pub fn validate_blockchain_address(address: &str, blockchain: &str) -> bool {
     }
     let chain = blockchain.trim().to_ascii_lowercase();
     let chain = match chain.as_str() {
-        "eth" => "ethereum",
+        "eth" | "base" | "pol" | "polygon" => "ethereum",
         "sol" => "solana",
         "trx" => "tron",
         "btc" => "bitcoin",
@@ -55,6 +55,13 @@ mod tests {
             "0xde709f2102306220921060314715629080e2fb77",
             "eth"
         ));
+        for chain in ["base", "pol", "polygon"] {
+            assert!(validate_blockchain_address(
+                "0xde709f2102306220921060314715629080e2fb77",
+                chain
+            ));
+            assert!(!validate_blockchain_address("0x1234", chain));
+        }
         // Upstream does not validate mixed-case EIP-55 checksums.
         assert!(validate_blockchain_address(
             "0xDE709f2102306220921060314715629080e2fb77",

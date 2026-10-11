@@ -21,17 +21,20 @@ import 'package:zkool/widgets/input_amount.dart';
 
 /// Destination networks offered by the initial frontend.
 enum SwapNetwork {
-  solana('Solana'),
-  ethereum('Ethereum');
+  solana('Solana', {'sol', 'solana'}),
+  ethereum('Ethereum', {'eth', 'ethereum'}),
+  base('Base', {'base'}),
+  polygon('Polygon', {'pol', 'polygon'});
 
   final String label;
-  const SwapNetwork(this.label);
+  final Set<String> blockchainIds;
+  const SwapNetwork(this.label, this.blockchainIds);
 }
 
 // TODO: Load supported assets from 1Click and add search and network filtering.
 enum SwapAsset {
-  usdt('USDT', 6, [SwapNetwork.solana, SwapNetwork.ethereum]),
-  usdc('USDC', 6, [SwapNetwork.solana, SwapNetwork.ethereum]),
+  usdt('USDT', 6, [SwapNetwork.solana, SwapNetwork.ethereum, SwapNetwork.polygon]),
+  usdc('USDC', 6, [SwapNetwork.solana, SwapNetwork.ethereum, SwapNetwork.base, SwapNetwork.polygon]),
   sol('SOL', 9, [SwapNetwork.solana]),
   eth('ETH', 18, [SwapNetwork.ethereum]);
 
@@ -391,14 +394,10 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
                 return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   if (!quote.apiKeyConfigured) const ErrorCard(error: 'Warning: The swap service API key is not configured. Swap requests may fail.'),
                   if (draft.direction == SwapDirection.receiveZec && quote.request != null)
-                    ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Zcash receiving address'),
-                        subtitle: SelectableText(quote.request!.recipient)),
+                    ListTile(contentPadding: EdgeInsets.zero, title: const Text('Zcash receiving address'), subtitle: SelectableText(quote.request!.recipient)),
                   _row('You send', '${quote.amountIn} ${draft.originSymbol}'),
                   _row('You receive', '${quote.amountOut} ${draft.destinationSymbol}'),
-                  _row('Minimum received',
-                      quote.minimumReceived == 'Unavailable' ? 'Unavailable' : '${quote.minimumReceived} ${draft.destinationSymbol}'),
+                  _row('Minimum received', quote.minimumReceived == 'Unavailable' ? 'Unavailable' : '${quote.minimumReceived} ${draft.destinationSymbol}'),
                   _row('Estimated swap cost', quote.estimatedCostUsd == null ? 'Unavailable' : '${quote.estimatedCostUsd} USD'),
                   Text(
                       'Based on quoted USD values. Includes fees, spread and price impact; may include a refundable slippage buffer. ${draft.direction == SwapDirection.sendZec ? 'Zcash' : draft.network.label} network fee is extra.'),

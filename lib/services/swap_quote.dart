@@ -17,9 +17,8 @@ DateTime swapDeadline(ni.SavedSwap swap) {
 Future<SwapReviewQuote> loadSwapQuote(SwapDraft draft, Coin coin) async {
   if (coin.coin != 0) throw StateError('Swaps require a Zcash mainnet wallet.');
   final assets = await nearIntentsAssets(c: coin);
-  final networks = draft.network == SwapNetwork.solana ? {'sol', 'solana'} : {'eth', 'ethereum'};
-  final matches =
-      assets.where((asset) => asset.symbol.toUpperCase() == draft.asset.symbol && networks.contains(asset.blockchain.toLowerCase())).toList();
+  final networks = draft.network.blockchainIds;
+  final matches = assets.where((asset) => asset.symbol.toUpperCase() == draft.asset.symbol && networks.contains(asset.blockchain.toLowerCase())).toList();
   if (matches.length != 1) throw StateError('Unable to identify ${draft.asset.symbol} on ${draft.network.label}.');
   final asset = matches.single;
   final addresses = await getAddresses(uaPools: 0, c: coin);
