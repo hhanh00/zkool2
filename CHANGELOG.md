@@ -1,5 +1,38 @@
 # Changelog
 
+## [6.33.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.32.0...zkool-v6.33.0) (2026-10-11)
+
+
+### Features
+
+* add initial NEAR Intents swap flow ([51fbbcc](https://github.com/hhanh00/zkool2/commit/51fbbcc596596f27a1ae0822343f84f0524fdbff))
+* allow editing account internal change setting ([a7e9449](https://github.com/hhanh00/zkool2/commit/a7e94495e5ad7c67d6ddffafc0586feeb6fab266))
+* confirm account edits when leaving the form ([b6b39a1](https://github.com/hhanh00/zkool2/commit/b6b39a1a3935a8f1b731f63759dc32503a3bdb0c))
+* **db:** add persistent swap history schema ([b282e50](https://github.com/hhanh00/zkool2/commit/b282e50d9216d6984dcce76e6bee0b5e7dac0d8e))
+* default to internal change for new and recovered accounts ([c874096](https://github.com/hhanh00/zkool2/commit/c874096c7b6dc4b9080e84aa1a5a63dfdd6c66e1))
+* **swaps:** add current swaps page and navigation ([2a85983](https://github.com/hhanh00/zkool2/commit/2a859835daea1c5f512eb04cfe41e20e7ee9494d))
+* **swaps:** authenticate 1Click requests with build-time API key ([d77de7d](https://github.com/hhanh00/zkool2/commit/d77de7d47a597eb7872da15ca011c7f74bfbd136))
+* **swaps:** create swaps with confirmation and summary ([d1c8eab](https://github.com/hhanh00/zkool2/commit/d1c8eab4321080cd6c27b7d1781ef6e568fcceaa))
+* **swaps:** delete closed swaps through UI and GraphQL ([3c7e4f0](https://github.com/hhanh00/zkool2/commit/3c7e4f01a82a51ccbc60485405495157ddb94c35))
+* **swaps:** expose saved swaps and status refresh APIs ([db2a922](https://github.com/hhanh00/zkool2/commit/db2a9220619ef2c59f26f2ecad501673c163c522))
+* **swaps:** fund through transaction flow and poll completion ([423a305](https://github.com/hhanh00/zkool2/commit/423a3051c700a771875e37f0d58981e57a813094))
+* **swaps:** support receiving ZEC from external assets ([2533d5b](https://github.com/hhanh00/zkool2/commit/2533d5ba14fc41020029c57197c3c367478c04bc))
+* **swaps:** validate addresses with pinned multichain library ([78babd9](https://github.com/hhanh00/zkool2/commit/78babd9d12beca04320e0a4fb690fd0e08ab8b65))
+* **swaps:** wire quote previews and estimated swap costs ([f02abca](https://github.com/hhanh00/zkool2/commit/f02abcaa18326c1fc822f67d347cbcb9733ed118))
+* **zsa:** integrate published NU7 dependencies while preserving deployed protocol ([#1293](https://github.com/hhanh00/zkool2/issues/1293)) ([9e9ee81](https://github.com/hhanh00/zkool2/commit/9e9ee817273532c9f863003937673bb763e69801))
+
+
+### Bug Fixes
+
+* **ci:** run builds on release-please pull requests ([4fe2eee](https://github.com/hhanh00/zkool2/commit/4fe2eee379bdccaf7d7600a291dcc37dec0b0739))
+* **ledger:** replace deprecated transparent viewing key accessor ([082eadb](https://github.com/hhanh00/zkool2/commit/082eadbf64a95bca3fd610a9e28cfee0f8f42837))
+* replace deprecated transparent viewing key accessors ([e2f3ef5](https://github.com/hhanh00/zkool2/commit/e2f3ef5043ed2486cc1a7c019508a251e1fcd01b))
+* resolve account page async lint notices ([5801380](https://github.com/hhanh00/zkool2/commit/58013804e12adbbf77275e5cd5da23a8a946be16))
+* **swaps:** expire unfunded swaps after one-day grace period ([fc52d1d](https://github.com/hhanh00/zkool2/commit/fc52d1de9f7a54cff5c9b6a2077aa6917eea66cf))
+* **swaps:** include provider reasons in API errors ([1053d9e](https://github.com/hhanh00/zkool2/commit/1053d9ed49059da78215471e0e410f011d1ace67))
+* **swap:** warn when the Near Intents API key is unset ([eb58f48](https://github.com/hhanh00/zkool2/commit/eb58f484a0f1bcce275b15f6c27b31c52b3ef5b9))
+* **sync:** handle user cancellation as normal termination ([c09fa06](https://github.com/hhanh00/zkool2/commit/c09fa06bcddd3fb750779e6ec98e1a0229168fe7))
+
 ## [6.32.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.31.0...zkool-v6.32.0) (2026-10-06)
 
 
