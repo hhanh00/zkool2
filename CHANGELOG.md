@@ -1,5 +1,18 @@
 # Changelog
 
+## [6.33.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.33.0-rc.2...zkool-v6.33.0-rc.3) (2026-10-11)
+
+
+### Features
+
+* **swaps:** fund through transaction flow and poll completion ([286f4bc](https://github.com/hhanh00/zkool2/commit/286f4bc9380502ad4c091a8178c0e80f925ffb8d))
+
+
+### Bug Fixes
+
+* **ledger:** replace deprecated transparent viewing key accessor ([630f0bf](https://github.com/hhanh00/zkool2/commit/630f0bf1b5509d1d109b986e061df71e3824bcd7))
+* **swaps:** include provider reasons in API errors ([0f87571](https://github.com/hhanh00/zkool2/commit/0f87571d558c1fe429dcd7276499eece5bea001b))
+
 ## [6.33.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.33.0-rc.1...zkool-v6.33.0-rc.2) (2026-10-10)
 
 
