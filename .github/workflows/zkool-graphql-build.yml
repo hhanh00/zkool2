@@ -2,6 +2,9 @@ name: Build ZKool GraphQL (reusable)
 
 on:
   workflow_call:
+    secrets:
+      NEAR_INTENTS_API_KEY:
+        required: false
     inputs:
       ledger-transport:
         description: Ledger transport to compile (ledger for HID or zemu for HTTP)
@@ -11,6 +14,8 @@ on:
 
 jobs:
   build:
+    env:
+      NEAR_INTENTS_API_KEY: ${{ secrets.NEAR_INTENTS_API_KEY }}
     # Release the slot as soon as the binary is cached, before caller tests run.
     concurrency:
       group: zkool-graphql-${{ inputs.ledger-transport }}-${{ github.repository }}-${{ github.ref }}

@@ -12,6 +12,8 @@ on:
 jobs:
   zkool-graphql:
     uses: ./.github/workflows/zkool-graphql-build.yml
+    secrets:
+      NEAR_INTENTS_API_KEY: ${{ secrets.NEAR_INTENTS_API_KEY }}
     with:
       ledger-transport: ledger
 

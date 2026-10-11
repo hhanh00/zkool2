@@ -301,7 +301,13 @@ async fn request(
     body: Vec<u8>,
 ) -> Result<String> {
     let timeout = Duration::from_secs(30);
-    let headers = [("Content-Type".to_owned(), "application/json".to_owned())];
+    let mut headers = vec![("Content-Type".to_owned(), "application/json".to_owned())];
+    let api_key = std::env::var("NEAR_INTENTS_API_KEY")
+        .ok()
+        .or_else(|| option_env!("NEAR_INTENTS_API_KEY").map(str::to_owned));
+    if let Some(api_key) = api_key.filter(|key| !key.trim().is_empty()) {
+        headers.push(("X-API-Key".to_owned(), api_key));
+    }
     let (status, bytes) = if transport.mode == 1 {
         let response =
             http::tor_request(method, url, body, &headers, timeout, MAX_RESPONSE).await?;
@@ -316,12 +322,11 @@ async fn request(
             "External proxy is not configured"
         );
         let client = http::client(http::proxy_url(transport.mode, &transport.proxy), timeout)?;
-        let mut response = client
-            .request(method, url)
-            .header("Content-Type", "application/json")
-            .body(body)
-            .send()
-            .await?;
+        let mut request = client.request(method, url).body(body);
+        for (name, value) in &headers {
+            request = request.header(name, value);
+        }
+        let mut response = request.send().await?;
         let status = response.status().as_u16();
         let mut bytes = Vec::new();
         while let Some(chunk) = response.chunk().await? {
