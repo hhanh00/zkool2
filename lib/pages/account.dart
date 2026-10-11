@@ -315,7 +315,8 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
           final ss = fullData.syncState;
           if (ss == null) return const SizedBox.shrink();
 
-          final syncing = ss.start != ss.end;
+          final cancelling = ref.watch(synchronizerProvider).cancelling;
+          final syncing = ss.start != ss.end || cancelling;
           final unconfirmedAmount = fullData.mempool.unconfirmedFunds[account.account.id];
 
           return Padding(
@@ -330,6 +331,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                             color: Theme.of(context).colorScheme.surface,
                             child: Column(children: [
                               if (syncing) ...[
+                                if (cancelling) const Text("Cancelling Synchronization"),
                                 HeroProgressWidget(account.account),
                                 Gap(8),
                               ],

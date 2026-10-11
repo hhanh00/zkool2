@@ -93,7 +93,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
         return Ok(current_height);
     };
 
-    let (tx_cancel, _rx_cancel) = broadcast::channel::<()>(1);
+    let (tx_cancel, mut rx_cancel) = broadcast::channel::<()>(16);
     {
         let mut cancel = CANCEL_SYNC.lock().await;
         *cancel = Some(tx_cancel.clone());
@@ -303,12 +303,15 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
         Ok::<_, anyhow::Error>(())
     };
 
-    match res.await {
-        Ok(_) => {}
-        Err(e) => {
-            debug!("Error during sync: {:?}", e);
-            progress2.send_error(e).await;
-        }
+    let result = res.await;
+    // Inner operations may unwind with an error after receiving cancellation.
+    // A user-requested stop is normal termination at the API boundary.
+    let cancelled = rx_cancel.try_recv().is_ok();
+    if cancelled {
+        debug!("Synchronization cancelled by user");
+    } else if let Err(e) = result {
+        debug!("Error during sync: {:?}", e);
+        progress2.send_error(e).await;
     }
 
     {
