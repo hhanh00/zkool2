@@ -30,6 +30,7 @@ jobs:
             target: windows
     env:
       FLUTTER_VERSION: 3.47.4
+      NEAR_INTENTS_API_KEY: ${{ secrets.NEAR_INTENTS_API_KEY }}
     permissions:
       id-token: write
       attestations: write
