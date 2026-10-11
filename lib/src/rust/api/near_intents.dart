@@ -17,6 +17,16 @@ Future<List<SavedSwap>> nearIntentsListSwaps(
     RustLib.instance.api.crateApiNearIntentsNearIntentsListSwaps(
         pendingOnly: pendingOnly, c: c);
 
+/// Permanently remove closed swaps belonging to the current account.
+Future<void> nearIntentsClearClosedSwaps({required Coin c}) =>
+    RustLib.instance.api.crateApiNearIntentsNearIntentsClearClosedSwaps(c: c);
+
+/// Permanently remove one closed swap belonging to the current account.
+Future<void> nearIntentsDeleteClosedSwap(
+        {required PlatformInt64 idSwap, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiNearIntentsNearIntentsDeleteClosedSwap(idSwap: idSwap, c: c);
+
 Future<List<SwapAsset>> nearIntentsAssets({required Coin c}) =>
     RustLib.instance.api.crateApiNearIntentsNearIntentsAssets(c: c);
 

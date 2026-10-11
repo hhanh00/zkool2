@@ -53,7 +53,7 @@ class _SwapSummaryPageState extends ConsumerState<SwapSummaryPage> {
   bool _refreshing = false;
   Object? _error;
 
-  bool get _completed => const ['SUCCESS', 'REFUNDED', 'FAILED'].contains(_swap.status);
+  bool get _completed => const ['SUCCESS', 'REFUNDED', 'FAILED', 'EXPIRED'].contains(_swap.status);
 
   @override
   void initState() {
@@ -107,6 +107,7 @@ class _SwapSummaryPageState extends ConsumerState<SwapSummaryPage> {
         'SUCCESS' => 'Swap completed.',
         'REFUNDED' => 'Swap refunded to your refund address.',
         'FAILED' => 'Swap failed.',
+        'EXPIRED' => 'Swap expired without a deposit.',
         'PROCESSING' => 'Deposit received. Processing swap…',
         'KNOWN_DEPOSIT_TX' => 'Deposit reported. Waiting for confirmation…',
         'INCOMPLETE_DEPOSIT' => 'Incomplete deposit received.',

@@ -47,12 +47,57 @@ pub struct SavedSwap {
     pub updated_at: i64,
 }
 
+/// Expire local unfunded swaps one day after the request deadline, never the deposit
+/// address lifetime returned in quote.deadline.
+async fn expire_swaps(connection: &mut sqlx::SqliteConnection, account: u32) -> Result<()> {
+    sqlx::query(
+        "UPDATE swaps SET status = 'EXPIRED', completed_at = unixepoch(), updated_at = unixepoch()
+        WHERE account = ? AND completed_at IS NULL AND deposit_tx_hash IS NULL
+        AND (status IS NULL OR status = 'PENDING_DEPOSIT')
+        AND julianday(COALESCE(
+            CASE WHEN json_valid(quote_response) THEN json_extract(quote_response, '$.quoteRequest.deadline') END,
+            deadline), '+1 day') <= julianday('now')",
+    ).bind(account).execute(connection).await?;
+    Ok(())
+}
+
+pub(crate) async fn clear_closed_swaps(
+    connection: &mut sqlx::SqliteConnection,
+    account: u32,
+) -> Result<()> {
+    sqlx::query("DELETE FROM swaps WHERE account = ? AND completed_at IS NOT NULL")
+        .bind(account)
+        .execute(connection)
+        .await?;
+    Ok(())
+}
+
+pub(crate) async fn delete_closed_swap(
+    connection: &mut sqlx::SqliteConnection,
+    account: u32,
+    id_swap: i64,
+) -> Result<()> {
+    let result = sqlx::query(
+        "DELETE FROM swaps WHERE account = ? AND id_swap = ? AND completed_at IS NOT NULL",
+    )
+    .bind(account)
+    .bind(id_swap)
+    .execute(connection)
+    .await?;
+    ensure!(
+        result.rows_affected() == 1,
+        "Closed swap not found for the current account"
+    );
+    Ok(())
+}
+
 pub(crate) async fn read_swaps(
     connection: &mut sqlx::SqliteConnection,
     account: u32,
     pending_only: bool,
 ) -> Result<Vec<SavedSwap>> {
     use sqlx::Row;
+    expire_swaps(connection, account).await?;
     let rows = sqlx::query(
         "SELECT * FROM swaps WHERE account = ?
         AND (NOT ? OR completed_at IS NULL) ORDER BY created_at DESC, id_swap DESC",
@@ -184,6 +229,7 @@ pub struct SwapQuote {
 pub struct SwapQuoteResponse {
     pub quote: SwapQuote,
     pub raw_response: String,
+    pub api_key_configured: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -248,6 +294,14 @@ fn quote_payload(request: &SwapRequest) -> Result<serde_json::Value> {
     Ok(payload)
 }
 
+/// Resolve the same runtime or build-time key used by all 1Click requests.
+fn api_key() -> Option<String> {
+    std::env::var("NEAR_INTENTS_API_KEY")
+        .ok()
+        .or_else(|| option_env!("NEAR_INTENTS_API_KEY").map(str::to_owned))
+        .filter(|key| !key.trim().is_empty())
+}
+
 /// No automatic POST retries: a timed-out quote may already have been created.
 async fn request(
     transport: &Transport,
@@ -256,7 +310,10 @@ async fn request(
     body: Vec<u8>,
 ) -> Result<String> {
     let timeout = Duration::from_secs(30);
-    let headers = [("Content-Type".to_owned(), "application/json".to_owned())];
+    let mut headers = vec![("Content-Type".to_owned(), "application/json".to_owned())];
+    if let Some(api_key) = api_key() {
+        headers.push(("X-API-Key".to_owned(), api_key));
+    }
     let (status, bytes) = if transport.mode == 1 {
         let response =
             http::tor_request(method, url, body, &headers, timeout, MAX_RESPONSE).await?;
@@ -271,12 +328,11 @@ async fn request(
             "External proxy is not configured"
         );
         let client = http::client(http::proxy_url(transport.mode, &transport.proxy), timeout)?;
-        let mut response = client
-            .request(method, url)
-            .header("Content-Type", "application/json")
-            .body(body)
-            .send()
-            .await?;
+        let mut request = client.request(method, url).body(body);
+        for (name, value) in &headers {
+            request = request.header(name, value);
+        }
+        let mut response = request.send().await?;
         let status = response.status().as_u16();
         let mut bytes = Vec::new();
         while let Some(chunk) = response.chunk().await? {
@@ -395,6 +451,7 @@ pub async fn quote(request_data: SwapRequest, transport: &Transport) -> Result<S
     Ok(SwapQuoteResponse {
         quote: response.quote,
         raw_response,
+        api_key_configured: api_key().is_some(),
     })
 }
 
@@ -518,7 +575,7 @@ pub(crate) async fn persist_swap_status(
     .bind(deposit_address)
     .bind(deposit_memo)
     .bind(previous_response)
-    .execute(connection)
+    .execute(&mut *connection)
     .await?;
     // Compare the snapshot read before HTTP, so a slower concurrent refresh
     // cannot overwrite a newer response (or a deleted/replaced row).
@@ -526,6 +583,7 @@ pub(crate) async fn persist_swap_status(
         result.rows_affected() == 1,
         "Swap changed during status refresh; retry"
     );
+    expire_swaps(connection, account).await?;
     Ok(())
 }
 
@@ -559,6 +617,63 @@ pub async fn submit_deposit(
 mod tests {
     use super::*;
     use sqlx::Connection;
+
+    #[tokio::test]
+    async fn expired_swaps_use_request_deadline_and_preserve_funded_swaps() -> Result<()> {
+        let mut db = sqlx::SqliteConnection::connect("sqlite::memory:").await?;
+        sqlx::raw_sql("CREATE TABLE accounts(id_account INTEGER PRIMARY KEY); INSERT INTO accounts VALUES (1), (2);")
+            .execute(&mut db).await?;
+        sqlx::raw_sql(include_str!("db/swaps.sql"))
+            .execute(&mut db)
+            .await?;
+        for id in 1..=7 {
+            let mut request = sample();
+            request.dry = false;
+            let response = SwapQuoteResponse {
+                api_key_configured: true,
+                quote: decode(&format!(
+                    r#"{{"amountIn":"100","amountOut":"200","depositAddress":"deposit-{id}"}}"#
+                ))?,
+                raw_response: if id == 1 {
+                    r#"{"quoteRequest":{"deadline":"2000-01-01T00:00:00Z"},"quote":{"deadline":"2099-01-01T00:00:00Z"}}"#.into()
+                } else {
+                    "{}".into()
+                },
+            };
+            save_swap(&mut db, if id == 7 { 2 } else { 1 }, &request, &response).await?;
+        }
+        sqlx::query("UPDATE swaps SET deadline = '2000-01-01T00:00:00Z', status = 'PENDING_DEPOSIT' WHERE id_swap IN (2, 3, 4, 5, 7)").execute(&mut db).await?;
+        sqlx::query("UPDATE swaps SET deposit_tx_hash = ? WHERE id_swap = 3")
+            .bind("a".repeat(64))
+            .execute(&mut db)
+            .await?;
+        sqlx::query("UPDATE swaps SET status = 'PROCESSING' WHERE id_swap = 4")
+            .execute(&mut db)
+            .await?;
+        sqlx::query("UPDATE swaps SET status = 'SUCCESS', completed_at = 123 WHERE id_swap = 5")
+            .execute(&mut db)
+            .await?;
+        // Still within the one-day grace period.
+        sqlx::query("UPDATE swaps SET deadline = strftime('%Y-%m-%dT%H:%M:%SZ', 'now', '-12 hours') WHERE id_swap = 6").execute(&mut db).await?;
+        let swaps = read_swaps(&mut db, 1, false).await?;
+        for id in [1, 2] {
+            let swap = swaps.iter().find(|s| s.id_swap == id).unwrap();
+            assert_eq!(swap.status.as_deref(), Some("EXPIRED"));
+            assert!(swap.completed_at.is_some());
+        }
+        let pending = read_swaps(&mut db, 1, true).await?;
+        assert_eq!(pending.len(), 3); // funded, processing, within grace period
+        let other: Option<String> =
+            sqlx::query_scalar("SELECT status FROM swaps WHERE id_swap = 7")
+                .fetch_one(&mut db)
+                .await?;
+        assert_eq!(other.as_deref(), Some("PENDING_DEPOSIT"));
+        assert_eq!(
+            swaps.iter().find(|s| s.id_swap == 5).unwrap().completed_at,
+            Some(123)
+        );
+        Ok(())
+    }
 
     #[test]
     fn provider_errors_preserve_reasons() {
@@ -606,6 +721,7 @@ mod tests {
         let mut request = sample();
         let raw = r#"{"quote":{"amountIn":"123456789","amountOut":"600000000","depositAddress":"deposit","deadline":"2026-10-13T12:00:00Z","minAmountOut":"590000000"},"signature":"provider-signature"}"#;
         let response = SwapQuoteResponse {
+            api_key_configured: true,
             quote: decode(&serde_json::from_str::<serde_json::Value>(raw)?["quote"].to_string())?,
             raw_response: raw.into(),
         };
@@ -709,6 +825,25 @@ mod tests {
         );
         assert_eq!(read_swaps(&mut db, 2, false).await?[0].id_swap, 4);
         assert!(read_swaps(&mut db, 99, false).await?.is_empty());
+        sqlx::query("UPDATE swaps SET completed_at = 99 WHERE account = 2")
+            .execute(&mut db)
+            .await?;
+        assert!(delete_closed_swap(&mut db, 1, 1).await.is_err()); // active
+        assert!(delete_closed_swap(&mut db, 1, 4).await.is_err()); // other account
+        delete_closed_swap(&mut db, 1, 2).await?;
+        assert!(delete_closed_swap(&mut db, 1, 2).await.is_err()); // already deleted
+        clear_closed_swaps(&mut db, 1).await?;
+        assert_eq!(
+            read_swaps(&mut db, 1, false)
+                .await?
+                .iter()
+                .map(|s| s.id_swap)
+                .collect::<Vec<_>>(),
+            vec![3, 1]
+        );
+        assert_eq!(read_swaps(&mut db, 2, false).await?[0].id_swap, 4);
+        clear_closed_swaps(&mut db, 1).await?; // clearing an empty history is safe
+
         Ok(())
     }
 
@@ -857,7 +992,7 @@ mod tests {
             slippage_tolerance: 100,
             recipient: "recipient".into(),
             refund_to: "refund".into(),
-            deadline: "2026-10-10T12:00:00Z".into(),
+            deadline: "2099-10-10T12:00:00Z".into(),
         }
     }
     #[test]
