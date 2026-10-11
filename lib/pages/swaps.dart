@@ -130,6 +130,7 @@ class _SwapTile extends StatelessWidget {
       'SUCCESS' => 'Completed',
       'REFUNDED' => 'Refunded',
       'FAILED' => 'Failed',
+      'EXPIRED' => 'Expired',
       null => 'Status not checked',
       final value => value,
     };
@@ -149,6 +150,7 @@ class _SwapTile extends StatelessWidget {
         'SUCCESS' => Icons.check_circle_outline,
         'FAILED' => Icons.error_outline,
         'REFUNDED' => Icons.undo,
+        'EXPIRED' => Icons.timer_off_outlined,
         _ => Icons.currency_exchange,
       }),
       title: Text('${originSymbol ?? 'Sending asset'} → ${destinationSymbol ?? 'Receiving asset'}'),
