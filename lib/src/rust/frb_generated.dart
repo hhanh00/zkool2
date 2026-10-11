@@ -7795,11 +7795,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SwapQuoteResponse dco_decode_swap_quote_response(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
+    if (arr.length != 3)
+      throw Exception('unexpected arr length: expect 3 but see ${arr.length}');
     return SwapQuoteResponse(
       quote: dco_decode_swap_quote(arr[0]),
       rawResponse: dco_decode_String(arr[1]),
+      apiKeyConfigured: dco_decode_bool(arr[2]),
     );
   }
 
@@ -10029,7 +10030,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_quote = sse_decode_swap_quote(deserializer);
     var var_rawResponse = sse_decode_String(deserializer);
-    return SwapQuoteResponse(quote: var_quote, rawResponse: var_rawResponse);
+    var var_apiKeyConfigured = sse_decode_bool(deserializer);
+    return SwapQuoteResponse(quote: var_quote, rawResponse: var_rawResponse, apiKeyConfigured: var_apiKeyConfigured);
   }
 
   @protected
@@ -12023,6 +12025,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_swap_quote(self.quote, serializer);
     sse_encode_String(self.rawResponse, serializer);
+    sse_encode_bool(self.apiKeyConfigured, serializer);
   }
 
   @protected

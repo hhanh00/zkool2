@@ -229,6 +229,7 @@ pub struct SwapQuote {
 pub struct SwapQuoteResponse {
     pub quote: SwapQuote,
     pub raw_response: String,
+    pub api_key_configured: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -293,6 +294,14 @@ fn quote_payload(request: &SwapRequest) -> Result<serde_json::Value> {
     Ok(payload)
 }
 
+/// Resolve the same runtime or build-time key used by all 1Click requests.
+fn api_key() -> Option<String> {
+    std::env::var("NEAR_INTENTS_API_KEY")
+        .ok()
+        .or_else(|| option_env!("NEAR_INTENTS_API_KEY").map(str::to_owned))
+        .filter(|key| !key.trim().is_empty())
+}
+
 /// No automatic POST retries: a timed-out quote may already have been created.
 async fn request(
     transport: &Transport,
@@ -302,10 +311,7 @@ async fn request(
 ) -> Result<String> {
     let timeout = Duration::from_secs(30);
     let mut headers = vec![("Content-Type".to_owned(), "application/json".to_owned())];
-    let api_key = std::env::var("NEAR_INTENTS_API_KEY")
-        .ok()
-        .or_else(|| option_env!("NEAR_INTENTS_API_KEY").map(str::to_owned));
-    if let Some(api_key) = api_key.filter(|key| !key.trim().is_empty()) {
+    if let Some(api_key) = api_key() {
         headers.push(("X-API-Key".to_owned(), api_key));
     }
     let (status, bytes) = if transport.mode == 1 {
@@ -445,6 +451,7 @@ pub async fn quote(request_data: SwapRequest, transport: &Transport) -> Result<S
     Ok(SwapQuoteResponse {
         quote: response.quote,
         raw_response,
+        api_key_configured: api_key().is_some(),
     })
 }
 
@@ -623,6 +630,7 @@ mod tests {
             let mut request = sample();
             request.dry = false;
             let response = SwapQuoteResponse {
+                api_key_configured: true,
                 quote: decode(&format!(
                     r#"{{"amountIn":"100","amountOut":"200","depositAddress":"deposit-{id}"}}"#
                 ))?,
@@ -713,6 +721,7 @@ mod tests {
         let mut request = sample();
         let raw = r#"{"quote":{"amountIn":"123456789","amountOut":"600000000","depositAddress":"deposit","deadline":"2026-10-13T12:00:00Z","minAmountOut":"590000000"},"signature":"provider-signature"}"#;
         let response = SwapQuoteResponse {
+            api_key_configured: true,
             quote: decode(&serde_json::from_str::<serde_json::Value>(raw)?["quote"].to_string())?,
             raw_response: raw.into(),
         };

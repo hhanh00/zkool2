@@ -264,14 +264,16 @@ class SwapQuote {
 class SwapQuoteResponse {
   final SwapQuote quote;
   final String rawResponse;
+  final bool apiKeyConfigured;
 
   const SwapQuoteResponse({
     required this.quote,
     required this.rawResponse,
+    required this.apiKeyConfigured,
   });
 
   @override
-  int get hashCode => quote.hashCode ^ rawResponse.hashCode;
+  int get hashCode => quote.hashCode ^ rawResponse.hashCode ^ apiKeyConfigured.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -279,7 +281,8 @@ class SwapQuoteResponse {
       other is SwapQuoteResponse &&
           runtimeType == other.runtimeType &&
           quote == other.quote &&
-          rawResponse == other.rawResponse;
+          rawResponse == other.rawResponse &&
+          apiKeyConfigured == other.apiKeyConfigured;
 }
 
 /// Source/destination fields are shared so inbound swaps can reuse the client later.

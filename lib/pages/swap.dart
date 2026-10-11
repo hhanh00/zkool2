@@ -78,6 +78,7 @@ class SwapReviewQuote {
   final String minimumReceived;
   final String? estimatedCostUsd;
   final DateTime expiresAt;
+  final bool apiKeyConfigured;
 
   const SwapReviewQuote(
       {required this.amountIn,
@@ -85,6 +86,7 @@ class SwapReviewQuote {
       required this.minimumReceived,
       this.estimatedCostUsd,
       required this.expiresAt,
+      this.apiKeyConfigured = true,
       this.request,
       this.originDecimals,
       this.destinationDecimals});
@@ -387,11 +389,16 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
                 final quote = snapshot.requireData;
                 _displayedQuote = quote;
                 return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                  if (!quote.apiKeyConfigured) const ErrorCard(error: 'Warning: The swap service API key is not configured. Swap requests may fail.'),
                   if (draft.direction == SwapDirection.receiveZec && quote.request != null)
-                    ListTile(contentPadding: EdgeInsets.zero, title: const Text('Zcash receiving address'), subtitle: SelectableText(quote.request!.recipient)),
+                    ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Zcash receiving address'),
+                        subtitle: SelectableText(quote.request!.recipient)),
                   _row('You send', '${quote.amountIn} ${draft.originSymbol}'),
                   _row('You receive', '${quote.amountOut} ${draft.destinationSymbol}'),
-                  _row('Minimum received', quote.minimumReceived == 'Unavailable' ? 'Unavailable' : '${quote.minimumReceived} ${draft.destinationSymbol}'),
+                  _row('Minimum received',
+                      quote.minimumReceived == 'Unavailable' ? 'Unavailable' : '${quote.minimumReceived} ${draft.destinationSymbol}'),
                   _row('Estimated swap cost', quote.estimatedCostUsd == null ? 'Unavailable' : '${quote.estimatedCostUsd} USD'),
                   Text(
                       'Based on quoted USD values. Includes fees, spread and price impact; may include a refundable slippage buffer. ${draft.direction == SwapDirection.sendZec ? 'Zcash' : draft.network.label} network fee is extra.'),
