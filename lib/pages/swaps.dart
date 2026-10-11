@@ -31,10 +31,11 @@ class SwapsPage extends ConsumerStatefulWidget {
 class _SwapsPageState extends ConsumerState<SwapsPage> {
   bool _showCompleted = false;
   bool _refreshing = false;
+  bool _clearing = false;
   Object? _refreshError;
 
   Future<void> _refresh() async {
-    if (_refreshing) return;
+    if (_refreshing || _clearing) return;
     final coin = coinContext.coin.copyWith(account: ref.read(selectedAccountIdProvider));
     setState(() {
       _refreshing = true;
@@ -67,6 +68,39 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
     }
   }
 
+  Future<void> _clearClosed() async {
+    if (_clearing || _refreshing) return;
+    final coin = coinContext.coin.copyWith(account: ref.read(selectedAccountIdProvider));
+    final confirmed = await confirmDialog(context,
+        title: 'Clear closed swaps?', message: 'Permanently delete completed, refunded, failed, and expired swaps for this account?');
+    if (!confirmed || !mounted) return;
+    setState(() => _clearing = true);
+    try {
+      await nearIntentsClearClosedSwaps(c: coin);
+      if (mounted) ref.invalidate(savedSwapsProvider);
+    } catch (error) {
+      if (mounted) await showException(context, error.toString());
+    } finally {
+      if (mounted) setState(() => _clearing = false);
+    }
+  }
+
+  Future<void> _deleteClosed(SavedSwap swap) async {
+    if (_clearing || _refreshing) return;
+    final coin = coinContext.coin.copyWith(account: ref.read(selectedAccountIdProvider));
+    final confirmed = await confirmDialog(context, title: 'Delete closed swap?', message: 'Permanently delete this swap from the database?');
+    if (!confirmed || !mounted) return;
+    setState(() => _clearing = true);
+    try {
+      await nearIntentsDeleteClosedSwap(idSwap: swap.idSwap, c: coin);
+      if (mounted) ref.invalidate(savedSwapsProvider);
+    } catch (error) {
+      if (mounted) await showException(context, error.toString());
+    } finally {
+      if (mounted) setState(() => _clearing = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (ref.watch(lifecycleProvider).value ?? false) return PinLock();
@@ -74,12 +108,16 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
     final assets = ref.watch(swapAssetsProvider).value ?? <SwapAsset>[];
     return Scaffold(
       appBar: AppBar(title: const Text('Swaps'), actions: [
-        IconButton(tooltip: 'Refresh swap status', onPressed: _refreshing ? null : _refresh, icon: const Icon(Icons.refresh)),
+        IconButton(
+            tooltip: 'Clear closed swaps',
+            onPressed: _clearing || _refreshing || !(swaps.value?.any((swap) => swap.completedAt != null) ?? false) ? null : _clearClosed,
+            icon: const Icon(Icons.delete_forever)),
+        IconButton(tooltip: 'Refresh swap status', onPressed: _refreshing || _clearing ? null : _refresh, icon: const Icon(Icons.refresh)),
         IconButton(tooltip: 'New swap', onPressed: () => context.push('/swap'), icon: const Icon(Icons.add)),
       ]),
       body: Column(children: [
-        if (_refreshing) const LinearProgressIndicator(),
-        SwitchListTile(title: const Text('Show completed swaps'), value: _showCompleted, onChanged: (value) => setState(() => _showCompleted = value)),
+        if (_refreshing || _clearing) const LinearProgressIndicator(),
+        SwitchListTile(title: const Text('Show closed swaps'), value: _showCompleted, onChanged: (value) => setState(() => _showCompleted = value)),
         if (_refreshError != null) ErrorCard(error: _refreshError!, onRetry: _refreshing ? null : _refresh),
         Expanded(
             child: swaps.when(
@@ -100,7 +138,13 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
                       : visible.map((swap) {
                           final externalAsset = swap.originAsset == 'nep141:zec.omft.near' ? swap.destinationAsset : swap.originAsset;
                           final matches = assets.where((asset) => asset.assetId == externalAsset);
-                          return _SwapTile(swap: swap, asset: matches.isEmpty ? null : matches.first);
+                          return _SwapTile(
+                            key: ValueKey(swap.idSwap),
+                            swap: swap,
+                            asset: matches.isEmpty ? null : matches.first,
+                            showDelete: _showCompleted && swap.completedAt != null,
+                            onDelete: _clearing || _refreshing ? null : () => _deleteClosed(swap),
+                          );
                         }).toList(),
                 ));
           },
@@ -113,7 +157,9 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
 class _SwapTile extends StatelessWidget {
   final SavedSwap swap;
   final SwapAsset? asset;
-  const _SwapTile({required this.swap, this.asset});
+  final bool showDelete;
+  final VoidCallback? onDelete;
+  const _SwapTile({required this.swap, this.asset, this.showDelete = false, this.onDelete, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +199,10 @@ class _SwapTile extends StatelessWidget {
         'EXPIRED' => Icons.timer_off_outlined,
         _ => Icons.currency_exchange,
       }),
-      title: Text('${originSymbol ?? 'Sending asset'} → ${destinationSymbol ?? 'Receiving asset'}'),
+      title: Row(children: [
+        Expanded(child: Text('${originSymbol ?? 'Sending asset'} → ${destinationSymbol ?? 'Receiving asset'}')),
+        if (showDelete) IconButton(tooltip: 'Delete closed swap', onPressed: onDelete, icon: const Icon(Icons.delete_forever)),
+      ]),
       subtitle: Text(
           '$status\nQuoted: ${amountIn == null ? '${swap.amountIn} base units' : '$amountIn ${originSymbol ?? ''}'} → ${amountOut == null ? '${swap.amountOut} base units' : '$amountOut ${destinationSymbol ?? ''}'}'),
       childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),

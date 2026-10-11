@@ -61,6 +61,36 @@ async fn expire_swaps(connection: &mut sqlx::SqliteConnection, account: u32) -> 
     Ok(())
 }
 
+pub(crate) async fn clear_closed_swaps(
+    connection: &mut sqlx::SqliteConnection,
+    account: u32,
+) -> Result<()> {
+    sqlx::query("DELETE FROM swaps WHERE account = ? AND completed_at IS NOT NULL")
+        .bind(account)
+        .execute(connection)
+        .await?;
+    Ok(())
+}
+
+pub(crate) async fn delete_closed_swap(
+    connection: &mut sqlx::SqliteConnection,
+    account: u32,
+    id_swap: i64,
+) -> Result<()> {
+    let result = sqlx::query(
+        "DELETE FROM swaps WHERE account = ? AND id_swap = ? AND completed_at IS NOT NULL",
+    )
+    .bind(account)
+    .bind(id_swap)
+    .execute(connection)
+    .await?;
+    ensure!(
+        result.rows_affected() == 1,
+        "Closed swap not found for the current account"
+    );
+    Ok(())
+}
+
 pub(crate) async fn read_swaps(
     connection: &mut sqlx::SqliteConnection,
     account: u32,
@@ -781,6 +811,25 @@ mod tests {
         );
         assert_eq!(read_swaps(&mut db, 2, false).await?[0].id_swap, 4);
         assert!(read_swaps(&mut db, 99, false).await?.is_empty());
+        sqlx::query("UPDATE swaps SET completed_at = 99 WHERE account = 2")
+            .execute(&mut db)
+            .await?;
+        assert!(delete_closed_swap(&mut db, 1, 1).await.is_err()); // active
+        assert!(delete_closed_swap(&mut db, 1, 4).await.is_err()); // other account
+        delete_closed_swap(&mut db, 1, 2).await?;
+        assert!(delete_closed_swap(&mut db, 1, 2).await.is_err()); // already deleted
+        clear_closed_swaps(&mut db, 1).await?;
+        assert_eq!(
+            read_swaps(&mut db, 1, false)
+                .await?
+                .iter()
+                .map(|s| s.id_swap)
+                .collect::<Vec<_>>(),
+            vec![3, 1]
+        );
+        assert_eq!(read_swaps(&mut db, 2, false).await?[0].id_swap, 4);
+        clear_closed_swaps(&mut db, 1).await?; // clearing an empty history is safe
+
         Ok(())
     }
 

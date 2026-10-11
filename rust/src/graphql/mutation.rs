@@ -77,6 +77,45 @@ pub struct UnsignedTx {
     context = Context,
 )]
 impl Mutation {
+    /// Permanently delete all closed swaps for the specified account.
+    async fn near_intents_clear_closed_swaps(
+        id_account: i32,
+        context: &Context,
+    ) -> FieldResult<bool> {
+        if id_account <= 0 {
+            return Err("Invalid account ID".into());
+        }
+        check_auth(context, id_account, true)?;
+        let coin = crate::api::coin::Coin {
+            account: id_account as u32,
+            ..context.coin.clone()
+        };
+        crate::api::near_intents::near_intents_clear_closed_swaps(&coin).await?;
+        Ok(true)
+    }
+
+    /// Permanently delete one closed swap owned by the specified account.
+    async fn near_intents_delete_closed_swap(
+        id_account: i32,
+        id_swap: juniper::ID,
+        context: &Context,
+    ) -> FieldResult<bool> {
+        if id_account <= 0 {
+            return Err("Invalid account ID".into());
+        }
+        check_auth(context, id_account, true)?;
+        let id_swap: i64 = id_swap.parse()?;
+        if id_swap <= 0 {
+            return Err("Invalid swap ID".into());
+        }
+        let coin = crate::api::coin::Coin {
+            account: id_account as u32,
+            ..context.coin.clone()
+        };
+        crate::api::near_intents::near_intents_delete_closed_swap(id_swap, &coin).await?;
+        Ok(true)
+    }
+
     /// Refresh the provider status and persist it for a saved swap.
     async fn near_intents_refresh_swap_status(
         id_account: i32,

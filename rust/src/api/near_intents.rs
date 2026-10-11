@@ -20,6 +20,22 @@ pub async fn near_intents_list_swaps(pending_only: bool, c: &Coin) -> Result<Vec
     crate::near_intents::read_swaps(&mut connection, c.account, pending_only).await
 }
 
+/// Permanently remove closed swaps belonging to the current account.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn near_intents_clear_closed_swaps(c: &Coin) -> Result<()> {
+    ensure!(c.account != 0, "Select an account");
+    let mut connection = c.get_connection().await?;
+    crate::near_intents::clear_closed_swaps(&mut connection, c.account).await
+}
+
+/// Permanently remove one closed swap belonging to the current account.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn near_intents_delete_closed_swap(id_swap: i64, c: &Coin) -> Result<()> {
+    ensure!(c.account != 0, "Select an account");
+    let mut connection = c.get_connection().await?;
+    crate::near_intents::delete_closed_swap(&mut connection, c.account, id_swap).await
+}
+
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn near_intents_assets(c: &Coin) -> Result<Vec<SwapAsset>> {
     crate::near_intents::assets(&transport(c)).await
