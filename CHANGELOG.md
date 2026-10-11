@@ -1,5 +1,23 @@
 # Changelog
 
+## [6.33.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.33.0-rc.2...zkool-v6.33.0-rc.3) (2026-10-11)
+
+
+### Features
+
+* **swaps:** authenticate 1Click requests with build-time API key ([4032ca9](https://github.com/hhanh00/zkool2/commit/4032ca959ebf27fcbb98db8243fb1722dcbdecde))
+* **swaps:** delete closed swaps through UI and GraphQL ([fdad7c8](https://github.com/hhanh00/zkool2/commit/fdad7c80858783cd8a8f2d894093e297aeeb3e1b))
+* **swaps:** fund through transaction flow and poll completion ([286f4bc](https://github.com/hhanh00/zkool2/commit/286f4bc9380502ad4c091a8178c0e80f925ffb8d))
+
+
+### Bug Fixes
+
+* **ledger:** replace deprecated transparent viewing key accessor ([630f0bf](https://github.com/hhanh00/zkool2/commit/630f0bf1b5509d1d109b986e061df71e3824bcd7))
+* **swaps:** expire unfunded swaps after one-day grace period ([02e7c67](https://github.com/hhanh00/zkool2/commit/02e7c67c40bd8a767fff5b8bb47f6454e64adca9))
+* **swaps:** include provider reasons in API errors ([0f87571](https://github.com/hhanh00/zkool2/commit/0f87571d558c1fe429dcd7276499eece5bea001b))
+* **swap:** warn when the Near Intents API key is unset ([e391a09](https://github.com/hhanh00/zkool2/commit/e391a091fab6d96212d7614cc4c18f8d7ee50a65))
+* **sync:** handle user cancellation as normal termination ([bed178f](https://github.com/hhanh00/zkool2/commit/bed178fcf7ef2dabf882dcba514ceaed2ce5d3ce))
+
 ## [6.33.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.33.0-rc.1...zkool-v6.33.0-rc.2) (2026-10-10)
 
 
