@@ -28,7 +28,7 @@ pub async fn near_intents_clear_closed_swaps(c: &Coin) -> Result<()> {
     crate::near_intents::clear_closed_swaps(&mut connection, c.account).await
 }
 
-/// Permanently remove one closed swap belonging to the current account.
+/// Permanently remove one swap belonging to the current account.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn near_intents_delete_closed_swap(id_swap: i64, c: &Coin) -> Result<()> {
     ensure!(c.account != 0, "Select an account");

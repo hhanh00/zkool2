@@ -94,7 +94,7 @@ impl Mutation {
         Ok(true)
     }
 
-    /// Permanently delete one closed swap owned by the specified account.
+    /// Permanently delete one swap owned by the specified account.
     async fn near_intents_delete_closed_swap(
         id_account: i32,
         id_swap: juniper::ID,

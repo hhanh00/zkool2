@@ -85,10 +85,10 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
     }
   }
 
-  Future<void> _deleteClosed(SavedSwap swap) async {
+  Future<void> _deleteSwap(SavedSwap swap) async {
     if (_clearing || _refreshing) return;
     final coin = coinContext.coin.copyWith(account: ref.read(selectedAccountIdProvider));
-    final confirmed = await confirmDialog(context, title: 'Delete closed swap?', message: 'Permanently delete this swap from the database?');
+    final confirmed = await confirmDialog(context, title: 'Delete swap?', message: 'Permanently delete this swap from the database? This stops local tracking but does not cancel the swap or recover funds.');
     if (!confirmed || !mounted) return;
     setState(() => _clearing = true);
     try {
@@ -142,8 +142,7 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
                             key: ValueKey(swap.idSwap),
                             swap: swap,
                             asset: matches.isEmpty ? null : matches.first,
-                            showDelete: _showCompleted && swap.completedAt != null,
-                            onDelete: _clearing || _refreshing ? null : () => _deleteClosed(swap),
+                            onDelete: _clearing || _refreshing ? null : () => _deleteSwap(swap),
                           );
                         }).toList(),
                 ));
@@ -157,9 +156,8 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
 class _SwapTile extends StatelessWidget {
   final SavedSwap swap;
   final SwapAsset? asset;
-  final bool showDelete;
   final VoidCallback? onDelete;
-  const _SwapTile({required this.swap, this.asset, this.showDelete = false, this.onDelete, super.key});
+  const _SwapTile({required this.swap, this.asset, this.onDelete, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -201,7 +199,6 @@ class _SwapTile extends StatelessWidget {
       }),
       title: Row(children: [
         Expanded(child: Text('${originSymbol ?? 'Sending asset'} → ${destinationSymbol ?? 'Receiving asset'}')),
-        if (showDelete) IconButton(tooltip: 'Delete closed swap', onPressed: onDelete, icon: const Icon(Icons.delete_forever)),
       ]),
       subtitle: Text(
           '$status\nQuoted: ${amountIn == null ? '${swap.amountIn} base units' : '$amountIn ${originSymbol ?? ''}'} → ${amountOut == null ? '${swap.amountOut} base units' : '$amountOut ${destinationSymbol ?? ''}'}'),
@@ -224,6 +221,10 @@ class _SwapTile extends StatelessWidget {
         if (swap.depositTxHash != null) _detail('Deposit transaction', swap.depositTxHash!),
         _detail('Refund address', swap.refundTo),
         _detail('Deadline', exactTimeToString(swapDeadline(swap).millisecondsSinceEpoch ~/ 1000)),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton.icon(onPressed: onDelete, icon: const Icon(Icons.delete_forever), label: const Text('Delete swap')),
+        ),
       ],
     );
   }

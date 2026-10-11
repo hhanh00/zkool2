@@ -78,7 +78,7 @@ pub(crate) async fn delete_closed_swap(
     id_swap: i64,
 ) -> Result<()> {
     let result = sqlx::query(
-        "DELETE FROM swaps WHERE account = ? AND id_swap = ? AND completed_at IS NOT NULL",
+        "DELETE FROM swaps WHERE account = ? AND id_swap = ?",
     )
     .bind(account)
     .bind(id_swap)
@@ -86,7 +86,7 @@ pub(crate) async fn delete_closed_swap(
     .await?;
     ensure!(
         result.rows_affected() == 1,
-        "Closed swap not found for the current account"
+        "Swap not found for the current account"
     );
     Ok(())
 }
@@ -828,7 +828,7 @@ mod tests {
         sqlx::query("UPDATE swaps SET completed_at = 99 WHERE account = 2")
             .execute(&mut db)
             .await?;
-        assert!(delete_closed_swap(&mut db, 1, 1).await.is_err()); // active
+        delete_closed_swap(&mut db, 1, 1).await?; // active swaps can be deleted
         assert!(delete_closed_swap(&mut db, 1, 4).await.is_err()); // other account
         delete_closed_swap(&mut db, 1, 2).await?;
         assert!(delete_closed_swap(&mut db, 1, 2).await.is_err()); // already deleted
@@ -839,7 +839,7 @@ mod tests {
                 .iter()
                 .map(|s| s.id_swap)
                 .collect::<Vec<_>>(),
-            vec![3, 1]
+            vec![3]
         );
         assert_eq!(read_swaps(&mut db, 2, false).await?[0].id_swap, 4);
         clear_closed_swaps(&mut db, 1).await?; // clearing an empty history is safe
