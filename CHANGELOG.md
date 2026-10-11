@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.34.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.33.0...zkool-v6.34.0) (2026-10-11)
+
+
+### Features
+
+* **swaps:** allow deleting any expanded swap ([9f1e0ae](https://github.com/hhanh00/zkool2/commit/9f1e0ae93e160e5d3470f3e778183e17da95a794))
+* **swaps:** support Base and Polygon networks ([ceff059](https://github.com/hhanh00/zkool2/commit/ceff05917df5e78d651482619e0198a1a7e81154))
+
 ## [6.33.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.32.0...zkool-v6.33.0) (2026-10-11)
 
 
