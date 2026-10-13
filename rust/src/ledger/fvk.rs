@@ -13,7 +13,7 @@ use crate::{
     api::coin::Network,
     db::{get_account_aindex, get_account_dindex},
     ledger::{
-        transport::{connect_ledger, APDUCommand, Device},
+        transport::{APDUCommand, Device},
         LedgerError, LedgerResult,
     },
     tiu, IntoAnyhow,
@@ -150,12 +150,12 @@ pub async fn get_hw_transparent_address<D: Device>(
     Ok((pk.to_vec(), taddress))
 }
 
-pub async fn show_sapling_address(
+pub async fn show_sapling_address<D: Device>(
+    ledger: &D,
     network: &Network,
     connection: &mut SqliteConnection,
     account: u32,
 ) -> LedgerResult<String> {
-    let ledger = connect_ledger().await?;
     let aindex = get_account_aindex(connection, account).await? | 0x80000000u32;
     // We SHOULD be using the diversifier index and ask the device
     // to give us the matching diversifer, but there is currently
@@ -204,12 +204,12 @@ pub async fn show_sapling_address(
     Ok(address.encode(network))
 }
 
-pub async fn show_transparent_address(
+pub async fn show_transparent_address<D: Device>(
+    ledger: &D,
     network: &Network,
     connection: &mut SqliteConnection,
     account: u32,
 ) -> LedgerResult<String> {
-    let ledger = connect_ledger().await?;
     let aindex = get_account_aindex(connection, account).await?;
     let dindex = get_account_dindex(connection, account).await?;
     let mut data = vec![];

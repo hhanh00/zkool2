@@ -67,8 +67,9 @@ impl LedgerApp for ZondaxApp {
         connection: &mut SqliteConnection,
         account: u32,
     ) -> Result<String> {
+        let ledger = crate::ledger::transport::connect_ledger().await?;
         let address =
-            crate::ledger::fvk::show_sapling_address(network, connection, account).await?;
+            crate::ledger::fvk::show_sapling_address(&ledger, network, connection, account).await?;
         Ok(address)
     }
 
@@ -78,8 +79,9 @@ impl LedgerApp for ZondaxApp {
         connection: &mut SqliteConnection,
         account: u32,
     ) -> Result<String> {
+        let ledger = crate::ledger::transport::connect_ledger().await?;
         let address =
-            crate::ledger::fvk::show_transparent_address(network, connection, account).await?;
+            crate::ledger::fvk::show_transparent_address(&ledger, network, connection, account).await?;
         Ok(address)
     }
 }
