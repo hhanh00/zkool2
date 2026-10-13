@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
-import 'package:zkool/services/swap_quote.dart' show swapDeadline, swapDecimalAmount;
+import 'package:zkool/services/swap_quote.dart' show refreshSingleSwap, swapDeadline, swapDecimalAmount, zecAsset;
 import 'package:zkool/src/rust/api/near_intents.dart';
 import 'package:zkool/src/rust/near_intents.dart';
 import 'package:zkool/store.dart';
@@ -47,10 +47,7 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
       for (final swap in swaps) {
         if (!mounted || ref.read(selectedAccountIdProvider) != coin.account) break;
         try {
-          if (swap.depositTxHash != null && swap.depositSubmittedAt == null) {
-            await nearIntentsRecordDeposit(idSwap: swap.idSwap, txHash: swap.depositTxHash!, c: coin);
-          }
-          await nearIntentsRefreshSwapStatus(idSwap: swap.idSwap, c: coin);
+          await refreshSingleSwap(swap, coin);
         } catch (e) {
           error ??= e;
         }
@@ -136,7 +133,7 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
                               child: Text(_showCompleted ? 'No swaps yet.' : 'No swaps in progress.', textAlign: TextAlign.center))
                         ]
                       : visible.map((swap) {
-                          final externalAsset = swap.originAsset == 'nep141:zec.omft.near' ? swap.destinationAsset : swap.originAsset;
+                          final externalAsset = swap.originAsset == zecAsset ? swap.destinationAsset : swap.originAsset;
                           final matches = assets.where((asset) => asset.assetId == externalAsset);
                           return _SwapTile(
                             key: ValueKey(swap.idSwap),
@@ -161,7 +158,7 @@ class _SwapTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final outgoing = swap.originAsset == 'nep141:zec.omft.near';
+    final outgoing = swap.originAsset == zecAsset;
     final originSymbol = outgoing ? 'ZEC' : asset?.symbol;
     final destinationSymbol = outgoing ? asset?.symbol : 'ZEC';
     final originDecimals = outgoing ? 8 : asset?.decimals;

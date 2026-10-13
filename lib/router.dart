@@ -140,7 +140,6 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
               originSymbol: args.originSymbol,
               originDecimals: args.originDecimals,
               depositNetwork: args.depositNetwork,
-              notificationError: args.notificationError,
             );
           },
         ),

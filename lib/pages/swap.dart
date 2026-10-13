@@ -31,7 +31,6 @@ enum SwapNetwork {
   const SwapNetwork(this.label, this.blockchainIds);
 }
 
-// TODO: Load supported assets from 1Click and add search and network filtering.
 enum SwapAsset {
   usdt('USDT', 6, [SwapNetwork.solana, SwapNetwork.ethereum, SwapNetwork.polygon]),
   usdc('USDC', 6, [SwapNetwork.solana, SwapNetwork.ethereum, SwapNetwork.base, SwapNetwork.polygon]),
@@ -303,7 +302,6 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
       decimals: quote.destinationDecimals!,
       originSymbol: widget.draft.originSymbol,
       originDecimals: quote.originDecimals!,
-      notificationError: null,
       depositNetwork: widget.draft.direction == SwapDirection.receiveZec ? widget.draft.network.label : null,
     );
     if (widget.draft.direction == SwapDirection.sendZec) {

@@ -7,6 +7,19 @@ import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/near_intents.dart';
 import 'package:zkool/src/rust/near_intents.dart' as ni;
 
+const zecAsset = 'nep141:zec.omft.near';
+
+/// Retry pending deposit notification if needed, then poll provider status.
+/// Notification failure is non-fatal; status failure throws.
+Future<void> refreshSingleSwap(ni.SavedSwap swap, Coin coin) async {
+  if (swap.depositTxHash != null && swap.depositSubmittedAt == null) {
+    try {
+      await nearIntentsRecordDeposit(idSwap: swap.idSwap, txHash: swap.depositTxHash!, c: coin);
+    } catch (_) {}
+  }
+  await nearIntentsRefreshSwapStatus(idSwap: swap.idSwap, c: coin);
+}
+
 DateTime swapDeadline(ni.SavedSwap swap) {
   final response = jsonDecode(swap.quoteResponse) as Map<String, dynamic>;
   final request = response['quoteRequest'] as Map<String, dynamic>?;
@@ -52,8 +65,8 @@ ni.SwapRequest buildSwapRequest(SwapDraft draft, String assetId, int assetDecima
   return ni.SwapRequest(
     dry: true,
     swapType: draft.amountMode == SwapAmountMode.send ? ni.SwapType.exactInput : ni.SwapType.exactOutput,
-    originAsset: outgoing ? 'nep141:zec.omft.near' : assetId,
-    destinationAsset: outgoing ? assetId : 'nep141:zec.omft.near',
+    originAsset: outgoing ? zecAsset : assetId,
+    destinationAsset: outgoing ? assetId : zecAsset,
     amount: swapBaseUnits(draft.amount, draft.amountMode == SwapAmountMode.send ? originDecimals : destinationDecimals),
     slippageTolerance: draft.slippageTolerance,
     recipient: outgoing ? draft.recipient : walletAddress,
