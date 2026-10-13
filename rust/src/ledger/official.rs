@@ -2,16 +2,19 @@
 
 use anyhow::Result;
 use byteorder::{WriteBytesExt, BE};
+use sqlx::SqliteConnection;
 use tonic::async_trait;
 use zcash_keys::keys::UnifiedFullViewingKey;
 use zcash_protocol::consensus::NetworkConstants as _;
 
 use crate::{
     api::coin::Network,
+    api::pay::{PcztPackage, SigningEvent},
     ledger::{
         transport::{connect_ledger, APDUCommand, Device},
         HwKind, LedgerApp, LedgerError, LedgerResult,
     },
+    Sink,
 };
 
 pub struct OfficialApp {}
@@ -111,5 +114,24 @@ impl LedgerApp for OfficialApp {
     async fn get_ufvk(&self, network: &Network, aindex: u32) -> Result<String> {
         let ledger = connect_ledger().await?;
         Ok(get_ufvk(&ledger, network, aindex).await?)
+    }
+}
+
+impl OfficialApp {
+    pub async fn sign_pczt<S>(
+        &self,
+        network: Network,
+        sink: &S,
+        connection: &mut SqliteConnection,
+        account: u32,
+        package: PcztPackage,
+    ) -> Result<PcztPackage>
+    where
+        S: Sink<SigningEvent> + Sync,
+    {
+        crate::ledger::official_sign::sign_official_transaction(
+            network, sink, connection, account, package,
+        )
+        .await
     }
 }

@@ -27,7 +27,7 @@ use crate::{
     api::{coin::Coin, pay::SigningEvent},
     db::{get_account_dindex, get_account_hw},
     io::{decrypt, encrypt},
-    ledger::{HwKind, LedgerApp},
+    ledger::{HwKind, LedgerHandle},
     Sink,
 };
 
@@ -895,7 +895,6 @@ pub async fn sign_ledger_transaction(
     Ok(())
 }
 
-#[cfg(feature = "ledger")]
 pub(crate) async fn sign_ledger_pczt<S>(
     sink: &S,
     package: PcztPackage,
@@ -906,50 +905,8 @@ where
     S: Sink<SigningEvent> + Sync,
 {
     let mut connection = c.get_connection().await?;
-    let hw = get_account_hw(&mut connection, account).await?;
-    match HwKind::from_hw(hw) {
-        HwKind::Zondax => {
-            crate::ledger::builder::sign_ledger_transaction(
-                c.network(),
-                sink,
-                connection,
-                account,
-                package,
-            )
-            .await
-        }
-        HwKind::Official => {
-            crate::ledger::official_sign::sign_official_transaction(
-                c.network(),
-                sink,
-                &mut connection,
-                account,
-                package,
-            )
-            .await
-        }
-        HwKind::Software => anyhow::bail!("account is not a hardware wallet"),
-    }
-}
-
-#[cfg(not(feature = "ledger"))]
-pub(crate) async fn sign_ledger_pczt<S>(
-    sink: &S,
-    package: PcztPackage,
-    account: u32,
-    c: &Coin,
-) -> Result<PcztPackage>
-where
-    S: Sink<SigningEvent> + Sync,
-{
-    let _ = (sink, package);
-    let mut connection = c.get_connection().await?;
-    let hw = get_account_hw(&mut connection, account).await?;
-    if HwKind::from_hw(hw).is_ledger() {
-        anyhow::bail!("this build has no Ledger support")
-    } else {
-        anyhow::bail!("account is not a hardware wallet")
-    }
+    let app = get_ledger(&mut connection, account).await?;
+    app.sign_pczt(c.network(), sink, &mut connection, account, package).await
 }
 
 #[derive(Default, Debug)]
@@ -1016,31 +973,9 @@ pub struct TxMemo {
 pub(crate) async fn get_ledger(
     connection: &mut SqliteConnection,
     account: u32,
-) -> Result<Box<dyn LedgerApp + Send + Sync>> {
+) -> Result<LedgerHandle> {
     let hw = get_account_hw(connection, account).await?;
-    Ok(match HwKind::from_hw(hw) {
-        HwKind::Zondax => {
-            #[cfg(feature = "ledger")]
-            {
-                Box::new(crate::ledger::nano::ZondaxApp {})
-            }
-            #[cfg(not(feature = "ledger"))]
-            {
-                Box::new(crate::ledger::mock::StubLedger::no_support())
-            }
-        }
-        HwKind::Official => {
-            #[cfg(feature = "ledger")]
-            {
-                Box::new(crate::ledger::official::OfficialApp {})
-            }
-            #[cfg(not(feature = "ledger"))]
-            {
-                Box::new(crate::ledger::mock::StubLedger::official())
-            }
-        }
-        HwKind::Software => Box::new(crate::ledger::mock::StubLedger::software()),
-    })
+    Ok(LedgerHandle::from_hw(hw))
 }
 
 #[cfg(feature = "flutter")]
