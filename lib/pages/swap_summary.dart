@@ -19,7 +19,6 @@ typedef SwapSummaryArgs = ({
   String originSymbol,
   int originDecimals,
   String? depositNetwork,
-  String? notificationError,
 });
 
 class SwapSummaryPage extends ConsumerStatefulWidget {
@@ -29,7 +28,6 @@ class SwapSummaryPage extends ConsumerStatefulWidget {
   final String originSymbol;
   final int originDecimals;
   final String? depositNetwork;
-  final String? notificationError;
 
   const SwapSummaryPage(
       {required this.swap,
@@ -38,7 +36,6 @@ class SwapSummaryPage extends ConsumerStatefulWidget {
       this.originSymbol = 'ZEC',
       this.originDecimals = 8,
       this.depositNetwork,
-      this.notificationError,
       super.key});
 
   @override
@@ -47,7 +44,6 @@ class SwapSummaryPage extends ConsumerStatefulWidget {
 
 class _SwapSummaryPageState extends ConsumerState<SwapSummaryPage> {
   late SavedSwap _swap = widget.swap;
-  late String? _notificationError = widget.notificationError;
   final _coin = coinContext.coin;
   Timer? _timer;
   bool _refreshing = false;
@@ -73,16 +69,7 @@ class _SwapSummaryPageState extends ConsumerState<SwapSummaryPage> {
     setState(() => _refreshing = true);
     Object? error;
     try {
-      if (_swap.depositTxHash != null && _swap.depositSubmittedAt == null) {
-        try {
-          await nearIntentsRecordDeposit(idSwap: _swap.idSwap, txHash: _swap.depositTxHash!, c: _coin);
-          _notificationError = null;
-        } catch (e) {
-          _notificationError = e.toString();
-        }
-      }
-      if (!mounted) return;
-      await nearIntentsRefreshSwapStatus(idSwap: _swap.idSwap, c: _coin);
+      await refreshSingleSwap(_swap, _coin);
       if (!mounted) return;
       final swaps = await nearIntentsListSwaps(pendingOnly: false, c: _coin);
       if (!mounted) return;
@@ -154,9 +141,15 @@ class _SwapSummaryPageState extends ConsumerState<SwapSummaryPage> {
             if (_error != null) ErrorCard(error: _error!, onRetry: _refreshing ? null : _refresh),
             if (swap.depositTxHash != null)
               ListTile(contentPadding: EdgeInsets.zero, title: const Text('Deposit transaction'), subtitle: SelectableText(swap.depositTxHash!)),
-            if (_notificationError != null && !_completed)
-              const ListTile(
-                  contentPadding: EdgeInsets.zero, title: Text('Deposit sent; 1Click notification pending.'), subtitle: Text('Retrying automatically…')),
+            if (swap.lastCheckedAt != null && !_completed)
+              ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Last checked'),
+                  subtitle: Text(() {
+                    final age = compactBetween(
+                        DateTime.fromMillisecondsSinceEpoch(swap.lastCheckedAt!.toInt() * 1000), DateTime.now());
+                    return age.isEmpty ? 'just now' : '$age ago';
+                  }())),
             ListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('You send'),

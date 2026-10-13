@@ -163,8 +163,13 @@ String compactBetween(DateTime from, DateTime to) {
   int days = to.day - from.day;
   int hours = to.hour - from.hour;
   int mins = to.minute - from.minute;
+  int secs = to.second - from.second;
 
   // Cascade borrows
+  if (secs < 0) {
+    secs += 60;
+    mins -= 1;
+  }
   if (mins < 0) {
     mins += 60;
     hours -= 1;
@@ -188,6 +193,7 @@ String compactBetween(DateTime from, DateTime to) {
   if (days > 0) parts.add('${days}d');
   if (hours > 0) parts.add('${hours}h');
   if (mins > 0) parts.add('${mins}m');
+  if (secs > 0 && parts.isEmpty) parts.add('${secs}s');
 
   return parts.take(2).join('');
 }
