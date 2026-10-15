@@ -728,13 +728,19 @@ void runLogListener() async {
 //     blockExplorer = await getProp(key: "block_explorer") ?? blockExplorer;
 //   }
 
+/// Accounts asked for while a sync was running, merged by id, with the
+/// highest height requested.
+class _SyncRequest {
+  final accounts = <int, Account>{};
+  int? height;
+}
+
 @Riverpod(keepAlive: true)
 class SynchronizerNotifier extends _$SynchronizerNotifier {
   bool syncInProgress = false;
   StreamSubscription<int>? _autoSyncSubscription;
-  bool _handlingAutoSyncHeight = false;
-  bool _forceNextAutoSync = false;
-  int? _pendingAutoSyncHeight;
+  /// A sync asked for while one was running; runs when the current one ends.
+  _SyncRequest? _pending;
   StreamSubscription<SyncEvent>? syncProgressSubscription;
   int retryCount = 0;
 
@@ -783,18 +789,45 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
   Future<void> cancelSynchronization() async {
     if (!syncInProgress || state.cancelling) return;
     state = state.copyWith(cancelling: true);
-    _pendingAutoSyncHeight = null;
-    _forceNextAutoSync = false;
+    _pending = null;
     // This signals Rust; the sync mutation owns cleanup once Rust exits.
     await cancelSync(c: coinContext.coin);
   }
 
+  /// Sync `accounts`. While a sync is running the request is queued and runs
+  /// when it ends, merged with any other request made meanwhile; a
+  /// cancellation drops the queue.
   Future<void> startSynchronize(
     List<Account> accounts, {
     int? currentHeight,
   }) async {
-    if (syncInProgress) return;
+    if (syncInProgress) {
+      if (!state.cancelling) _queueRequest(accounts, currentHeight);
+      return;
+    }
+    await _runSynchronize(accounts, currentHeight: currentHeight);
+    while (_pending != null) {
+      final next = _pending!;
+      _pending = null;
+      await _runSynchronize(next.accounts.values.toList(), currentHeight: next.height);
+    }
+  }
 
+  void _queueRequest(List<Account> accounts, int? currentHeight) {
+    final pending = _pending ?? _SyncRequest();
+    for (final account in accounts) {
+      pending.accounts[account.id] = account;
+    }
+    if (currentHeight != null) {
+      pending.height = max(pending.height ?? currentHeight, currentHeight);
+    }
+    _pending = pending;
+  }
+
+  Future<void> _runSynchronize(
+    List<Account> accounts, {
+    int? currentHeight,
+  }) async {
     final c = coinContext.coin;
     final settings = ref.read(appSettingsProvider).requireValue;
     if (settings.offline) return;
@@ -937,30 +970,12 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     }
   }
 
+  /// Autosync requests go through the same queue as manual ones: a request
+  /// made while a sync runs is merged and runs next.
   void _queueAutoSync(int height, {required bool force}) {
-    _pendingAutoSyncHeight = max(_pendingAutoSyncHeight ?? height, height);
-    _forceNextAutoSync |= force;
-    if (_handlingAutoSyncHeight) return;
-    unawaited(_drainAutoSyncQueue());
-  }
-
-  Future<void> _drainAutoSyncQueue() async {
-    _handlingAutoSyncHeight = true;
-    try {
-      while (_pendingAutoSyncHeight != null) {
-        final height = _pendingAutoSyncHeight!;
-        final force = _forceNextAutoSync;
-        _pendingAutoSyncHeight = null;
-        _forceNextAutoSync = false;
-        try {
-          await syncIfNeeded(height, now: force);
-        } on AnyhowException catch (error, stackTrace) {
-          logger.e("AutoSync failed", error: error, stackTrace: stackTrace);
-        }
-      }
-    } finally {
-      _handlingAutoSyncHeight = false;
-    }
+    unawaited(syncIfNeeded(height, now: force).catchError((Object error, StackTrace stackTrace) {
+      logger.e("AutoSync failed", error: error, stackTrace: stackTrace);
+    }));
   }
 
   Future<void> syncIfNeeded(int currentHeight, {required bool now}) async {
