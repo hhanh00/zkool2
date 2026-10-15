@@ -326,9 +326,13 @@ async def test_migration_orchard_to_ironwood(gql_client_factory, rpc_url, zkool_
             ordinary_id = await create_account(client, "Ordinary", key="")
             dead_zone_id = await create_account(client, "DeadZone", key="")
 
+            # 0.0125 ZEC = 1_250_000 zats decomposes to 1_020_000 + 120_000 with
+            # 110_000 left over: a split, two denominations, and sub-MIN_SD
+            # dust, in three anchor boundaries. Every SD note costs a full
+            # ANCHOR_BUCKET_SIZE of mining and syncing, so keep the count low.
             # 0.0055 ZEC = 550_000 zats decomposes to 4 x 120_000 with 70_000
             # left over: the exact shape from the reported stall.
-            for account_id, amount in ((ordinary_id, "0.05"), (dead_zone_id, "0.0055")):
+            for account_id, amount in ((ordinary_id, "0.0125"), (dead_zone_id, "0.0055")):
                 address = await get_address(client, account_id, pool="orchard")
                 await fund_orchard(client, rpc_url, miner_id, address, amount)
                 await sync_account(client, account_id)
