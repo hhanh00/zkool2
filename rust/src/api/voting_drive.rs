@@ -15,7 +15,7 @@ use bip39::Mnemonic;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 use sqlx::SqliteConnection;
-use zcash_voting::delegate::ResolveDelegationLwdParams;
+use zcash_voting::delegate::{DelegationLwdInputs, ResolveDelegationLwdParams};
 use zcash_voting::delegation_pipeline::DelegationAccountIdentity;
 use zcash_voting::prelude::BundlePolicy;
 
@@ -126,6 +126,28 @@ pub struct VotingDriveStatus {
     pub failures: Vec<String>,
 }
 
+/// Authenticated config and round material resolved from the vote servers.
+pub(crate) struct RoundConfig {
+    pub(crate) sidecar: VotingSidecar,
+    pub(crate) network: zcash_voting::Network,
+    pub(crate) servers: Vec<String>,
+    pub(crate) roster: Vec<(u32, u32)>,
+    /// Vote end as the rounds overview reported it; the chain status fetch
+    /// refines it with the ceremony boundary.
+    pub(crate) vote_end: Option<u64>,
+    pub(crate) params: zcash_voting::VotingRoundParams,
+    pub(crate) pir_endpoints: Vec<String>,
+    pub(crate) pir_layout: zcash_voting::config::PirLayout,
+}
+
+/// Wallet-derived keys and notes needed for delegation and vote casting.
+pub(crate) struct WalletInputs {
+    pub(crate) hotkey: zcash_voting::prelude::VotingHotkey,
+    pub(crate) seed: Vec<u8>,
+    pub(crate) identity: DelegationAccountIdentity,
+    pub(crate) note_source: note_source::ZkoolNoteSource,
+}
+
 /// Everything `voting_drive_start` and `voting_prepare_round` need, gathered
 /// once: authenticated config, round material, and wallet keys and notes.
 struct GatheredRound {
@@ -140,12 +162,10 @@ struct GatheredRound {
     inputs: drive::DelegationHostInputs,
 }
 
-async fn gather_round_inputs(
-    round_id: &str,
-    lightwalletd_url: &str,
-    round_name: &str,
-    c: &Coin,
-) -> Result<GatheredRound> {
+/// Fetches the authenticated voting config and round material from the vote
+/// servers. Opens the voting sidecar. No wallet DB access beyond reading the
+/// `voting_config_url` prop and the seed fingerprint.
+async fn resolve_round_config(round_id: &str, c: &Coin) -> Result<RoundConfig> {
     let network = voting_network(c)?;
     let wallet = wallet_id(c).await?;
     let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet).await?;
@@ -155,12 +175,13 @@ async fn gather_round_inputs(
         Duration::from_secs(15),
     )?;
 
-    // Authenticated config and round material.
     let mut connection = c.get_connection().await?;
     let source = crate::db::get_prop(&mut connection, "voting_config_url")
         .await?
         .filter(|source| !source.is_empty())
         .ok_or_else(|| anyhow!("voting configuration is missing"))?;
+    drop(connection);
+
     let config = voting_net::voting_config_resolve(&source, &http_client).await?;
     let params = voting_net::fetch_round_params(round_id, &config, &http_client).await?;
     let servers: Vec<String> = config
@@ -185,16 +206,35 @@ async fn gather_round_inputs(
         })
         .collect();
 
-    // Wallet material: hotkey, seed-derived identity, notes and witnesses.
-    let hotkey = hotkey::load_or_create(&mut connection, network).await?;
+    Ok(RoundConfig {
+        sidecar,
+        network,
+        servers,
+        roster,
+        vote_end,
+        params,
+        pir_endpoints: config
+            .pir_endpoints
+            .iter()
+            .map(|endpoint| endpoint.url.clone())
+            .collect(),
+        pir_layout: config.pir_layout,
+    })
+}
+
+/// Loads wallet keys and notes needed for delegation.
+///
+/// The identity's viewing key must be the stored account key the note source
+/// uses, not a fresh seed derivation — see `delegation_identity`.
+/// The signer's ZIP-32 index, never the row id — see `delegation_identity`.
+async fn gather_wallet_inputs(c: &Coin, config: &RoundConfig) -> Result<WalletInputs> {
+    let mut connection = c.get_connection().await?;
+    let hotkey = hotkey::load_or_create(&mut connection, config.network).await?;
     let seed = account_seed(&mut connection, c.account).await?;
-    // The identity's viewing key must be the stored account key the note
-    // source uses, not a fresh seed derivation — see delegation_identity.
     let orchard_keys = crate::db::select_account_orchard(&mut connection, c.account).await?;
     let account_fvk = orchard_keys
         .xvk
         .ok_or_else(|| anyhow!("account {} has no orchard viewing key", c.account))?;
-    // The signer's ZIP-32 index, never the row id — see delegation_identity.
     let aindex = crate::db::get_account_aindex(&mut connection, c.account).await?;
     let identity = delegation_identity(&account_fvk, &seed, aindex)?;
     let mut client = c.client().await?;
@@ -203,43 +243,59 @@ async fn gather_round_inputs(
         &mut connection,
         &mut client,
         c.account,
-        params.snapshot_height,
+        config.params.snapshot_height,
     )
     .await
     .map_err(|error| anyhow!("{error}"))?;
-    drop(client);
-    drop(connection);
+    Ok(WalletInputs { hotkey, seed, identity, note_source })
+}
 
-    // Lightwalletd-derived anchor material for the delegation precompute.
-    let lwd = zcash_voting::delegate::gather_delegation_lwd_inputs(ResolveDelegationLwdParams {
+/// Fetches lightwalletd-derived anchor and branch-id material for the
+/// delegation precompute.
+async fn gather_lwd_inputs<'a>(
+    config: &'a RoundConfig,
+    lightwalletd_url: &'a str,
+    round_name: &'a str,
+) -> Result<DelegationLwdInputs> {
+    zcash_voting::delegate::gather_delegation_lwd_inputs(ResolveDelegationLwdParams {
         lightwalletd_url,
-        network,
-        round_params: params,
+        network: config.network,
+        round_params: config.params.clone(),
         round_name,
     })
     .await
-    .map_err(|error| anyhow!("{error}"))?;
+    .map_err(|error| anyhow!("{error}"))
+}
 
+/// Thin coordinator: resolves config, then gathers wallet and LWD inputs in
+/// parallel (they are independent once the config is in hand).
+async fn gather_round_inputs(
+    round_id: &str,
+    lightwalletd_url: &str,
+    round_name: &str,
+    c: &Coin,
+) -> Result<GatheredRound> {
+    let config = resolve_round_config(round_id, c).await?;
+    let (wallet, lwd) = tokio::try_join!(
+        gather_wallet_inputs(c, &config),
+        gather_lwd_inputs(&config, lightwalletd_url, round_name),
+    )?;
     Ok(GatheredRound {
-        sidecar,
-        network,
-        servers,
-        roster,
-        vote_end,
-        hotkey,
+        sidecar: config.sidecar,
+        network: config.network,
+        servers: config.servers,
+        roster: config.roster,
+        vote_end: config.vote_end,
+        hotkey: wallet.hotkey,
         inputs: drive::DelegationHostInputs {
             lwd,
-            identity,
-            note_source,
+            identity: wallet.identity,
+            note_source: wallet.note_source,
             session_json: None,
             bundle_policy: BundlePolicy::default(),
-            pir_endpoints: config
-                .pir_endpoints
-                .iter()
-                .map(|endpoint| endpoint.url.clone())
-                .collect(),
+            pir_endpoints: config.pir_endpoints,
             pir_layout: config.pir_layout,
-            seed,
+            seed: wallet.seed,
         },
     })
 }
