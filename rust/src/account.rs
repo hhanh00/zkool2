@@ -27,7 +27,7 @@ use crate::{
         key::generate_seed,
     },
     db::{
-        get_account_dindex, get_account_hw, select_account_transparent, store_account_hw,
+        get_account_dindex, get_account_hw, store_account_hw,
         store_account_metadata,
     },
     pay::pool::{ALL_POOLS, POOL_IRONWOOD, POOL_ORCHARD, POOL_SAPLING, POOL_TRANSPARENT},
@@ -67,6 +67,7 @@ use zip32::{fingerprint::SeedFingerprint, AccountId};
 use crate::{
     api::account::FrostParams,
     sync::chain_log,
+    transparent_keys::{ensure_transparent_address, DerivedTransparentAddr, TransparentKeySource},
     warp::{AuthPath, Witness, MERKLE_DEPTH},
 };
 
@@ -128,7 +129,7 @@ pub async fn new_account(
             let ledger = get_ledger(&mut db_tx, account).await?;
             derive_official_device_keys(network, &ledger, na.aindex, pools).await?
         }
-        source => derive_account_keys(network, source, &passphrase, na.aindex, pools)?,
+        source => derive_account_keys(network, source, &passphrase, na.aindex, pools).await?,
     };
 
     store_account_keys(network, &mut db_tx, account, birth, keys).await?;
@@ -318,41 +319,40 @@ struct OrchardKeys {
     vk: FullViewingKey,
 }
 
-fn transparent_addr(
+async fn transparent_addr(
     network: &Network,
-    tvk: &AccountPubKey,
-    tsk: Option<&AccountPrivKey>,
+    source: &TransparentKeySource,
     dindex: u32,
 ) -> Result<TransparentAddr> {
-    let sk = tsk.map(|tsk| derive_transparent_sk(tsk, 0, dindex)).transpose()?;
-    let (pk, taddr) = derive_transparent_address(tvk, 0, dindex, false)?;
+    let derived = source.derive(network, 0, dindex).await?;
     Ok(TransparentAddr {
         dindex,
-        sk,
-        pk,
-        address: taddr.encode(network),
+        sk: derived.sk,
+        pk: derived.pk,
+        address: derived.address,
         uncompressed: false,
     })
 }
 
 /// The external transparent addresses a new account registers: index 0 and
 /// the account's default diversifier index (once, when they coincide).
-fn external_transparent_addrs(
+async fn external_transparent_addrs(
     network: &Network,
     tvk: &AccountPubKey,
     tsk: Option<&AccountPrivKey>,
     dindex: u32,
 ) -> Result<Vec<TransparentAddr>> {
-    let mut addresses = vec![transparent_addr(network, tvk, tsk, 0)?];
+    let source = TransparentKeySource::software(tvk.clone(), tsk.cloned());
+    let mut addresses = vec![transparent_addr(network, &source, 0).await?];
     if dindex != 0 {
-        addresses.push(transparent_addr(network, tvk, tsk, dindex)?);
+        addresses.push(transparent_addr(network, &source, dindex).await?);
     }
     Ok(addresses)
 }
 
 /// Derive the keys of a software account from its classified key source.
-/// Pure: no database, no device.
-fn derive_account_keys(
+/// No database, no device: the only `await` is the software key source.
+async fn derive_account_keys(
     network: &Network,
     source: KeySource,
     passphrase: &str,
@@ -381,7 +381,8 @@ fn derive_account_keys(
             if pools & POOL_TRANSPARENT != 0 {
                 let tsk = usk.transparent();
                 let tvk = tsk.to_account_pubkey();
-                let addresses = external_transparent_addrs(network, &tvk, Some(tsk), dindex)?;
+                let addresses =
+                    external_transparent_addrs(network, &tvk, Some(tsk), dindex).await?;
                 keys.transparent = Some(TransparentKeys {
                     sk: Some(tsk.clone()),
                     vk: Some(tvk),
@@ -408,7 +409,7 @@ fn derive_account_keys(
         }
         KeySource::TransparentSk(xsk) => {
             let xvk = xsk.to_account_pubkey();
-            let addresses = external_transparent_addrs(network, &xvk, Some(&xsk), 0)?;
+            let addresses = external_transparent_addrs(network, &xvk, Some(&xsk), 0).await?;
             keys.transparent = Some(TransparentKeys {
                 sk: Some(xsk),
                 vk: Some(xvk),
@@ -416,7 +417,7 @@ fn derive_account_keys(
             });
         }
         KeySource::TransparentVk(xvk) => {
-            let addresses = external_transparent_addrs(network, &xvk, None, 0)?;
+            let addresses = external_transparent_addrs(network, &xvk, None, 0).await?;
             keys.transparent = Some(TransparentKeys {
                 sk: None,
                 vk: Some(xvk),
@@ -466,7 +467,7 @@ fn derive_account_keys(
             let dindex: u32 = di.try_into()?;
             keys.dindex = dindex;
             if let Some(tvk) = uvk.p2pkh().filter(|_| pools & POOL_TRANSPARENT != 0) {
-                let addresses = external_transparent_addrs(network, tvk, None, dindex)?;
+                let addresses = external_transparent_addrs(network, tvk, None, dindex).await?;
                 keys.transparent = Some(TransparentKeys {
                     sk: None,
                     vk: Some(tvk.clone()),
@@ -549,17 +550,12 @@ async fn derive_zondax_device_keys(
     if pools & POOL_TRANSPARENT != 0 {
         // Zondax accounts only ever register the transparent address at index
         // 0, regardless of the sapling default diversifier index.
-        let (pk, taddr) = ledger
-            .get_transparent_pubkey(network, aindex, 0, 0)
-            .await?;
+        let source = TransparentKeySource::Ledger {
+            handle: LedgerHandle::from_hw(HwKind::Zondax as u8),
+            aindex,
+        };
         keys.transparent = Some(TransparentKeys {
-            addresses: vec![TransparentAddr {
-                dindex: 0,
-                sk: None,
-                pk,
-                address: taddr.encode(network),
-                uncompressed: false,
-            }],
+            addresses: vec![transparent_addr(network, &source, 0).await?],
             ..Default::default()
         });
     }
@@ -584,7 +580,7 @@ async fn derive_official_device_keys(
         let tvk = uvk
             .p2pkh()
             .ok_or_else(|| anyhow!("device viewing key has no transparent key"))?;
-        let addresses = external_transparent_addrs(network, tvk, None, keys.dindex)?;
+        let addresses = external_transparent_addrs(network, tvk, None, keys.dindex).await?;
         keys.transparent = Some(TransparentKeys {
             sk: None,
             vk: Some(tvk.clone()),
@@ -681,8 +677,10 @@ mod new_account_tests {
     const MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
     const NETWORK: Network = Network::Main;
 
-    fn seed_keys(pools: u8) -> AccountKeys {
-        derive_account_keys(&NETWORK, KeySource::Seed(MNEMONIC.to_string()), "", 0, pools).unwrap()
+    async fn seed_keys(pools: u8) -> AccountKeys {
+        derive_account_keys(&NETWORK, KeySource::Seed(MNEMONIC.to_string()), "", 0, pools)
+            .await
+            .unwrap()
     }
 
     fn usk() -> UnifiedSpendingKey {
@@ -788,9 +786,9 @@ mod new_account_tests {
         assert!(classify_key(&NETWORK, HwKind::Software, "garbage").is_err());
     }
 
-    #[test]
-    fn seed_derivation_covers_requested_pools() {
-        let keys = seed_keys(ALL_POOLS);
+    #[tokio::test]
+    async fn seed_derivation_covers_requested_pools() {
+        let keys = seed_keys(ALL_POOLS).await;
         let seed = keys.seed.as_ref().unwrap();
         assert_eq!(seed.mnemonic, MNEMONIC);
         assert_eq!(seed.aindex, 0);
@@ -809,21 +807,23 @@ mod new_account_tests {
         assert_eq!(s.address, derive_sapling_address(&NETWORK, &s.vk, keys.dindex));
         assert!(keys.orchard.as_ref().unwrap().sk.is_some());
 
-        let keys = seed_keys(POOL_SAPLING);
+        let keys = seed_keys(POOL_SAPLING).await;
         assert!(keys.transparent.is_none());
         assert!(keys.sapling.is_some());
         assert!(keys.orchard.is_none());
 
-        let keys = seed_keys(POOL_IRONWOOD);
+        let keys = seed_keys(POOL_IRONWOOD).await;
         assert!(keys.orchard.is_some());
     }
 
-    #[test]
-    fn ufvk_derivation_matches_seed_derivation() {
-        let from_seed = seed_keys(ALL_POOLS);
+    #[tokio::test]
+    async fn ufvk_derivation_matches_seed_derivation() {
+        let from_seed = seed_keys(ALL_POOLS).await;
         let ufvk = usk().to_unified_full_viewing_key().encode(&NETWORK).unwrap();
         let source = classify_key(&NETWORK, HwKind::Software, &ufvk).unwrap();
-        let from_ufvk = derive_account_keys(&NETWORK, source, "", 0, ALL_POOLS).unwrap();
+        let from_ufvk = derive_account_keys(&NETWORK, source, "", 0, ALL_POOLS)
+            .await
+            .unwrap();
 
         assert!(from_ufvk.seed.is_none());
         assert_eq!(from_ufvk.dindex, from_seed.dindex);
@@ -849,9 +849,13 @@ mod new_account_tests {
         assert_eq!(so.vk.to_bytes(), uo.vk.to_bytes());
     }
 
-    #[test]
-    fn ledger_sources_are_not_software_derivable() {
-        assert!(derive_account_keys(&NETWORK, KeySource::ZondaxDevice, "", 0, ALL_POOLS).is_err());
+    #[tokio::test]
+    async fn ledger_sources_are_not_software_derivable() {
+        assert!(
+            derive_account_keys(&NETWORK, KeySource::ZondaxDevice, "", 0, ALL_POOLS)
+                .await
+                .is_err()
+        );
     }
 }
 
@@ -1284,26 +1288,12 @@ pub async fn generate_next_dindex(
         .execute(&mut *db_tx)
         .await?;
 
-    let tkeys = select_account_transparent(&mut db_tx, account, dindex).await?;
-    let (sk, pk, address) = match tkeys.xvk {
-        Some(xvk) => {
-            let sk = tkeys
-                .xsk
-                .as_ref()
-                .map(|tsk| derive_transparent_sk(tsk, 0, dindex).unwrap());
-            let (pk, address) = derive_transparent_address(&xvk, 0, dindex, false)?;
-            (sk, pk, Some(address))
-        }
-        None if hw != 0 => {
-            let (pk, address) = ledger
-                .get_transparent_pubkey(network, aindex, 0, dindex)
-                .await?;
-            (None, pk, Some(address))
-        }
-        _ => (None, vec![], None),
+    let address = match TransparentKeySource::try_load(&mut db_tx, account).await? {
+        Some(source) => Some(source.derive(network, 0, dindex).await?),
+        None => None,
     };
 
-    if let Some(address) = address {
+    if let Some(DerivedTransparentAddr { sk, pk, address }) = address {
         store_account_transparent_addr(
             &mut db_tx,
             account,
@@ -1311,7 +1301,7 @@ pub async fn generate_next_dindex(
             dindex,
             sk,
             &pk,
-            &address.encode(network),
+            &address,
             false,
         )
         .await?;
@@ -1367,7 +1357,7 @@ pub async fn generate_next_change_address(
     Ok(None)
 }
 
-async fn get_transparent_keys(
+pub(crate) async fn get_transparent_keys(
     connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<(Option<AccountPrivKey>, Option<AccountPubKey>)> {
@@ -1420,61 +1410,6 @@ pub async fn transparent_change_address(
 }
 
 /// Derive and store the transparent address at (scope, dindex) when missing.
-async fn derive_and_store_transparent(
-    network: &Network,
-    connection: &mut SqliteConnection,
-    account: u32,
-    scope: u32,
-    dindex: u32,
-) -> Result<bool> {
-    let exists: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM transparent_address_accounts
-        WHERE account = ?1 AND scope = ?2 AND dindex = ?3",
-    )
-    .bind(account)
-    .bind(scope)
-    .bind(dindex)
-    .fetch_one(&mut *connection)
-    .await?;
-    if exists.0 > 0 {
-        return Ok(false);
-    }
-
-    let hw = get_account_hw(connection, account).await?;
-    let (xsk, xvk) = get_transparent_keys(connection, account).await?;
-    let (sk, pk, address) = match xvk {
-        Some(xvk) => {
-            let sk = match xsk.as_ref() {
-                Some(xsk) => Some(derive_transparent_sk(xsk, scope, dindex)?),
-                None => None,
-            };
-            let (pk, address) = derive_transparent_address(&xvk, scope, dindex, false)?;
-            (sk, pk, address)
-        }
-        None if hw != 0 => {
-            let (aindex,): (u32,) =
-                sqlx::query_as("SELECT aindex FROM accounts WHERE id_account = ?")
-                    .bind(account)
-                    .fetch_one(&mut *connection)
-                    .await?;
-            let ledger = get_ledger(connection, account).await?;
-            let (pk, address) = ledger
-                .get_transparent_pubkey(network, aindex, scope, dindex)
-                .await?;
-            (None, pk, address)
-        }
-        _ => {
-            anyhow::bail!(
-                "cannot derive transparent address scope {scope} at dindex {dindex} \
-                 for account {account}: no account key"
-            )
-        }
-    };
-    let encoded = address.encode(network);
-    store_account_transparent_addr(connection, account, scope, dindex, sk, &pk, &encoded, false)
-        .await
-}
-
 /// Ensure the internal (scope 1) change counterpart of external index `dindex`
 /// exists for accounts that use internal change. Returns whether a new row was
 /// inserted.
@@ -1492,7 +1427,8 @@ pub async fn ensure_internal_change_address(
     if !use_internal {
         return Ok(false);
     }
-    derive_and_store_transparent(network, connection, account, 1, dindex).await
+    let source = TransparentKeySource::load(connection, account).await?;
+    ensure_transparent_address(connection, network, &source, account, 1, dindex).await
 }
 
 /// Materialize the internal (change) counterpart of every stored external
@@ -1524,8 +1460,17 @@ pub async fn backfill_account_transparent_change_addresses(
     connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<usize> {
-    let (xsk, xvk) = get_transparent_keys(connection, account).await?;
-    if xvk.is_none() && xsk.is_none() {
+    // Only software keys: a device may not be connected when this runs.
+    let source = match TransparentKeySource::try_load(connection, account).await? {
+        Some(source) if source.is_software() => source,
+        _ => return Ok(0),
+    };
+    let (use_internal,): (bool,) =
+        sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
+            .bind(account)
+            .fetch_one(&mut *connection)
+            .await?;
+    if !use_internal {
         return Ok(0);
     }
     let indexes: Vec<u32> = sqlx::query(
@@ -1537,7 +1482,7 @@ pub async fn backfill_account_transparent_change_addresses(
     .await?;
     let mut added = 0;
     for dindex in indexes {
-        if ensure_internal_change_address(network, connection, account, dindex).await? {
+        if ensure_transparent_address(connection, network, &source, account, 1, dindex).await? {
             added += 1;
         }
     }
