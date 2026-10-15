@@ -7760,23 +7760,25 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Tx dco_decode_tx(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 14)
-      throw Exception('unexpected arr length: expect 14 but see ${arr.length}');
+    if (arr.length != 16)
+      throw Exception('unexpected arr length: expect 16 but see ${arr.length}');
     return Tx(
       id: dco_decode_u_32(arr[0]),
-      txid: dco_decode_list_prim_u_8_strict(arr[1]),
-      height: dco_decode_u_32(arr[2]),
-      time: dco_decode_u_32(arr[3]),
-      value: dco_decode_i_64(arr[4]),
-      tpe: dco_decode_opt_box_autoadd_u_8(arr[5]),
-      category: dco_decode_opt_String(arr[6]),
-      zsaValue: dco_decode_i_64(arr[7]),
-      assetId: dco_decode_opt_box_autoadd_i_32(arr[8]),
-      assetDisplay: dco_decode_String(arr[9]),
-      price: dco_decode_opt_box_autoadd_f_64(arr[10]),
-      memo: dco_decode_opt_String(arr[11]),
-      isUserMemo: dco_decode_bool(arr[12]),
-      contactName: dco_decode_opt_String(arr[13]),
+      account: dco_decode_u_32(arr[1]),
+      txid: dco_decode_list_prim_u_8_strict(arr[2]),
+      height: dco_decode_u_32(arr[3]),
+      time: dco_decode_u_32(arr[4]),
+      value: dco_decode_i_64(arr[5]),
+      fee: dco_decode_i_64(arr[6]),
+      tpe: dco_decode_opt_box_autoadd_u_8(arr[7]),
+      category: dco_decode_opt_String(arr[8]),
+      zsaValue: dco_decode_i_64(arr[9]),
+      assetId: dco_decode_opt_box_autoadd_i_32(arr[10]),
+      assetDisplay: dco_decode_String(arr[11]),
+      price: dco_decode_opt_box_autoadd_f_64(arr[12]),
+      memo: dco_decode_opt_String(arr[13]),
+      isUserMemo: dco_decode_bool(arr[14]),
+      contactName: dco_decode_opt_String(arr[15]),
     );
   }
 
@@ -9964,10 +9966,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Tx sse_decode_tx(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_u_32(deserializer);
+    var var_account = sse_decode_u_32(deserializer);
     var var_txid = sse_decode_list_prim_u_8_strict(deserializer);
     var var_height = sse_decode_u_32(deserializer);
     var var_time = sse_decode_u_32(deserializer);
     var var_value = sse_decode_i_64(deserializer);
+    var var_fee = sse_decode_i_64(deserializer);
     var var_tpe = sse_decode_opt_box_autoadd_u_8(deserializer);
     var var_category = sse_decode_opt_String(deserializer);
     var var_zsaValue = sse_decode_i_64(deserializer);
@@ -9979,10 +9983,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_contactName = sse_decode_opt_String(deserializer);
     return Tx(
         id: var_id,
+        account: var_account,
         txid: var_txid,
         height: var_height,
         time: var_time,
         value: var_value,
+        fee: var_fee,
         tpe: var_tpe,
         category: var_category,
         zsaValue: var_zsaValue,
@@ -11914,10 +11920,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_tx(Tx self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_32(self.id, serializer);
+    sse_encode_u_32(self.account, serializer);
     sse_encode_list_prim_u_8_strict(self.txid, serializer);
     sse_encode_u_32(self.height, serializer);
     sse_encode_u_32(self.time, serializer);
     sse_encode_i_64(self.value, serializer);
+    sse_encode_i_64(self.fee, serializer);
     sse_encode_opt_box_autoadd_u_8(self.tpe, serializer);
     sse_encode_opt_String(self.category, serializer);
     sse_encode_i_64(self.zsaValue, serializer);

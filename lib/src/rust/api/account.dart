@@ -400,10 +400,12 @@ class TAddressTxCount {
 sealed class Tx with _$Tx {
   const factory Tx({
     required int id,
+    required int account,
     required Uint8List txid,
     required int height,
     required int time,
     required PlatformInt64 value,
+    required PlatformInt64 fee,
     int? tpe,
     String? category,
     required PlatformInt64 zsaValue,

@@ -152,18 +152,11 @@ impl Query {
         context: &Context,
     ) -> FieldResult<Vec<Transaction>> {
         check_auth(context, id_account, false)?;
-        let height = height.unwrap_or_default();
+        let min_height = u32::try_from(height.unwrap_or_default()).unwrap_or_default();
         let mut conn = context.coin.get_connection().await?;
-        let transactions = query(
-            "SELECT account, id_tx, txid, height, time, value, fee FROM transactions
-            WHERE account = ?1 AND height >= ?2 ORDER BY height DESC",
-        )
-        .bind(id_account)
-        .bind(height)
-        .map(row_to_transaction)
-        .fetch_all(&mut *conn)
-        .await?;
-        Ok(transactions)
+        let transactions =
+            crate::db::fetch_txs_from(&mut conn, id_account as u32, min_height).await?;
+        Ok(transactions.into_iter().map(Into::into).collect())
     }
 
     pub async fn transaction_by_id(
@@ -175,17 +168,10 @@ impl Query {
         let mut txid = hex::decode(&txid)?;
         txid.reverse();
         let mut conn = context.coin.get_connection().await?;
-        let transaction = query(
-            "SELECT account, id_tx, txid, height, time, value, fee FROM transactions
-            WHERE account = ?1 AND txid = ?2 ORDER BY height DESC",
-        )
-        .bind(id_account)
-        .bind(&txid)
-        .map(row_to_transaction)
-        .fetch_optional(&mut *conn)
-        .await?
-        .ok_or(FieldError::new("Unknown txid", juniper::Value::Null))?;
-        Ok(transaction)
+        let transaction = crate::db::fetch_tx_by_txid(&mut conn, id_account as u32, &txid)
+            .await?
+            .ok_or(FieldError::new("Unknown txid", juniper::Value::Null))?;
+        Ok(transaction.into())
     }
 
     pub async fn memos_by_transaction(
@@ -788,32 +774,6 @@ impl Note {
     }
 }
 
-fn row_to_transaction(r: SqliteRow) -> Transaction {
-    let account: i32 = r.get(0);
-    let id: i32 = r.get(1);
-    let mut txid: Vec<u8> = r.get(2);
-    let height: i32 = r.get(3);
-    let time: i32 = r.get(4);
-    let value: i64 = r.get(5);
-    let fee: i64 = r.get(6);
-    txid.reverse();
-    let txid = hex::encode(&txid);
-    let time = DateTime::from_timestamp_millis(time as i64 * 1000)
-        .unwrap()
-        .naive_local();
-    let value = zats_to_zec(value);
-    let fee = zats_to_zec(fee);
-    Transaction {
-        account,
-        id,
-        txid,
-        height,
-        time,
-        value,
-        fee,
-    }
-}
-
 pub fn zats_to_zec(zats: i64) -> bigdecimal::BigDecimal {
     let digits = BigInt::from_i64(zats).unwrap();
     BigDecimal::from_bigint(digits, 8)
@@ -836,32 +796,29 @@ pub struct TxBatcher {
 
 impl dataloader::BatchFn<i32, Result<Transaction, Arc<Error>>> for TxBatcher {
     async fn load(&mut self, keys: &[i32]) -> HashMap<i32, Result<Transaction, Arc<Error>>> {
-        let f = async move {
+        let ids: Vec<u32> = keys
+            .iter()
+            .filter_map(|id| u32::try_from(*id).ok())
+            .collect();
+        let loaded = async {
             let mut conn = self.pool.acquire().await?;
-            query("CREATE TEMP TABLE IF NOT EXISTS tmp_ids (id INTEGER PRIMARY KEY)")
-                .execute(&mut *conn)
-                .await?;
-            query("DELETE FROM tmp_ids").execute(&mut *conn).await?;
-            for id in keys {
-                query("INSERT INTO tmp_ids(id) VALUES (?1)")
-                    .bind(*id)
-                    .execute(&mut *conn)
-                    .await?;
+            crate::db::fetch_txs_by_ids(&mut conn, &ids).await
+        }
+        .await;
+        match loaded {
+            Ok(txs) => txs
+                .into_iter()
+                .map(|tx| (tx.id as i32, Ok(Transaction::from(tx))))
+                .collect(),
+            // A failed batch fails every key in it rather than panicking the
+            // request; the resolver surfaces the error per field.
+            Err(error) => {
+                let error = Arc::new(error);
+                keys.iter()
+                    .map(|id| (*id, Err(Arc::clone(&error))))
+                    .collect()
             }
-            let txs = query(
-                "SELECT account, id_tx, txid, height, time, value, fee FROM transactions t
-            JOIN tmp_ids i ON t.id_tx = i.id",
-            )
-            .map(row_to_transaction)
-            .fetch_all(&mut *conn)
-            .await?;
-            let txs: HashMap<i32, Result<Transaction, Arc<Error>>> =
-                txs.into_iter().map(|tx| (tx.id, Ok(tx))).collect();
-            Ok::<_, anyhow::Error>(txs)
-        };
-
-        let txs = f.await.unwrap();
-        txs
+        }
     }
 }
 

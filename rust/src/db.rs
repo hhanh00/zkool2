@@ -1529,17 +1529,17 @@ pub async fn calculate_balance(
     Ok(balance)
 }
 
-pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Result<Vec<Tx>> {
-    // union notes and spends, then sum value by tx into v to get tx value
-    // join transactions with v by id_tx and filter by account
-    // order by height desc to get latest transactions first
-    tracing::debug!("fetch_txs: starting for account {}", account);
-    let transactions = sqlx::query(
-        "SELECT t.id_tx, t.txid, t.height, t.time, t.value, t.tpe, c.name, t.zsa_value, t.price, t.asset_id,
+/// The transaction row with its display joins (category, asset, user memo,
+/// first matching contact), followed by the given `WHERE` clause. Every
+/// transaction query selects these columns and is mapped by `row_to_tx`.
+macro_rules! tx_select {
+    ($where:literal) => {
+        concat!(
+            "SELECT t.id_tx, t.txid, t.height, t.time, t.value, t.tpe, c.name, t.zsa_value, t.price, t.asset_id,
             a.asset_name, a.asset_desc_hash,
             um.user_memo as memo,
             (um.user_memo IS NOT NULL AND um.user_memo != '') as is_user_memo,
-            oc.contact_name
+            oc.contact_name, t.account, t.fee
             FROM transactions t
             LEFT JOIN categories c ON c.id_category = t.category
             LEFT JOIN assets a ON t.asset_id = a.id_asset
@@ -1549,52 +1549,104 @@ pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Resul
                 FROM outputs o
                 JOIN contact_addresses ca ON o.address = ca.receiver AND o.pool = ca.pool
                 JOIN contacts ct ON ca.contact_id = ct.id_contact
-            ) oc ON oc.tx = t.id_tx
-            WHERE t.account = ?
-            ORDER BY t.height DESC",
-    )
+            ) oc ON oc.tx = t.id_tx ",
+            $where
+        )
+    };
+}
+
+fn row_to_tx(row: SqliteRow) -> Tx {
+    let id: u32 = row.get(0);
+    let txid: Vec<u8> = row.get(1);
+    let height: u32 = row.get(2);
+    let time: u32 = row.get(3);
+    let value: i64 = row.get(4);
+    let tpe: Option<u8> = row.get(5);
+    let category: Option<String> = row.get(6);
+    let zsa_value: i64 = row.get(7);
+    let price: Option<f64> = row.get(8);
+    let asset_id: Option<i32> = row.get(9);
+    let asset_name: Option<String> = row.get(10);
+    let asset_desc_hash: Option<Vec<u8>> = row.get(11);
+    let memo: Option<String> = row.get(12);
+    let is_user_memo: bool = row.get(13);
+    let contact_name: Option<String> = row.get(14);
+    let account: u32 = row.get(15);
+    let fee: i64 = row.get(16);
+    Tx {
+        id,
+        account,
+        txid,
+        height,
+        time,
+        value,
+        fee,
+        tpe,
+        category,
+        zsa_value,
+        asset_id,
+        asset_display: crate::account::asset_display(asset_id, asset_name, asset_desc_hash),
+        price,
+        memo,
+        is_user_memo,
+        contact_name,
+    }
+}
+
+/// An account's transactions, latest first.
+pub async fn fetch_txs(connection: &mut SqliteConnection, account: u32) -> Result<Vec<Tx>> {
+    fetch_txs_from(connection, account, 0).await
+}
+
+/// An account's transactions at or above `min_height`, latest first.
+pub async fn fetch_txs_from(
+    connection: &mut SqliteConnection,
+    account: u32,
+    min_height: u32,
+) -> Result<Vec<Tx>> {
+    let transactions = sqlx::query(tx_select!(
+        "WHERE t.account = ?1 AND t.height >= ?2 ORDER BY t.height DESC"
+    ))
     .bind(account)
-    .map(|row: SqliteRow| {
-        let id: u32 = row.get(0);
-        let txid: Vec<u8> = row.get(1);
-        let height: u32 = row.get(2);
-        let time: u32 = row.get(3);
-        let value: i64 = row.get(4);
-        let tpe: Option<u8> = row.get(5);
-        let category: Option<String> = row.get(6);
-        let zsa_value: i64 = row.get(7);
-        let price: Option<f64> = row.get(8);
-        let asset_id: Option<i32> = row.get(9);
-        let asset_name: Option<String> = row.get(10);
-        let asset_desc_hash: Option<Vec<u8>> = row.get(11);
-        let memo: Option<String> = row.get(12);
-        let is_user_memo: bool = row.get(13);
-        let contact_name: Option<String> = row.get(14);
-        Tx {
-            id,
-            txid,
-            height,
-            time,
-            value,
-            tpe,
-            category,
-            zsa_value,
-            asset_id,
-            asset_display: crate::account::asset_display(
-                asset_id,
-                asset_name,
-                asset_desc_hash,
-            ),
-            price,
-            memo,
-            is_user_memo,
-            contact_name,
-        }
-    })
+    .bind(min_height)
+    .map(row_to_tx)
     .fetch_all(&mut *connection)
     .await?;
-    tracing::debug!("fetch_txs: completed with {} txs", transactions.len());
     Ok(transactions)
+}
+
+/// One of an account's transactions by its txid, in stored (little-endian)
+/// byte order.
+pub async fn fetch_tx_by_txid(
+    connection: &mut SqliteConnection,
+    account: u32,
+    txid: &[u8],
+) -> Result<Option<Tx>> {
+    let transaction = sqlx::query(tx_select!("WHERE t.account = ?1 AND t.txid = ?2"))
+        .bind(account)
+    .bind(txid)
+    .map(row_to_tx)
+    .fetch_optional(&mut *connection)
+    .await?;
+    Ok(transaction)
+}
+
+/// Transactions by row id, across accounts, in no particular order.
+pub async fn fetch_txs_by_ids(connection: &mut SqliteConnection, ids: &[u32]) -> Result<Vec<Tx>> {
+    if ids.is_empty() {
+        return Ok(vec![]);
+    }
+    // Only the placeholder count is dynamic; the ids themselves are bound.
+    let placeholders = vec!["?"; ids.len()].join(", ");
+    let sql = format!("{} WHERE t.id_tx IN ({placeholders})", tx_select!(""));
+    let mut query = sqlx::query(sqlx::AssertSqlSafe(sql));
+    for id in ids {
+        query = query.bind(*id);
+    }
+    Ok(query
+        .map(row_to_tx)
+        .fetch_all(&mut *connection)
+        .await?)
 }
 
 pub async fn get_memos(pool: &mut SqliteConnection, account: u32) -> Result<Vec<Memo>> {

@@ -3714,10 +3714,12 @@ class __$SeedCopyWithImpl<$Res> implements _$SeedCopyWith<$Res> {
 /// @nodoc
 mixin _$Tx {
   int get id;
+  int get account;
   Uint8List get txid;
   int get height;
   int get time;
   PlatformInt64 get value;
+  PlatformInt64 get fee;
   int? get tpe;
   String? get category;
   PlatformInt64 get zsaValue;
@@ -3740,10 +3742,12 @@ mixin _$Tx {
         (other.runtimeType == runtimeType &&
             other is Tx &&
             (identical(other.id, id) || other.id == id) &&
+            (identical(other.account, account) || other.account == account) &&
             const DeepCollectionEquality().equals(other.txid, txid) &&
             (identical(other.height, height) || other.height == height) &&
             (identical(other.time, time) || other.time == time) &&
             (identical(other.value, value) || other.value == value) &&
+            (identical(other.fee, fee) || other.fee == fee) &&
             (identical(other.tpe, tpe) || other.tpe == tpe) &&
             (identical(other.category, category) ||
                 other.category == category) &&
@@ -3764,10 +3768,12 @@ mixin _$Tx {
   int get hashCode => Object.hash(
       runtimeType,
       id,
+      account,
       const DeepCollectionEquality().hash(txid),
       height,
       time,
       value,
+      fee,
       tpe,
       category,
       zsaValue,
@@ -3780,7 +3786,7 @@ mixin _$Tx {
 
   @override
   String toString() {
-    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay, price: $price, memo: $memo, isUserMemo: $isUserMemo, contactName: $contactName)';
+    return 'Tx(id: $id, account: $account, txid: $txid, height: $height, time: $time, value: $value, fee: $fee, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay, price: $price, memo: $memo, isUserMemo: $isUserMemo, contactName: $contactName)';
   }
 }
 
@@ -3790,10 +3796,12 @@ abstract mixin class $TxCopyWith<$Res> {
   @useResult
   $Res call(
       {int id,
+      int account,
       Uint8List txid,
       int height,
       int time,
       PlatformInt64 value,
+      PlatformInt64 fee,
       int? tpe,
       String? category,
       PlatformInt64 zsaValue,
@@ -3818,10 +3826,12 @@ class _$TxCopyWithImpl<$Res> implements $TxCopyWith<$Res> {
   @override
   $Res call({
     Object? id = null,
+    Object? account = null,
     Object? txid = null,
     Object? height = null,
     Object? time = null,
     Object? value = null,
+    Object? fee = null,
     Object? tpe = freezed,
     Object? category = freezed,
     Object? zsaValue = null,
@@ -3836,6 +3846,10 @@ class _$TxCopyWithImpl<$Res> implements $TxCopyWith<$Res> {
       id: null == id
           ? _self.id
           : id // ignore: cast_nullable_to_non_nullable
+              as int,
+      account: null == account
+          ? _self.account
+          : account // ignore: cast_nullable_to_non_nullable
               as int,
       txid: null == txid
           ? _self.txid
@@ -3852,6 +3866,10 @@ class _$TxCopyWithImpl<$Res> implements $TxCopyWith<$Res> {
       value: null == value
           ? _self.value
           : value // ignore: cast_nullable_to_non_nullable
+              as PlatformInt64,
+      fee: null == fee
+          ? _self.fee
+          : fee // ignore: cast_nullable_to_non_nullable
               as PlatformInt64,
       tpe: freezed == tpe
           ? _self.tpe
@@ -3986,10 +4004,12 @@ extension TxPatterns on Tx {
   TResult maybeWhen<TResult extends Object?>(
     TResult Function(
             int id,
+            int account,
             Uint8List txid,
             int height,
             int time,
             PlatformInt64 value,
+            PlatformInt64 fee,
             int? tpe,
             String? category,
             PlatformInt64 zsaValue,
@@ -4007,10 +4027,12 @@ extension TxPatterns on Tx {
       case _Tx() when $default != null:
         return $default(
             _that.id,
+            _that.account,
             _that.txid,
             _that.height,
             _that.time,
             _that.value,
+            _that.fee,
             _that.tpe,
             _that.category,
             _that.zsaValue,
@@ -4042,10 +4064,12 @@ extension TxPatterns on Tx {
   TResult when<TResult extends Object?>(
     TResult Function(
             int id,
+            int account,
             Uint8List txid,
             int height,
             int time,
             PlatformInt64 value,
+            PlatformInt64 fee,
             int? tpe,
             String? category,
             PlatformInt64 zsaValue,
@@ -4062,10 +4086,12 @@ extension TxPatterns on Tx {
       case _Tx():
         return $default(
             _that.id,
+            _that.account,
             _that.txid,
             _that.height,
             _that.time,
             _that.value,
+            _that.fee,
             _that.tpe,
             _that.category,
             _that.zsaValue,
@@ -4094,10 +4120,12 @@ extension TxPatterns on Tx {
   TResult? whenOrNull<TResult extends Object?>(
     TResult? Function(
             int id,
+            int account,
             Uint8List txid,
             int height,
             int time,
             PlatformInt64 value,
+            PlatformInt64 fee,
             int? tpe,
             String? category,
             PlatformInt64 zsaValue,
@@ -4114,10 +4142,12 @@ extension TxPatterns on Tx {
       case _Tx() when $default != null:
         return $default(
             _that.id,
+            _that.account,
             _that.txid,
             _that.height,
             _that.time,
             _that.value,
+            _that.fee,
             _that.tpe,
             _that.category,
             _that.zsaValue,
@@ -4138,10 +4168,12 @@ extension TxPatterns on Tx {
 class _Tx implements Tx {
   const _Tx(
       {required this.id,
+      required this.account,
       required this.txid,
       required this.height,
       required this.time,
       required this.value,
+      required this.fee,
       this.tpe,
       this.category,
       required this.zsaValue,
@@ -4155,6 +4187,8 @@ class _Tx implements Tx {
   @override
   final int id;
   @override
+  final int account;
+  @override
   final Uint8List txid;
   @override
   final int height;
@@ -4162,6 +4196,8 @@ class _Tx implements Tx {
   final int time;
   @override
   final PlatformInt64 value;
+  @override
+  final PlatformInt64 fee;
   @override
   final int? tpe;
   @override
@@ -4194,10 +4230,12 @@ class _Tx implements Tx {
         (other.runtimeType == runtimeType &&
             other is _Tx &&
             (identical(other.id, id) || other.id == id) &&
+            (identical(other.account, account) || other.account == account) &&
             const DeepCollectionEquality().equals(other.txid, txid) &&
             (identical(other.height, height) || other.height == height) &&
             (identical(other.time, time) || other.time == time) &&
             (identical(other.value, value) || other.value == value) &&
+            (identical(other.fee, fee) || other.fee == fee) &&
             (identical(other.tpe, tpe) || other.tpe == tpe) &&
             (identical(other.category, category) ||
                 other.category == category) &&
@@ -4218,10 +4256,12 @@ class _Tx implements Tx {
   int get hashCode => Object.hash(
       runtimeType,
       id,
+      account,
       const DeepCollectionEquality().hash(txid),
       height,
       time,
       value,
+      fee,
       tpe,
       category,
       zsaValue,
@@ -4234,7 +4274,7 @@ class _Tx implements Tx {
 
   @override
   String toString() {
-    return 'Tx(id: $id, txid: $txid, height: $height, time: $time, value: $value, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay, price: $price, memo: $memo, isUserMemo: $isUserMemo, contactName: $contactName)';
+    return 'Tx(id: $id, account: $account, txid: $txid, height: $height, time: $time, value: $value, fee: $fee, tpe: $tpe, category: $category, zsaValue: $zsaValue, assetId: $assetId, assetDisplay: $assetDisplay, price: $price, memo: $memo, isUserMemo: $isUserMemo, contactName: $contactName)';
   }
 }
 
@@ -4245,10 +4285,12 @@ abstract mixin class _$TxCopyWith<$Res> implements $TxCopyWith<$Res> {
   @useResult
   $Res call(
       {int id,
+      int account,
       Uint8List txid,
       int height,
       int time,
       PlatformInt64 value,
+      PlatformInt64 fee,
       int? tpe,
       String? category,
       PlatformInt64 zsaValue,
@@ -4273,10 +4315,12 @@ class __$TxCopyWithImpl<$Res> implements _$TxCopyWith<$Res> {
   @pragma('vm:prefer-inline')
   $Res call({
     Object? id = null,
+    Object? account = null,
     Object? txid = null,
     Object? height = null,
     Object? time = null,
     Object? value = null,
+    Object? fee = null,
     Object? tpe = freezed,
     Object? category = freezed,
     Object? zsaValue = null,
@@ -4291,6 +4335,10 @@ class __$TxCopyWithImpl<$Res> implements _$TxCopyWith<$Res> {
       id: null == id
           ? _self.id
           : id // ignore: cast_nullable_to_non_nullable
+              as int,
+      account: null == account
+          ? _self.account
+          : account // ignore: cast_nullable_to_non_nullable
               as int,
       txid: null == txid
           ? _self.txid
@@ -4307,6 +4355,10 @@ class __$TxCopyWithImpl<$Res> implements _$TxCopyWith<$Res> {
       value: null == value
           ? _self.value
           : value // ignore: cast_nullable_to_non_nullable
+              as PlatformInt64,
+      fee: null == fee
+          ? _self.fee
+          : fee // ignore: cast_nullable_to_non_nullable
               as PlatformInt64,
       tpe: freezed == tpe
           ? _self.tpe

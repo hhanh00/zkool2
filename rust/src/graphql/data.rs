@@ -29,6 +29,24 @@ pub struct Transaction {
     pub fee: BigDecimal,
 }
 
+impl From<crate::api::account::Tx> for Transaction {
+    fn from(tx: crate::api::account::Tx) -> Self {
+        let mut txid = tx.txid;
+        txid.reverse();
+        Self {
+            id: tx.id as i32,
+            txid: hex::encode(&txid),
+            account: tx.account as i32,
+            height: tx.height as i32,
+            time: chrono::DateTime::from_timestamp(tx.time as i64, 0)
+                .unwrap_or_default()
+                .naive_local(),
+            value: crate::graphql::query::zats_to_zec(tx.value),
+            fee: crate::graphql::query::zats_to_zec(tx.fee),
+        }
+    }
+}
+
 #[derive(GraphQLObject)]
 pub struct Balance {
     pub height: Option<i32>,

@@ -344,10 +344,12 @@ pub struct NewAccount {
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 pub struct Tx {
     pub id: u32,
+    pub account: u32,
     pub txid: Vec<u8>,
     pub height: u32,
     pub time: u32,
     pub value: i64,
+    pub fee: i64,
     pub tpe: Option<u8>,
     pub category: Option<String>,
     pub zsa_value: i64,
