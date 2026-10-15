@@ -43,7 +43,7 @@ async fn test_orchard_transfer() {
         .expect("open ZSA database")
         .set_lwd(0, "https://zsa.methyl.cc".to_string())
         .expect("set LWD URL");
-    println!("Coin initialized: coin={} db={db_path}", coin.coin);
+    println!("Coin initialized: coin={} db={db_path}", coin.coin());
 
     // -- 2. Restore faucet account from seed --
     let na = NewAccount {
@@ -64,11 +64,7 @@ async fn test_orchard_transfer() {
     let sender_id = new_account(&na, &coin)
         .await
         .expect("restore sender account from seed");
-    let sender = coin
-        .clone()
-        .set_account(sender_id)
-        .await
-        .expect("set sender account");
+    let sender = coin.clone();
     println!("Sender account restored: id={sender_id}");
 
     // -- 3. Sync sender from LWD server to current height --
@@ -92,7 +88,7 @@ async fn test_orchard_transfer() {
     println!("Sender synced to height: {height}");
 
     // -- 4. Check ZEC balance (0=T,1=S,2=O,3=IW) --
-    let bal = rlz::api::sync::balance(&sender)
+    let bal = rlz::api::sync::balance(sender_id, &sender)
         .await
         .expect("sender balance");
     println!(
@@ -173,11 +169,7 @@ async fn test_orchard_transfer() {
     let recipient_id = new_account(&na2, &coin).await.expect("restore recipient");
     println!("Recipient account restored: id={recipient_id}");
 
-    let recipient = coin
-        .clone()
-        .set_account(recipient_id)
-        .await
-        .expect("set recipient account");
+    let recipient = coin.clone();
 
     // Sync recipient account (just needs the UA, no notes needed)
     let height = get_current_height(&recipient)
@@ -197,7 +189,7 @@ async fn test_orchard_transfer() {
     .expect("sync recipient");
     println!("Recipient synced");
 
-    let recipient_addresses = get_addresses(ALL_POOLS, &recipient)
+    let recipient_addresses = get_addresses(ALL_POOLS, recipient_id, &recipient)
         .await
         .expect("get recipient addresses");
     let recipient_ua = recipient_addresses.ua.expect("recipient UA");
@@ -223,7 +215,7 @@ async fn test_orchard_transfer() {
     };
 
     println!("Planning O2O transfer of {send_amount} zats...");
-    let pczt = rlz::api::pay::prepare(&[pay_recipient], options, &sender)
+    let pczt = rlz::api::pay::prepare(&[pay_recipient], options, sender_id, &sender)
         .await
         .expect("plan O2O transfer");
     assert!(
@@ -232,7 +224,7 @@ async fn test_orchard_transfer() {
     );
     println!("  spends: {:?}", pczt.n_spends);
 
-    let signed = sign_transaction(&pczt, &sender).await.expect("sign");
+    let signed = sign_transaction(&pczt, sender_id, &sender).await.expect("sign");
     std::fs::write("/tmp/zsa_postsigned.pczt", &signed.pczt).expect("save postsigned pczt");
     let tx_bytes = extract_transaction(&signed).await.expect("extract");
     std::fs::write("/tmp/zsa_tx.bin", &tx_bytes).expect("save tx bytes");
@@ -245,7 +237,7 @@ async fn test_orchard_transfer() {
     let height = get_current_height(&sender)
         .await
         .expect("get current height");
-    let txid = broadcast_transaction(height, &tx_bytes, &sender)
+    let txid = broadcast_transaction(height, &tx_bytes, sender_id, &sender)
         .await
         .expect("broadcast transfer");
     println!("Transfer broadcast: {txid}");
@@ -288,7 +280,7 @@ async fn test_orchard_transfer() {
     .expect("re-sync after transfer");
 
     // Verify sender balance decreased
-    let bal = rlz::api::sync::balance(&sender)
+    let bal = rlz::api::sync::balance(sender_id, &sender)
         .await
         .expect("sender balance");
     println!(
@@ -301,7 +293,7 @@ async fn test_orchard_transfer() {
     );
 
     // Switch to recipient and verify receipt
-    let recv_bal = rlz::api::sync::balance(&recipient)
+    let recv_bal = rlz::api::sync::balance(recipient_id, &recipient)
         .await
         .expect("recipient balance");
     println!(
@@ -342,7 +334,7 @@ async fn test_zsa_issuance() {
         .expect("open ZSA database")
         .set_lwd(0, "https://zsa.methyl.cc".to_string())
         .expect("set LWD URL");
-    println!("Coin initialized: coin={} db={db_path}", coin.coin);
+    println!("Coin initialized: coin={} db={db_path}", coin.coin());
 
     // -- 2. Restore faucet account from seed --
     let na = NewAccount {
@@ -363,11 +355,7 @@ async fn test_zsa_issuance() {
     let account_id = new_account(&na, &coin)
         .await
         .expect("restore faucet account from seed");
-    let account = coin
-        .clone()
-        .set_account(account_id)
-        .await
-        .expect("set account");
+    let account = coin.clone();
     println!("Account restored: id={account_id}");
 
     // -- 3. Sync from LWD server to current height --
@@ -412,7 +400,7 @@ async fn test_zsa_issuance() {
     let height = get_current_height(&account)
         .await
         .expect("get current height");
-    let txid = broadcast_transaction(height, &tx_bytes, &account)
+    let txid = broadcast_transaction(height, &tx_bytes, account_id, &account)
         .await
         .expect("broadcast issuance");
     println!("Issuance broadcast: {txid}");
@@ -456,7 +444,7 @@ async fn test_zsa_issuance() {
     .expect("re-sync after issuance");
     println!("Re-synced to height: {height}");
 
-    let holdings = rlz::api::zsa::list_zsa_holdings(&account)
+    let holdings = rlz::api::zsa::list_zsa_holdings(account_id, &account)
         .await
         .expect("list holdings after issuance");
     println!("ZSA holdings after issuance: {}", holdings.len());
@@ -514,7 +502,7 @@ async fn test_zsa_transfer() {
         .expect("open ZSA database")
         .set_lwd(0, "https://zsa.methyl.cc".to_string())
         .expect("set LWD URL");
-    println!("Coin initialized: coin={} db={db_path}", coin.coin);
+    println!("Coin initialized: coin={} db={db_path}", coin.coin());
 
     // -- 2. Restore faucet (sender) account from seed --
     let na = NewAccount {
@@ -535,11 +523,7 @@ async fn test_zsa_transfer() {
     let sender_id = new_account(&na, &coin)
         .await
         .expect("restore sender account from seed");
-    let sender = coin
-        .clone()
-        .set_account(sender_id)
-        .await
-        .expect("set sender account");
+    let sender = coin.clone();
     println!("Sender account restored: id={sender_id}");
 
     // -- 3. Sync sender from LWD server --
@@ -584,7 +568,7 @@ async fn test_zsa_transfer() {
     let height = get_current_height(&sender)
         .await
         .expect("get current height");
-    let txid = broadcast_transaction(height, &tx_bytes, &sender)
+    let txid = broadcast_transaction(height, &tx_bytes, sender_id, &sender)
         .await
         .expect("broadcast issuance");
     println!("Issuance broadcast: {txid}");
@@ -629,7 +613,7 @@ async fn test_zsa_transfer() {
     .expect("re-sync after issuance");
     println!("Re-synced to height: {height}");
 
-    let holdings = rlz::api::zsa::list_zsa_holdings(&sender)
+    let holdings = rlz::api::zsa::list_zsa_holdings(sender_id, &sender)
         .await
         .expect("list sender holdings");
     assert!(!holdings.is_empty(), "should have the issued asset");
@@ -667,11 +651,7 @@ async fn test_zsa_transfer() {
         hw: 0,
     };
     let recipient_id = new_account(&na2, &coin).await.expect("restore recipient");
-    let recipient = coin
-        .clone()
-        .set_account(recipient_id)
-        .await
-        .expect("set recipient account");
+    let recipient = coin.clone();
     println!("Recipient account restored: id={recipient_id}");
 
     // Sync recipient (just needs the UA)
@@ -693,7 +673,7 @@ async fn test_zsa_transfer() {
     println!("Recipient synced");
 
     // Get recipient's UA for the transfer
-    let recipient_addresses = get_addresses(ALL_POOLS, &recipient)
+    let recipient_addresses = get_addresses(ALL_POOLS, recipient_id, &recipient)
         .await
         .expect("get recipient addresses");
     let recipient_ua = recipient_addresses.ua.expect("recipient UA");
@@ -721,7 +701,7 @@ async fn test_zsa_transfer() {
         category: None,
     };
 
-    let pczt = rlz::api::pay::prepare(&[pay_recipient], options, &sender)
+    let pczt = rlz::api::pay::prepare(&[pay_recipient], options, sender_id, &sender)
         .await
         .expect("plan ZSA transfer");
     assert!(
@@ -739,7 +719,7 @@ async fn test_zsa_transfer() {
         "ZSA recipient must be displayed with its asset name",
     );
 
-    let signed = sign_transaction(&pczt, &sender).await.expect("sign");
+    let signed = sign_transaction(&pczt, sender_id, &sender).await.expect("sign");
     let tx_bytes = extract_transaction(&signed).await.expect("extract");
     println!("ZSA transfer tx: {} bytes", tx_bytes.len());
 
@@ -747,7 +727,7 @@ async fn test_zsa_transfer() {
     let height = get_current_height(&sender)
         .await
         .expect("get current height");
-    let txid = broadcast_transaction(height, &tx_bytes, &sender)
+    let txid = broadcast_transaction(height, &tx_bytes, sender_id, &sender)
         .await
         .expect("broadcast ZSA transfer");
     println!("ZSA transfer broadcast: {txid}");
@@ -793,7 +773,7 @@ async fn test_zsa_transfer() {
     println!("Synced to height: {height}");
 
     // -- 13. Verify sender ZSA balance decreased --
-    let sender_holdings = rlz::api::zsa::list_zsa_holdings(&sender)
+    let sender_holdings = rlz::api::zsa::list_zsa_holdings(sender_id, &sender)
         .await
         .expect("list sender holdings");
     let sender_zsa = sender_holdings
@@ -807,7 +787,7 @@ async fn test_zsa_transfer() {
     );
 
     // -- 14. Verify recipient received the ZSA --
-    let recv_holdings = rlz::api::zsa::list_zsa_holdings(&recipient)
+    let recv_holdings = rlz::api::zsa::list_zsa_holdings(recipient_id, &recipient)
         .await
         .expect("list recipient holdings");
     println!("Recipient ZSA holdings: {}", recv_holdings.len());
