@@ -14,14 +14,14 @@ import 'package:zkool/transfer.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 
-class MigratePage extends StatefulWidget {
+class MigratePage extends ConsumerStatefulWidget {
   const MigratePage({super.key});
 
   @override
-  State<MigratePage> createState() => _MigratePageState();
+  ConsumerState<MigratePage> createState() => _MigratePageState();
 }
 
-class _MigratePageState extends State<MigratePage> with WidgetsBindingObserver {
+class _MigratePageState extends ConsumerState<MigratePage> with WidgetsBindingObserver {
   StreamSubscription<MigrationStatus>? _sub;
   StreamSubscription<int>? _blockHeightSubscription;
   MigrationStatus? _status;
@@ -53,6 +53,7 @@ class _MigratePageState extends State<MigratePage> with WidgetsBindingObserver {
   }) {
     final migration = NoteMigration();
     final source = migration.run(
+      account: ref.read(selectedAccountIdProvider),
       c: coinContext.coin,
       meanDelayMs: meanDelayMs,
     );
@@ -220,9 +221,10 @@ class _MigratePageState extends State<MigratePage> with WidgetsBindingObserver {
 
     try {
       final c = coinContext.coin;
-      final addresses = await getAddresses(uaPools: 4, c: c);
+      final addresses = await getAddresses(uaPools: 4, account: ref.read(selectedAccountIdProvider), c: c);
       if (!mounted) return;
       final pczt = await transferAllBetweenPools(
+        account: ref.read(selectedAccountIdProvider),
         c: c,
         sourcePools: 4,
         destinationAddress: addresses.oaddr ?? "",

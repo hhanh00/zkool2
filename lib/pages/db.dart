@@ -207,7 +207,7 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
 
     for (var dbName in selection) {
       final db = await getFullDatabasePath(dbName);
-      await deleteDb(dbFilepath: db);
+      await deleteDb(dbFilepath: db, c: coinContext.coin);
     }
 
     if (!mounted) return;
@@ -252,7 +252,7 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
       try {
         final oldDbFilepath = await getFullDatabasePath(selection.first);
         final newDbFilepath = await getFullDatabasePath(name.text);
-        await renameDb(dbFilepath: oldDbFilepath, newDbFilepath: newDbFilepath);
+        await renameDb(dbFilepath: oldDbFilepath, newDbFilepath: newDbFilepath, c: coinContext.coin);
         await refresh();
       } on AnyhowException catch (e) {
         if (!mounted) return;
@@ -273,6 +273,7 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
         tmpDir: (await getTemporaryDirectory()).path,
         oldPassword: oldPassword ?? "",
         newPassword: newPassword ?? "",
+        c: coinContext.coin,
       );
     } on AnyhowException catch (e) {
       if (!mounted) return;

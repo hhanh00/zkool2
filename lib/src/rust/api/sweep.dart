@@ -16,5 +16,8 @@ abstract class TransparentScanner implements RustOpaqueInterface {
       RustLib.instance.api.crateApiSweepTransparentScannerNew();
 
   Stream<String> run(
-      {required int endHeight, required int gapLimit, required Coin c});
+      {required int endHeight,
+      required int gapLimit,
+      required int account,
+      required Coin c});
 }

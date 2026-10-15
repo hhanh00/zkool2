@@ -16,9 +16,11 @@ Future<int> votingTrackSharesOnce(
         {required String roundId,
         required List<String> helperUrls,
         BigInt? voteEndTimeSeconds,
+        required int account,
         required Coin c}) =>
     RustLib.instance.api.crateApiVotingShareTrackingVotingTrackSharesOnce(
         roundId: roundId,
         helperUrls: helperUrls,
         voteEndTimeSeconds: voteEndTimeSeconds,
+        account: account,
         c: c);

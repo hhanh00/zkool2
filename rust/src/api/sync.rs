@@ -40,9 +40,8 @@ pub async fn synchronize(
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn balance(c: &Coin) -> Result<PoolBalance> {
+pub async fn balance(account: u32, c: &Coin) -> Result<PoolBalance> {
     let mut connection = c.get_connection().await?;
-    let account = c.account;
 
     calculate_balance(&mut *connection, account, None).await
 }
@@ -63,9 +62,9 @@ pub async fn rewind_sync(height: u32, account: u32, c: &Coin) -> Result<()> {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn get_db_height(c: &Coin) -> Result<SyncHeight> {
+pub async fn get_db_height(account: u32, c: &Coin) -> Result<SyncHeight> {
     let mut connection = c.get_connection().await?;
-    crate::sync::get_db_height(&mut *connection, c.account).await
+    crate::sync::get_db_height(&mut *connection, account).await
 }
 
 /// Decrypt memos and store transaction details for `account`.

@@ -13,19 +13,23 @@ import 'pay.dart';
 // These functions are ignored because they are not marked as `pub`: `ensure_swap_deadline`, `funding_recipient`, `saved_swap`, `transport`
 
 Future<List<SavedSwap>> nearIntentsListSwaps(
-        {required bool pendingOnly, required Coin c}) =>
+        {required bool pendingOnly, required int account, required Coin c}) =>
     RustLib.instance.api.crateApiNearIntentsNearIntentsListSwaps(
-        pendingOnly: pendingOnly, c: c);
+        pendingOnly: pendingOnly, account: account, c: c);
 
-/// Permanently remove closed swaps belonging to the current account.
-Future<void> nearIntentsClearClosedSwaps({required Coin c}) =>
-    RustLib.instance.api.crateApiNearIntentsNearIntentsClearClosedSwaps(c: c);
-
-/// Permanently remove one closed swap belonging to the current account.
-Future<void> nearIntentsDeleteClosedSwap(
-        {required PlatformInt64 idSwap, required Coin c}) =>
+/// Permanently remove closed swaps belonging to the account.
+Future<void> nearIntentsClearClosedSwaps(
+        {required int account, required Coin c}) =>
     RustLib.instance.api
-        .crateApiNearIntentsNearIntentsDeleteClosedSwap(idSwap: idSwap, c: c);
+        .crateApiNearIntentsNearIntentsClearClosedSwaps(account: account, c: c);
+
+/// Permanently remove one swap belonging to the account.
+Future<void> nearIntentsDeleteClosedSwap(
+        {required PlatformInt64 idSwap,
+        required int account,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiNearIntentsNearIntentsDeleteClosedSwap(
+        idSwap: idSwap, account: account, c: c);
 
 Future<List<SwapAsset>> nearIntentsAssets({required Coin c}) =>
     RustLib.instance.api.crateApiNearIntentsNearIntentsAssets(c: c);
@@ -37,24 +41,29 @@ Future<SwapQuoteResponse> nearIntentsQuote(
 
 /// Create a deposit quote and persist it before any wallet payment is prepared.
 Future<SavedSwap> nearIntentsCreateSwap(
-        {required SwapRequest request, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiNearIntentsNearIntentsCreateSwap(request: request, c: c);
+        {required SwapRequest request,
+        required int account,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiNearIntentsNearIntentsCreateSwap(
+        request: request, account: account, c: c);
 
 /// Prepare the exact saved deposit for the normal transaction UI.
 Future<PcztPackage> nearIntentsPrepareSwap(
-        {required PlatformInt64 idSwap, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiNearIntentsNearIntentsPrepareSwap(idSwap: idSwap, c: c);
+        {required PlatformInt64 idSwap,
+        required int account,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiNearIntentsNearIntentsPrepareSwap(
+        idSwap: idSwap, account: account, c: c);
 
 /// Persist an already broadcast deposit before notifying the provider. Retrying
 /// notification never sends another wallet transaction.
 Future<void> nearIntentsRecordDeposit(
         {required PlatformInt64 idSwap,
         required String txHash,
+        required int account,
         required Coin c}) =>
     RustLib.instance.api.crateApiNearIntentsNearIntentsRecordDeposit(
-        idSwap: idSwap, txHash: txHash, c: c);
+        idSwap: idSwap, txHash: txHash, account: account, c: c);
 
 Future<SwapStatus> nearIntentsStatus(
         {required String depositAddress,
@@ -63,12 +72,14 @@ Future<SwapStatus> nearIntentsStatus(
     RustLib.instance.api.crateApiNearIntentsNearIntentsStatus(
         depositAddress: depositAddress, depositMemo: depositMemo, c: c);
 
-/// Refresh a saved swap owned by the current account. Provider failures leave
+/// Refresh a saved swap owned by the account. Provider failures leave
 /// the saved snapshot untouched, and concurrent updates are checked on write.
 Future<SwapStatus> nearIntentsRefreshSwapStatus(
-        {required PlatformInt64 idSwap, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiNearIntentsNearIntentsRefreshSwapStatus(idSwap: idSwap, c: c);
+        {required PlatformInt64 idSwap,
+        required int account,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiNearIntentsNearIntentsRefreshSwapStatus(
+        idSwap: idSwap, account: account, c: c);
 
 Future<void> nearIntentsSubmitDeposit(
         {required String depositAddress,

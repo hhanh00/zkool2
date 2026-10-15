@@ -14,8 +14,8 @@ part 'migrate.freezed.dart';
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
 
 /// Single-shot step (kept for FRB generated-code compatibility).
-Future<MigrationEvent> stepMigration({required Coin c}) =>
-    RustLib.instance.api.crateApiMigrateStepMigration(c: c);
+Future<MigrationEvent> stepMigration({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiMigrateStepMigration(account: account, c: c);
 
 /// Stub kept for FRB generated-code compatibility.
 Future<MigrationStatus> getMigrationStatus({required Coin c}) =>
@@ -28,7 +28,8 @@ abstract class NoteMigration implements RustOpaqueInterface {
   factory NoteMigration() =>
       RustLib.instance.api.crateApiMigrateNoteMigrationNew();
 
-  Stream<MigrationStatus> run({required Coin c, required BigInt meanDelayMs});
+  Stream<MigrationStatus> run(
+      {required int account, required Coin c, required BigInt meanDelayMs});
 
   /// Supplies a height observed by the shared Dart block-height service.
   void updateHeight({required int height});

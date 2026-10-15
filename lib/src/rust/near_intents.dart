@@ -273,7 +273,8 @@ class SwapQuoteResponse {
   });
 
   @override
-  int get hashCode => quote.hashCode ^ rawResponse.hashCode ^ apiKeyConfigured.hashCode;
+  int get hashCode =>
+      quote.hashCode ^ rawResponse.hashCode ^ apiKeyConfigured.hashCode;
 
   @override
   bool operator ==(Object other) =>

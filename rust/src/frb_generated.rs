@@ -26,6 +26,7 @@
 
 // Section: imports
 
+use crate::api::coin::*;
 use crate::api::mempool::*;
 use crate::api::migrate::*;
 use crate::api::sweep::*;
@@ -42,7 +43,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 205656243;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -2002142615;
 
 // Section: executor
 
@@ -50,6 +51,349 @@ flutter_rust_bridge::frb_generated_default_handler!();
 
 // Section: wire_funcs
 
+fn wire__crate__api__coin__Coin_coin_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "Coin_coin",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let mut api_that_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_that, 0, false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_that_guard = api_that_guard.unwrap();
+                let output_ok =
+                    Result::<_, ()>::Ok(crate::api::coin::Coin::coin(&*api_that_guard))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__coin__Coin_get_name_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "Coin_get_name",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| {
+                transform_result_sse::<_, ()>((move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = Result::<_, ()>::Ok({
+                        crate::api::coin::Coin::get_name(&*api_that_guard);
+                    })?;
+                    Ok(output_ok)
+                })())
+            }
+        },
+    )
+}
+fn wire__crate__api__coin__Coin_new_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "Coin_new",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_default_coin = <Option<u8>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, ()>((move || {
+                let output_ok = Result::<_, ()>::Ok(crate::api::coin::Coin::new(api_default_coin))?;
+                Ok(output_ok)
+            })())
+        },
+    )
+}
+fn wire__crate__api__coin__Coin_open_database_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "Coin_open_database",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
+            let api_db_filepath = <String>::sse_decode(&mut deserializer);
+            let api_password = <Option<String>>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let mut api_that_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_that, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => {
+                                    api_that_guard =
+                                        Some(api_that.lockable_decode_async_ref().await)
+                                }
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_that_guard = api_that_guard.unwrap();
+                        let output_ok = crate::api::coin::Coin::open_database(
+                            &*api_that_guard,
+                            api_db_filepath,
+                            api_password,
+                        )
+                        .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__coin__Coin_set_lwd_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "Coin_set_lwd",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
+            let api_server_type = <u8>::sse_decode(&mut deserializer);
+            let api_url = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                (move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::coin::Coin::set_lwd(
+                        &*api_that_guard,
+                        api_server_type,
+                        api_url,
+                    )?;
+                    Ok(output_ok)
+                })(),
+            )
+        },
+    )
+}
+fn wire__crate__api__coin__Coin_set_proxy_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "Coin_set_proxy",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
+            let api_proxy = <String>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                (move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok = crate::api::coin::Coin::set_proxy(&*api_that_guard, api_proxy)?;
+                    Ok(output_ok)
+                })(),
+            )
+        },
+    )
+}
+fn wire__crate__api__coin__Coin_set_transport_impl(
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "Coin_set_transport",
+            port: None,
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_that = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
+            let api_transport = <u8>::sse_decode(&mut deserializer);
+            deserializer.end();
+            transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                (move || {
+                    let mut api_that_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_that, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_that_guard = Some(api_that.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_that_guard = api_that_guard.unwrap();
+                    let output_ok =
+                        crate::api::coin::Coin::set_transport(&*api_that_guard, api_transport)?;
+                    Ok(output_ok)
+                })(),
+            )
+        },
+    )
+}
 fn wire__crate__api__vault__DartVault_recover_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -534,7 +878,7 @@ fn wire__crate__api__mempool__Mempool_run_impl(
                 crate::api::mempool::MempoolMsg,
                 flutter_rust_bridge::for_generated::SseCodec,
             >>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <Coin>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
@@ -674,18 +1018,27 @@ fn wire__crate__api__migrate__NoteMigration_run_impl(
                 crate::api::migrate::MigrationStatus,
                 flutter_rust_bridge::for_generated::SseCodec,
             >>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             let api_mean_delay_ms = <u64>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
                         let mut api_that_guard = None;
+                        let mut api_c_guard = None;
                         let decode_indices_ =
                             flutter_rust_bridge::for_generated::lockable_compute_decode_order(
-                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                    &api_that, 0, false,
-                                )],
+                                vec![
+                                    flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                        &api_that, 0, false,
+                                    ),
+                                    flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                        &api_c, 1, false,
+                                    ),
+                                ],
                             );
                         for i in decode_indices_ {
                             match i {
@@ -693,14 +1046,17 @@ fn wire__crate__api__migrate__NoteMigration_run_impl(
                                     api_that_guard =
                                         Some(api_that.lockable_decode_async_ref().await)
                                 }
+                                1 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
                                 _ => unreachable!(),
                             }
                         }
                         let api_that_guard = api_that_guard.unwrap();
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::migrate::NoteMigration::run(
                             &*api_that_guard,
                             api_sink,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                             api_mean_delay_ms,
                         )
                         .await?;
@@ -878,17 +1234,26 @@ fn wire__crate__api__sweep__TransparentScanner_run_impl(
             >>::sse_decode(&mut deserializer);
             let api_end_height = <u32>::sse_decode(&mut deserializer);
             let api_gap_limit = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
                         let mut api_that_guard = None;
+                        let mut api_c_guard = None;
                         let decode_indices_ =
                             flutter_rust_bridge::for_generated::lockable_compute_decode_order(
-                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                    &api_that, 0, true,
-                                )],
+                                vec![
+                                    flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                        &api_that, 0, true,
+                                    ),
+                                    flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                        &api_c, 1, false,
+                                    ),
+                                ],
                             );
                         for i in decode_indices_ {
                             match i {
@@ -896,16 +1261,19 @@ fn wire__crate__api__sweep__TransparentScanner_run_impl(
                                     api_that_guard =
                                         Some(api_that.lockable_decode_async_ref_mut().await)
                                 }
+                                1 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
                                 _ => unreachable!(),
                             }
                         }
                         let mut api_that_guard = api_that_guard.unwrap();
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::sweep::TransparentScanner::run(
                             &mut *api_that_guard,
                             api_address_stream,
                             api_end_height,
                             api_gap_limit,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -938,12 +1306,30 @@ fn wire__crate__api__sync__balance_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::sync::balance(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::sync::balance(api_account, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -976,15 +1362,33 @@ fn wire__crate__api__pay__broadcast_transaction_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_height = <u32>::sse_decode(&mut deserializer);
             let api_tx_bytes = <Vec<u8>>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::pay::broadcast_transaction(
                             api_height,
                             &api_tx_bytes,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -1055,14 +1459,33 @@ fn wire__crate__api__sync__cache_block_time_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_account = <u32>::sse_decode(&mut deserializer);
             let api_height = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::sync::cache_block_time(api_account, api_height, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::sync::cache_block_time(
+                            api_account,
+                            api_height,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -1093,12 +1516,28 @@ fn wire__crate__api__frost__cancel_dkg_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::frost::cancel_dkg(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::frost::cancel_dkg(&*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -1168,15 +1607,33 @@ fn wire__crate__api__db__change_db_password_impl(
             let api_tmp_dir = <String>::sse_decode(&mut deserializer);
             let api_old_password = <String>::sse_decode(&mut deserializer);
             let api_new_password = <String>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::db::change_db_password(
                             &api_db_filepath,
                             &api_tmp_dir,
                             &api_old_password,
                             &api_new_password,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -1216,288 +1673,6 @@ fn wire__crate__api__sapling__check_sapling_params_impl(
         },
     )
 }
-fn wire__crate__api__coin__close_pool_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "close_pool",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_db_filepath = <String>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| {
-                transform_result_sse::<_, ()>((move || {
-                    let output_ok = Result::<_, ()>::Ok({
-                        crate::api::coin::close_pool(&api_db_filepath);
-                    })?;
-                    Ok(output_ok)
-                })())
-            }
-        },
-    )
-}
-fn wire__crate__api__coin__coin_get_name_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_normal::<flutter_rust_bridge::for_generated::SseCodec, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "coin_get_name",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| {
-                transform_result_sse::<_, ()>((move || {
-                    let output_ok = Result::<_, ()>::Ok({
-                        crate::api::coin::Coin::get_name(&api_that);
-                    })?;
-                    Ok(output_ok)
-                })())
-            }
-        },
-    )
-}
-fn wire__crate__api__coin__coin_new_impl(
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "coin_new",
-            port: None,
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_default_coin = <Option<u8>>::sse_decode(&mut deserializer);
-            deserializer.end();
-            transform_result_sse::<_, ()>((move || {
-                let output_ok = Result::<_, ()>::Ok(crate::api::coin::Coin::new(api_default_coin))?;
-                Ok(output_ok)
-            })())
-        },
-    )
-}
-fn wire__crate__api__coin__coin_open_database_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "coin_open_database",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
-            let api_db_filepath = <String>::sse_decode(&mut deserializer);
-            let api_password = <Option<String>>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| async move {
-                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || async move {
-                        let output_ok = crate::api::coin::Coin::open_database(
-                            api_that,
-                            api_db_filepath,
-                            api_password,
-                        )
-                        .await?;
-                        Ok(output_ok)
-                    })()
-                    .await,
-                )
-            }
-        },
-    )
-}
-fn wire__crate__api__coin__coin_set_account_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "coin_set_account",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
-            let api_account = <u32>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| async move {
-                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || async move {
-                        let output_ok =
-                            crate::api::coin::Coin::set_account(api_that, api_account).await?;
-                        Ok(output_ok)
-                    })()
-                    .await,
-                )
-            }
-        },
-    )
-}
-fn wire__crate__api__coin__coin_set_lwd_impl(
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "coin_set_lwd",
-            port: None,
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
-            let api_server_type = <u8>::sse_decode(&mut deserializer);
-            let api_url = <String>::sse_decode(&mut deserializer);
-            deserializer.end();
-            transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
-                (move || {
-                    let output_ok =
-                        crate::api::coin::Coin::set_lwd(api_that, api_server_type, api_url)?;
-                    Ok(output_ok)
-                })(),
-            )
-        },
-    )
-}
-fn wire__crate__api__coin__coin_set_proxy_impl(
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "coin_set_proxy",
-            port: None,
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
-            let api_proxy = <String>::sse_decode(&mut deserializer);
-            deserializer.end();
-            transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
-                (move || {
-                    let output_ok = crate::api::coin::Coin::set_proxy(api_that, api_proxy)?;
-                    Ok(output_ok)
-                })(),
-            )
-        },
-    )
-}
-fn wire__crate__api__coin__coin_set_transport_impl(
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_sync::<flutter_rust_bridge::for_generated::SseCodec, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "coin_set_transport",
-            port: None,
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Sync,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_that = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
-            let api_transport = <u8>::sse_decode(&mut deserializer);
-            deserializer.end();
-            transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
-                (move || {
-                    let output_ok = crate::api::coin::Coin::set_transport(api_that, api_transport)?;
-                    Ok(output_ok)
-                })(),
-            )
-        },
-    )
-}
 fn wire__crate__api__contacts__create_contact_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -1523,16 +1698,32 @@ fn wire__crate__api__contacts__create_contact_impl(
             let api_name = <String>::sse_decode(&mut deserializer);
             let api_addresses = <Vec<String>>::sse_decode(&mut deserializer);
             let api_notes = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::contacts::create_contact(
                             &api_name,
                             api_addresses,
                             &api_notes,
-                            &api_c,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -1566,13 +1757,30 @@ fn wire__crate__api__account__create_new_category_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_category = <crate::api::account::Category>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::account::create_new_category(&api_category, &api_c).await?;
+                            crate::api::account::create_new_category(&api_category, &*api_c_guard)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -1604,13 +1812,30 @@ fn wire__crate__api__account__create_new_folder_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_name = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::account::create_new_folder(&api_name, &api_c).await?;
+                            crate::api::account::create_new_folder(&api_name, &*api_c_guard)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -1678,13 +1903,29 @@ fn wire__crate__api__account__delete_account_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_account = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::account::delete_account(api_account, &api_c).await?;
+                            crate::api::account::delete_account(api_account, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -1716,13 +1957,29 @@ fn wire__crate__api__account__delete_categories_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_ids = <Vec<u32>>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::account::delete_categories(&api_ids, &api_c).await?;
+                            crate::api::account::delete_categories(&api_ids, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -1754,13 +2011,29 @@ fn wire__crate__api__contacts__delete_contacts_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_ids = <Vec<u32>>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::contacts::delete_contacts(api_ids, &api_c).await?;
+                            crate::api::contacts::delete_contacts(api_ids, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -1792,11 +2065,29 @@ fn wire__crate__api__db__delete_db_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_db_filepath = <String>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::db::delete_db(&api_db_filepath).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::db::delete_db(&api_db_filepath, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -1828,13 +2119,29 @@ fn wire__crate__api__account__delete_folders_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_ids = <Vec<u32>>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::account::delete_folders(&api_ids, &api_c).await?;
+                            crate::api::account::delete_folders(&api_ids, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -1869,12 +2176,29 @@ fn wire__crate__api__frost__do_dkg_impl(
                 crate::api::frost::DKGStatus,
                 flutter_rust_bridge::for_generated::SseCodec,
             >>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::frost::do_dkg(api_status, &api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::frost::do_dkg(api_status, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -1909,12 +2233,29 @@ fn wire__crate__api__frost__do_sign_impl(
                 crate::api::frost::SigningStatus,
                 flutter_rust_bridge::for_generated::SseCodec,
             >>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::frost::do_sign(api_status, &api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::frost::do_sign(api_status, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2089,14 +2430,33 @@ fn wire__crate__api__account__export_account_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id = <u32>::sse_decode(&mut deserializer);
             let api_passphrase = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::account::export_account(api_id, &api_passphrase, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::export_account(
+                            api_id,
+                            &api_passphrase,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2127,12 +2487,29 @@ fn wire__crate__api__contacts__export_contacts_vcard_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::contacts::export_contacts_vcard(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::contacts::export_contacts_vcard(&*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2199,17 +2576,35 @@ fn wire__crate__api__account__fetch_address_tx_count_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
             let api_aggregate = <bool>::sse_decode(&mut deserializer);
             let api_pool_filter = <u8>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::account::fetch_address_tx_count(
-                            &api_c,
                             api_aggregate,
                             api_pool_filter,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -2245,16 +2640,34 @@ fn wire__crate__api__transaction__fetch_amounts_impl(
             let api_from = <Option<u32>>::sse_decode(&mut deserializer);
             let api_to = <Option<u32>>::sse_decode(&mut deserializer);
             let api_category = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::transaction::fetch_amounts(
                             api_from,
                             api_to,
                             api_category,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -2289,13 +2702,33 @@ fn wire__crate__api__transaction__fetch_category_amounts_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_from = <Option<u32>>::sse_decode(&mut deserializer);
             let api_to = <Option<u32>>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::transaction::fetch_category_amounts(
-                            api_from, api_to, &api_c,
+                            api_from,
+                            api_to,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -2328,13 +2761,33 @@ fn wire__crate__api__account__fetch_transparent_address_tx_count_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::account::fetch_transparent_address_tx_count(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::fetch_transparent_address_tx_count(
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2366,13 +2819,29 @@ fn wire__crate__api__sync__fetch_tx_details_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_account = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::sync::fetch_tx_details(api_account, &api_c).await?;
+                            crate::api::sync::fetch_tx_details(api_account, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2405,15 +2874,33 @@ fn wire__crate__api__transaction__fill_missing_tx_prices_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_api = <String>::sse_decode(&mut deserializer);
             let api_currency = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::transaction::fill_missing_tx_prices(
                             api_api,
                             api_currency,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -2447,14 +2934,32 @@ fn wire__crate__api__contacts__find_contacts_for_address_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_address = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::contacts::find_contacts_for_address(&api_address, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::contacts::find_contacts_for_address(
+                            &api_address,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2518,13 +3023,33 @@ fn wire__crate__api__account__generate_next_change_address_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::account::generate_next_change_address(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::generate_next_change_address(
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2555,12 +3080,31 @@ fn wire__crate__api__account__generate_next_dindex_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::generate_next_dindex(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::account::generate_next_dindex(api_account, &*api_c_guard)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2624,15 +3168,31 @@ fn wire__crate__api__account__get_account_addresses_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_account = <u32>::sse_decode(&mut deserializer);
             let api_ua_pools = <u8>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::account::get_account_addresses(
                             api_account,
                             api_ua_pools,
-                            &api_c,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -2666,14 +3226,32 @@ fn wire__crate__api__account__get_account_fingerprint_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_account = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::account::get_account_fingerprint(api_account, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::get_account_fingerprint(
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2704,13 +3282,33 @@ fn wire__crate__api__account__get_account_frost_params_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::account::get_account_frost_params(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::get_account_frost_params(
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2742,13 +3340,30 @@ fn wire__crate__api__account__get_account_pools_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_account = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::account::get_account_pools(api_account, &api_c).await?;
+                            crate::api::account::get_account_pools(api_account, &*api_c_guard)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2780,13 +3395,30 @@ fn wire__crate__api__account__get_account_seed_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_account = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::account::get_account_seed(api_account, &api_c).await?;
+                            crate::api::account::get_account_seed(api_account, &*api_c_guard)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2819,14 +3451,33 @@ fn wire__crate__api__account__get_account_ufvk_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_account = <u32>::sse_decode(&mut deserializer);
             let api_pools = <u8>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::account::get_account_ufvk(api_account, api_pools, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::get_account_ufvk(
+                            api_account,
+                            api_pools,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2858,13 +3509,34 @@ fn wire__crate__api__account__get_addresses_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_ua_pools = <u8>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::account::get_addresses(api_ua_pools, &api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::get_addresses(
+                            api_ua_pools,
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2897,15 +3569,31 @@ fn wire__crate__api__network__get_coingecko_price_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_api = <String>::sse_decode(&mut deserializer);
             let api_currency = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::network::get_coingecko_price(
                             &api_api,
                             &api_currency,
-                            &api_c,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -2938,12 +3626,29 @@ fn wire__crate__api__network__get_current_height_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::network::get_current_height(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::network::get_current_height(&*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -2974,12 +3679,30 @@ fn wire__crate__api__sync__get_db_height_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::sync::get_db_height(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::sync::get_db_height(api_account, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3010,12 +3733,28 @@ fn wire__crate__api__frost__get_dkg_addresses_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::frost::get_dkg_addresses(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::frost::get_dkg_addresses(&*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3049,16 +3788,32 @@ fn wire__crate__api__network__get_exchange_rate_impl(
             let api_api = <String>::sse_decode(&mut deserializer);
             let api_from_currency = <String>::sse_decode(&mut deserializer);
             let api_to_currency = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::network::get_exchange_rate(
                             &api_api,
                             &api_from_currency,
                             &api_to_currency,
-                            &api_c,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -3092,13 +3847,34 @@ fn wire__crate__api__account__get_exported_data_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_type = <u8>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::account::get_exported_data(api_type, &api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::get_exported_data(
+                            api_type,
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3129,11 +3905,27 @@ fn wire__crate__api__key__get_key_pools_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_key = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                 (move || {
-                    let output_ok = crate::api::key::get_key_pools(&api_key, &api_c)?;
+                    let mut api_c_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_c, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_c_guard = Some(api_c.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_c_guard = api_c_guard.unwrap();
+                    let output_ok = crate::api::key::get_key_pools(&api_key, &*api_c_guard)?;
                     Ok(output_ok)
                 })(),
             )
@@ -3163,13 +3955,29 @@ fn wire__crate__api__mempool__get_mempool_tx_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_tx_id = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::mempool::get_mempool_tx(&api_tx_id, &api_c).await?;
+                            crate::api::mempool::get_mempool_tx(&api_tx_id, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3200,12 +4008,29 @@ fn wire__crate__api__migrate__get_migration_status_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api__c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api__c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::migrate::get_migration_status(&api__c).await?;
+                        let mut api__c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api__c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api__c_guard = Some(api__c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api__c_guard = api__c_guard.unwrap();
+                        let output_ok =
+                            crate::api::migrate::get_migration_status(&*api__c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3236,13 +4061,29 @@ fn wire__crate__api__network__get_network_name_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, ()>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = Result::<_, ()>::Ok(
-                            crate::api::network::get_network_name(&api_c).await,
+                            crate::api::network::get_network_name(&*api_c_guard).await,
                         )?;
                         Ok(output_ok)
                     })()
@@ -3275,12 +4116,28 @@ fn wire__crate__api__db__get_prop_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_key = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::db::get_prop(&api_key, &api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::db::get_prop(&api_key, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3344,14 +4201,32 @@ fn wire__crate__api__network__get_supported_vs_currencies_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_api = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::network::get_supported_vs_currencies(&api_api, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::network::get_supported_vs_currencies(
+                            &api_api,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3420,13 +4295,34 @@ fn wire__crate__api__account__get_tx_details_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id_tx = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::account::get_tx_details(api_id_tx, &api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::get_tx_details(
+                            api_id_tx,
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3457,12 +4353,28 @@ fn wire__crate__api__frost__has_dkg_addresses_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::frost::has_dkg_addresses(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::frost::has_dkg_addresses(&*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3493,12 +4405,28 @@ fn wire__crate__api__frost__has_dkg_params_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::frost::has_dkg_params(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::frost::has_dkg_params(&*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3529,13 +4457,33 @@ fn wire__crate__api__account__has_transparent_pub_key_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::account::has_transparent_pub_key(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::has_transparent_pub_key(
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3568,14 +4516,33 @@ fn wire__crate__api__account__import_account_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_passphrase = <String>::sse_decode(&mut deserializer);
             let api_data = <Vec<u8>>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::account::import_account(&api_passphrase, &api_data, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::import_account(
+                            &api_passphrase,
+                            &api_data,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3607,14 +4574,32 @@ fn wire__crate__api__contacts__import_contacts_vcard_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_vcard_data = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::contacts::import_contacts_vcard(&api_vcard_data, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::contacts::import_contacts_vcard(
+                            &api_vcard_data,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3785,12 +4770,28 @@ fn wire__crate__api__frost__init_dkg_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::frost::init_dkg(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::frost::init_dkg(&*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3855,16 +4856,34 @@ fn wire__crate__api__frost__init_sign_impl(
             let api_coordinator = <u8>::sse_decode(&mut deserializer);
             let api_funding_account = <u32>::sse_decode(&mut deserializer);
             let api_pczt = <crate::api::pay::PcztPackage>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::frost::init_sign(
                             api_coordinator,
                             api_funding_account,
                             &api_pczt,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -3935,12 +4954,29 @@ fn wire__crate__api__plugin__install_plugin_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_url = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::plugin::install_plugin(api_url, &api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::plugin::install_plugin(api_url, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -3971,12 +5007,29 @@ fn wire__crate__api__network__is_ironwood_active_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::network::is_ironwood_active(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::network::is_ironwood_active(&*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4007,12 +5060,29 @@ fn wire__crate__api__frost__is_signing_in_progress_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::frost::is_signing_in_progress(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::frost::is_signing_in_progress(&*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4043,11 +5113,29 @@ fn wire__crate__api__key__is_tex_address_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_address = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
-                let output_ok =
-                    Result::<_, ()>::Ok(crate::api::key::is_tex_address(&api_address, &api_c))?;
+                let mut api_c_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_c, 0, false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_c_guard = Some(api_c.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_c_guard = api_c_guard.unwrap();
+                let output_ok = Result::<_, ()>::Ok(crate::api::key::is_tex_address(
+                    &api_address,
+                    &*api_c_guard,
+                ))?;
                 Ok(output_ok)
             })())
         },
@@ -4106,11 +5194,27 @@ fn wire__crate__api__key__is_valid_fvk_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_fvk = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
+                let mut api_c_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_c, 0, false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_c_guard = Some(api_c.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_c_guard = api_c_guard.unwrap();
                 let output_ok =
-                    Result::<_, ()>::Ok(crate::api::key::is_valid_fvk(&api_fvk, &api_c))?;
+                    Result::<_, ()>::Ok(crate::api::key::is_valid_fvk(&api_fvk, &*api_c_guard))?;
                 Ok(output_ok)
             })())
         },
@@ -4138,11 +5242,27 @@ fn wire__crate__api__key__is_valid_key_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_key = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
+                let mut api_c_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_c, 0, false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_c_guard = Some(api_c.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_c_guard = api_c_guard.unwrap();
                 let output_ok =
-                    Result::<_, ()>::Ok(crate::api::key::is_valid_key(&api_key, &api_c))?;
+                    Result::<_, ()>::Ok(crate::api::key::is_valid_key(&api_key, &*api_c_guard))?;
                 Ok(output_ok)
             })())
         },
@@ -4231,11 +5351,27 @@ fn wire__crate__api__key__is_valid_transparent_address_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_address = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
+                let mut api_c_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_c, 0, false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_c_guard = Some(api_c.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_c_guard = api_c_guard.unwrap();
                 let output_ok = Result::<_, ()>::Ok(
-                    crate::api::key::is_valid_transparent_address(&api_address, &api_c),
+                    crate::api::key::is_valid_transparent_address(&api_address, &*api_c_guard),
                 )?;
                 Ok(output_ok)
             })())
@@ -4264,11 +5400,28 @@ fn wire__crate__api__zsa__is_zsa_available_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| {
                 transform_result_sse::<_, ()>((move || {
-                    let output_ok = Result::<_, ()>::Ok(crate::api::zsa::is_zsa_available(&api_c))?;
+                    let mut api_c_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_c, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_c_guard = Some(api_c.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_c_guard = api_c_guard.unwrap();
+                    let output_ok =
+                        Result::<_, ()>::Ok(crate::api::zsa::is_zsa_available(&*api_c_guard))?;
                     Ok(output_ok)
                 })())
             }
@@ -4303,11 +5456,27 @@ fn wire__crate__api__issuance__issue_asset_impl(
             let api_finalize = <bool>::sse_decode(&mut deserializer);
             let api_desc_hash = <Option<Vec<u8>>>::sse_decode(&mut deserializer);
             let api_id_account = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::issuance::issue_asset(
                             api_asset_name,
                             api_amount,
@@ -4315,7 +5484,7 @@ fn wire__crate__api__issuance__issue_asset_impl(
                             api_finalize,
                             api_desc_hash,
                             api_id_account,
-                            &api_c,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -4348,12 +5517,28 @@ fn wire__crate__api__account__list_accounts_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::list_accounts(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::list_accounts(&*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4384,12 +5569,28 @@ fn wire__crate__api__account__list_categories_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::list_categories(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::list_categories(&*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4420,12 +5621,28 @@ fn wire__crate__api__contacts__list_contacts_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::contacts::list_contacts(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::contacts::list_contacts(&*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4528,12 +5745,28 @@ fn wire__crate__api__account__list_folders_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::list_folders(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::list_folders(&*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4564,12 +5797,30 @@ fn wire__crate__api__account__list_memos_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::list_memos(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::account::list_memos(api_account, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4600,12 +5851,30 @@ fn wire__crate__api__account__list_notes_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::list_notes(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::account::list_notes(api_account, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4636,12 +5905,28 @@ fn wire__crate__api__plugin__list_plugins_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::plugin::list_plugins(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::plugin::list_plugins(&*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4672,12 +5957,31 @@ fn wire__crate__api__account__list_tx_history_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::list_tx_history(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::account::list_tx_history(api_account, &*api_c_guard)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4708,12 +6012,30 @@ fn wire__crate__api__zsa__list_zsa_holdings_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::zsa::list_zsa_holdings(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::zsa::list_zsa_holdings(api_account, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4746,13 +6068,35 @@ fn wire__crate__api__account__lock_note_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id = <u32>::sse_decode(&mut deserializer);
             let api_locked = <bool>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::account::lock_note(api_id, api_locked, &api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::lock_note(
+                            api_id,
+                            api_locked,
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4785,15 +6129,33 @@ fn wire__crate__api__account__lock_recent_notes_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_height = <u32>::sse_decode(&mut deserializer);
             let api_threshold = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::account::lock_recent_notes(
                             api_height,
                             api_threshold,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -4826,12 +6188,30 @@ fn wire__crate__api__account__max_spendable_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::max_spendable(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::account::max_spendable(api_account, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4862,13 +6242,29 @@ fn wire__crate__api__near_intents__near_intents_assets_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::near_intents::near_intents_assets(&api_c).await?;
+                            crate::api::near_intents::near_intents_assets(&*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4899,14 +6295,33 @@ fn wire__crate__api__near_intents__near_intents_clear_closed_swaps_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::near_intents::near_intents_clear_closed_swaps(&api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::near_intents::near_intents_clear_closed_swaps(
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4938,14 +6353,34 @@ fn wire__crate__api__near_intents__near_intents_create_swap_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_request = <crate::near_intents::SwapRequest>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::near_intents::near_intents_create_swap(api_request, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::near_intents::near_intents_create_swap(
+                            api_request,
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -4977,14 +6412,32 @@ fn wire__crate__api__near_intents__near_intents_delete_closed_swap_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id_swap = <i64>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::near_intents::near_intents_delete_closed_swap(
                             api_id_swap,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -5018,14 +6471,32 @@ fn wire__crate__api__near_intents__near_intents_list_swaps_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_pending_only = <bool>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::near_intents::near_intents_list_swaps(
                             api_pending_only,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -5059,14 +6530,32 @@ fn wire__crate__api__near_intents__near_intents_prepare_swap_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id_swap = <i64>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::near_intents::near_intents_prepare_swap(
                             api_id_swap,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -5100,14 +6589,32 @@ fn wire__crate__api__near_intents__near_intents_quote_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_request = <crate::near_intents::SwapRequest>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::near_intents::near_intents_quote(api_request, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::near_intents::near_intents_quote(
+                            api_request,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5140,15 +6647,33 @@ fn wire__crate__api__near_intents__near_intents_record_deposit_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id_swap = <i64>::sse_decode(&mut deserializer);
             let api_tx_hash = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::near_intents::near_intents_record_deposit(
                             api_id_swap,
                             api_tx_hash,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -5182,14 +6707,32 @@ fn wire__crate__api__near_intents__near_intents_refresh_swap_status_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id_swap = <i64>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::near_intents::near_intents_refresh_swap_status(
                             api_id_swap,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -5224,15 +6767,31 @@ fn wire__crate__api__near_intents__near_intents_status_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_deposit_address = <String>::sse_decode(&mut deserializer);
             let api_deposit_memo = <Option<String>>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::near_intents::near_intents_status(
                             api_deposit_address,
                             api_deposit_memo,
-                            &api_c,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -5267,15 +6826,31 @@ fn wire__crate__api__near_intents__near_intents_submit_deposit_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_deposit_address = <String>::sse_decode(&mut deserializer);
             let api_tx_hash = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::near_intents::near_intents_submit_deposit(
                             api_deposit_address,
                             api_tx_hash,
-                            &api_c,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -5309,12 +6884,29 @@ fn wire__crate__api__account__new_account_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_na = <crate::api::account::NewAccount>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::new_account(&api_na, &api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::account::new_account(&api_na, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5381,14 +6973,32 @@ fn wire__crate__api__plugin__parse_memo_with_plugins_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_memo_bytes = <Vec<u8>>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::plugin::parse_memo_with_plugins(api_memo_bytes, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::plugin::parse_memo_with_plugins(
+                            api_memo_bytes,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5451,13 +7061,35 @@ fn wire__crate__api__pay__prepare_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_recipients = <Vec<crate::pay::Recipient>>::sse_decode(&mut deserializer);
             let api_options = <crate::api::pay::PaymentOptions>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::pay::prepare(&api_recipients, api_options, &api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::pay::prepare(
+                            &api_recipients,
+                            api_options,
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5490,15 +7122,33 @@ fn wire__crate__api__pay__prepare_migration_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_recipients = <Vec<crate::pay::Recipient>>::sse_decode(&mut deserializer);
             let api_src_pools = <u8>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::pay::prepare_migration(
                             &api_recipients,
                             api_src_pools,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -5532,12 +7182,29 @@ fn wire__crate__api__account__print_keys_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::print_keys(api_id, &api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::account::print_keys(api_id, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5570,13 +7237,29 @@ fn wire__crate__api__db__put_prop_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_key = <String>::sse_decode(&mut deserializer);
             let api_value = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::db::put_prop(&api_key, &api_value, &api_c).await?;
+                            crate::api::db::put_prop(&api_key, &api_value, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5675,11 +7358,27 @@ fn wire__crate__api__account__receivers_from_ua_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_ua = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                 (move || {
-                    let output_ok = crate::api::account::receivers_from_ua(&api_ua, &api_c)?;
+                    let mut api_c_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_c, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_c_guard = Some(api_c.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_c_guard = api_c_guard.unwrap();
+                    let output_ok = crate::api::account::receivers_from_ua(&api_ua, &*api_c_guard)?;
                     Ok(output_ok)
                 })(),
             )
@@ -5709,13 +7408,30 @@ fn wire__crate__api__account__remove_account_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_account_id = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::account::remove_account(api_account_id, &api_c).await?;
+                            crate::api::account::remove_account(api_account_id, &*api_c_guard)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5747,12 +7463,29 @@ fn wire__crate__api__plugin__remove_plugin_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::plugin::remove_plugin(api_id, &api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::plugin::remove_plugin(api_id, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5784,13 +7517,30 @@ fn wire__crate__api__account__rename_category_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_category = <crate::api::account::Category>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::account::rename_category(&api_category, &api_c).await?;
+                            crate::api::account::rename_category(&api_category, &*api_c_guard)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5823,13 +7573,33 @@ fn wire__crate__api__db__rename_db_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_db_filepath = <String>::sse_decode(&mut deserializer);
             let api_new_db_filepath = <String>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::db::rename_db(&api_db_filepath, &api_new_db_filepath)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::db::rename_db(
+                            &api_db_filepath,
+                            &api_new_db_filepath,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5862,13 +7632,30 @@ fn wire__crate__api__account__rename_folder_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id = <u32>::sse_decode(&mut deserializer);
             let api_name = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::account::rename_folder(api_id, &api_name, &api_c).await?;
+                            crate::api::account::rename_folder(api_id, &api_name, &*api_c_guard)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5901,15 +7688,31 @@ fn wire__crate__api__account__reorder_account_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_old_position = <u32>::sse_decode(&mut deserializer);
             let api_new_position = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::account::reorder_account(
                             api_old_position,
                             api_new_position,
-                            &api_c,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -5942,12 +7745,28 @@ fn wire__crate__api__frost__reset_sign_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::frost::reset_sign(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::frost::reset_sign(&*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -5979,12 +7798,29 @@ fn wire__crate__api__account__reset_sync_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::reset_sync(api_id, &api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::account::reset_sync(api_id, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -6016,13 +7852,30 @@ fn wire__crate__api__openalias__resolve_openalias_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_alias = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::openalias::resolve_openalias(api_alias, &api_c).await?;
+                            crate::api::openalias::resolve_openalias(api_alias, &*api_c_guard)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -6129,13 +7982,30 @@ fn wire__crate__api__sync__rewind_sync_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_height = <u32>::sse_decode(&mut deserializer);
             let api_account = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::sync::rewind_sync(api_height, api_account, &api_c).await?;
+                            crate::api::sync::rewind_sync(api_height, api_account, &*api_c_guard)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -6168,13 +8038,35 @@ fn wire__crate__api__pay__send_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_height = <u32>::sse_decode(&mut deserializer);
             let api_data = <Vec<u8>>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::pay::send(api_height, &api_data, &api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::pay::send(
+                            api_height,
+                            &api_data,
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -6207,13 +8099,30 @@ fn wire__crate__api__zsa__set_asset_name_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id_asset = <i64>::sse_decode(&mut deserializer);
             let api_name = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::zsa::set_asset_name(api_id_asset, api_name, &api_c).await?;
+                            crate::api::zsa::set_asset_name(api_id_asset, api_name, &*api_c_guard)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -6246,13 +8155,29 @@ fn wire__crate__api__frost__set_dkg_address_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id = <u8>::sse_decode(&mut deserializer);
             let api_address = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::frost::set_dkg_address(api_id, &api_address, &api_c)
+                            crate::api::frost::set_dkg_address(api_id, &api_address, &*api_c_guard)
                                 .await?;
                         Ok(output_ok)
                     })()
@@ -6289,18 +8214,34 @@ fn wire__crate__api__frost__set_dkg_params_impl(
             let api_n = <u8>::sse_decode(&mut deserializer);
             let api_t = <u8>::sse_decode(&mut deserializer);
             let api_funding_account = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::frost::set_dkg_params(
                             &api_name,
                             api_id,
                             api_n,
                             api_t,
                             api_funding_account,
-                            &api_c,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -6402,14 +8343,33 @@ fn wire__crate__api__plugin__set_plugin_enabled_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id = <String>::sse_decode(&mut deserializer);
             let api_enabled = <bool>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::plugin::set_plugin_enabled(api_id, api_enabled, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::plugin::set_plugin_enabled(
+                            api_id,
+                            api_enabled,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -6442,14 +8402,33 @@ fn wire__crate__api__transaction__set_tx_category_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id = <u32>::sse_decode(&mut deserializer);
             let api_category = <Option<u32>>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::transaction::set_tx_category(api_id, api_category, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::transaction::set_tx_category(
+                            api_id,
+                            api_category,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -6482,13 +8461,29 @@ fn wire__crate__api__transaction__set_tx_price_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id = <u32>::sse_decode(&mut deserializer);
             let api_price = <Option<f64>>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::transaction::set_tx_price(api_id, api_price, &api_c)
+                            crate::api::transaction::set_tx_price(api_id, api_price, &*api_c_guard)
                                 .await?;
                         Ok(output_ok)
                     })()
@@ -6522,14 +8517,35 @@ fn wire__crate__api__transaction__set_user_memo_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_id_tx = <u32>::sse_decode(&mut deserializer);
             let api_memo = <Option<String>>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::transaction::set_user_memo(api_id_tx, api_memo, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::transaction::set_user_memo(
+                            api_id_tx,
+                            api_memo,
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -6560,13 +8576,33 @@ fn wire__crate__api__account__show_ledger_sapling_address_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::account::show_ledger_sapling_address(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::show_ledger_sapling_address(
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -6597,13 +8633,33 @@ fn wire__crate__api__account__show_ledger_transparent_address_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::account::show_ledger_transparent_address(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::account::show_ledger_transparent_address(
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -6639,15 +8695,33 @@ fn wire__crate__api__account__sign_ledger_transaction_impl(
                 flutter_rust_bridge::for_generated::SseCodec,
             >>::sse_decode(&mut deserializer);
             let api_package = <crate::api::pay::PcztPackage>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::account::sign_ledger_transaction(
                             api_sink,
                             api_package,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -6681,13 +8755,34 @@ fn wire__crate__api__pay__sign_transaction_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_pczt = <crate::api::pay::PcztPackage>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::pay::sign_transaction(&api_pczt, &api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::pay::sign_transaction(
+                            &api_pczt,
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -6718,12 +8813,30 @@ fn wire__crate__api__migrate__step_migration_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::migrate::step_migration(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::migrate::step_migration(api_account, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -6758,17 +8871,35 @@ fn wire__crate__api__pay__store_pending_tx_impl(
             let api_txid = <Vec<u8>>::sse_decode(&mut deserializer);
             let api_price = <Option<f64>>::sse_decode(&mut deserializer);
             let api_category = <Option<u32>>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::pay::store_pending_tx(
                             api_height,
                             &api_txid,
                             api_price,
                             api_category,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -6811,11 +8942,27 @@ fn wire__crate__api__sync__synchronize_impl(
             let api_transparent_limit = <u32>::sse_decode(&mut deserializer);
             let api_checkpoint_age = <u32>::sse_decode(&mut deserializer);
             let api_fast = <bool>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::sync::synchronize(
                             api_progress,
                             api_accounts,
@@ -6824,7 +8971,7 @@ fn wire__crate__api__sync__synchronize_impl(
                             api_transparent_limit,
                             api_checkpoint_age,
                             api_fast,
-                            &api_c,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -6857,11 +9004,27 @@ fn wire__crate__api__pay__to_plan_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_package = <crate::api::pay::PcztPackage>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                 (move || {
-                    let output_ok = crate::api::pay::to_plan(&api_package, &api_c)?;
+                    let mut api_c_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_c, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_c_guard = Some(api_c.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_c_guard = api_c_guard.unwrap();
+                    let output_ok = crate::api::pay::to_plan(&api_package, &*api_c_guard)?;
                     Ok(output_ok)
                 })(),
             )
@@ -6890,12 +9053,31 @@ fn wire__crate__api__account__toggle_all_notes_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::toggle_all_notes(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::account::toggle_all_notes(api_account, &*api_c_guard)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -6926,12 +9108,30 @@ fn wire__crate__api__openalias__try_validate_zcash_address_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_address = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                 (move || {
-                    let output_ok =
-                        crate::api::openalias::try_validate_zcash_address(api_address, &api_c)?;
+                    let mut api_c_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_c, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_c_guard = Some(api_c.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_c_guard = api_c_guard.unwrap();
+                    let output_ok = crate::api::openalias::try_validate_zcash_address(
+                        api_address,
+                        &*api_c_guard,
+                    )?;
                     Ok(output_ok)
                 })(),
             )
@@ -7121,11 +9321,28 @@ fn wire__crate__api__account__ua_from_ufvk_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_ufvk = <String>::sse_decode(&mut deserializer);
             let api_di = <Option<u32>>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                 (move || {
-                    let output_ok = crate::api::account::ua_from_ufvk(&api_ufvk, api_di, &api_c)?;
+                    let mut api_c_guard = None;
+                    let decode_indices_ =
+                        flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                            flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                &api_c, 0, false,
+                            ),
+                        ]);
+                    for i in decode_indices_ {
+                        match i {
+                            0 => api_c_guard = Some(api_c.lockable_decode_sync_ref()),
+                            _ => unreachable!(),
+                        }
+                    }
+                    let api_c_guard = api_c_guard.unwrap();
+                    let output_ok =
+                        crate::api::account::ua_from_ufvk(&api_ufvk, api_di, &*api_c_guard)?;
                     Ok(output_ok)
                 })(),
             )
@@ -7154,12 +9371,31 @@ fn wire__crate__api__account__unlock_all_notes_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::account::unlock_all_notes(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::account::unlock_all_notes(api_account, &*api_c_guard)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -7226,13 +9462,29 @@ fn wire__crate__api__account__update_account_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_update = <crate::api::account::AccountUpdate>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
-                            crate::api::account::update_account(&api_update, &api_c).await?;
+                            crate::api::account::update_account(&api_update, &*api_c_guard).await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -7267,17 +9519,33 @@ fn wire__crate__api__contacts__update_contact_impl(
             let api_name = <Option<String>>::sse_decode(&mut deserializer);
             let api_addresses = <Option<Vec<String>>>::sse_decode(&mut deserializer);
             let api_notes = <Option<String>>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::contacts::update_contact(
                             api_id,
                             api_name,
                             api_addresses,
                             api_notes,
-                            &api_c,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -7312,15 +9580,31 @@ fn wire__crate__api__transaction__update_historical_prices_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_currency = <String>::sse_decode(&mut deserializer);
             let api_exchange_rate = <f64>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::transaction::update_historical_prices(
                             api_currency,
                             api_exchange_rate,
-                            &api_c,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -7418,11 +9702,27 @@ fn wire__crate__api__openalias__validate_zcash_address_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_address = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
+                let mut api_c_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_c, 0, false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_c_guard = Some(api_c.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_c_guard = api_c_guard.unwrap();
                 let output_ok = Result::<_, ()>::Ok(
-                    crate::api::openalias::validate_zcash_address(&api_address, &api_c),
+                    crate::api::openalias::validate_zcash_address(&api_address, &*api_c_guard),
                 )?;
                 Ok(output_ok)
             })())
@@ -7453,15 +9753,33 @@ fn wire__crate__api__voting__voting_clear_selection_impl(
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_round_id = <String>::sse_decode(&mut deserializer);
             let api_proposal_id = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::voting::voting_clear_selection(
                             &api_round_id,
                             api_proposal_id,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -7495,14 +9813,34 @@ fn wire__crate__api__voting_drive__voting_drive_cancel_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_round_id = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::voting_drive::voting_drive_cancel(&api_round_id, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::voting_drive::voting_drive_cancel(
+                            &api_round_id,
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -7533,13 +9871,33 @@ fn wire__crate__api__voting_drive__voting_drive_cancel_all_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::voting_drive::voting_drive_cancel_all(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::voting_drive::voting_drive_cancel_all(
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -7573,16 +9931,34 @@ fn wire__crate__api__voting_drive__voting_drive_start_impl(
             let api_round_id = <String>::sse_decode(&mut deserializer);
             let api_lightwalletd_url = <String>::sse_decode(&mut deserializer);
             let api_round_name = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::voting_drive::voting_drive_start(
                             &api_round_id,
                             &api_lightwalletd_url,
                             &api_round_name,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -7616,14 +9992,34 @@ fn wire__crate__api__voting_drive__voting_drive_status_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_round_id = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::voting_drive::voting_drive_status(&api_round_id, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::voting_drive::voting_drive_status(
+                            &api_round_id,
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -7655,14 +10051,34 @@ fn wire__crate__api__voting__voting_load_selections_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_round_id = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok =
-                            crate::api::voting::voting_load_selections(&api_round_id, &api_c)
-                                .await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::voting::voting_load_selections(
+                            &api_round_id,
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -7696,16 +10112,34 @@ fn wire__crate__api__voting_drive__voting_prepare_round_impl(
             let api_round_id = <String>::sse_decode(&mut deserializer);
             let api_lightwalletd_url = <String>::sse_decode(&mut deserializer);
             let api_round_name = <String>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::voting_drive::voting_prepare_round(
                             &api_round_id,
                             &api_lightwalletd_url,
                             &api_round_name,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -7738,12 +10172,31 @@ fn wire__crate__api__voting__voting_round_list_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
-                        let output_ok = crate::api::voting::voting_round_list(&api_c).await?;
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok =
+                            crate::api::voting::voting_round_list(api_account, &*api_c_guard)
+                                .await?;
                         Ok(output_ok)
                     })()
                     .await,
@@ -7778,17 +10231,35 @@ fn wire__crate__api__voting__voting_save_selection_impl(
             let api_proposal_id = <u32>::sse_decode(&mut deserializer);
             let api_decision = <crate::api::voting::Decision>::sse_decode(&mut deserializer);
             let api_num_options = <u32>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::voting::voting_save_selection(
                             &api_round_id,
                             api_proposal_id,
                             api_decision,
                             api_num_options,
-                            &api_c,
+                            api_account,
+                            &*api_c_guard,
                         )
                         .await?;
                         Ok(output_ok)
@@ -7824,17 +10295,35 @@ fn wire__crate__api__voting_share_tracking__voting_track_shares_once_impl(
             let api_round_id = <String>::sse_decode(&mut deserializer);
             let api_helper_urls = <Vec<String>>::sse_decode(&mut deserializer);
             let api_vote_end_time_seconds = <Option<u64>>::sse_decode(&mut deserializer);
-            let api_c = <crate::api::coin::Coin>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             move |context| async move {
                 transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
                     (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
                         let output_ok =
                             crate::api::voting_share_tracking::voting_track_shares_once(
                                 &api_round_id,
                                 api_helper_urls,
                                 api_vote_end_time_seconds,
-                                &api_c,
+                                api_account,
+                                &*api_c_guard,
                             )
                             .await?;
                         Ok(output_ok)
@@ -7887,6 +10376,9 @@ fn decode_DartFn_Inputs_list_prim_u_8_strict_Output_unit_AnyhowException(
     }
 }
 flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
+    flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>
+);
+flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
     flutter_rust_bridge::for_generated::RustAutoOpaqueInner<DartVault>
 );
 flutter_rust_bridge::frb_generated_moi_arc_impl_value!(
@@ -7906,6 +10398,16 @@ impl SseDecode for flutter_rust_bridge::for_generated::anyhow::Error {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut inner = <String>::sse_decode(deserializer);
         return flutter_rust_bridge::for_generated::anyhow::anyhow!("{}", inner);
+    }
+}
+
+impl SseDecode for Coin {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <RustOpaqueMoi<
+            flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+        >>::sse_decode(deserializer);
+        return flutter_rust_bridge::for_generated::rust_auto_opaque_decode_owned(inner);
     }
 }
 
@@ -7954,6 +10456,14 @@ impl SseDecode for flutter_rust_bridge::DartOpaque {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut inner = <usize>::sse_decode(deserializer);
         return unsafe { flutter_rust_bridge::for_generated::sse_decode_dart_opaque(inner) };
+    }
+}
+
+impl SseDecode for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <usize>::sse_decode(deserializer);
+        return decode_rust_opaque_moi(inner);
     }
 }
 
@@ -8193,28 +10703,6 @@ impl SseDecode for crate::api::account::Category {
             id: var_id,
             name: var_name,
             is_income: var_isIncome,
-        };
-    }
-}
-
-impl SseDecode for crate::api::coin::Coin {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_coin = <u8>::sse_decode(deserializer);
-        let mut var_account = <u32>::sse_decode(deserializer);
-        let mut var_dbFilepath = <String>::sse_decode(deserializer);
-        let mut var_url = <String>::sse_decode(deserializer);
-        let mut var_serverType = <u8>::sse_decode(deserializer);
-        let mut var_transport = <u8>::sse_decode(deserializer);
-        let mut var_proxy = <String>::sse_decode(deserializer);
-        return crate::api::coin::Coin {
-            coin: var_coin,
-            account: var_account,
-            db_filepath: var_dbFilepath,
-            url: var_url,
-            server_type: var_serverType,
-            transport: var_transport,
-            proxy: var_proxy,
         };
     }
 }
@@ -10253,414 +12741,412 @@ fn pde_ffi_dispatcher_primary_impl(
 ) {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        1 => wire__crate__api__vault__DartVault_recover_impl(port, ptr, rust_vec_len, data_len),
-        2 => wire__crate__api__vault__DartVault_recover_with_prf_impl(
+        2 => wire__crate__api__coin__Coin_get_name_impl(port, ptr, rust_vec_len, data_len),
+        4 => wire__crate__api__coin__Coin_open_database_impl(port, ptr, rust_vec_len, data_len),
+        8 => wire__crate__api__vault__DartVault_recover_impl(port, ptr, rust_vec_len, data_len),
+        9 => wire__crate__api__vault__DartVault_recover_with_prf_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        3 => wire__crate__api__vault__DartVault_register_device_impl(
+        10 => wire__crate__api__vault__DartVault_register_device_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        4 => wire__crate__api__vault__DartVault_set_master_password_impl(
+        11 => wire__crate__api__vault__DartVault_set_master_password_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        5 => {
+        12 => {
             wire__crate__api__vault__DartVault_store_account_impl(port, ptr, rust_vec_len, data_len)
         }
-        6 => wire__crate__api__vault__DartVault_test_impl(port, ptr, rust_vec_len, data_len),
-        7 => wire__crate__api__mempool__Mempool_cancel_impl(port, ptr, rust_vec_len, data_len),
-        9 => wire__crate__api__mempool__Mempool_run_impl(port, ptr, rust_vec_len, data_len),
-        10 => {
+        13 => wire__crate__api__vault__DartVault_test_impl(port, ptr, rust_vec_len, data_len),
+        14 => wire__crate__api__mempool__Mempool_cancel_impl(port, ptr, rust_vec_len, data_len),
+        16 => wire__crate__api__mempool__Mempool_run_impl(port, ptr, rust_vec_len, data_len),
+        17 => {
             wire__crate__api__migrate__NoteMigration_cancel_impl(port, ptr, rust_vec_len, data_len)
         }
-        12 => wire__crate__api__migrate__NoteMigration_run_impl(port, ptr, rust_vec_len, data_len),
-        14 => wire__crate__api__sweep__TransparentScanner_cancel_impl(
+        19 => wire__crate__api__migrate__NoteMigration_run_impl(port, ptr, rust_vec_len, data_len),
+        21 => wire__crate__api__sweep__TransparentScanner_cancel_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        15 => {
+        22 => {
             wire__crate__api__sweep__TransparentScanner_new_impl(port, ptr, rust_vec_len, data_len)
         }
-        16 => {
+        23 => {
             wire__crate__api__sweep__TransparentScanner_run_impl(port, ptr, rust_vec_len, data_len)
         }
-        17 => wire__crate__api__sync__balance_impl(port, ptr, rust_vec_len, data_len),
-        18 => wire__crate__api__pay__broadcast_transaction_impl(port, ptr, rust_vec_len, data_len),
-        19 => wire__crate__api__pay__build_puri_impl(port, ptr, rust_vec_len, data_len),
-        20 => wire__crate__api__sync__cache_block_time_impl(port, ptr, rust_vec_len, data_len),
-        21 => wire__crate__api__frost__cancel_dkg_impl(port, ptr, rust_vec_len, data_len),
-        22 => wire__crate__api__sync__cancel_sync_impl(port, ptr, rust_vec_len, data_len),
-        23 => wire__crate__api__db__change_db_password_impl(port, ptr, rust_vec_len, data_len),
-        25 => wire__crate__api__coin__close_pool_impl(port, ptr, rust_vec_len, data_len),
-        26 => wire__crate__api__coin__coin_get_name_impl(port, ptr, rust_vec_len, data_len),
-        28 => wire__crate__api__coin__coin_open_database_impl(port, ptr, rust_vec_len, data_len),
-        29 => wire__crate__api__coin__coin_set_account_impl(port, ptr, rust_vec_len, data_len),
-        33 => wire__crate__api__contacts__create_contact_impl(port, ptr, rust_vec_len, data_len),
-        34 => {
+        24 => wire__crate__api__sync__balance_impl(port, ptr, rust_vec_len, data_len),
+        25 => wire__crate__api__pay__broadcast_transaction_impl(port, ptr, rust_vec_len, data_len),
+        26 => wire__crate__api__pay__build_puri_impl(port, ptr, rust_vec_len, data_len),
+        27 => wire__crate__api__sync__cache_block_time_impl(port, ptr, rust_vec_len, data_len),
+        28 => wire__crate__api__frost__cancel_dkg_impl(port, ptr, rust_vec_len, data_len),
+        29 => wire__crate__api__sync__cancel_sync_impl(port, ptr, rust_vec_len, data_len),
+        30 => wire__crate__api__db__change_db_password_impl(port, ptr, rust_vec_len, data_len),
+        32 => wire__crate__api__contacts__create_contact_impl(port, ptr, rust_vec_len, data_len),
+        33 => {
             wire__crate__api__account__create_new_category_impl(port, ptr, rust_vec_len, data_len)
         }
-        35 => wire__crate__api__account__create_new_folder_impl(port, ptr, rust_vec_len, data_len),
-        36 => wire__crate__api__raptor__decode_impl(port, ptr, rust_vec_len, data_len),
-        37 => wire__crate__api__account__delete_account_impl(port, ptr, rust_vec_len, data_len),
-        38 => wire__crate__api__account__delete_categories_impl(port, ptr, rust_vec_len, data_len),
-        39 => wire__crate__api__contacts__delete_contacts_impl(port, ptr, rust_vec_len, data_len),
-        40 => wire__crate__api__db__delete_db_impl(port, ptr, rust_vec_len, data_len),
-        41 => wire__crate__api__account__delete_folders_impl(port, ptr, rust_vec_len, data_len),
-        42 => wire__crate__api__frost__do_dkg_impl(port, ptr, rust_vec_len, data_len),
-        43 => wire__crate__api__frost__do_sign_impl(port, ptr, rust_vec_len, data_len),
-        44 => wire__crate__api__sapling__download_sapling_params_impl(
+        34 => wire__crate__api__account__create_new_folder_impl(port, ptr, rust_vec_len, data_len),
+        35 => wire__crate__api__raptor__decode_impl(port, ptr, rust_vec_len, data_len),
+        36 => wire__crate__api__account__delete_account_impl(port, ptr, rust_vec_len, data_len),
+        37 => wire__crate__api__account__delete_categories_impl(port, ptr, rust_vec_len, data_len),
+        38 => wire__crate__api__contacts__delete_contacts_impl(port, ptr, rust_vec_len, data_len),
+        39 => wire__crate__api__db__delete_db_impl(port, ptr, rust_vec_len, data_len),
+        40 => wire__crate__api__account__delete_folders_impl(port, ptr, rust_vec_len, data_len),
+        41 => wire__crate__api__frost__do_dkg_impl(port, ptr, rust_vec_len, data_len),
+        42 => wire__crate__api__frost__do_sign_impl(port, ptr, rust_vec_len, data_len),
+        43 => wire__crate__api__sapling__download_sapling_params_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        45 => wire__crate__api__account__dummy_export_impl(port, ptr, rust_vec_len, data_len),
-        46 => wire__crate__api__raptor__encode_impl(port, ptr, rust_vec_len, data_len),
-        47 => wire__crate__api__raptor__end_decode_impl(port, ptr, rust_vec_len, data_len),
-        48 => wire__crate__api__account__export_account_impl(port, ptr, rust_vec_len, data_len),
-        49 => wire__crate__api__contacts__export_contacts_vcard_impl(
+        44 => wire__crate__api__account__dummy_export_impl(port, ptr, rust_vec_len, data_len),
+        45 => wire__crate__api__raptor__encode_impl(port, ptr, rust_vec_len, data_len),
+        46 => wire__crate__api__raptor__end_decode_impl(port, ptr, rust_vec_len, data_len),
+        47 => wire__crate__api__account__export_account_impl(port, ptr, rust_vec_len, data_len),
+        48 => wire__crate__api__contacts__export_contacts_vcard_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        50 => wire__crate__api__pay__extract_transaction_impl(port, ptr, rust_vec_len, data_len),
-        51 => wire__crate__api__account__fetch_address_tx_count_impl(
+        49 => wire__crate__api__pay__extract_transaction_impl(port, ptr, rust_vec_len, data_len),
+        50 => wire__crate__api__account__fetch_address_tx_count_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        52 => wire__crate__api__transaction__fetch_amounts_impl(port, ptr, rust_vec_len, data_len),
-        53 => wire__crate__api__transaction__fetch_category_amounts_impl(
+        51 => wire__crate__api__transaction__fetch_amounts_impl(port, ptr, rust_vec_len, data_len),
+        52 => wire__crate__api__transaction__fetch_category_amounts_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        54 => wire__crate__api__account__fetch_transparent_address_tx_count_impl(
+        53 => wire__crate__api__account__fetch_transparent_address_tx_count_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        55 => wire__crate__api__sync__fetch_tx_details_impl(port, ptr, rust_vec_len, data_len),
-        56 => wire__crate__api__transaction__fill_missing_tx_prices_impl(
+        54 => wire__crate__api__sync__fetch_tx_details_impl(port, ptr, rust_vec_len, data_len),
+        55 => wire__crate__api__transaction__fill_missing_tx_prices_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        57 => wire__crate__api__contacts__find_contacts_for_address_impl(
+        56 => wire__crate__api__contacts__find_contacts_for_address_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        58 => wire__crate__api__frost__frost_sign_params_default_impl(
+        57 => wire__crate__api__frost__frost_sign_params_default_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        59 => wire__crate__api__account__generate_next_change_address_impl(
+        58 => wire__crate__api__account__generate_next_change_address_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        60 => {
+        59 => {
             wire__crate__api__account__generate_next_dindex_impl(port, ptr, rust_vec_len, data_len)
         }
-        62 => {
+        61 => {
             wire__crate__api__account__get_account_addresses_impl(port, ptr, rust_vec_len, data_len)
         }
-        63 => wire__crate__api__account__get_account_fingerprint_impl(
+        62 => wire__crate__api__account__get_account_fingerprint_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        64 => wire__crate__api__account__get_account_frost_params_impl(
+        63 => wire__crate__api__account__get_account_frost_params_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        65 => wire__crate__api__account__get_account_pools_impl(port, ptr, rust_vec_len, data_len),
-        66 => wire__crate__api__account__get_account_seed_impl(port, ptr, rust_vec_len, data_len),
-        67 => wire__crate__api__account__get_account_ufvk_impl(port, ptr, rust_vec_len, data_len),
-        68 => wire__crate__api__account__get_addresses_impl(port, ptr, rust_vec_len, data_len),
-        69 => {
+        64 => wire__crate__api__account__get_account_pools_impl(port, ptr, rust_vec_len, data_len),
+        65 => wire__crate__api__account__get_account_seed_impl(port, ptr, rust_vec_len, data_len),
+        66 => wire__crate__api__account__get_account_ufvk_impl(port, ptr, rust_vec_len, data_len),
+        67 => wire__crate__api__account__get_addresses_impl(port, ptr, rust_vec_len, data_len),
+        68 => {
             wire__crate__api__network__get_coingecko_price_impl(port, ptr, rust_vec_len, data_len)
         }
-        70 => wire__crate__api__network__get_current_height_impl(port, ptr, rust_vec_len, data_len),
-        71 => wire__crate__api__sync__get_db_height_impl(port, ptr, rust_vec_len, data_len),
-        72 => wire__crate__api__frost__get_dkg_addresses_impl(port, ptr, rust_vec_len, data_len),
-        73 => wire__crate__api__network__get_exchange_rate_impl(port, ptr, rust_vec_len, data_len),
-        74 => wire__crate__api__account__get_exported_data_impl(port, ptr, rust_vec_len, data_len),
-        76 => wire__crate__api__mempool__get_mempool_tx_impl(port, ptr, rust_vec_len, data_len),
-        77 => {
+        69 => wire__crate__api__network__get_current_height_impl(port, ptr, rust_vec_len, data_len),
+        70 => wire__crate__api__sync__get_db_height_impl(port, ptr, rust_vec_len, data_len),
+        71 => wire__crate__api__frost__get_dkg_addresses_impl(port, ptr, rust_vec_len, data_len),
+        72 => wire__crate__api__network__get_exchange_rate_impl(port, ptr, rust_vec_len, data_len),
+        73 => wire__crate__api__account__get_exported_data_impl(port, ptr, rust_vec_len, data_len),
+        75 => wire__crate__api__mempool__get_mempool_tx_impl(port, ptr, rust_vec_len, data_len),
+        76 => {
             wire__crate__api__migrate__get_migration_status_impl(port, ptr, rust_vec_len, data_len)
         }
-        78 => wire__crate__api__network__get_network_name_impl(port, ptr, rust_vec_len, data_len),
-        79 => wire__crate__api__db__get_prop_impl(port, ptr, rust_vec_len, data_len),
-        81 => wire__crate__api__network__get_supported_vs_currencies_impl(
+        77 => wire__crate__api__network__get_network_name_impl(port, ptr, rust_vec_len, data_len),
+        78 => wire__crate__api__db__get_prop_impl(port, ptr, rust_vec_len, data_len),
+        80 => wire__crate__api__network__get_supported_vs_currencies_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        82 => wire__crate__api__coin__get_tor_client_impl(port, ptr, rust_vec_len, data_len),
-        83 => wire__crate__api__account__get_tx_details_impl(port, ptr, rust_vec_len, data_len),
-        84 => wire__crate__api__frost__has_dkg_addresses_impl(port, ptr, rust_vec_len, data_len),
-        85 => wire__crate__api__frost__has_dkg_params_impl(port, ptr, rust_vec_len, data_len),
-        86 => wire__crate__api__account__has_transparent_pub_key_impl(
+        81 => wire__crate__api__coin__get_tor_client_impl(port, ptr, rust_vec_len, data_len),
+        82 => wire__crate__api__account__get_tx_details_impl(port, ptr, rust_vec_len, data_len),
+        83 => wire__crate__api__frost__has_dkg_addresses_impl(port, ptr, rust_vec_len, data_len),
+        84 => wire__crate__api__frost__has_dkg_params_impl(port, ptr, rust_vec_len, data_len),
+        85 => wire__crate__api__account__has_transparent_pub_key_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        87 => wire__crate__api__account__import_account_impl(port, ptr, rust_vec_len, data_len),
-        88 => wire__crate__api__contacts__import_contacts_vcard_impl(
+        86 => wire__crate__api__account__import_account_impl(port, ptr, rust_vec_len, data_len),
+        87 => wire__crate__api__contacts__import_contacts_vcard_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        89 => wire__crate__api__init__init_app_impl(port, ptr, rust_vec_len, data_len),
-        90 => wire__crate__api__raptor__init_app_impl(port, ptr, rust_vec_len, data_len),
-        91 => wire__crate__api__coin__init_datadir_impl(port, ptr, rust_vec_len, data_len),
-        92 => wire__crate__api__network__init_datadir_impl(port, ptr, rust_vec_len, data_len),
-        93 => wire__crate__api__frost__init_dkg_impl(port, ptr, rust_vec_len, data_len),
-        95 => wire__crate__api__frost__init_sign_impl(port, ptr, rust_vec_len, data_len),
-        96 => wire__crate__api__vault__init_vault_impl(port, ptr, rust_vec_len, data_len),
-        97 => wire__crate__api__plugin__install_plugin_impl(port, ptr, rust_vec_len, data_len),
-        98 => wire__crate__api__network__is_ironwood_active_impl(port, ptr, rust_vec_len, data_len),
-        99 => {
+        88 => wire__crate__api__init__init_app_impl(port, ptr, rust_vec_len, data_len),
+        89 => wire__crate__api__raptor__init_app_impl(port, ptr, rust_vec_len, data_len),
+        90 => wire__crate__api__coin__init_datadir_impl(port, ptr, rust_vec_len, data_len),
+        91 => wire__crate__api__network__init_datadir_impl(port, ptr, rust_vec_len, data_len),
+        92 => wire__crate__api__frost__init_dkg_impl(port, ptr, rust_vec_len, data_len),
+        94 => wire__crate__api__frost__init_sign_impl(port, ptr, rust_vec_len, data_len),
+        95 => wire__crate__api__vault__init_vault_impl(port, ptr, rust_vec_len, data_len),
+        96 => wire__crate__api__plugin__install_plugin_impl(port, ptr, rust_vec_len, data_len),
+        97 => wire__crate__api__network__is_ironwood_active_impl(port, ptr, rust_vec_len, data_len),
+        98 => {
             wire__crate__api__frost__is_signing_in_progress_impl(port, ptr, rust_vec_len, data_len)
         }
-        107 => wire__crate__api__zsa__is_zsa_available_impl(port, ptr, rust_vec_len, data_len),
-        108 => wire__crate__api__issuance__issue_asset_impl(port, ptr, rust_vec_len, data_len),
-        109 => wire__crate__api__account__list_accounts_impl(port, ptr, rust_vec_len, data_len),
-        110 => wire__crate__api__account__list_categories_impl(port, ptr, rust_vec_len, data_len),
-        111 => wire__crate__api__contacts__list_contacts_impl(port, ptr, rust_vec_len, data_len),
-        112 => wire__crate__api__db__list_db_accounts_impl(port, ptr, rust_vec_len, data_len),
-        113 => wire__crate__api__db__list_db_names_impl(port, ptr, rust_vec_len, data_len),
-        114 => wire__crate__api__account__list_folders_impl(port, ptr, rust_vec_len, data_len),
-        115 => wire__crate__api__account__list_memos_impl(port, ptr, rust_vec_len, data_len),
-        116 => wire__crate__api__account__list_notes_impl(port, ptr, rust_vec_len, data_len),
-        117 => wire__crate__api__plugin__list_plugins_impl(port, ptr, rust_vec_len, data_len),
-        118 => wire__crate__api__account__list_tx_history_impl(port, ptr, rust_vec_len, data_len),
-        119 => wire__crate__api__zsa__list_zsa_holdings_impl(port, ptr, rust_vec_len, data_len),
-        120 => wire__crate__api__account__lock_note_impl(port, ptr, rust_vec_len, data_len),
-        121 => wire__crate__api__account__lock_recent_notes_impl(port, ptr, rust_vec_len, data_len),
-        122 => wire__crate__api__account__max_spendable_impl(port, ptr, rust_vec_len, data_len),
-        123 => wire__crate__api__near_intents__near_intents_assets_impl(
+        106 => wire__crate__api__zsa__is_zsa_available_impl(port, ptr, rust_vec_len, data_len),
+        107 => wire__crate__api__issuance__issue_asset_impl(port, ptr, rust_vec_len, data_len),
+        108 => wire__crate__api__account__list_accounts_impl(port, ptr, rust_vec_len, data_len),
+        109 => wire__crate__api__account__list_categories_impl(port, ptr, rust_vec_len, data_len),
+        110 => wire__crate__api__contacts__list_contacts_impl(port, ptr, rust_vec_len, data_len),
+        111 => wire__crate__api__db__list_db_accounts_impl(port, ptr, rust_vec_len, data_len),
+        112 => wire__crate__api__db__list_db_names_impl(port, ptr, rust_vec_len, data_len),
+        113 => wire__crate__api__account__list_folders_impl(port, ptr, rust_vec_len, data_len),
+        114 => wire__crate__api__account__list_memos_impl(port, ptr, rust_vec_len, data_len),
+        115 => wire__crate__api__account__list_notes_impl(port, ptr, rust_vec_len, data_len),
+        116 => wire__crate__api__plugin__list_plugins_impl(port, ptr, rust_vec_len, data_len),
+        117 => wire__crate__api__account__list_tx_history_impl(port, ptr, rust_vec_len, data_len),
+        118 => wire__crate__api__zsa__list_zsa_holdings_impl(port, ptr, rust_vec_len, data_len),
+        119 => wire__crate__api__account__lock_note_impl(port, ptr, rust_vec_len, data_len),
+        120 => wire__crate__api__account__lock_recent_notes_impl(port, ptr, rust_vec_len, data_len),
+        121 => wire__crate__api__account__max_spendable_impl(port, ptr, rust_vec_len, data_len),
+        122 => wire__crate__api__near_intents__near_intents_assets_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        124 => wire__crate__api__near_intents__near_intents_clear_closed_swaps_impl(
+        123 => wire__crate__api__near_intents__near_intents_clear_closed_swaps_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        125 => wire__crate__api__near_intents__near_intents_create_swap_impl(
+        124 => wire__crate__api__near_intents__near_intents_create_swap_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        126 => wire__crate__api__near_intents__near_intents_delete_closed_swap_impl(
+        125 => wire__crate__api__near_intents__near_intents_delete_closed_swap_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        127 => wire__crate__api__near_intents__near_intents_list_swaps_impl(
+        126 => wire__crate__api__near_intents__near_intents_list_swaps_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        128 => wire__crate__api__near_intents__near_intents_prepare_swap_impl(
+        127 => wire__crate__api__near_intents__near_intents_prepare_swap_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        129 => wire__crate__api__near_intents__near_intents_quote_impl(
+        128 => wire__crate__api__near_intents__near_intents_quote_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        130 => wire__crate__api__near_intents__near_intents_record_deposit_impl(
+        129 => wire__crate__api__near_intents__near_intents_record_deposit_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        131 => wire__crate__api__near_intents__near_intents_refresh_swap_status_impl(
+        130 => wire__crate__api__near_intents__near_intents_refresh_swap_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        132 => wire__crate__api__near_intents__near_intents_status_impl(
+        131 => wire__crate__api__near_intents__near_intents_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        133 => wire__crate__api__near_intents__near_intents_submit_deposit_impl(
+        132 => wire__crate__api__near_intents__near_intents_submit_deposit_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        134 => wire__crate__api__account__new_account_impl(port, ptr, rust_vec_len, data_len),
-        135 => wire__crate__api__pay__pack_transaction_impl(port, ptr, rust_vec_len, data_len),
-        136 => wire__crate__api__plugin__parse_memo_with_plugins_impl(
+        133 => wire__crate__api__account__new_account_impl(port, ptr, rust_vec_len, data_len),
+        134 => wire__crate__api__pay__pack_transaction_impl(port, ptr, rust_vec_len, data_len),
+        135 => wire__crate__api__plugin__parse_memo_with_plugins_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        138 => wire__crate__api__pay__prepare_impl(port, ptr, rust_vec_len, data_len),
-        139 => wire__crate__api__pay__prepare_migration_impl(port, ptr, rust_vec_len, data_len),
-        140 => wire__crate__api__account__print_keys_impl(port, ptr, rust_vec_len, data_len),
-        141 => wire__crate__api__db__put_prop_impl(port, ptr, rust_vec_len, data_len),
-        142 => wire__crate__api__network__query_lwd_list_impl(port, ptr, rust_vec_len, data_len),
-        143 => wire__crate__api__account__receivers_default_impl(port, ptr, rust_vec_len, data_len),
-        145 => wire__crate__api__account__remove_account_impl(port, ptr, rust_vec_len, data_len),
-        146 => wire__crate__api__plugin__remove_plugin_impl(port, ptr, rust_vec_len, data_len),
-        147 => wire__crate__api__account__rename_category_impl(port, ptr, rust_vec_len, data_len),
-        148 => wire__crate__api__db__rename_db_impl(port, ptr, rust_vec_len, data_len),
-        149 => wire__crate__api__account__rename_folder_impl(port, ptr, rust_vec_len, data_len),
-        150 => wire__crate__api__account__reorder_account_impl(port, ptr, rust_vec_len, data_len),
-        151 => wire__crate__api__frost__reset_sign_impl(port, ptr, rust_vec_len, data_len),
-        152 => wire__crate__api__account__reset_sync_impl(port, ptr, rust_vec_len, data_len),
-        153 => {
+        137 => wire__crate__api__pay__prepare_impl(port, ptr, rust_vec_len, data_len),
+        138 => wire__crate__api__pay__prepare_migration_impl(port, ptr, rust_vec_len, data_len),
+        139 => wire__crate__api__account__print_keys_impl(port, ptr, rust_vec_len, data_len),
+        140 => wire__crate__api__db__put_prop_impl(port, ptr, rust_vec_len, data_len),
+        141 => wire__crate__api__network__query_lwd_list_impl(port, ptr, rust_vec_len, data_len),
+        142 => wire__crate__api__account__receivers_default_impl(port, ptr, rust_vec_len, data_len),
+        144 => wire__crate__api__account__remove_account_impl(port, ptr, rust_vec_len, data_len),
+        145 => wire__crate__api__plugin__remove_plugin_impl(port, ptr, rust_vec_len, data_len),
+        146 => wire__crate__api__account__rename_category_impl(port, ptr, rust_vec_len, data_len),
+        147 => wire__crate__api__db__rename_db_impl(port, ptr, rust_vec_len, data_len),
+        148 => wire__crate__api__account__rename_folder_impl(port, ptr, rust_vec_len, data_len),
+        149 => wire__crate__api__account__reorder_account_impl(port, ptr, rust_vec_len, data_len),
+        150 => wire__crate__api__frost__reset_sign_impl(port, ptr, rust_vec_len, data_len),
+        151 => wire__crate__api__account__reset_sync_impl(port, ptr, rust_vec_len, data_len),
+        152 => {
             wire__crate__api__openalias__resolve_openalias_impl(port, ptr, rust_vec_len, data_len)
         }
-        154 => wire__crate__api__openalias__resolve_openalias_all_impl(
+        153 => wire__crate__api__openalias__resolve_openalias_all_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        155 => wire__crate__api__openalias__resolve_openalias_raw_impl(
+        154 => wire__crate__api__openalias__resolve_openalias_raw_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        156 => wire__crate__api__sync__rewind_sync_impl(port, ptr, rust_vec_len, data_len),
-        157 => wire__crate__api__pay__send_impl(port, ptr, rust_vec_len, data_len),
-        158 => wire__crate__api__zsa__set_asset_name_impl(port, ptr, rust_vec_len, data_len),
-        159 => wire__crate__api__frost__set_dkg_address_impl(port, ptr, rust_vec_len, data_len),
-        160 => wire__crate__api__frost__set_dkg_params_impl(port, ptr, rust_vec_len, data_len),
-        163 => wire__crate__api__plugin__set_plugin_enabled_impl(port, ptr, rust_vec_len, data_len),
-        164 => {
+        155 => wire__crate__api__sync__rewind_sync_impl(port, ptr, rust_vec_len, data_len),
+        156 => wire__crate__api__pay__send_impl(port, ptr, rust_vec_len, data_len),
+        157 => wire__crate__api__zsa__set_asset_name_impl(port, ptr, rust_vec_len, data_len),
+        158 => wire__crate__api__frost__set_dkg_address_impl(port, ptr, rust_vec_len, data_len),
+        159 => wire__crate__api__frost__set_dkg_params_impl(port, ptr, rust_vec_len, data_len),
+        162 => wire__crate__api__plugin__set_plugin_enabled_impl(port, ptr, rust_vec_len, data_len),
+        163 => {
             wire__crate__api__transaction__set_tx_category_impl(port, ptr, rust_vec_len, data_len)
         }
-        165 => wire__crate__api__transaction__set_tx_price_impl(port, ptr, rust_vec_len, data_len),
-        166 => wire__crate__api__transaction__set_user_memo_impl(port, ptr, rust_vec_len, data_len),
-        167 => wire__crate__api__account__show_ledger_sapling_address_impl(
+        164 => wire__crate__api__transaction__set_tx_price_impl(port, ptr, rust_vec_len, data_len),
+        165 => wire__crate__api__transaction__set_user_memo_impl(port, ptr, rust_vec_len, data_len),
+        166 => wire__crate__api__account__show_ledger_sapling_address_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        168 => wire__crate__api__account__show_ledger_transparent_address_impl(
+        167 => wire__crate__api__account__show_ledger_transparent_address_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        169 => wire__crate__api__account__sign_ledger_transaction_impl(
+        168 => wire__crate__api__account__sign_ledger_transaction_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        170 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
-        171 => wire__crate__api__migrate__step_migration_impl(port, ptr, rust_vec_len, data_len),
-        172 => wire__crate__api__pay__store_pending_tx_impl(port, ptr, rust_vec_len, data_len),
-        173 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
-        175 => wire__crate__api__account__toggle_all_notes_impl(port, ptr, rust_vec_len, data_len),
-        177 => {
+        169 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
+        170 => wire__crate__api__migrate__step_migration_impl(port, ptr, rust_vec_len, data_len),
+        171 => wire__crate__api__pay__store_pending_tx_impl(port, ptr, rust_vec_len, data_len),
+        172 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
+        174 => wire__crate__api__account__toggle_all_notes_impl(port, ptr, rust_vec_len, data_len),
+        176 => {
             wire__crate__api__account__tx_account_default_impl(port, ptr, rust_vec_len, data_len)
         }
-        178 => wire__crate__api__account__tx_memo_default_impl(port, ptr, rust_vec_len, data_len),
-        179 => wire__crate__api__account__tx_note_default_impl(port, ptr, rust_vec_len, data_len),
-        180 => wire__crate__api__account__tx_output_default_impl(port, ptr, rust_vec_len, data_len),
-        181 => wire__crate__api__account__tx_spend_default_impl(port, ptr, rust_vec_len, data_len),
-        183 => wire__crate__api__account__unlock_all_notes_impl(port, ptr, rust_vec_len, data_len),
-        184 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
-        185 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
-        186 => wire__crate__api__contacts__update_contact_impl(port, ptr, rust_vec_len, data_len),
-        187 => wire__crate__api__transaction__update_historical_prices_impl(
+        177 => wire__crate__api__account__tx_memo_default_impl(port, ptr, rust_vec_len, data_len),
+        178 => wire__crate__api__account__tx_note_default_impl(port, ptr, rust_vec_len, data_len),
+        179 => wire__crate__api__account__tx_output_default_impl(port, ptr, rust_vec_len, data_len),
+        180 => wire__crate__api__account__tx_spend_default_impl(port, ptr, rust_vec_len, data_len),
+        182 => wire__crate__api__account__unlock_all_notes_impl(port, ptr, rust_vec_len, data_len),
+        183 => wire__crate__api__pay__unpack_transaction_impl(port, ptr, rust_vec_len, data_len),
+        184 => wire__crate__api__account__update_account_impl(port, ptr, rust_vec_len, data_len),
+        185 => wire__crate__api__contacts__update_contact_impl(port, ptr, rust_vec_len, data_len),
+        186 => wire__crate__api__transaction__update_historical_prices_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        191 => {
+        190 => {
             wire__crate__api__voting__voting_clear_selection_impl(port, ptr, rust_vec_len, data_len)
         }
-        192 => wire__crate__api__voting_drive__voting_drive_cancel_impl(
+        191 => wire__crate__api__voting_drive__voting_drive_cancel_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        193 => wire__crate__api__voting_drive__voting_drive_cancel_all_impl(
+        192 => wire__crate__api__voting_drive__voting_drive_cancel_all_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        194 => wire__crate__api__voting_drive__voting_drive_start_impl(
+        193 => wire__crate__api__voting_drive__voting_drive_start_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        195 => wire__crate__api__voting_drive__voting_drive_status_impl(
+        194 => wire__crate__api__voting_drive__voting_drive_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        196 => {
+        195 => {
             wire__crate__api__voting__voting_load_selections_impl(port, ptr, rust_vec_len, data_len)
         }
-        197 => wire__crate__api__voting_drive__voting_prepare_round_impl(
+        196 => wire__crate__api__voting_drive__voting_prepare_round_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        198 => wire__crate__api__voting__voting_round_list_impl(port, ptr, rust_vec_len, data_len),
-        199 => {
+        197 => wire__crate__api__voting__voting_round_list_impl(port, ptr, rust_vec_len, data_len),
+        198 => {
             wire__crate__api__voting__voting_save_selection_impl(port, ptr, rust_vec_len, data_len)
         }
-        200 => wire__crate__api__voting_share_tracking__voting_track_shares_once_impl(
+        199 => wire__crate__api__voting_share_tracking__voting_track_shares_once_impl(
             port,
             ptr,
             rust_vec_len,
@@ -10678,47 +13164,48 @@ fn pde_ffi_dispatcher_sync_impl(
 ) -> flutter_rust_bridge::for_generated::WireSyncRust2DartSse {
     // Codec=Pde (Serialization + dispatch), see doc to use other codecs
     match func_id {
-        8 => wire__crate__api__mempool__Mempool_new_impl(ptr, rust_vec_len, data_len),
-        11 => wire__crate__api__migrate__NoteMigration_new_impl(ptr, rust_vec_len, data_len),
-        13 => {
+        1 => wire__crate__api__coin__Coin_coin_impl(ptr, rust_vec_len, data_len),
+        3 => wire__crate__api__coin__Coin_new_impl(ptr, rust_vec_len, data_len),
+        5 => wire__crate__api__coin__Coin_set_lwd_impl(ptr, rust_vec_len, data_len),
+        6 => wire__crate__api__coin__Coin_set_proxy_impl(ptr, rust_vec_len, data_len),
+        7 => wire__crate__api__coin__Coin_set_transport_impl(ptr, rust_vec_len, data_len),
+        15 => wire__crate__api__mempool__Mempool_new_impl(ptr, rust_vec_len, data_len),
+        18 => wire__crate__api__migrate__NoteMigration_new_impl(ptr, rust_vec_len, data_len),
+        20 => {
             wire__crate__api__migrate__NoteMigration_update_height_impl(ptr, rust_vec_len, data_len)
         }
-        24 => wire__crate__api__sapling__check_sapling_params_impl(ptr, rust_vec_len, data_len),
-        27 => wire__crate__api__coin__coin_new_impl(ptr, rust_vec_len, data_len),
-        30 => wire__crate__api__coin__coin_set_lwd_impl(ptr, rust_vec_len, data_len),
-        31 => wire__crate__api__coin__coin_set_proxy_impl(ptr, rust_vec_len, data_len),
-        32 => wire__crate__api__coin__coin_set_transport_impl(ptr, rust_vec_len, data_len),
-        61 => wire__crate__api__key__generate_seed_impl(ptr, rust_vec_len, data_len),
-        75 => wire__crate__api__key__get_key_pools_impl(ptr, rust_vec_len, data_len),
-        80 => wire__crate__api__raptor__get_qr_bytes_impl(ptr, rust_vec_len, data_len),
-        94 => wire__crate__api__plugin__init_plugins_impl(ptr, rust_vec_len, data_len),
-        100 => wire__crate__api__key__is_tex_address_impl(ptr, rust_vec_len, data_len),
-        101 => wire__crate__api__key__is_valid_address_impl(ptr, rust_vec_len, data_len),
-        102 => wire__crate__api__key__is_valid_fvk_impl(ptr, rust_vec_len, data_len),
-        103 => wire__crate__api__key__is_valid_key_impl(ptr, rust_vec_len, data_len),
-        104 => wire__crate__api__network__is_valid_nym_url_impl(ptr, rust_vec_len, data_len),
-        105 => wire__crate__api__key__is_valid_phrase_impl(ptr, rust_vec_len, data_len),
-        106 => {
+        31 => wire__crate__api__sapling__check_sapling_params_impl(ptr, rust_vec_len, data_len),
+        60 => wire__crate__api__key__generate_seed_impl(ptr, rust_vec_len, data_len),
+        74 => wire__crate__api__key__get_key_pools_impl(ptr, rust_vec_len, data_len),
+        79 => wire__crate__api__raptor__get_qr_bytes_impl(ptr, rust_vec_len, data_len),
+        93 => wire__crate__api__plugin__init_plugins_impl(ptr, rust_vec_len, data_len),
+        99 => wire__crate__api__key__is_tex_address_impl(ptr, rust_vec_len, data_len),
+        100 => wire__crate__api__key__is_valid_address_impl(ptr, rust_vec_len, data_len),
+        101 => wire__crate__api__key__is_valid_fvk_impl(ptr, rust_vec_len, data_len),
+        102 => wire__crate__api__key__is_valid_key_impl(ptr, rust_vec_len, data_len),
+        103 => wire__crate__api__network__is_valid_nym_url_impl(ptr, rust_vec_len, data_len),
+        104 => wire__crate__api__key__is_valid_phrase_impl(ptr, rust_vec_len, data_len),
+        105 => {
             wire__crate__api__key__is_valid_transparent_address_impl(ptr, rust_vec_len, data_len)
         }
-        137 => wire__crate__api__pay__parse_payment_uri_impl(ptr, rust_vec_len, data_len),
-        144 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
-        161 => wire__crate__api__init__set_expert_mode_impl(ptr, rust_vec_len, data_len),
-        162 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
-        174 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
-        176 => wire__crate__api__openalias__try_validate_zcash_address_impl(
+        136 => wire__crate__api__pay__parse_payment_uri_impl(ptr, rust_vec_len, data_len),
+        143 => wire__crate__api__account__receivers_from_ua_impl(ptr, rust_vec_len, data_len),
+        160 => wire__crate__api__init__set_expert_mode_impl(ptr, rust_vec_len, data_len),
+        161 => wire__crate__api__init__set_log_stream_impl(ptr, rust_vec_len, data_len),
+        173 => wire__crate__api__pay__to_plan_impl(ptr, rust_vec_len, data_len),
+        175 => wire__crate__api__openalias__try_validate_zcash_address_impl(
             ptr,
             rust_vec_len,
             data_len,
         ),
-        182 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
-        188 => {
+        181 => wire__crate__api__account__ua_from_ufvk_impl(ptr, rust_vec_len, data_len),
+        187 => {
             wire__crate__api__address__validate_blockchain_address_impl(ptr, rust_vec_len, data_len)
         }
-        189 => {
+        188 => {
             wire__crate__api__openalias__validate_openalias_name_impl(ptr, rust_vec_len, data_len)
         }
-        190 => {
+        189 => {
             wire__crate__api__openalias__validate_zcash_address_impl(ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
@@ -10726,6 +13213,21 @@ fn pde_ffi_dispatcher_sync_impl(
 }
 
 // Section: rust2dart
+
+// Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for FrbWrapper<Coin> {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self.0)
+            .into_dart()
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for FrbWrapper<Coin> {}
+
+impl flutter_rust_bridge::IntoIntoDart<FrbWrapper<Coin>> for Coin {
+    fn into_into_dart(self) -> FrbWrapper<Coin> {
+        self.into()
+    }
+}
 
 // Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for FrbWrapper<DartVault> {
@@ -10894,27 +13396,6 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::account::Category>
     for crate::api::account::Category
 {
     fn into_into_dart(self) -> crate::api::account::Category {
-        self
-    }
-}
-// Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::coin::Coin {
-    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [
-            self.coin.into_into_dart().into_dart(),
-            self.account.into_into_dart().into_dart(),
-            self.db_filepath.into_into_dart().into_dart(),
-            self.url.into_into_dart().into_dart(),
-            self.server_type.into_into_dart().into_dart(),
-            self.transport.into_into_dart().into_dart(),
-            self.proxy.into_into_dart().into_dart(),
-        ]
-        .into_dart()
-    }
-}
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::coin::Coin {}
-impl flutter_rust_bridge::IntoIntoDart<crate::api::coin::Coin> for crate::api::coin::Coin {
-    fn into_into_dart(self) -> crate::api::coin::Coin {
         self
     }
 }
@@ -12426,6 +14907,16 @@ impl SseEncode for flutter_rust_bridge::for_generated::anyhow::Error {
     }
 }
 
+impl SseEncode for Coin {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        <RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>>>::sse_encode(
+            flutter_rust_bridge::for_generated::rust_auto_opaque_encode::<_, MoiArc<_>>(self),
+            serializer,
+        );
+    }
+}
+
 impl SseEncode for DartVault {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -12458,6 +14949,15 @@ impl SseEncode for flutter_rust_bridge::DartOpaque {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <usize>::sse_encode(self.encode(), serializer);
+    }
+}
+
+impl SseEncode for RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>> {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        let (ptr, size) = self.sse_encode_raw();
+        <usize>::sse_encode(ptr, serializer);
+        <i32>::sse_encode(size, serializer);
     }
 }
 
@@ -12648,19 +15148,6 @@ impl SseEncode for crate::api::account::Category {
         <u32>::sse_encode(self.id, serializer);
         <String>::sse_encode(self.name, serializer);
         <bool>::sse_encode(self.is_income, serializer);
-    }
-}
-
-impl SseEncode for crate::api::coin::Coin {
-    // Codec=Sse (Serialization based), see doc to use other codecs
-    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <u8>::sse_encode(self.coin, serializer);
-        <u32>::sse_encode(self.account, serializer);
-        <String>::sse_encode(self.db_filepath, serializer);
-        <String>::sse_encode(self.url, serializer);
-        <u8>::sse_encode(self.server_type, serializer);
-        <u8>::sse_encode(self.transport, serializer);
-        <String>::sse_encode(self.proxy, serializer);
     }
 }
 
@@ -14164,6 +16651,7 @@ mod io {
     // Section: imports
 
     use super::*;
+    use crate::api::coin::*;
     use crate::api::mempool::*;
     use crate::api::migrate::*;
     use crate::api::sweep::*;
@@ -14177,6 +16665,20 @@ mod io {
     // Section: boilerplate
 
     flutter_rust_bridge::frb_generated_boilerplate_io!();
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_zkool_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>>::increment_strong_count(ptr as _);
+    }
+
+    #[unsafe(no_mangle)]
+    pub extern "C" fn frbgen_zkool_rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>>::decrement_strong_count(ptr as _);
+    }
 
     #[unsafe(no_mangle)]
     pub extern "C" fn frbgen_zkool_rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(
@@ -14246,6 +16748,7 @@ mod web {
     // Section: imports
 
     use super::*;
+    use crate::api::coin::*;
     use crate::api::mempool::*;
     use crate::api::migrate::*;
     use crate::api::sweep::*;
@@ -14261,6 +16764,20 @@ mod web {
     // Section: boilerplate
 
     flutter_rust_bridge::frb_generated_boilerplate_web!();
+
+    #[wasm_bindgen]
+    pub fn rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>>::increment_strong_count(ptr as _);
+    }
+
+    #[wasm_bindgen]
+    pub fn rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
+        ptr: *const std::ffi::c_void,
+    ) {
+        MoiArc::<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>>::decrement_strong_count(ptr as _);
+    }
 
     #[wasm_bindgen]
     pub fn rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerDartVault(

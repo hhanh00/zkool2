@@ -7,20 +7,17 @@ import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:zkool/store.dart';
 
+class _FakeCoin implements Coin {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 class _Api implements RustLibApi {
   final streams = <StreamController<SyncProgress>>[];
   int cancels = 0;
 
   @override
-  Coin crateApiCoinCoinNew({int? defaultCoin}) => const Coin.raw(
-        coin: 0,
-        account: 0,
-        dbFilepath: '',
-        url: '',
-        serverType: 0,
-        transport: 0,
-        proxy: '',
-      );
+  Coin crateApiCoinCoinNew({int? defaultCoin}) => _FakeCoin();
 
   @override
   Stream<SyncProgress> crateApiSyncSynchronize({

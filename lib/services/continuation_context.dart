@@ -11,13 +11,13 @@ final class SwapContext extends ContinuationContext {
   final SwapSummaryArgs summary;
   const SwapContext(this.summary);
 
-  Future<SwapSummaryArgs> complete(String txHash, Coin coin) async {
+  Future<SwapSummaryArgs> complete(String txHash, int account, Coin coin) async {
     var swap = summary.swap;
     try {
-      await nearIntentsRecordDeposit(idSwap: swap.idSwap, txHash: txHash, c: coin);
+      await nearIntentsRecordDeposit(idSwap: swap.idSwap, txHash: txHash, account: account, c: coin);
     } catch (_) {}
     try {
-      final swaps = await nearIntentsListSwaps(pendingOnly: false, c: coin);
+      final swaps = await nearIntentsListSwaps(pendingOnly: false, account: account, c: coin);
       swap = swaps.firstWhere((item) => item.idSwap == swap.idSwap);
     } catch (_) {}
     return (

@@ -19,22 +19,25 @@ Future<String> buildPuri({required List<Recipient> recipients}) =>
 Future<PcztPackage> prepare(
         {required List<Recipient> recipients,
         required PaymentOptions options,
+        required int account,
         required Coin c}) =>
-    RustLib.instance.api
-        .crateApiPayPrepare(recipients: recipients, options: options, c: c);
+    RustLib.instance.api.crateApiPayPrepare(
+        recipients: recipients, options: options, account: account, c: c);
 
 /// Prepare a migration transaction (splitting or migrating).
 /// Uses `migration=true` to allow Orchard outputs when Ironwood is active.
 Future<PcztPackage> prepareMigration(
         {required List<Recipient> recipients,
         required int srcPools,
+        required int account,
         required Coin c}) =>
     RustLib.instance.api.crateApiPayPrepareMigration(
-        recipients: recipients, srcPools: srcPools, c: c);
+        recipients: recipients, srcPools: srcPools, account: account, c: c);
 
 Future<PcztPackage> signTransaction(
-        {required PcztPackage pczt, required Coin c}) =>
-    RustLib.instance.api.crateApiPaySignTransaction(pczt: pczt, c: c);
+        {required PcztPackage pczt, required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiPaySignTransaction(pczt: pczt, account: account, c: c);
 
 Future<Uint8List> extractTransaction({required PcztPackage package}) =>
     RustLib.instance.api.crateApiPayExtractTransaction(package: package);
@@ -52,25 +55,38 @@ Future<PcztPackage> unpackTransaction({required List<int> bytes}) =>
     RustLib.instance.api.crateApiPayUnpackTransaction(bytes: bytes);
 
 Future<String> broadcastTransaction(
-        {required int height, required List<int> txBytes, required Coin c}) =>
+        {required int height,
+        required List<int> txBytes,
+        required int account,
+        required Coin c}) =>
     RustLib.instance.api.crateApiPayBroadcastTransaction(
-        height: height, txBytes: txBytes, c: c);
+        height: height, txBytes: txBytes, account: account, c: c);
 
 TxPlan toPlan({required PcztPackage package, required Coin c}) =>
     RustLib.instance.api.crateApiPayToPlan(package: package, c: c);
 
 Future<String> send(
-        {required int height, required List<int> data, required Coin c}) =>
-    RustLib.instance.api.crateApiPaySend(height: height, data: data, c: c);
+        {required int height,
+        required List<int> data,
+        required int account,
+        required Coin c}) =>
+    RustLib.instance.api
+        .crateApiPaySend(height: height, data: data, account: account, c: c);
 
 Future<void> storePendingTx(
         {required int height,
         required List<int> txid,
         double? price,
         int? category,
+        required int account,
         required Coin c}) =>
     RustLib.instance.api.crateApiPayStorePendingTx(
-        height: height, txid: txid, price: price, category: category, c: c);
+        height: height,
+        txid: txid,
+        price: price,
+        category: category,
+        account: account,
+        c: c);
 
 List<Recipient>? parsePaymentUri({required String uri}) =>
     RustLib.instance.api.crateApiPayParsePaymentUri(uri: uri);

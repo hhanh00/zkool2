@@ -36,9 +36,9 @@ pub struct DkgStepOutcome {
 
 /// Run one pass for `account`.
 ///
-/// The account is explicit rather than read from `c.account`: a caller holding
-/// a process-wide coin — the GraphQL server does — must step the wallet it was
-/// asked about, not whichever one the coin happens to name.
+/// The handle names the wallet; the account is explicit, so a caller holding
+/// a process-wide coin — the GraphQL server does — steps the account it was
+/// asked about.
 pub async fn dkg_step(
     network: &Network,
     connection: &mut SqliteConnection,

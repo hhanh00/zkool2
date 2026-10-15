@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
-import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -24,29 +23,9 @@ class AccountListPage extends ConsumerStatefulWidget {
   ConsumerState<AccountListPage> createState() => AccountListPageState();
 }
 
-class AccountListPageState extends ConsumerState<AccountListPage> with RouteAware {
+class AccountListPageState extends ConsumerState<AccountListPage> {
   var includeHidden = false;
   final listKey = GlobalKey<EditableListState<Account>>();
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    routeObserver.subscribe(this, ModalRoute.of(context)!);
-  }
-
-  @override
-  void dispose() {
-    routeObserver.unsubscribe(this);
-    super.dispose();
-  }
-
-  @override
-  void didPopNext() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      coinContext.setAccount(account: 0);
-    });
-    super.didPopNext();
-  }
 
   void refreshHeight(bool fetchPrice) async {
     try {
@@ -272,8 +251,6 @@ class AccountListPageState extends ConsumerState<AccountListPage> with RouteAwar
     // Invalidate cache to ensure fresh data
     ref.invalidate(getCurrentAccountProvider);
     ref.invalidate(accountProvider(account.id));
-    // Update both the coin context and selected account ID
-    await coinContext.setAccount(account: account.id);
     ref.read(selectedAccountIdProvider.notifier).set(account.id);
     // Wait for getCurrentAccountProvider (what the page watches) to complete
     await ref.read(getCurrentAccountProvider.future);

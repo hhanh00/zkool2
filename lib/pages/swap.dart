@@ -281,6 +281,7 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
   bool _submitting = false;
   String _submitStep = '';
   late final _coin = coinContext.coin;
+  late final _account = ref.read(selectedAccountIdProvider);
 
   Future<void> _confirmAndSubmit() async {
     final quote = _displayedQuote!;
@@ -295,7 +296,7 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
       return;
     }
     if (mounted) setState(() => _submitStep = 'Creating swap...');
-    final saved = _createdSwap ??= await nearIntentsCreateSwap(request: quote.request!, c: _coin);
+    final saved = _createdSwap ??= await nearIntentsCreateSwap(request: quote.request!, account: _account, c: _coin);
     final SwapSummaryArgs summary = (
       swap: saved,
       symbol: widget.draft.destinationSymbol,
@@ -306,7 +307,7 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
     );
     if (widget.draft.direction == SwapDirection.sendZec) {
       if (mounted) setState(() => _submitStep = 'Preparing deposit...');
-      final pczt = await nearIntentsPrepareSwap(idSwap: saved.idSwap, c: _coin);
+      final pczt = await nearIntentsPrepareSwap(idSwap: saved.idSwap, account: _account, c: _coin);
       if (!mounted) return;
       ref.invalidate(savedSwapsProvider);
       unawaited(GoRouter.of(context).pushReplacement<void>('/tx', extra: TxPageArgs(pczt, SwapContext(summary))));
@@ -352,7 +353,7 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
   void _refresh() {
     _displayedQuote = null;
     final loader = widget.quoteLoader;
-    _quote = Future.sync(() => loader != null ? loader(widget.draft) : loadSwapQuote(widget.draft, _coin));
+    _quote = Future.sync(() => loader != null ? loader(widget.draft) : loadSwapQuote(widget.draft, _account, _coin));
   }
 
   @override

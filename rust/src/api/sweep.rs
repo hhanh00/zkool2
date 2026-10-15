@@ -26,6 +26,7 @@ impl TransparentScanner {
         address_stream: StreamSink<String>,
         end_height: u32,
         gap_limit: u32,
+        account: u32,
         c: &Coin,
     ) -> Result<()> {
         let connection = c.get_connection().await?;
@@ -34,7 +35,7 @@ impl TransparentScanner {
             &c.network(),
             connection,
             client,
-            c.account,
+            account,
             end_height,
             gap_limit,
             move |address| {

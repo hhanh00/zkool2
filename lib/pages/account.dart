@@ -419,6 +419,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                               await setUserMemo(
                                 idTx: txId,
                                 memo: newMemo,
+                                account: ref.read(selectedAccountIdProvider),
                                 c: c,
                               );
                               ref.invalidate(accountProvider);
@@ -437,7 +438,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                         ),
                     ],
                   ),
-                  showMemos(context, account.memos, () {
+                  showMemos(context, account.memos, ref.read(selectedAccountIdProvider), () {
                     final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
                     ref.invalidate(accountProvider(selectedAccount.id));
                   }),
@@ -481,7 +482,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
         builder: (_) => const Center(child: CircularProgressIndicator()),
       ));
       try {
-        final n = await fillMissingTxPrices(c: c, api: settings.coingecko, currency: settings.currency);
+        final n = await fillMissingTxPrices(api: settings.coingecko, currency: settings.currency, account: ref.read(selectedAccountIdProvider), c: c);
         if (mounted) {
           GoRouter.of(context).pop();
           if (n > 0) {
@@ -500,7 +501,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
   }
 
   void onExport(int index) async {
-    final data = await getExportedData(type: index, c: c);
+    final data = await getExportedData(type: index, account: ref.read(selectedAccountIdProvider), c: c);
     final filename = await saveFile(data: utf8.encode(data));
     if (!mounted) return;
     if (filename != null) await showMessage(context, "$filename Saved");
@@ -906,9 +907,9 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
           "Are you sure you want to rewind this account? This will rollback the account to a previous height. You will not lose any funds, but you will need to resync the account",
     );
     if (!confirmed) return;
-    final dbHeight = await getDbHeight(c: c);
+    final dbHeight = await getDbHeight(account: account.id, c: c);
     await rewindSync(height: dbHeight.height - 60, account: account.id, c: c);
-    final h = await getDbHeight(c: c);
+    final h = await getDbHeight(account: account.id, c: c);
     final ss = ref.read(syncStateAccountProvider(account.id).notifier);
     ss.updateHeight(h.height, h.time);
   }
@@ -1019,14 +1020,14 @@ Uint8List trimTrailingZeros(Uint8List bytes) {
   return bytes.sublist(0, end);
 }
 
-Widget showMemos(BuildContext context, List<Memo> memos, VoidCallback onMemoChanged) {
+Widget showMemos(BuildContext context, List<Memo> memos, int account, VoidCallback onMemoChanged) {
   // Use a key derived from the memo list content to force rebuild when memos update,
   // since SearchableList only reads initialList once.
   final memoKey = memos.isEmpty ? 'empty' : '${memos.first.id}_${memos.last.id}_${memos.length}';
   return SearchableList(
     key: ValueKey(memoKey),
     initialList: memos,
-    itemBuilder: (memo) => MemoWidget(memo, onMemoChanged: onMemoChanged),
+    itemBuilder: (memo) => MemoWidget(memo, account: account, onMemoChanged: onMemoChanged),
     filter: (query) => memos.where((m) => query.isEmpty || (m.memo?.contains(query) == true)).toList(),
     inputDecoration: InputDecoration(
       labelText: "Search Memos",
@@ -1151,6 +1152,7 @@ void onLockRecent(WidgetRef ref, BuildContext context, int? currentHeight) async
     await lockRecentNotes(
       height: currentHeight,
       threshold: threshold,
+      account: ref.read(selectedAccountIdProvider),
       c: c,
     );
     final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
@@ -1162,7 +1164,7 @@ void onUnlockAll(WidgetRef ref, BuildContext context) async {
   final c = coinContext.coin;
   final confirmed = await confirmDialog(context, title: "Unlock All", message: "Do you want to unlock every note?");
   if (confirmed) {
-    await unlockAllNotes(c: c);
+    await unlockAllNotes(account: ref.read(selectedAccountIdProvider), c: c);
     final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
     ref.invalidate(accountProvider(selectedAccount.id));
   }
@@ -1172,7 +1174,7 @@ void onToggleAll(WidgetRef ref, BuildContext context) async {
   final c = coinContext.coin;
   final confirmed = await confirmDialog(context, title: "Toggle All", message: "Do you want to toggle the lock state of every note?");
   if (confirmed) {
-    await toggleAllNotes(c: c);
+    await toggleAllNotes(account: ref.read(selectedAccountIdProvider), c: c);
     final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
     ref.invalidate(accountProvider(selectedAccount.id));
   }
@@ -1183,7 +1185,7 @@ void onTogglePoolNotes(WidgetRef ref, BuildContext context, List<TxNote> poolNot
   final target = !allLocked;
   final c = coinContext.coin;
   for (final note in poolNotes) {
-    await lockNote(id: note.id, locked: target, c: c);
+    await lockNote(id: note.id, locked: target, account: ref.read(selectedAccountIdProvider), c: c);
   }
   final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
   ref.invalidate(accountProvider(selectedAccount.id));
@@ -1191,15 +1193,16 @@ void onTogglePoolNotes(WidgetRef ref, BuildContext context, List<TxNote> poolNot
 
 void toggleLock(WidgetRef ref, BuildContext context, int id, bool locked) async {
   final c = coinContext.coin;
-  await lockNote(id: id, locked: locked, c: c);
+  await lockNote(id: id, locked: locked, account: ref.read(selectedAccountIdProvider), c: c);
   final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
   ref.invalidate(accountProvider(selectedAccount.id));
 }
 
 class MemoWidget extends StatefulWidget {
   final Memo memo;
+  final int account;
   final void Function() onMemoChanged;
-  const MemoWidget(this.memo, {super.key, required this.onMemoChanged});
+  const MemoWidget(this.memo, {super.key, required this.account, required this.onMemoChanged});
 
   @override
   State<MemoWidget> createState() => _MemoWidgetState();
@@ -1252,9 +1255,9 @@ class _MemoWidgetState extends State<MemoWidget> {
     if (newText == oldText) return;
 
     if (newText.isEmpty) {
-      await setUserMemo(idTx: widget.memo.idTx, memo: null, c: c);
+      await setUserMemo(idTx: widget.memo.idTx, memo: null, account: widget.account, c: c);
     } else {
-      await setUserMemo(idTx: widget.memo.idTx, memo: newText, c: c);
+      await setUserMemo(idTx: widget.memo.idTx, memo: newText, account: widget.account, c: c);
     }
     widget.onMemoChanged();
   }

@@ -11,20 +11,17 @@ import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:zkool/store.dart';
 
+class _FakeCoin implements Coin {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 class _Api implements RustLibApi {
   final updates = <AccountUpdate>[];
   final resets = <int>[];
 
   @override
-  Coin crateApiCoinCoinNew({int? defaultCoin}) => const Coin.raw(
-        coin: 3,
-        account: 0,
-        dbFilepath: '',
-        url: '',
-        serverType: 0,
-        transport: 0,
-        proxy: '',
-      );
+  Coin crateApiCoinCoinNew({int? defaultCoin}) => _FakeCoin();
 
   @override
   Future<void> crateApiAccountUpdateAccount({required AccountUpdate update, required Coin c}) async {

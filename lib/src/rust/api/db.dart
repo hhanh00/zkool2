@@ -14,12 +14,14 @@ Future<void> changeDbPassword(
         {required String dbFilepath,
         required String tmpDir,
         required String oldPassword,
-        required String newPassword}) =>
+        required String newPassword,
+        required Coin c}) =>
     RustLib.instance.api.crateApiDbChangeDbPassword(
         dbFilepath: dbFilepath,
         tmpDir: tmpDir,
         oldPassword: oldPassword,
-        newPassword: newPassword);
+        newPassword: newPassword,
+        c: c);
 
 Future<String?> getProp({required String key, required Coin c}) =>
     RustLib.instance.api.crateApiDbGetProp(key: key, c: c);
@@ -34,8 +36,8 @@ Future<void> putProp(
 /// sidecar is one of those files, and leaving it behind would strand voting
 /// state that a wallet later recreated under the same name would inherit. The
 /// WAL companions of both only exist after an unclean shutdown.
-Future<void> deleteDb({required String dbFilepath}) =>
-    RustLib.instance.api.crateApiDbDeleteDb(dbFilepath: dbFilepath);
+Future<void> deleteDb({required String dbFilepath, required Coin c}) =>
+    RustLib.instance.api.crateApiDbDeleteDb(dbFilepath: dbFilepath, c: c);
 
 /// Renames a wallet database and every file that belongs to it.
 ///
@@ -45,9 +47,11 @@ Future<void> deleteDb({required String dbFilepath}) =>
 /// companions move too -- one left behind holds commits the renamed database
 /// would no longer see.
 Future<void> renameDb(
-        {required String dbFilepath, required String newDbFilepath}) =>
+        {required String dbFilepath,
+        required String newDbFilepath,
+        required Coin c}) =>
     RustLib.instance.api.crateApiDbRenameDb(
-        dbFilepath: dbFilepath, newDbFilepath: newDbFilepath);
+        dbFilepath: dbFilepath, newDbFilepath: newDbFilepath, c: c);
 
 Future<List<String>> listDbNames({required String dir}) =>
     RustLib.instance.api.crateApiDbListDbNames(dir: dir);

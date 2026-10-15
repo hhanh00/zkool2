@@ -36,7 +36,7 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
       final a = await ref.read(accountProvider(selectedAccount.id).future);
       final pools = a.pool; // All pools including transparent
       final defaultPools = pools & 6; // Default to shielded pools only
-      final addrs = await getAddresses(uaPools: defaultPools, c: c);
+      final addrs = await getAddresses(uaPools: defaultPools, account: selectedAccount.id, c: c);
       setState(() {
         account = a.account;
         addresses = addrs;
@@ -139,7 +139,7 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
   void onCheckSapling() async {
     showSnackbar("Check address on the device");
     try {
-      await showLedgerSaplingAddress(c: c);
+      await showLedgerSaplingAddress(account: ref.read(selectedAccountIdProvider), c: c);
     } on AnyhowException catch (e) {
       await showException(context, e.message);
     }
@@ -148,7 +148,7 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
   void onCheckTransparent() async {
     showSnackbar("Check address on the device");
     try {
-      await showLedgerTransparentAddress(c: c);
+      await showLedgerTransparentAddress(account: ref.read(selectedAccountIdProvider), c: c);
     } on AnyhowException catch (e) {
       await showException(context, e.message);
     }
@@ -156,7 +156,7 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
 
   void onChangedUAPools(int pools) async {
     uaPools = pools;
-    addresses = await getAddresses(uaPools: uaPools, c: c);
+    addresses = await getAddresses(uaPools: uaPools, account: ref.read(selectedAccountIdProvider), c: c);
     setState(() {});
   }
 
@@ -167,8 +167,8 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
       if (!confirmed) return;
       if (!mounted) return;
       final dialog = showLoadingDialog(context, "Please wait for the address generation\nCheck your Ledger");
-      await generateNextDindex(c: c); // This takes a while on the Ledger
-      addresses = await getAddresses(uaPools: uaPools, c: c);
+      await generateNextDindex(account: ref.read(selectedAccountIdProvider), c: c); // This takes a while on the Ledger
+      addresses = await getAddresses(uaPools: uaPools, account: ref.read(selectedAccountIdProvider), c: c);
       dialog.dismiss();
       setState(() {});
     } on AnyhowException catch (e) {
@@ -181,9 +181,10 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
   }
 
   void onViewAddresses() async {
-    final availablePools = await getAccountPools(account: c.account, c: c);
+    final account = ref.read(selectedAccountIdProvider);
+    final availablePools = await getAccountPools(account: account, c: c);
     final poolFilter = availablePools; // default: all available
-    final txCounts = await fetchAddressTxCount(c: c, aggregate: false, poolFilter: poolFilter);
+    final txCounts = await fetchAddressTxCount(aggregate: false, poolFilter: poolFilter, account: account, c: c);
     if (!mounted) return;
     await GoRouter.of(context).push("/addresses", extra: {
       'txCounts': txCounts,
@@ -231,7 +232,7 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
 
   Future<void> _refetch() async {
     final mask = _selectedPools.fold(0, (acc, p) => acc | _poolBits[p]!);
-    final txCounts = await fetchAddressTxCount(c: widget.c, aggregate: _aggregate, poolFilter: mask);
+    final txCounts = await fetchAddressTxCount(aggregate: _aggregate, poolFilter: mask, account: ref.read(selectedAccountIdProvider), c: widget.c);
     if (mounted) setState(() => _txCounts = txCounts);
   }
 

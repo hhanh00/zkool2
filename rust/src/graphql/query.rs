@@ -21,7 +21,7 @@ use crate::pay::{
 
 use bigdecimal::num_bigint::BigInt;
 use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
-use chrono::{DateTime, NaiveDateTime};
+use chrono::NaiveDateTime;
 use juniper::{graphql_object, FieldError, FieldResult, GraphQLInputObject};
 
 pub struct Query {}
@@ -48,14 +48,12 @@ impl Query {
             ));
         }
         check_auth(context, id_account, false)?;
-        let coin = Coin {
-            account: id_account as u32,
-            ..context.coin.clone()
-        };
-        Ok(
-            crate::api::near_intents::near_intents_list_swaps(pending_only.unwrap_or(false), &coin)
-                .await?,
+        Ok(crate::api::near_intents::near_intents_list_swaps(
+            pending_only.unwrap_or(false),
+            id_account as u32,
+            &context.coin,
         )
+        .await?)
     }
 
     async fn near_intents_assets(

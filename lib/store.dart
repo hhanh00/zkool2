@@ -60,10 +60,6 @@ class CoinContext {
 
   Coin get coin => _coin;
 
-  Future<void> setAccount({required int account}) async {
-    _coin = await _coin.setAccount(account: account);
-  }
-
   void set({required Coin coin}) {
     _coin = coin;
   }
@@ -296,13 +292,13 @@ Future<AccountData> account(Ref ref, int id) async {
   final c = coinContext.coin;
   final accounts = await ref.watch(getAccountsProvider.future);
   final account = accounts.firstWhere((a) => a.id == id);
-  final poolBalance = await balance(c: c);
+  final poolBalance = await balance(account: id, c: c);
   final pool = await getAccountPools(account: id, c: c);
-  final frostParams = await getAccountFrostParams(c: c);
-  final transactions = await listTxHistory(c: c);
-  final memos = await listMemos(c: c);
-  final notes = await listNotes(c: c);
-  final zsas = await listZsaHoldings(c: c);
+  final frostParams = await getAccountFrostParams(account: id, c: c);
+  final transactions = await listTxHistory(account: id, c: c);
+  final memos = await listMemos(account: id, c: c);
+  final notes = await listNotes(account: id, c: c);
+  final zsas = await listZsaHoldings(account: id, c: c);
   zsas.sort((a, b) {
     final nameA = a.assetName.isNotEmpty ? a.assetName : hex.encode(a.assetDescHash.sublist(0, 4));
     final nameB = b.assetName.isNotEmpty ? b.assetName : hex.encode(b.assetDescHash.sublist(0, 4));
@@ -1002,7 +998,7 @@ class TransparentScan extends _$TransparentScan {
       final sc = await TransparentScanner.newInstance();
       scanner = sc;
       final endHeight = await getCurrentHeight(c: c);
-      final sub = sc.run(endHeight: endHeight, gapLimit: gapLimit, c: c);
+      final sub = sc.run(endHeight: endHeight, gapLimit: gapLimit, account: ref.read(selectedAccountIdProvider), c: c);
       progressSubscription = sub.listen(
         (a) {
           state = a;
@@ -1039,7 +1035,8 @@ class GetTxDetails extends _$GetTxDetails {
   @override
   Future<TxAccount> build(int id) async {
     final c = coinContext.coin;
-    return await getTxDetails(idTx: id, c: c);
+    final account = ref.watch(selectedAccountIdProvider);
+    return await getTxDetails(idTx: id, account: account, c: c);
   }
 }
 
@@ -1395,6 +1392,7 @@ class VotingDriveJob extends _$VotingDriveJob {
         roundId: _roundId,
         lightwalletdUrl: lightwalletdUrl,
         roundName: roundName,
+        account: ref.read(selectedAccountIdProvider),
         c: coinContext.coin,
       );
       state = state.copyWith(stage: "ready", eligibility: eligibility);
@@ -1418,6 +1416,7 @@ class VotingDriveJob extends _$VotingDriveJob {
         roundId: _roundId,
         lightwalletdUrl: lightwalletdUrl,
         roundName: roundName,
+        account: ref.read(selectedAccountIdProvider),
         c: coinContext.coin,
       );
     } on Exception catch (e) {
@@ -1435,7 +1434,7 @@ class VotingDriveJob extends _$VotingDriveJob {
   /// stopped.
   Future<void> cancel() async {
     try {
-      await votingDriveCancel(roundId: _roundId, c: coinContext.coin);
+      await votingDriveCancel(roundId: _roundId, account: ref.read(selectedAccountIdProvider), c: coinContext.coin);
     } on Exception catch (e) {
       state = state.copyWith(error: e.toString());
     }
@@ -1443,7 +1442,7 @@ class VotingDriveJob extends _$VotingDriveJob {
 
   Future<void> _adoptLiveRun() async {
     try {
-      final status = await votingDriveStatus(roundId: _roundId, c: coinContext.coin);
+      final status = await votingDriveStatus(roundId: _roundId, account: ref.read(selectedAccountIdProvider), c: coinContext.coin);
       if (status.running && state.stage != "driving") {
         state = state.copyWith(stage: "driving", status: status);
         _votingDriveRunningRounds.add(_roundId);
@@ -1468,7 +1467,7 @@ class VotingDriveJob extends _$VotingDriveJob {
 
   Future<void> _pollOnce() async {
     try {
-      final status = await votingDriveStatus(roundId: _roundId, c: coinContext.coin);
+      final status = await votingDriveStatus(roundId: _roundId, account: ref.read(selectedAccountIdProvider), c: coinContext.coin);
       state = state.copyWith(status: status);
       if (!status.running) {
         _stopPolling();
@@ -1516,7 +1515,7 @@ class VotingDriveStopAll extends _$VotingDriveStopAll {
 
   Future<void> run() async {
     try {
-      final cancelled = await votingDriveCancelAll(c: coinContext.coin);
+      final cancelled = await votingDriveCancelAll(account: ref.read(selectedAccountIdProvider), c: coinContext.coin);
       if (cancelled > BigInt.zero) {
         logger.i("[Voting] stopped $cancelled driver run(s) for this wallet");
       }

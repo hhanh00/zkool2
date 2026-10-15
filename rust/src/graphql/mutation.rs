@@ -86,11 +86,8 @@ impl Mutation {
             return Err("Invalid account ID".into());
         }
         check_auth(context, id_account, true)?;
-        let coin = crate::api::coin::Coin {
-            account: id_account as u32,
-            ..context.coin.clone()
-        };
-        crate::api::near_intents::near_intents_clear_closed_swaps(&coin).await?;
+        crate::api::near_intents::near_intents_clear_closed_swaps(id_account as u32, &context.coin)
+            .await?;
         Ok(true)
     }
 
@@ -108,11 +105,12 @@ impl Mutation {
         if id_swap <= 0 {
             return Err("Invalid swap ID".into());
         }
-        let coin = crate::api::coin::Coin {
-            account: id_account as u32,
-            ..context.coin.clone()
-        };
-        crate::api::near_intents::near_intents_delete_closed_swap(id_swap, &coin).await?;
+        crate::api::near_intents::near_intents_delete_closed_swap(
+            id_swap,
+            id_account as u32,
+            &context.coin,
+        )
+        .await?;
         Ok(true)
     }
 
@@ -136,11 +134,12 @@ impl Mutation {
                 juniper::Value::Null,
             ));
         }
-        let coin = crate::api::coin::Coin {
-            account: id_account as u32,
-            ..context.coin.clone()
-        };
-        Ok(crate::api::near_intents::near_intents_refresh_swap_status(id_swap, &coin).await?)
+        Ok(crate::api::near_intents::near_intents_refresh_swap_status(
+            id_swap,
+            id_account as u32,
+            &context.coin,
+        )
+        .await?)
     }
 
     /// Preview with dry=true, then create a deposit quote with dry=false.

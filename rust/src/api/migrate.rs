@@ -61,11 +61,13 @@ impl NoteMigration {
     pub async fn run(
         &self,
         sink: StreamSink<MigrationStatus>,
+        account: u32,
         c: &Coin,
         mean_delay_ms: u64,
     ) -> Result<()> {
         run_migration(
             sink,
+            account,
             c,
             mean_delay_ms,
             self.cancellation_token.clone(),
@@ -87,8 +89,8 @@ impl NoteMigration {
 
 /// Single-shot step (kept for FRB generated-code compatibility).
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn step_migration(c: &Coin) -> Result<MigrationEvent> {
-    Ok(match crate::migrate::step::step_once(c, c.account).await? {
+pub async fn step_migration(account: u32, c: &Coin) -> Result<MigrationEvent> {
+    Ok(match crate::migrate::step::step_once(c, account).await? {
         StepOutcome::Split { fee } => MigrationEvent::SplitComplete { fee },
         StepOutcome::Migrated { fee } => MigrationEvent::MigrateComplete { fee },
         StepOutcome::Complete => MigrationEvent::Complete,
@@ -110,6 +112,7 @@ pub async fn step_migration(c: &Coin) -> Result<MigrationEvent> {
 #[cfg(feature = "flutter")]
 async fn run_migration(
     sink: StreamSink<MigrationStatus>,
+    account: u32,
     c: &Coin,
     mean_delay_ms: u64,
     cancellation_token: CancellationToken,
@@ -155,7 +158,7 @@ async fn run_migration(
         // replay differently.
         pacing.sampled_delay_ms = sample_delay(mean_delay_ms);
 
-        let state = observe_state(c, anchor_bucket_size).await?;
+        let state = observe_state(c, account, anchor_bucket_size).await?;
         let task = next_task(&state, &pacing);
         let status = status_from(&state, &task, acc_split, acc_migrate);
         sink.add(status.clone()).ok();
@@ -170,7 +173,7 @@ async fn run_migration(
         // effect is checked against state read immediately before it runs.
         // A stale task is re-planned, never executed.
         if matches!(task.kind(), TaskKind::Effect) {
-            let fresh = observe_state(c, anchor_bucket_size).await?;
+            let fresh = observe_state(c, account, anchor_bucket_size).await?;
             if !task.is_satisfied_by(&fresh) {
                 tracing::info!("Migration task {:?} no longer applies; replanning", task);
                 // Pace the retry, so a task that stays stale cannot spin.
@@ -185,7 +188,7 @@ async fn run_migration(
                 tracing::info!("Note migration cancelled");
                 true
             }
-            result = execute(c, &task, &block_height_tx) => {
+            result = execute(c, account, &task, &block_height_tx) => {
                 match result? {
                     Executed::Waited => pacing.delay_served = true,
                     Executed::Split { fee } => {
@@ -222,6 +225,7 @@ enum Executed {
 #[cfg(feature = "flutter")]
 async fn execute(
     c: &Coin,
+    account: u32,
     task: &MigrationTask,
     block_height_tx: &watch::Sender<Option<u32>>,
 ) -> Result<Executed> {
@@ -239,14 +243,14 @@ async fn execute(
             Executed::Waited
         }
         MigrationTask::Split { inputs, outputs } => Executed::Split {
-            fee: crate::migrate::exec::split(c, inputs, outputs).await?,
+            fee: crate::migrate::exec::split(c, account, inputs, outputs).await?,
         },
         MigrationTask::Migrate {
             note,
             amount,
             anchor,
         } => Executed::Migrated {
-            fee: crate::migrate::exec::migrate(c, *note, *amount, *anchor).await?,
+            fee: crate::migrate::exec::migrate(c, account, *note, *amount, *anchor).await?,
         },
         MigrationTask::Done => Executed::Waited,
     })
@@ -283,7 +287,7 @@ pub async fn get_migration_status(_c: &Coin) -> Result<MigrationStatus> {
 }
 
 #[cfg(feature = "flutter")]
-async fn observe_state(c: &Coin, anchor_bucket_size: u32) -> Result<MigrationState> {
+async fn observe_state(c: &Coin, account: u32, anchor_bucket_size: u32) -> Result<MigrationState> {
     let network = c.network();
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
@@ -291,7 +295,7 @@ async fn observe_state(c: &Coin, anchor_bucket_size: u32) -> Result<MigrationSta
         &network,
         &mut connection,
         &mut client,
-        c.account,
+        account,
         anchor_bucket_size,
     )
     .await

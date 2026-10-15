@@ -5,13 +5,18 @@ use anyhow::Result;
 use flutter_rust_bridge::frb;
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn fill_missing_tx_prices(api: String, currency: String, c: &Coin) -> Result<u32> {
+pub async fn fill_missing_tx_prices(
+    api: String,
+    currency: String,
+    account: u32,
+    c: &Coin,
+) -> Result<u32> {
     let mut connection = c.get_connection().await?;
     let client = crate::net::http::client(
         crate::net::http::proxy_url(c.transport, &c.proxy),
         std::time::Duration::from_secs(15),
     )?;
-    crate::budget::fill_missing_tx_prices(&mut connection, c.account, &currency, &api, &client)
+    crate::budget::fill_missing_tx_prices(&mut connection, account, &currency, &api, &client)
         .await
 }
 
@@ -27,9 +32,14 @@ pub async fn update_historical_prices(
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn set_user_memo(id_tx: u32, memo: Option<String>, c: &Coin) -> Result<()> {
+pub async fn set_user_memo(
+    id_tx: u32,
+    memo: Option<String>,
+    account: u32,
+    c: &Coin,
+) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    crate::db::set_user_memo(&mut connection, c.account, id_tx, memo).await?;
+    crate::db::set_user_memo(&mut connection, account, id_tx, memo).await?;
     Ok(())
 }
 
@@ -51,10 +61,11 @@ pub async fn set_tx_price(id: u32, price: Option<f64>, c: &Coin) -> Result<()> {
 pub async fn fetch_category_amounts(
     from: Option<u32>,
     to: Option<u32>,
+    account: u32,
     c: &Coin,
 ) -> Result<Vec<(String, f64, bool)>> {
     let mut connection = c.get_connection().await?;
-    crate::budget::fetch_category_amounts(&mut connection, c.account, from, to).await
+    crate::budget::fetch_category_amounts(&mut connection, account, from, to).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -62,8 +73,9 @@ pub async fn fetch_amounts(
     from: Option<u32>,
     to: Option<u32>,
     category: u32,
+    account: u32,
     c: &Coin,
 ) -> Result<Vec<(u32, f64)>> {
     let mut connection = c.get_connection().await?;
-    crate::budget::fetch_amounts(&mut connection, c.account, from, to, category).await
+    crate::budget::fetch_amounts(&mut connection, account, from, to, category).await
 }

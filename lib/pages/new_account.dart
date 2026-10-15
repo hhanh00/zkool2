@@ -453,11 +453,9 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         ref.invalidate(getAccountsProvider);
         await ref.read(getAccountsProvider.future);
 
-        await coinContext.setAccount(account: account);
         await ref.read(selectedAccountIdProvider.notifier).set(account);
-        c = coinContext.coin;
 
-        if ((key.isNotEmpty && await hasTransparentPubKey(c: c)) || ledger) {
+        if ((key.isNotEmpty && await hasTransparentPubKey(account: account, c: c)) || ledger) {
           if (mounted) await showTransparentScan(ref, context);
         }
 

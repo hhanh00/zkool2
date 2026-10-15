@@ -96,20 +96,14 @@ impl From<VotingDriveStatus> for VotingSubmissionStatus {
     }
 }
 
-fn coin_for_account(
-    id_account: i32,
-    context: &Context,
-    write: bool,
-) -> FieldResult<crate::api::coin::Coin> {
+fn authorized_account(id_account: i32, context: &Context, write: bool) -> FieldResult<u32> {
     check_auth(context, id_account, write)?;
-    let mut coin = context.coin.clone();
-    coin.account = u32::try_from(id_account)
-        .map_err(|_| FieldError::new("Account id must be non-negative", juniper::Value::Null))?;
-    Ok(coin)
+    u32::try_from(id_account)
+        .map_err(|_| FieldError::new("Account id must be non-negative", juniper::Value::Null))
 }
 pub async fn rounds(id_account: i32, context: &Context) -> FieldResult<Vec<VotingRound>> {
-    let coin = coin_for_account(id_account, context, false)?;
-    crate::api::voting::voting_round_list(&coin)
+    let account = authorized_account(id_account, context, false)?;
+    crate::api::voting::voting_round_list(account, &context.coin)
         .await?
         .into_iter()
         .map(TryInto::try_into)
@@ -121,8 +115,8 @@ pub async fn round(
     round_id: String,
     context: &Context,
 ) -> FieldResult<VotingRound> {
-    let coin = coin_for_account(id_account, context, false)?;
-    crate::api::voting::voting_round_list(&coin)
+    let account = authorized_account(id_account, context, false)?;
+    crate::api::voting::voting_round_list(account, &context.coin)
         .await?
         .into_iter()
         .find(|round| round.round_id == round_id)
@@ -135,9 +129,9 @@ pub async fn submission_status(
     round_id: String,
     context: &Context,
 ) -> FieldResult<VotingSubmissionStatus> {
-    let coin = coin_for_account(id_account, context, false)?;
+    let account = authorized_account(id_account, context, false)?;
     Ok(
-        crate::api::voting_drive::voting_drive_status(&round_id, &coin)
+        crate::api::voting_drive::voting_drive_status(&round_id, account, &context.coin)
             .await?
             .into(),
     )
@@ -149,14 +143,15 @@ pub async fn submit_vote(
     selections: Vec<VotingSelectionInput>,
     context: &Context,
 ) -> FieldResult<VotingSubmissionStatus> {
-    let coin = coin_for_account(id_account, context, true)?;
+    let account = authorized_account(id_account, context, true)?;
+    let coin = &context.coin;
     if selections.is_empty() {
         return Err("At least one voting selection is required".into());
     }
 
     // Resolve the authenticated roster rather than trusting caller-provided
     // option counts. This also supplies the display name used by the driver.
-    let round = crate::api::voting::voting_round_list(&coin)
+    let round = crate::api::voting::voting_round_list(account, coin)
         .await?
         .into_iter()
         .find(|round| round.round_id == round_id)
@@ -199,7 +194,8 @@ pub async fn submit_vote(
             proposal_id,
             decision,
             num_options,
-            &coin,
+            account,
+            coin,
         )
         .await?;
     }
@@ -207,10 +203,22 @@ pub async fn submit_vote(
     // Bundle preparation is the explicit durable setup phase. The driver
     // itself is spawned and returns immediately, so chain/share delivery is
     // asynchronous and can be polled through votingSubmissionStatus.
-    crate::api::voting_drive::voting_prepare_round(&round.round_id, &coin.url, &round.title, &coin)
-        .await?;
-    crate::api::voting_drive::voting_drive_start(&round.round_id, &coin.url, &round.title, &coin)
-        .await?;
+    crate::api::voting_drive::voting_prepare_round(
+        &round.round_id,
+        &coin.url,
+        &round.title,
+        account,
+        coin,
+    )
+    .await?;
+    crate::api::voting_drive::voting_drive_start(
+        &round.round_id,
+        &coin.url,
+        &round.title,
+        account,
+        coin,
+    )
+    .await?;
 
     // The foreground driver creates the helper shares. Once it quiesces, this
     // task runs tracking passes — the same mechanism the round page uses —
@@ -223,8 +231,12 @@ pub async fn submit_vote(
     let vote_end_time = round.vote_end_time;
     tokio::spawn(async move {
         loop {
-            match crate::api::voting_drive::voting_drive_status(&tracking_round_id, &tracking_coin)
-                .await
+            match crate::api::voting_drive::voting_drive_status(
+                &tracking_round_id,
+                account,
+                &tracking_coin,
+            )
+            .await
             {
                 Ok(status) if status.running => {
                     tokio::time::sleep(Duration::from_secs(1)).await;
@@ -236,8 +248,14 @@ pub async fn submit_vote(
                 }
             }
         }
-        track_shares_until_done(&tracking_round_id, &helper_urls, vote_end_time, &tracking_coin)
-            .await;
+        track_shares_until_done(
+            &tracking_round_id,
+            &helper_urls,
+            vote_end_time,
+            account,
+            &tracking_coin,
+        )
+        .await;
     });
 
     submission_status(id_account, round.round_id, context).await
@@ -254,6 +272,7 @@ async fn track_shares_until_done(
     round_id: &str,
     helper_urls: &[String],
     vote_end_time: Option<u64>,
+    account: u32,
     coin: &crate::api::coin::Coin,
 ) {
     if helper_urls.is_empty() {
@@ -273,6 +292,7 @@ async fn track_shares_until_done(
             round_id,
             helper_urls,
             vote_end_time,
+            account,
             coin,
         )
         .await

@@ -165,9 +165,9 @@ struct GatheredRound {
 /// Fetches the authenticated voting config and round material from the vote
 /// servers. Opens the voting sidecar. No wallet DB access beyond reading the
 /// `voting_config_url` prop and the seed fingerprint.
-async fn resolve_round_config(round_id: &str, c: &Coin) -> Result<RoundConfig> {
+async fn resolve_round_config(round_id: &str, account: u32, c: &Coin) -> Result<RoundConfig> {
     let network = voting_network(c)?;
-    let wallet = wallet_id(c).await?;
+    let wallet = wallet_id(account, c).await?;
     let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet).await?;
 
     let http_client = crate::net::http::client(
@@ -227,22 +227,26 @@ async fn resolve_round_config(round_id: &str, c: &Coin) -> Result<RoundConfig> {
 /// The identity's viewing key must be the stored account key the note source
 /// uses, not a fresh seed derivation — see `delegation_identity`.
 /// The signer's ZIP-32 index, never the row id — see `delegation_identity`.
-async fn gather_wallet_inputs(c: &Coin, config: &RoundConfig) -> Result<WalletInputs> {
+async fn gather_wallet_inputs(
+    account: u32,
+    c: &Coin,
+    config: &RoundConfig,
+) -> Result<WalletInputs> {
     let mut connection = c.get_connection().await?;
     let hotkey = hotkey::load_or_create(&mut connection, config.network).await?;
-    let seed = account_seed(&mut connection, c.account).await?;
-    let orchard_keys = crate::db::select_account_orchard(&mut connection, c.account).await?;
+    let seed = account_seed(&mut connection, account).await?;
+    let orchard_keys = crate::db::select_account_orchard(&mut connection, account).await?;
     let account_fvk = orchard_keys
         .xvk
-        .ok_or_else(|| anyhow!("account {} has no orchard viewing key", c.account))?;
-    let aindex = crate::db::get_account_aindex(&mut connection, c.account).await?;
+        .ok_or_else(|| anyhow!("account {} has no orchard viewing key", account))?;
+    let aindex = crate::db::get_account_aindex(&mut connection, account).await?;
     let identity = delegation_identity(&account_fvk, &seed, aindex)?;
     let mut client = c.client().await?;
     let note_source = note_source::ZkoolNoteSource::load(
         &c.network(),
         &mut connection,
         &mut client,
-        c.account,
+        account,
         config.params.snapshot_height,
     )
     .await
@@ -273,11 +277,12 @@ async fn gather_round_inputs(
     round_id: &str,
     lightwalletd_url: &str,
     round_name: &str,
+    account: u32,
     c: &Coin,
 ) -> Result<GatheredRound> {
-    let config = resolve_round_config(round_id, c).await?;
+    let config = resolve_round_config(round_id, account, c).await?;
     let (wallet, lwd) = tokio::try_join!(
-        gather_wallet_inputs(c, &config),
+        gather_wallet_inputs(account, c, &config),
         gather_lwd_inputs(&config, lightwalletd_url, round_name),
     )?;
     Ok(GatheredRound {
@@ -353,11 +358,12 @@ pub async fn voting_prepare_round(
     round_id: &str,
     lightwalletd_url: &str,
     round_name: &str,
+    account: u32,
     c: &Coin,
 ) -> Result<VotingEligibilityPreview> {
     ensure_nonempty(round_id, "round id")?;
     ensure_nonempty(lightwalletd_url, "lightwalletd URL")?;
-    let gathered = gather_round_inputs(round_id, lightwalletd_url, round_name, c).await?;
+    let gathered = gather_round_inputs(round_id, lightwalletd_url, round_name, account, c).await?;
     prepare_bundles(gathered, c).await
 }
 
@@ -372,11 +378,12 @@ pub async fn voting_drive_start(
     round_id: &str,
     lightwalletd_url: &str,
     round_name: &str,
+    account: u32,
     c: &Coin,
 ) -> Result<bool> {
     ensure_nonempty(round_id, "round id")?;
     ensure_nonempty(lightwalletd_url, "lightwalletd URL")?;
-    let gathered = gather_round_inputs(round_id, lightwalletd_url, round_name, c).await?;
+    let gathered = gather_round_inputs(round_id, lightwalletd_url, round_name, account, c).await?;
     let GatheredRound {
         sidecar,
         network,
@@ -413,8 +420,12 @@ pub async fn voting_drive_start(
 
 /// Polls one round's driver run; idle when nothing was started or it finished.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_drive_status(round_id: &str, c: &Coin) -> Result<VotingDriveStatus> {
-    let wallet = wallet_id(c).await?;
+pub async fn voting_drive_status(
+    round_id: &str,
+    account: u32,
+    c: &Coin,
+) -> Result<VotingDriveStatus> {
+    let wallet = wallet_id(account, c).await?;
     // Share confirmations are driven by the background tracker and land after
     // the foreground run quiesces, so read the live counts from the sidecar
     // rather than the run's stale tally.
@@ -448,8 +459,8 @@ pub async fn voting_drive_status(round_id: &str, c: &Coin) -> Result<VotingDrive
 
 /// Cancels one round's driver run, waking any in-flight retry wait.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_drive_cancel(round_id: &str, c: &Coin) -> Result<bool> {
-    let wallet = wallet_id(c).await?;
+pub async fn voting_drive_cancel(round_id: &str, account: u32, c: &Coin) -> Result<bool> {
+    let wallet = wallet_id(account, c).await?;
     Ok(drive::cancel_round_drive(&wallet, round_id))
 }
 
@@ -457,8 +468,8 @@ pub async fn voting_drive_cancel(round_id: &str, c: &Coin) -> Result<bool> {
 /// wallets untouched. Wallet switch and backgrounding call this so no run
 /// outlives its wallet; durable effects stay resumable through a later start.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_drive_cancel_all(c: &Coin) -> Result<usize> {
-    let wallet = wallet_id(c).await?;
+pub async fn voting_drive_cancel_all(account: u32, c: &Coin) -> Result<usize> {
+    let wallet = wallet_id(account, c).await?;
     Ok(drive::cancel_all_round_drives(&wallet))
 }
 

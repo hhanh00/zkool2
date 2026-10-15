@@ -71,9 +71,9 @@ class SendPageState extends ConsumerState<SendPage> {
       final c = coinContext.coin;
       final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
       final data = (await ref.read(accountProvider(selectedAccount.id).future));
-      final bal = await balance(c: c);
-      final addrs = await getAddresses(uaPools: data.pool, c: c);
-      final zsaHoldings = await listZsaHoldings(c: c);
+      final bal = await balance(account: selectedAccount.id, c: c);
+      final addrs = await getAddresses(uaPools: data.pool, account: selectedAccount.id, c: c);
+      final zsaHoldings = await listZsaHoldings(account: selectedAccount.id, c: c);
 
       // Preload contacts for @contactname autocomplete
       try {
@@ -280,7 +280,7 @@ class SendPageState extends ConsumerState<SendPage> {
 
   void onMax() async {
     final form = formKey.currentState!;
-    final total = await maxSpendable(c: c);
+    final total = await maxSpendable(account: ref.read(selectedAccountIdProvider), c: c);
     final a = zatToString(total);
     form.fields['amount']?.didChange(a);
     setState(() {
@@ -310,6 +310,7 @@ class SendPageState extends ConsumerState<SendPage> {
     }
     try {
       final pczt = await transferAllBetweenPools(
+        account: ref.read(selectedAccountIdProvider),
         c: c,
         sourcePools: 1,
         destinationAddress: addresses?.oaddr ?? addresses?.saddr ?? "",
@@ -325,6 +326,7 @@ class SendPageState extends ConsumerState<SendPage> {
   void onUnshield() async {
     try {
       final pczt = await transferAllBetweenPools(
+        account: ref.read(selectedAccountIdProvider),
         c: c,
         sourcePools: 14, // Sapling | Orchard | Ironwood
         destinationAddress: addresses?.taddr ?? "",
@@ -844,6 +846,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
       final pczt = await prepare(
         recipients: widget.recipients,
         options: options,
+        account: ref.read(selectedAccountIdProvider),
         c: c,
       );
 

@@ -67,8 +67,9 @@ pub async fn change_db_password(
     tmp_dir: &str,
     old_password: &str,
     new_password: &str,
+    c: &Coin,
 ) -> Result<()> {
-    crate::api::coin::close_pool(db_filepath);
+    c.close_pool_for(db_filepath).await;
     crate::db::change_db_password(db_filepath, tmp_dir, old_password, new_password).await
 }
 
@@ -91,10 +92,10 @@ pub async fn put_prop(key: &str, value: &str, c: &Coin) -> Result<()> {
 /// state that a wallet later recreated under the same name would inherit. The
 /// WAL companions of both only exist after an unclean shutdown.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn delete_db(db_filepath: &str) -> Result<()> {
-    // Dropping the pool first: on Windows an open handle blocks the delete,
+pub async fn delete_db(db_filepath: &str, c: &Coin) -> Result<()> {
+    // Closing the pool first: on Windows an open handle blocks the delete,
     // and elsewhere it would leave the pool serving a file that is gone.
-    crate::api::coin::close_pool(db_filepath);
+    c.close_pool_for(db_filepath).await;
 
     let wallet = std::path::Path::new(db_filepath);
     let sidecar = crate::voting::sidecar::voting_db_path(wallet);
@@ -120,8 +121,8 @@ pub async fn delete_db(db_filepath: &str) -> Result<()> {
 /// companions move too -- one left behind holds commits the renamed database
 /// would no longer see.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn rename_db(db_filepath: &str, new_db_filepath: &str) -> Result<()> {
-    crate::api::coin::close_pool(db_filepath);
+pub async fn rename_db(db_filepath: &str, new_db_filepath: &str, c: &Coin) -> Result<()> {
+    c.close_pool_for(db_filepath).await;
 
     let old = std::path::Path::new(db_filepath);
     let new = std::path::Path::new(new_db_filepath);
