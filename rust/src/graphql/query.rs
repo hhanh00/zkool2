@@ -253,15 +253,7 @@ impl Query {
             ua_pools,
         )
         .await?;
-        let addresses = Addresses {
-            ua: addresses.ua,
-            transparent: addresses.taddr,
-            sapling: addresses.saddr,
-            orchard: addresses.oaddr.clone(),
-            ironwood: addresses.oaddr,
-            diversifier_index: BigDecimal::from(addresses.diversifier_index),
-        };
-        Ok(addresses)
+        Ok(addresses.into())
     }
 
     async fn unconfirmed_by_account(

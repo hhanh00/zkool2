@@ -376,15 +376,7 @@ impl Mutation {
         let addresses =
             crate::account::get_addresses(&context.coin.network(), &mut conn, id_account as u32, 6)
                 .await?;
-        let addresses = Addresses {
-            ua: addresses.ua,
-            transparent: addresses.taddr,
-            sapling: addresses.saddr,
-            orchard: addresses.oaddr.clone(),
-            ironwood: addresses.oaddr,
-            diversifier_index: BigDecimal::from(addresses.diversifier_index),
-        };
-        Ok(addresses)
+        Ok(addresses.into())
     }
 
     pub async fn dkg_start(

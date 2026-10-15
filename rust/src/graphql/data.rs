@@ -67,6 +67,20 @@ pub struct Addresses {
     pub diversifier_index: BigDecimal,
 }
 
+impl From<crate::api::account::Addresses> for Addresses {
+    fn from(a: crate::api::account::Addresses) -> Self {
+        Self {
+            ua: a.ua,
+            transparent: a.taddr,
+            sapling: a.saddr,
+            // Ironwood shares Orchard's keys and therefore its address.
+            ironwood: a.oaddr.clone(),
+            orchard: a.oaddr,
+            diversifier_index: BigDecimal::from(a.diversifier_index),
+        }
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Note {
     pub id: i32,
