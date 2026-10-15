@@ -9,8 +9,8 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'voting_drive.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `account_seed`, `delegation_identity`, `ensure_nonempty`, `fetch_round_timing`, `gather_round_inputs`, `json_unix_seconds`, `prepare_bundles`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `GatheredRound`
+// These functions are ignored because they are not marked as `pub`: `account_seed`, `delegation_identity`, `ensure_nonempty`, `fetch_round_timing`, `gather_lwd_inputs`, `gather_round_inputs`, `gather_wallet_inputs`, `json_unix_seconds`, `prepare_bundles`, `resolve_round_config`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `GatheredRound`, `RoundConfig`, `WalletInputs`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `eq`, `eq`, `fmt`, `fmt`
 
 /// Prepares one round for submission: persists the bundle layout from the

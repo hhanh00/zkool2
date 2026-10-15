@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use juniper::{FieldError, FieldResult, GraphQLInputObject, GraphQLObject};
 
@@ -211,11 +212,11 @@ pub async fn submit_vote(
     crate::api::voting_drive::voting_drive_start(&round.round_id, &coin.url, &round.title, &coin)
         .await?;
 
-    // The foreground driver creates the helper shares. Once it quiesces,
-    // hand any durable pending shares to the retrying background tracker.
-    // This task is only an in-process wake-up mechanism; the shares and their
-    // confirmations remain in the sidecar and are safe to resume after a
-    // server restart.
+    // The foreground driver creates the helper shares. Once it quiesces, this
+    // task runs tracking passes — the same mechanism the round page uses —
+    // until every share is confirmed. The shares and their confirmations live
+    // in the sidecar, so a server restart loses nothing; the next submission
+    // or status poll simply runs the next pass.
     let tracking_coin = coin.clone();
     let tracking_round_id = round.round_id.clone();
     let helper_urls = round.helper_urls.clone();
@@ -226,7 +227,7 @@ pub async fn submit_vote(
                 .await
             {
                 Ok(status) if status.running => {
-                    tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                    tokio::time::sleep(Duration::from_secs(1)).await;
                 }
                 Ok(_) => break,
                 Err(error) => {
@@ -235,17 +236,72 @@ pub async fn submit_vote(
                 }
             }
         }
-        if let Err(error) = crate::api::voting_share_tracking::voting_start_share_tracking(
-            &tracking_round_id,
-            helper_urls,
-            vote_end_time,
-            &tracking_coin,
-        )
-        .await
-        {
-            tracing::error!("voting share tracking failed to start: {error:#}");
-        }
+        track_shares_until_done(&tracking_round_id, &helper_urls, vote_end_time, &tracking_coin)
+            .await;
     });
 
     submission_status(id_account, round.round_id, context).await
+}
+
+/// Failed passes in a row after which the submission task stops retrying.
+const MAX_CONSECUTIVE_SHARE_PASS_FAILURES: u32 = 5;
+/// Wait after a failed pass, which carries no `next_delay_seconds`.
+const SHARE_PASS_RETRY_DELAY: Duration = Duration::from_secs(30);
+
+/// Runs share-tracking passes for a round until nothing is pending, the vote
+/// end passes, or the helpers keep failing.
+async fn track_shares_until_done(
+    round_id: &str,
+    helper_urls: &[String],
+    vote_end_time: Option<u64>,
+    coin: &crate::api::coin::Coin,
+) {
+    if helper_urls.is_empty() {
+        return;
+    }
+    let mut failures = 0u32;
+    loop {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        if vote_end_time.is_some_and(|end| now >= end) {
+            tracing::info!("voting share tracking for {round_id} stopped: vote end reached");
+            return;
+        }
+        let delay = match crate::api::voting_share_tracking::track_shares_pass(
+            round_id,
+            helper_urls,
+            vote_end_time,
+            coin,
+        )
+        .await
+        {
+            Ok(report) => {
+                failures = 0;
+                if !report.unrecoverable.is_empty() {
+                    tracing::warn!(
+                        "voting share tracking for {round_id}: {} share(s) cannot be recovered",
+                        report.unrecoverable.len()
+                    );
+                }
+                match report.next_delay_seconds {
+                    Some(seconds) => Duration::from_secs(seconds.max(1)),
+                    None => return,
+                }
+            }
+            Err(error) => {
+                failures += 1;
+                if failures >= MAX_CONSECUTIVE_SHARE_PASS_FAILURES {
+                    tracing::error!(
+                        "voting share tracking for {round_id} gave up after {failures} failed passes: {error:#}"
+                    );
+                    return;
+                }
+                tracing::warn!("voting share tracking pass for {round_id} failed: {error:#}");
+                SHARE_PASS_RETRY_DELAY
+            }
+        };
+        tokio::time::sleep(delay).await;
+    }
 }
