@@ -16,12 +16,9 @@ jobs:
   build:
     env:
       NEAR_INTENTS_API_KEY: ${{ secrets.NEAR_INTENTS_API_KEY }}
-    # Release the slot as soon as the binary is cached, before caller tests run.
-    concurrency:
-      group: zkool-graphql-${{ inputs.ledger-transport }}-${{ github.repository }}-${{ github.ref }}
-      cancel-in-progress: false
-      # Keep all callers waiting; the default queue replaces pending runs.
-      queue: max
+    # The concurrency group lives on the caller's job: `inputs` does not
+    # resolve in a reusable workflow's concurrency key, which put every
+    # transport into one queue.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

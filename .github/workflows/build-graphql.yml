@@ -16,6 +16,13 @@ jobs:
       NEAR_INTENTS_API_KEY: ${{ secrets.NEAR_INTENTS_API_KEY }}
     with:
       ledger-transport: ledger
+    # One build per transport and ref: the first caller compiles and caches
+    # the binary, the others restore it. The group is set here, at the call
+    # site, where the transport is a literal.
+    concurrency:
+      group: zkool-graphql-ledger-${{ github.repository }}-${{ github.ref }}
+      cancel-in-progress: false
+      queue: max
 
   release:
     needs: zkool-graphql
