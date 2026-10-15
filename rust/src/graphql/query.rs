@@ -26,7 +26,7 @@ use bigdecimal::num_bigint::BigInt;
 use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
 use chrono::{DateTime, NaiveDateTime};
 use juniper::{graphql_object, FieldError, FieldResult, GraphQLInputObject};
-use sqlx::{query, sqlite::SqliteRow, Row};
+use sqlx::Row;
 
 pub struct Query {}
 
@@ -181,18 +181,9 @@ impl Query {
     ) -> FieldResult<Vec<String>> {
         check_auth(context, id_account, false)?;
         let mut conn = context.coin.get_connection().await?;
-        let memos = query(
-            "SELECT memo_text FROM memos
-            JOIN transactions t ON t.id_tx = tx
-            WHERE tx = ?1 AND memo_text IS NOT NULL AND t.account = ?2
-            ORDER BY id_memo",
-        )
-        .bind(id_transaction)
-        .bind(id_account)
-        .map(|r: SqliteRow| r.get::<String, _>(0))
-        .fetch_all(&mut *conn)
-        .await?;
-        Ok(memos)
+        let memos =
+            crate::account::tx_memos(&mut conn, id_account as u32, id_transaction as u32).await?;
+        Ok(memos.into_iter().filter_map(|m| m.memo).collect())
     }
 
     pub async fn balance_by_account(
@@ -655,9 +646,7 @@ impl Transaction {
         let ufvk =
             crate::key::get_account_ufvk(&network, &mut conn, self.account as u32, 7).await?;
         let ufvk = UnifiedFullViewingKey::decode(&network, &ufvk)?;
-        let mut txid = hex::decode(&self.txid)?;
-        txid.reverse();
-        let notes = crate::db::get_notes_txid(&mut conn, self.account as u32, &txid).await?;
+        let notes = crate::db::get_tx_notes(&mut conn, self.account as u32, self.id as u32).await?;
         let notes: Vec<_> = notes
             .into_iter()
             .map(|n| resolve_note(&network, &ufvk, n))
@@ -668,24 +657,19 @@ impl Transaction {
 
     pub async fn outputs(&self, context: &Context) -> FieldResult<Vec<Output>> {
         let mut conn = context.coin.get_connection().await?;
-        let outputs = query(
-            "SELECT o.id_output, o.pool, o.vout, o.value, o.address, m.memo_text
-        FROM outputs o
-        LEFT JOIN memos m ON o.id_output = m.output
-        WHERE o.tx = ?1",
-        )
-        .bind(self.id)
-        .map(|r: SqliteRow| Output {
-            id: r.get(0),
-            pool: r.get(1),
-            vout: r.get(2),
-            value: zats_to_zec(r.get(3)),
-            address: r.get(4),
-            memo: r.get(5),
-        })
-        .fetch_all(&mut *conn)
-        .await?;
-        Ok(outputs)
+        let outputs =
+            crate::account::tx_outputs(&mut conn, self.account as u32, self.id as u32).await?;
+        Ok(outputs
+            .into_iter()
+            .map(|o| Output {
+                id: o.id as i32,
+                pool: o.pool as i32,
+                vout: o.vout as i32,
+                value: zats_to_zec(o.value as i64),
+                address: o.address,
+                memo: o.memo,
+            })
+            .collect())
     }
 
     pub async fn spends(&self, context: &Context) -> FieldResult<Vec<Note>> {
@@ -694,38 +678,8 @@ impl Transaction {
         let ufvk =
             crate::key::get_account_ufvk(&network, &mut conn, self.account as u32, 7).await?;
         let ufvk = UnifiedFullViewingKey::decode(&network, &ufvk)?;
-        let spends = query(
-            "SELECT n.id_note, n.pool, n.height, n.tx,
-            n.scope, n.diversifier, n.value, n.locked,
-            m.memo_text, n.id_asset, a.asset_name, a.asset_desc_hash
-            FROM spends s
-            JOIN notes n ON s.id_note = n.id_note
-            LEFT JOIN memos m ON s.id_note = m.note
-            LEFT JOIN assets a ON n.id_asset = a.id_asset
-            WHERE s.tx = ?1
-            ORDER BY s.id_note",
-        )
-        .bind(self.id)
-        .map(|r: SqliteRow| {
-            let id_asset: Option<i32> = r.get(9);
-            crate::api::account::TxNote {
-                id: r.get(0),
-                pool: r.get(1),
-                height: r.get(2),
-                tx: r.get(3),
-                scope: r.get(4),
-                diversifier: r.get(5),
-                diversifier_index: None,
-                value: r.get(6),
-                locked: r.get(7),
-                memo: r.get(8),
-                id_asset: id_asset.map(|v| v as u32),
-                asset_display: crate::account::asset_display(id_asset, r.get(10), r.get(11)),
-            }
-        })
-        .fetch_all(&mut *conn)
-        .await?;
-
+        let spends =
+            crate::db::get_spent_notes(&mut conn, self.account as u32, self.id as u32).await?;
         let spends: Vec<_> = spends
             .into_iter()
             .map(|n| resolve_note(&network, &ufvk, n))

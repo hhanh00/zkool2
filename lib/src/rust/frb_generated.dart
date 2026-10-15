@@ -7845,15 +7845,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TxOutput dco_decode_tx_output(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 6)
-      throw Exception('unexpected arr length: expect 6 but see ${arr.length}');
+    if (arr.length != 8)
+      throw Exception('unexpected arr length: expect 8 but see ${arr.length}');
     return TxOutput(
       id: dco_decode_u_32(arr[0]),
       pool: dco_decode_u_8(arr[1]),
-      height: dco_decode_u_32(arr[2]),
-      value: dco_decode_u_64(arr[3]),
-      address: dco_decode_String(arr[4]),
-      contactName: dco_decode_opt_String(arr[5]),
+      vout: dco_decode_u_32(arr[2]),
+      height: dco_decode_u_32(arr[3]),
+      value: dco_decode_u_64(arr[4]),
+      address: dco_decode_String(arr[5]),
+      contactName: dco_decode_opt_String(arr[6]),
+      memo: dco_decode_opt_String(arr[7]),
     );
   }
 
@@ -10081,17 +10083,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_u_32(deserializer);
     var var_pool = sse_decode_u_8(deserializer);
+    var var_vout = sse_decode_u_32(deserializer);
     var var_height = sse_decode_u_32(deserializer);
     var var_value = sse_decode_u_64(deserializer);
     var var_address = sse_decode_String(deserializer);
     var var_contactName = sse_decode_opt_String(deserializer);
+    var var_memo = sse_decode_opt_String(deserializer);
     return TxOutput(
         id: var_id,
         pool: var_pool,
+        vout: var_vout,
         height: var_height,
         value: var_value,
         address: var_address,
-        contactName: var_contactName);
+        contactName: var_contactName,
+        memo: var_memo);
   }
 
   @protected
@@ -11986,10 +11992,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_32(self.id, serializer);
     sse_encode_u_8(self.pool, serializer);
+    sse_encode_u_32(self.vout, serializer);
     sse_encode_u_32(self.height, serializer);
     sse_encode_u_64(self.value, serializer);
     sse_encode_String(self.address, serializer);
     sse_encode_opt_String(self.contactName, serializer);
+    sse_encode_opt_String(self.memo, serializer);
   }
 
   @protected

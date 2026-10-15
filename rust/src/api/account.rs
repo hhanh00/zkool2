@@ -957,10 +957,12 @@ pub struct TxSpend {
 pub struct TxOutput {
     pub id: u32,
     pub pool: u8,
+    pub vout: u32,
     pub height: u32,
     pub value: u64,
     pub address: String,
     pub contact_name: Option<String>,
+    pub memo: Option<String>,
 }
 
 #[derive(Default, Debug)]

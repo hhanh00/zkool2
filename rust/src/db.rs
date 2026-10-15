@@ -1799,6 +1799,52 @@ pub async fn get_notes_txid(
     Ok(notes)
 }
 
+/// The notes a transaction created for an account, spent or not.
+pub async fn get_tx_notes(
+    connection: &mut SqliteConnection,
+    account: u32,
+    id_tx: u32,
+) -> Result<Vec<TxNote>> {
+    let notes = sqlx::query(
+        "SELECT n.id_note, n.height, n.pool, n.tx, n.scope, n.diversifier, n.diversifier_index, n.value, n.locked,
+        m.memo_text, n.id_asset, a.asset_name, a.asset_desc_hash
+        FROM notes n
+        LEFT JOIN memos m ON n.id_note = m.note
+        LEFT JOIN assets a ON n.id_asset = a.id_asset
+        WHERE n.account = ?1 AND n.tx = ?2",
+    )
+    .bind(account)
+    .bind(id_tx)
+    .map(row_to_note)
+    .fetch_all(&mut *connection)
+    .await?;
+    Ok(notes)
+}
+
+/// The notes a transaction spent for an account.
+pub async fn get_spent_notes(
+    connection: &mut SqliteConnection,
+    account: u32,
+    id_tx: u32,
+) -> Result<Vec<TxNote>> {
+    let notes = sqlx::query(
+        "SELECT n.id_note, n.height, n.pool, n.tx, n.scope, n.diversifier, n.diversifier_index, n.value, n.locked,
+        m.memo_text, n.id_asset, a.asset_name, a.asset_desc_hash
+        FROM spends s
+        JOIN notes n ON s.id_note = n.id_note
+        LEFT JOIN memos m ON n.id_note = m.note
+        LEFT JOIN assets a ON n.id_asset = a.id_asset
+        WHERE s.account = ?1 AND s.tx = ?2
+        ORDER BY s.id_note",
+    )
+    .bind(account)
+    .bind(id_tx)
+    .map(row_to_note)
+    .fetch_all(&mut *connection)
+    .await?;
+    Ok(notes)
+}
+
 fn row_to_note(row: SqliteRow) -> TxNote {
     let id_note: u32 = row.get(0);
     let height: u32 = row.get(1);

@@ -591,18 +591,22 @@ class TxNote {
 class TxOutput {
   final int id;
   final int pool;
+  final int vout;
   final int height;
   final BigInt value;
   final String address;
   final String? contactName;
+  final String? memo;
 
   const TxOutput({
     required this.id,
     required this.pool,
+    required this.vout,
     required this.height,
     required this.value,
     required this.address,
     this.contactName,
+    this.memo,
   });
 
   static Future<TxOutput> default_() =>
@@ -612,10 +616,12 @@ class TxOutput {
   int get hashCode =>
       id.hashCode ^
       pool.hashCode ^
+      vout.hashCode ^
       height.hashCode ^
       value.hashCode ^
       address.hashCode ^
-      contactName.hashCode;
+      contactName.hashCode ^
+      memo.hashCode;
 
   @override
   bool operator ==(Object other) =>
@@ -624,10 +630,12 @@ class TxOutput {
           runtimeType == other.runtimeType &&
           id == other.id &&
           pool == other.pool &&
+          vout == other.vout &&
           height == other.height &&
           value == other.value &&
           address == other.address &&
-          contactName == other.contactName;
+          contactName == other.contactName &&
+          memo == other.memo;
 }
 
 class TxSpend {

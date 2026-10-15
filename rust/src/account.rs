@@ -20,7 +20,7 @@ use crate::{
 use crate::{
     api::{
         account::{
-            Category, Folder, NewAccount, Seed, TxAccount, TxMemo, TxNote, TxOutput, TxSpend,
+            Category, Folder, NewAccount, Seed, TxAccount, TxMemo, TxOutput, TxSpend,
         },
         key::generate_seed,
     },
@@ -1358,134 +1358,10 @@ pub async fn get_tx_details(
     .fetch_one(&mut *connection)
     .await?;
 
-    let notes = sqlx::query(
-        "SELECT n.id_note, n.pool, n.height, n.tx, n.scope,
-        n.diversifier, n.value, n.locked, m.memo_text, n.id_asset,
-        a.asset_name, a.asset_desc_hash
-        FROM notes n
-        LEFT JOIN memos m ON n.id_note = m.note
-        LEFT JOIN assets a ON n.id_asset = a.id_asset
-        WHERE n.account = ? AND n.tx = ?",
-    )
-    .bind(account)
-    .bind(tx.id)
-    .map(|row: SqliteRow| {
-        let id_note: u32 = row.get(0);
-        let pool: u8 = row.get(1);
-        let height: u32 = row.get(2);
-        let tx: u32 = row.get(3);
-        let scope: u8 = row.get(4);
-        let diversifier: Option<Vec<u8>> = row.get(5);
-        let value: u64 = row.get(6);
-        let locked: bool = row.get(7);
-        let memo = row.get(8);
-        let id_asset: Option<i32> = row.get(9);
-        let asset_name: Option<String> = row.get(10);
-        let asset_desc_hash: Option<Vec<u8>> = row.get(11);
-        TxNote {
-            id: id_note,
-            pool,
-            height,
-            tx,
-            scope,
-            diversifier,
-            diversifier_index: None,
-            value,
-            locked,
-            memo,
-            id_asset: id_asset.map(|v| v as u32),
-            asset_display: asset_display(id_asset, asset_name, asset_desc_hash),
-        }
-    })
-    .fetch_all(&mut *connection)
-    .await?;
-
-    let outputs = sqlx::query(
-        "SELECT o.id_output, o.pool, o.height, o.value, o.address,
-                c.name as contact_name
-         FROM outputs o
-         LEFT JOIN contact_addresses ca ON o.address = ca.receiver AND o.pool = ca.pool
-         LEFT JOIN contacts c ON ca.contact_id = c.id_contact
-         WHERE o.account = ? AND o.tx = ?",
-    )
-    .bind(account)
-    .bind(tx.id)
-    .map(|row: SqliteRow| {
-        let id_output: u32 = row.get(0);
-        let pool: u8 = row.get(1);
-        let height: u32 = row.get(2);
-        let value: u64 = row.get(3);
-        let address: String = row.get(4);
-        let contact_name: Option<String> = row.get(5);
-        TxOutput {
-            id: id_output,
-            pool,
-            height,
-            value,
-            address,
-            contact_name,
-        }
-    })
-    .fetch_all(&mut *connection)
-    .await?;
-
-    let spends = sqlx::query(
-        "SELECT s.id_note, s.pool, s.height, s.value,
-        n.id_asset, a.asset_name, a.asset_desc_hash
-        FROM spends s
-        JOIN notes n ON s.id_note = n.id_note
-        LEFT JOIN assets a ON n.id_asset = a.id_asset
-        WHERE s.account = ? AND s.tx = ?",
-    )
-    .bind(account)
-    .bind(tx.id)
-    .map(|row: SqliteRow| {
-        let id: u32 = row.get(0);
-        let pool: u8 = row.get(1);
-        let height: u32 = row.get(2);
-        let value: i64 = row.get(3);
-        let id_asset: Option<i32> = row.get(4);
-        let asset_name: Option<String> = row.get(5);
-        let asset_desc_hash: Option<Vec<u8>> = row.get(6);
-        TxSpend {
-            id,
-            pool,
-            height,
-            value: -value as u64,
-            id_asset: id_asset.map(|v| v as u32),
-            asset_display: asset_display(id_asset, asset_name, asset_desc_hash),
-        }
-    })
-    .fetch_all(&mut *connection)
-    .await?;
-
-    let memos = sqlx::query(
-        "SELECT note, output, pool, memo_text, memo_bytes FROM memos
-        WHERE account = ? AND tx = ?",
-    )
-    .bind(account)
-    .bind(tx.id)
-    .map(|row: SqliteRow| {
-        let note: Option<u32> = row.get(0);
-        let output: Option<u32> = row.get(1);
-        let pool: u8 = row.get(2);
-        let memo: Option<String> = row.get(3);
-        let memo_bytes: Vec<u8> = row.get(4);
-        TxMemo {
-            note,
-            output,
-            pool,
-            memo,
-            memo_bytes,
-        }
-    })
-    .fetch_all(&mut *connection)
-    .await?;
-
-    tx.notes = notes;
-    tx.spends = spends;
-    tx.memos = memos;
-    tx.outputs = outputs;
+    tx.notes = crate::db::get_tx_notes(connection, account, tx.id).await?;
+    tx.outputs = tx_outputs(connection, account, tx.id).await?;
+    tx.spends = tx_spends(connection, account, tx.id).await?;
+    tx.memos = tx_memos(connection, account, tx.id).await?;
 
     let user_memo: Option<String> =
         sqlx::query("SELECT user_memo FROM user_memos WHERE account = ?1 AND id_tx = ?2")
@@ -1498,6 +1374,98 @@ pub async fn get_tx_details(
     tx.user_memo = user_memo;
 
     Ok(tx)
+}
+
+/// A transaction's outputs for an account, with the first matching contact
+/// name and the output's memo when one was decoded.
+pub async fn tx_outputs(
+    connection: &mut SqliteConnection,
+    account: u32,
+    id_tx: u32,
+) -> Result<Vec<TxOutput>> {
+    let outputs = sqlx::query(
+        "SELECT o.id_output, o.pool, o.vout, o.height, o.value, o.address,
+                c.name as contact_name, m.memo_text
+         FROM outputs o
+         LEFT JOIN contact_addresses ca ON o.address = ca.receiver AND o.pool = ca.pool
+         LEFT JOIN contacts c ON ca.contact_id = c.id_contact
+         LEFT JOIN memos m ON o.id_output = m.output
+         WHERE o.account = ?1 AND o.tx = ?2
+         ORDER BY o.id_output",
+    )
+    .bind(account)
+    .bind(id_tx)
+    .map(|row: SqliteRow| TxOutput {
+        id: row.get(0),
+        pool: row.get(1),
+        vout: row.get(2),
+        height: row.get(3),
+        value: row.get(4),
+        address: row.get(5),
+        contact_name: row.get(6),
+        memo: row.get(7),
+    })
+    .fetch_all(&mut *connection)
+    .await?;
+    Ok(outputs)
+}
+
+/// What a transaction spent for an account, as positive amounts per note.
+pub async fn tx_spends(
+    connection: &mut SqliteConnection,
+    account: u32,
+    id_tx: u32,
+) -> Result<Vec<TxSpend>> {
+    let spends = sqlx::query(
+        "SELECT s.id_note, s.pool, s.height, s.value,
+        n.id_asset, a.asset_name, a.asset_desc_hash
+        FROM spends s
+        JOIN notes n ON s.id_note = n.id_note
+        LEFT JOIN assets a ON n.id_asset = a.id_asset
+        WHERE s.account = ?1 AND s.tx = ?2",
+    )
+    .bind(account)
+    .bind(id_tx)
+    .map(|row: SqliteRow| {
+        let value: i64 = row.get(3);
+        let id_asset: Option<i32> = row.get(4);
+        TxSpend {
+            id: row.get(0),
+            pool: row.get(1),
+            height: row.get(2),
+            value: -value as u64,
+            id_asset: id_asset.map(|v| v as u32),
+            asset_display: asset_display(id_asset, row.get(5), row.get(6)),
+        }
+    })
+    .fetch_all(&mut *connection)
+    .await?;
+    Ok(spends)
+}
+
+/// A transaction's memos for an account, in memo id order.
+pub async fn tx_memos(
+    connection: &mut SqliteConnection,
+    account: u32,
+    id_tx: u32,
+) -> Result<Vec<TxMemo>> {
+    let memos = sqlx::query(
+        "SELECT note, output, pool, memo_text, memo_bytes FROM memos
+        WHERE account = ?1 AND tx = ?2
+        ORDER BY id_memo",
+    )
+    .bind(account)
+    .bind(id_tx)
+    .map(|row: SqliteRow| TxMemo {
+        note: row.get(0),
+        output: row.get(1),
+        pool: row.get(2),
+        memo: row.get(3),
+        memo_bytes: row.get(4),
+    })
+    .fetch_all(&mut *connection)
+    .await?;
+    Ok(memos)
 }
 
 pub async fn get_account_frost_params(

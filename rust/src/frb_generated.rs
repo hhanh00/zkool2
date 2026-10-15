@@ -9980,17 +9980,21 @@ impl SseDecode for crate::api::account::TxOutput {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_id = <u32>::sse_decode(deserializer);
         let mut var_pool = <u8>::sse_decode(deserializer);
+        let mut var_vout = <u32>::sse_decode(deserializer);
         let mut var_height = <u32>::sse_decode(deserializer);
         let mut var_value = <u64>::sse_decode(deserializer);
         let mut var_address = <String>::sse_decode(deserializer);
         let mut var_contactName = <Option<String>>::sse_decode(deserializer);
+        let mut var_memo = <Option<String>>::sse_decode(deserializer);
         return crate::api::account::TxOutput {
             id: var_id,
             pool: var_pool,
+            vout: var_vout,
             height: var_height,
             value: var_value,
             address: var_address,
             contact_name: var_contactName,
+            memo: var_memo,
         };
     }
 }
@@ -12165,10 +12169,12 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::TxOutput {
         [
             self.id.into_into_dart().into_dart(),
             self.pool.into_into_dart().into_dart(),
+            self.vout.into_into_dart().into_dart(),
             self.height.into_into_dart().into_dart(),
             self.value.into_into_dart().into_dart(),
             self.address.into_into_dart().into_dart(),
             self.contact_name.into_into_dart().into_dart(),
+            self.memo.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -13967,10 +13973,12 @@ impl SseEncode for crate::api::account::TxOutput {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <u32>::sse_encode(self.id, serializer);
         <u8>::sse_encode(self.pool, serializer);
+        <u32>::sse_encode(self.vout, serializer);
         <u32>::sse_encode(self.height, serializer);
         <u64>::sse_encode(self.value, serializer);
         <String>::sse_encode(self.address, serializer);
         <Option<String>>::sse_encode(self.contact_name, serializer);
+        <Option<String>>::sse_encode(self.memo, serializer);
     }
 }
 
