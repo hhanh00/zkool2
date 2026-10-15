@@ -33,6 +33,7 @@ pub mod pay;
 pub mod plugin;
 pub mod recover;
 pub mod sync;
+pub mod transparent_keys;
 pub mod vault;
 pub mod voting;
 pub mod warp;
