@@ -14,7 +14,7 @@ use zcash_voting::{HelperClient, HelperHealth};
 
 use crate::{
     api::{coin::Coin, voting::wallet_id},
-    voting::sidecar::{VotingSidecar, ZkoolHelperTransport},
+    voting::{chain::ZkoolHelperTransport, sidecar::VotingSidecar},
 };
 
 /// A round whose persisted helper shares need a foreground retry worker.

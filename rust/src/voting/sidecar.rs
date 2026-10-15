@@ -17,21 +17,21 @@ use std::{
         atomic::{AtomicU64, Ordering},
         Arc, LazyLock, Mutex,
     },
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use anyhow::{ensure, Result};
-use futures::StreamExt;
 use zcash_voting::delegate::{ensure_round_context, DelegationLwdInputs};
 use zcash_voting::prelude::{
     bundle_notes_for_index_for_round, BundlePolicy, Decision, DelegationKeys, DraftVote, Network,
     NoteInfo, PreparedDelegationBundle, VotingDb, VotingError, WitnessData,
 };
 use zcash_voting::{
-    ChainSubmissionControl, HelperClient, HelperFuture, HelperHealth, HelperResponse,
-    HelperTransport, HelperTransportError, NoopShareTrackingReporter, ShareTrackingDriver,
-    ShareTrackingHostContext, ShareTrackingHostSourceBridge, MAX_HELPER_RESPONSE_BYTES,
+    ChainSubmissionControl, HelperClient, HelperHealth, NoopShareTrackingReporter,
+    ShareTrackingDriver, ShareTrackingHostContext, ShareTrackingHostSourceBridge,
 };
+
+use crate::voting::chain::ZkoolHelperTransport;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 struct ShareTrackerKey {
@@ -52,192 +52,6 @@ struct ActiveShareTracker {
 static ACTIVE_SHARE_TRACKERS: LazyLock<Mutex<HashMap<ShareTrackerKey, ActiveShareTracker>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 static NEXT_SHARE_TRACKER_GENERATION: AtomicU64 = AtomicU64::new(1);
-
-/// Routes voting-helper HTTP requests through zkool's selected transport.
-///
-/// Direct connections and externally configured proxies use the wallet's
-/// standard reqwest setup. Tor uses the wallet's Arti HTTP adapter; Nym
-/// deliberately fails closed until it has a native HTTP adapter.
-#[derive(Clone, Debug)]
-pub struct ZkoolHelperTransport {
-    transport: u8,
-    proxy: String,
-}
-
-impl ZkoolHelperTransport {
-    pub fn new(transport: u8, proxy: impl Into<String>) -> Self {
-        Self {
-            transport,
-            proxy: proxy.into(),
-        }
-    }
-
-    fn direct_or_proxy_client(
-        &self,
-        timeout: Duration,
-    ) -> Result<reqwest::Client, HelperTransportError> {
-        match self.transport {
-            0 => crate::net::http::client("", timeout).map_err(|_| {
-                HelperTransportError::Transport("failed to create helper route".into())
-            }),
-            3 => crate::net::http::client(&self.proxy, timeout).map_err(|_| {
-                HelperTransportError::Transport("failed to create helper proxy route".into())
-            }),
-            2 => Err(HelperTransportError::Transport(
-                "Nym helper transport is unavailable".into(),
-            )),
-            _ => Err(HelperTransportError::Transport(
-                "unsupported helper transport".into(),
-            )),
-        }
-    }
-
-    async fn send(
-        &self,
-        request: reqwest::RequestBuilder,
-        timeout: Duration,
-    ) -> Result<HelperResponse, HelperTransportError> {
-        let response = match tokio::time::timeout(timeout, request.send()).await {
-            Err(_) => return Err(HelperTransportError::Timeout),
-            Ok(Err(error)) if error.is_timeout() => return Err(HelperTransportError::Timeout),
-            Ok(Err(error)) if error.is_connect() || error.is_builder() => {
-                return Err(HelperTransportError::Transport(
-                    "helper connection failed".into(),
-                ));
-            }
-            Ok(Err(_)) => {
-                return Err(HelperTransportError::Ambiguous(
-                    "helper request ended before response headers".into(),
-                ));
-            }
-            Ok(Ok(response)) => response,
-        };
-        let status = response.status().as_u16();
-        let content_type = response
-            .headers()
-            .get(reqwest::header::CONTENT_TYPE)
-            .and_then(|value| value.to_str().ok())
-            .map(str::to_owned);
-        if response
-            .content_length()
-            .is_some_and(|length| length as usize > MAX_HELPER_RESPONSE_BYTES)
-        {
-            return Err(HelperTransportError::Response(
-                "helper response exceeds the protocol body limit".into(),
-            ));
-        }
-        let mut body = Vec::new();
-        let mut stream = response.bytes_stream();
-        while let Some(chunk) = stream.next().await {
-            let chunk = chunk.map_err(|_| {
-                HelperTransportError::Response("helper response body read failed".into())
-            })?;
-            if body.len().saturating_add(chunk.len()) > MAX_HELPER_RESPONSE_BYTES {
-                return Err(HelperTransportError::Response(
-                    "helper response exceeds the protocol body limit".into(),
-                ));
-            }
-            body.extend_from_slice(&chunk);
-        }
-        Ok(HelperResponse::new(status, body, content_type))
-    }
-
-    async fn tor_send(
-        &self,
-        method: hyper::Method,
-        url: &str,
-        body: Vec<u8>,
-        headers: &[(String, String)],
-        timeout: Duration,
-    ) -> Result<HelperResponse, HelperTransportError> {
-        match crate::net::http::tor_request(
-            method,
-            url,
-            body,
-            headers,
-            timeout,
-            MAX_HELPER_RESPONSE_BYTES,
-        )
-        .await
-        {
-            Ok(response) => Ok(HelperResponse::new(
-                response.status,
-                response.body,
-                response.content_type,
-            )),
-            Err(error) if error.to_string().contains("timed out") => {
-                Err(HelperTransportError::Timeout)
-            }
-            // A failure reported by Hyper after route construction may have
-            // reached the helper. Treat it as ambiguous rather than risking a
-            // duplicate share submission on retry.
-            Err(error) => Err(HelperTransportError::Ambiguous(error.to_string())),
-        }
-    }
-
-    async fn request(
-        &self,
-        method: hyper::Method,
-        url: &str,
-        body: Vec<u8>,
-        headers: &[(String, String)],
-        timeout: Duration,
-    ) -> Result<HelperResponse, HelperTransportError> {
-        if self.transport == 1 {
-            return self.tor_send(method, url, body, headers, timeout).await;
-        }
-
-        let client = self.direct_or_proxy_client(timeout)?;
-        let mut request = client.request(method, url).body(body);
-        for (name, value) in headers {
-            request = request.header(name, value);
-        }
-        self.send(request, timeout).await
-    }
-}
-
-impl HelperTransport for ZkoolHelperTransport {
-    fn get<'a>(&'a self, url: &'a str, timeout: Duration) -> HelperFuture<'a> {
-        Box::pin(async move {
-            self.request(hyper::Method::GET, url, Vec::new(), &[], timeout)
-                .await
-        })
-    }
-
-    fn post_json<'a>(&'a self, url: &'a str, body: Vec<u8>, timeout: Duration) -> HelperFuture<'a> {
-        self.post_json_with_headers(url, body, timeout, &[])
-    }
-
-    fn post_json_with_headers<'a>(
-        &'a self,
-        url: &'a str,
-        body: Vec<u8>,
-        timeout: Duration,
-        headers: &'a [(String, String)],
-    ) -> HelperFuture<'a> {
-        Box::pin(async move {
-            let mut request_headers =
-                vec![("content-type".to_string(), "application/json".to_string())];
-            request_headers.extend(headers.iter().cloned());
-            self.request(hyper::Method::POST, url, body, &request_headers, timeout)
-                .await
-        })
-    }
-}
-
-#[cfg(test)]
-mod helper_transport_tests {
-    use super::{HelperTransportError, ZkoolHelperTransport};
-    use std::time::Duration;
-
-    #[test]
-    fn nym_fails_closed_without_a_native_http_adapter() {
-        assert!(matches!(
-            ZkoolHelperTransport::new(2, "").direct_or_proxy_client(Duration::from_secs(1)),
-            Err(HelperTransportError::Transport(_)),
-        ));
-    }
-}
 
 /// One wallet's handle on the voting sidecar database.
 ///
