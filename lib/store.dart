@@ -786,7 +786,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     _pendingAutoSyncHeight = null;
     _forceNextAutoSync = false;
     // This signals Rust; the sync mutation owns cleanup once Rust exits.
-    await cancelSync();
+    await cancelSync(c: coinContext.coin);
   }
 
   Future<void> startSynchronize(

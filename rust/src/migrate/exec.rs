@@ -13,8 +13,7 @@
 //! checkpoint and migration observes where it got to — which is also why it
 //! cannot force the wallet onto an anchor boundary and must wait for one.
 //! A sync started here would in any case be unreliable: `synchronize_impl`
-//! takes `SYNCING` with `try_lock` and returns silently when autosync already
-//! holds it.
+//! is skipped when autosync already holds the wallet's sync session.
 
 use anyhow::Result;
 

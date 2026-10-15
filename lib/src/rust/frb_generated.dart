@@ -214,7 +214,7 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiFrostCancelDkg({required Coin c});
 
-  Future<void> crateApiSyncCancelSync();
+  Future<void> crateApiSyncCancelSync({required Coin c});
 
   Future<void> crateApiDbChangeDbPassword(
       {required String dbFilepath,
@@ -1647,10 +1647,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<void> crateApiSyncCancelSync() {
+  Future<void> crateApiSyncCancelSync({required Coin c}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
+            c, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 29, port: port_);
       },
@@ -1659,14 +1661,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiSyncCancelSyncConstMeta,
-      argValues: [],
+      argValues: [c],
       apiImpl: this,
     ));
   }
 
   TaskConstMeta get kCrateApiSyncCancelSyncConstMeta => const TaskConstMeta(
         debugName: "cancel_sync",
-        argNames: [],
+        argNames: ["c"],
       );
 
   @override

@@ -38,7 +38,7 @@ class _Api implements RustLibApi {
   Future<int> crateApiNetworkGetCurrentHeight({required Coin c}) async => 100;
 
   @override
-  Future<void> crateApiSyncCancelSync() async {
+  Future<void> crateApiSyncCancelSync({required Coin c}) async {
     cancels++;
   }
 

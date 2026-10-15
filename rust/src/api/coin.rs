@@ -1,5 +1,5 @@
 use std::path::PathBuf;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use anyhow::Result;
 use arti_client::config::TorClientConfigBuilder;
@@ -20,6 +20,7 @@ use zcash_protocol::local_consensus::LocalNetwork;
 use crate::db::{backfill_diversifier_index, create_schema, migrate_sapling_addresses};
 use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
 use crate::net::zebra::ZebraClient;
+use crate::sync::session::SyncSession;
 use crate::{Client, IntoAnyhow};
 
 /// Wallet handle: which network, which database, and how to reach the
@@ -34,6 +35,9 @@ pub struct Coin {
     pub(crate) coin: u8,
     pub(crate) db_filepath: String,
     pub(crate) pool: Option<SqlitePool>,
+    /// One sync at a time for this database; shared by every clone of the
+    /// handle that serves it.
+    pub(crate) sync: Arc<SyncSession>,
     pub(crate) url: String,
     pub(crate) server_type: u8,
     /// Transport: 0 = direct, 1 = Tor (arti), 2 = Nym mixnet,
@@ -84,6 +88,7 @@ impl Coin {
             coin,
             db_filepath,
             pool: Some(pool),
+            sync: Arc::new(SyncSession::new()),
             ..self.clone()
         })
     }
@@ -580,6 +585,7 @@ impl Coin {
             coin: default_coin.unwrap_or(0),
             db_filepath: String::new(),
             pool: None,
+            sync: Arc::new(SyncSession::new()),
             server_type: 0,
             url: String::new(),
             transport: 0,

@@ -1,6 +1,4 @@
 use anyhow::Result;
-use std::sync::LazyLock;
-use tokio::sync::{broadcast, Mutex};
 
 use crate::api::coin::Coin;
 #[cfg(feature = "flutter")]
@@ -59,12 +57,10 @@ pub async fn balance(account: u32, c: &Coin) -> Result<PoolBalance> {
     calculate_balance(&mut *connection, account, None).await
 }
 
+/// Ask the wallet's running sync, if any, to stop.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn cancel_sync() -> Result<()> {
-    let tx = CANCEL_SYNC.lock().await;
-    if let Some(tx) = tx.as_ref() {
-        tx.send(())?;
-    }
+pub async fn cancel_sync(c: &Coin) -> Result<()> {
+    c.sync.cancel();
     Ok(())
 }
 
@@ -82,12 +78,12 @@ pub async fn get_db_height(account: u32, c: &Coin) -> Result<SyncHeight> {
 
 /// Decrypt memos and store transaction details for `account`.
 ///
-/// Deliberately does NOT take SYNCING. It did briefly, to stop it colliding
-/// with `do_dkg` — but holding the lock here let it starve the next sync, and
-/// `synchronize_impl` reports a skipped sync as success, so the DKG went on to
-/// build a transaction from stale notes and double-spent. Detail fetching is
-/// best effort and its `database is locked` failures are self-healing; a
-/// starved sync is not.
+/// Deliberately does NOT take the wallet's sync session. It did briefly, to
+/// stop it colliding with `do_dkg` — but holding the session here let it
+/// starve the next sync, which was then skipped, and the DKG went on to build
+/// a transaction from stale notes and double-spent. Detail fetching is best
+/// effort and its `database is locked` failures are self-healing; a starved
+/// sync is not.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn fetch_tx_details(account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
@@ -135,7 +131,3 @@ pub enum SyncEvent {
 }
 
 pub struct PoolBalance(pub Vec<u64>);
-
-pub static SYNCING: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
-pub static CANCEL_SYNC: LazyLock<Mutex<Option<broadcast::Sender<()>>>> =
-    LazyLock::new(|| Mutex::new(None));

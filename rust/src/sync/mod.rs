@@ -1,12 +1,11 @@
 use anyhow::{Context as _, Result};
 use sqlx::SqliteConnection;
 use sqlx::{sqlite::SqliteRow, Row};
-use tokio::sync::broadcast;
 use tokio::sync::mpsc::{channel, Sender};
 use tracing::debug;
 
 use crate::api::coin::{Coin, Network};
-use crate::api::sync::{SyncEvent, SyncOutcome, SyncProgress, CANCEL_SYNC, SYNCING};
+use crate::api::sync::{SyncEvent, SyncOutcome, SyncProgress};
 
 use crate::io::SyncHeight;
 use crate::Sink;
@@ -16,11 +15,13 @@ use sqlx::Connection;
 
 pub mod chain_log;
 pub mod plan;
+pub mod session;
 mod shielded;
 mod sweep;
 mod transparent;
 
 use plan::{plan_sync, AccountSyncState, SyncRange};
+use session::SyncRun;
 
 pub use shielded::{
     get_compact_block_range, get_tree_state, preload_account_key_cache, shielded_sync,
@@ -48,8 +49,9 @@ pub struct NoteExtended {
 /// `progress`; the returned outcome says how the run ended. An error is a
 /// failed run; the work committed before it stays.
 ///
-/// Only one sync runs at a time: when another holds the lock the call
-/// returns [`SyncOutcome::Skipped`] without touching anything.
+/// Only one sync runs at a time per wallet: when another holds the handle's
+/// session the call returns [`SyncOutcome::Skipped`] without touching
+/// anything.
 #[allow(clippy::too_many_arguments)]
 pub async fn synchronize_impl<S: Sink<SyncEvent> + Send + 'static>(
     progress: S,
@@ -67,15 +69,9 @@ pub async fn synchronize_impl<S: Sink<SyncEvent> + Send + 'static>(
         });
     }
 
-    let Ok(_guard) = SYNCING.try_lock() else {
+    let Some(mut run) = c.sync.try_begin() else {
         return Ok(SyncOutcome::Skipped);
     };
-
-    let (tx_cancel, mut rx_cancel) = broadcast::channel::<()>(16);
-    {
-        let mut cancel = CANCEL_SYNC.lock().await;
-        *cancel = Some(tx_cancel.clone());
-    }
 
     let params = SyncParams {
         current_height,
@@ -84,16 +80,12 @@ pub async fn synchronize_impl<S: Sink<SyncEvent> + Send + 'static>(
         checkpoint_age,
         skip_details,
     };
-    let result = run_sync(progress, &accounts, &params, &tx_cancel, c).await;
+    let result = run_sync(progress, &accounts, &params, &run, c).await;
 
     // Inner operations may unwind with an error after receiving cancellation.
     // A user-requested stop is normal termination at the API boundary.
-    let cancelled = rx_cancel.try_recv().is_ok();
-
-    {
-        let mut cancel = CANCEL_SYNC.lock().await;
-        *cancel = None;
-    }
+    let cancelled = run.was_cancelled();
+    drop(run);
 
     finish(result, cancelled, current_height)
 }
@@ -169,7 +161,7 @@ async fn run_sync<S: Sink<SyncEvent> + Send + 'static>(
     progress: S,
     accounts: &[u32],
     params: &SyncParams,
-    tx_cancel: &broadcast::Sender<()>,
+    run: &SyncRun<'_>,
     c: &Coin,
 ) -> Result<()> {
     let mut connection = c.get_connection().await?;
@@ -203,7 +195,7 @@ async fn run_sync<S: Sink<SyncEvent> + Send + 'static>(
     });
 
     for range in &plan {
-        run_range(&mut connection, range, params, &tx_progress, tx_cancel, c).await?;
+        run_range(&mut connection, range, params, &tx_progress, run, c).await?;
     }
 
     for account in accounts {
@@ -220,7 +212,7 @@ async fn run_range(
     range: &SyncRange,
     params: &SyncParams,
     tx_progress: &Sender<SyncProgress>,
-    tx_cancel: &broadcast::Sender<()>,
+    run: &SyncRun<'_>,
     c: &Coin,
 ) -> Result<()> {
     let network = c.network();
@@ -241,7 +233,7 @@ async fn run_range(
         range.start,
         range.end,
         params.transparent_limit,
-        tx_cancel.subscribe(),
+        run.cancellation(),
     )
     .await?;
 
@@ -259,7 +251,7 @@ async fn run_range(
         params.actions_per_sync,
         chunk_size,
         tx_progress.clone(),
-        tx_cancel.subscribe(),
+        run.cancellation(),
     )
     .await?;
 
