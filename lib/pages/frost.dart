@@ -15,10 +15,12 @@ import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/router.dart';
 
 class FrostPage1 extends ConsumerStatefulWidget {
   final PcztPackage pczt;
-  const FrostPage1(this.pczt, {super.key});
+  final int account;
+  const FrostPage1(this.pczt, {super.key, required this.account});
 
   @override
   ConsumerState<FrostPage1> createState() => FrostPage1State();
@@ -27,6 +29,7 @@ class FrostPage1 extends ConsumerStatefulWidget {
 Widget buildFrostPage(
   BuildContext context,
   WidgetRef ref, {
+  required int account,
   required int index,
   required bool finished,
   required Widget child,
@@ -38,7 +41,7 @@ Widget buildFrostPage(
         (finished)
             ? IconButton(
                 onPressed: () {
-                  GoRouter.of(context).go("/");
+                  GoRouter.of(context).go(accountRoute("/", account));
                 },
                 icon: Icon(Icons.close),
               )
@@ -77,7 +80,7 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
 
-    final accountDataAV = ref.watch(basicAccountDataProvider);
+    final accountDataAV = ref.watch(basicAccountDataProvider(widget.account));
 
     return accountDataAV.when(
       loading: () => blank(context),
@@ -93,7 +96,7 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
             if (signing) {
               if (context.mounted) {
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  GoRouter.of(context).pushReplacement("/frost2");
+                  GoRouter.of(context).pushReplacement(accountRoute("/frost2", widget.account));
                 });
               }
             }
@@ -171,15 +174,16 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
     if (form.saveAndValidate()) {
       final coordinator = form.fields["coordinator"]!.value as int;
       final fundingAccount = form.fields["account"]!.value as int;
-      await initSign(pczt: widget.pczt, coordinator: coordinator, fundingAccount: fundingAccount, account: ref.read(selectedAccountIdProvider), c: c);
+      await initSign(pczt: widget.pczt, coordinator: coordinator, fundingAccount: fundingAccount, account: widget.account, c: c);
       if (!mounted) return;
-      await GoRouter.of(context).pushReplacement("/frost2");
+      await GoRouter.of(context).pushReplacement(accountRoute("/frost2", widget.account));
     }
   }
 }
 
 class FrostPage2 extends ConsumerStatefulWidget {
-  const FrostPage2({super.key});
+  final int account;
+  const FrostPage2({super.key, required this.account});
 
   @override
   ConsumerState<FrostPage2> createState() => FrostPage2State();
@@ -237,6 +241,7 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
     return buildFrostPage(
       context,
       ref,
+      account: widget.account,
       index: currentIndex,
       finished: finished,
       child: Column(children: [Text(message, style: t.bodyLarge)]),

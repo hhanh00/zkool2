@@ -9,7 +9,7 @@ import 'package:zkool/main.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
-Future<void> showTransparentScan(WidgetRef ref, BuildContext context) async {
+Future<void> showTransparentScan(WidgetRef ref, BuildContext context, int account) async {
   final t = Theme.of(context).textTheme;
   final formKey = GlobalKey<FormBuilderState>();
 
@@ -78,6 +78,7 @@ Future<void> showTransparentScan(WidgetRef ref, BuildContext context) async {
                     logger.i("TScan $gapLimit");
                     await scanner.run(
                       context,
+                      account,
                       gapLimit,
                       onComplete: () {
                         ref.invalidate(accountProvider);

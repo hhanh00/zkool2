@@ -155,7 +155,6 @@ Future<int> setUpTestWallet({
     ),
     c: coinContext.coin,
   );
-  await coinContext.setAccount(account: account);
   return account;
 }
 

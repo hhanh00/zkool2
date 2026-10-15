@@ -55,11 +55,21 @@ abstract class _$HasDb extends $Notifier<bool> {
   }
 }
 
+/// The account the account page last opened, persisted so the next launch
+/// returns to it. Pages receive their account through the route (see
+/// `accountRoute`); this is only the launch default.
+
 @ProviderFor(SelectedAccountId)
 const selectedAccountIdProvider = SelectedAccountIdProvider._();
 
+/// The account the account page last opened, persisted so the next launch
+/// returns to it. Pages receive their account through the route (see
+/// `accountRoute`); this is only the launch default.
 final class SelectedAccountIdProvider
     extends $NotifierProvider<SelectedAccountId, int> {
+  /// The account the account page last opened, persisted so the next launch
+  /// returns to it. Pages receive their account through the route (see
+  /// `accountRoute`); this is only the launch default.
   const SelectedAccountIdProvider._()
       : super(
           from: null,
@@ -88,6 +98,10 @@ final class SelectedAccountIdProvider
 }
 
 String _$selectedAccountIdHash() => r'ef55f6cf79a2b42d1942ad84ced7902950ab20d8';
+
+/// The account the account page last opened, persisted so the next launch
+/// returns to it. Pages receive their account through the route (see
+/// `accountRoute`); this is only the launch default.
 
 abstract class _$SelectedAccountId extends $Notifier<int> {
   int build();
@@ -189,39 +203,6 @@ abstract class _$SyncStateAccount extends $AsyncNotifier<SyncProgressAccount> {
     element.handleValue(ref, created);
   }
 }
-
-@ProviderFor(selectedAccount)
-const selectedAccountProvider = SelectedAccountProvider._();
-
-final class SelectedAccountProvider extends $FunctionalProvider<
-        AsyncValue<Account?>, Account?, FutureOr<Account?>>
-    with $FutureModifier<Account?>, $FutureProvider<Account?> {
-  const SelectedAccountProvider._()
-      : super(
-          from: null,
-          argument: null,
-          retry: null,
-          name: r'selectedAccountProvider',
-          isAutoDispose: true,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
-
-  @override
-  String debugGetCreateSourceHash() => _$selectedAccountHash();
-
-  @$internal
-  @override
-  $FutureProviderElement<Account?> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<Account?> create(Ref ref) {
-    return selectedAccount(ref);
-  }
-}
-
-String _$selectedAccountHash() => r'8fe4c0fb33769599d1a69f1efc302dd70f6b7aa7';
 
 @ProviderFor(SelectedFolder)
 const selectedFolderProvider = SelectedFolderProvider._();
@@ -538,7 +519,7 @@ final class AccountProvider extends $FunctionalProvider<AsyncValue<AccountData>,
   }
 }
 
-String _$accountHash() => r'b5b61dba595b61fd82e1ba3777a9084c1c546457';
+String _$accountHash() => r'fdbd9cc7fd127d371560a116cb72cb4317a3e0d5';
 
 final class AccountFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<AccountData>, int> {
@@ -559,40 +540,6 @@ final class AccountFamily extends $Family
   @override
   String toString() => r'accountProvider';
 }
-
-@ProviderFor(getCurrentAccount)
-const getCurrentAccountProvider = GetCurrentAccountProvider._();
-
-final class GetCurrentAccountProvider extends $FunctionalProvider<
-        AsyncValue<AccountData?>, AccountData?, FutureOr<AccountData?>>
-    with $FutureModifier<AccountData?>, $FutureProvider<AccountData?> {
-  const GetCurrentAccountProvider._()
-      : super(
-          from: null,
-          argument: null,
-          retry: null,
-          name: r'getCurrentAccountProvider',
-          isAutoDispose: false,
-          dependencies: null,
-          $allTransitiveDependencies: null,
-        );
-
-  @override
-  String debugGetCreateSourceHash() => _$getCurrentAccountHash();
-
-  @$internal
-  @override
-  $FutureProviderElement<AccountData?> $createElement(
-          $ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
-
-  @override
-  FutureOr<AccountData?> create(Ref ref) {
-    return getCurrentAccount(ref);
-  }
-}
-
-String _$getCurrentAccountHash() => r'fb9e03f8c767fe77e0f33e71495c3bf0c167c7a1';
 
 @ProviderFor(AppSettingsNotifier)
 const appSettingsProvider = AppSettingsNotifierProvider._();
@@ -950,7 +897,7 @@ final class TransparentScanProvider
   }
 }
 
-String _$transparentScanHash() => r'8b7776a597f9527392f23125ea5eac64f6568cdf';
+String _$transparentScanHash() => r'44d8fc7c776f599e3d67dbc7ff27ce4b9c30c810';
 
 abstract class _$TransparentScan extends $Notifier<String> {
   String build();
@@ -971,7 +918,12 @@ const getTxDetailsProvider = GetTxDetailsFamily._();
 final class GetTxDetailsProvider
     extends $AsyncNotifierProvider<GetTxDetails, TxAccount> {
   const GetTxDetailsProvider._(
-      {required GetTxDetailsFamily super.from, required int super.argument})
+      {required GetTxDetailsFamily super.from,
+      required (
+        int,
+        int,
+      )
+          super.argument})
       : super(
           retry: null,
           name: r'getTxDetailsProvider',
@@ -987,7 +939,7 @@ final class GetTxDetailsProvider
   String toString() {
     return r'getTxDetailsProvider'
         ''
-        '($argument)';
+        '$argument';
   }
 
   @$internal
@@ -1005,12 +957,19 @@ final class GetTxDetailsProvider
   }
 }
 
-String _$getTxDetailsHash() => r'67175e914e53d2de8944db85e0f9225374cba276';
+String _$getTxDetailsHash() => r'6edd60a3c0893b12c3e584dd7fa8b539c7a68e00';
 
 final class GetTxDetailsFamily extends $Family
     with
-        $ClassFamilyOverride<GetTxDetails, AsyncValue<TxAccount>, TxAccount,
-            FutureOr<TxAccount>, int> {
+        $ClassFamilyOverride<
+            GetTxDetails,
+            AsyncValue<TxAccount>,
+            TxAccount,
+            FutureOr<TxAccount>,
+            (
+              int,
+              int,
+            )> {
   const GetTxDetailsFamily._()
       : super(
           retry: null,
@@ -1022,25 +981,35 @@ final class GetTxDetailsFamily extends $Family
 
   GetTxDetailsProvider call(
     int id,
+    int account,
   ) =>
-      GetTxDetailsProvider._(argument: id, from: this);
+      GetTxDetailsProvider._(argument: (
+        id,
+        account,
+      ), from: this);
 
   @override
   String toString() => r'getTxDetailsProvider';
 }
 
 abstract class _$GetTxDetails extends $AsyncNotifier<TxAccount> {
-  late final _$args = ref.$arg as int;
-  int get id => _$args;
+  late final _$args = ref.$arg as (
+    int,
+    int,
+  );
+  int get id => _$args.$1;
+  int get account => _$args.$2;
 
   FutureOr<TxAccount> build(
     int id,
+    int account,
   );
   @$mustCallSuper
   @override
   void runBuild() {
     final created = build(
-      _$args,
+      _$args.$1,
+      _$args.$2,
     );
     final ref = this.ref as $Ref<AsyncValue<TxAccount>, TxAccount>;
     final element = ref.element as $ClassProviderElement<
@@ -1130,17 +1099,16 @@ final class AccountsPageDataProvider extends $FunctionalProvider<
 String _$accountsPageDataHash() => r'e37b6e048a3a3938c9c2b03ae41328036271956d';
 
 @ProviderFor(basicAccountData)
-const basicAccountDataProvider = BasicAccountDataProvider._();
+const basicAccountDataProvider = BasicAccountDataFamily._();
 
 final class BasicAccountDataProvider extends $FunctionalProvider<
         AsyncValue<BasicAccountData>,
         BasicAccountData,
         FutureOr<BasicAccountData>>
     with $FutureModifier<BasicAccountData>, $FutureProvider<BasicAccountData> {
-  const BasicAccountDataProvider._()
+  const BasicAccountDataProvider._(
+      {required BasicAccountDataFamily super.from, required int super.argument})
       : super(
-          from: null,
-          argument: null,
           retry: null,
           name: r'basicAccountDataProvider',
           isAutoDispose: true,
@@ -1151,6 +1119,13 @@ final class BasicAccountDataProvider extends $FunctionalProvider<
   @override
   String debugGetCreateSourceHash() => _$basicAccountDataHash();
 
+  @override
+  String toString() {
+    return r'basicAccountDataProvider'
+        ''
+        '($argument)';
+  }
+
   @$internal
   @override
   $FutureProviderElement<BasicAccountData> $createElement(
@@ -1159,22 +1134,55 @@ final class BasicAccountDataProvider extends $FunctionalProvider<
 
   @override
   FutureOr<BasicAccountData> create(Ref ref) {
-    return basicAccountData(ref);
+    final argument = this.argument as int;
+    return basicAccountData(
+      ref,
+      argument,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is BasicAccountDataProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
   }
 }
 
-String _$basicAccountDataHash() => r'5f755167b7edd069b07888af935e53d49e425a16';
+String _$basicAccountDataHash() => r'3cc4b47523156d8ff7ea917ceb8eda9424e31f3f';
+
+final class BasicAccountDataFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<BasicAccountData>, int> {
+  const BasicAccountDataFamily._()
+      : super(
+          retry: null,
+          name: r'basicAccountDataProvider',
+          dependencies: null,
+          $allTransitiveDependencies: null,
+          isAutoDispose: true,
+        );
+
+  BasicAccountDataProvider call(
+    int account,
+  ) =>
+      BasicAccountDataProvider._(argument: account, from: this);
+
+  @override
+  String toString() => r'basicAccountDataProvider';
+}
 
 @ProviderFor(accountPageData)
-const accountPageDataProvider = AccountPageDataProvider._();
+const accountPageDataProvider = AccountPageDataFamily._();
 
 final class AccountPageDataProvider extends $FunctionalProvider<
         AsyncValue<AccountPageData>, AccountPageData, FutureOr<AccountPageData>>
     with $FutureModifier<AccountPageData>, $FutureProvider<AccountPageData> {
-  const AccountPageDataProvider._()
+  const AccountPageDataProvider._(
+      {required AccountPageDataFamily super.from, required int super.argument})
       : super(
-          from: null,
-          argument: null,
           retry: null,
           name: r'accountPageDataProvider',
           isAutoDispose: true,
@@ -1185,6 +1193,13 @@ final class AccountPageDataProvider extends $FunctionalProvider<
   @override
   String debugGetCreateSourceHash() => _$accountPageDataHash();
 
+  @override
+  String toString() {
+    return r'accountPageDataProvider'
+        ''
+        '($argument)';
+  }
+
   @$internal
   @override
   $FutureProviderElement<AccountPageData> $createElement(
@@ -1193,14 +1208,48 @@ final class AccountPageDataProvider extends $FunctionalProvider<
 
   @override
   FutureOr<AccountPageData> create(Ref ref) {
-    return accountPageData(ref);
+    final argument = this.argument as int;
+    return accountPageData(
+      ref,
+      argument,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is AccountPageDataProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
   }
 }
 
-String _$accountPageDataHash() => r'be356fdedbc8bf660c5ff2d19eaec87577045d47';
+String _$accountPageDataHash() => r'ac586da8719bf779a4c6531029a41097c8ae99af';
+
+final class AccountPageDataFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<AccountPageData>, int> {
+  const AccountPageDataFamily._()
+      : super(
+          retry: null,
+          name: r'accountPageDataProvider',
+          dependencies: null,
+          $allTransitiveDependencies: null,
+          isAutoDispose: true,
+        );
+
+  AccountPageDataProvider call(
+    int account,
+  ) =>
+      AccountPageDataProvider._(argument: account, from: this);
+
+  @override
+  String toString() => r'accountPageDataProvider';
+}
 
 @ProviderFor(fullAccountPageData)
-const fullAccountPageDataProvider = FullAccountPageDataProvider._();
+const fullAccountPageDataProvider = FullAccountPageDataFamily._();
 
 final class FullAccountPageDataProvider extends $FunctionalProvider<
         AsyncValue<FullAccountPageData>,
@@ -1209,10 +1258,10 @@ final class FullAccountPageDataProvider extends $FunctionalProvider<
     with
         $FutureModifier<FullAccountPageData>,
         $FutureProvider<FullAccountPageData> {
-  const FullAccountPageDataProvider._()
+  const FullAccountPageDataProvider._(
+      {required FullAccountPageDataFamily super.from,
+      required int super.argument})
       : super(
-          from: null,
-          argument: null,
           retry: null,
           name: r'fullAccountPageDataProvider',
           isAutoDispose: true,
@@ -1223,6 +1272,13 @@ final class FullAccountPageDataProvider extends $FunctionalProvider<
   @override
   String debugGetCreateSourceHash() => _$fullAccountPageDataHash();
 
+  @override
+  String toString() {
+    return r'fullAccountPageDataProvider'
+        ''
+        '($argument)';
+  }
+
   @$internal
   @override
   $FutureProviderElement<FullAccountPageData> $createElement(
@@ -1231,12 +1287,46 @@ final class FullAccountPageDataProvider extends $FunctionalProvider<
 
   @override
   FutureOr<FullAccountPageData> create(Ref ref) {
-    return fullAccountPageData(ref);
+    final argument = this.argument as int;
+    return fullAccountPageData(
+      ref,
+      argument,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is FullAccountPageDataProvider && other.argument == argument;
+  }
+
+  @override
+  int get hashCode {
+    return argument.hashCode;
   }
 }
 
 String _$fullAccountPageDataHash() =>
-    r'742c766717c6b4f146d1f6fa7c6a5aa2512fa0b6';
+    r'2bd1df3ea9210ab5767ea2cec12ec9ee9d1025be';
+
+final class FullAccountPageDataFamily extends $Family
+    with $FunctionalFamilyOverride<FutureOr<FullAccountPageData>, int> {
+  const FullAccountPageDataFamily._()
+      : super(
+          retry: null,
+          name: r'fullAccountPageDataProvider',
+          dependencies: null,
+          $allTransitiveDependencies: null,
+          isAutoDispose: true,
+        );
+
+  FullAccountPageDataProvider call(
+    int account,
+  ) =>
+      FullAccountPageDataProvider._(argument: account, from: this);
+
+  @override
+  String toString() => r'fullAccountPageDataProvider';
+}
 
 @ProviderFor(VaultNotifier)
 const vaultProvider = VaultNotifierProvider._();
@@ -1497,7 +1587,11 @@ final class VotingDriveJobProvider
   /// navigation; a run already live in Rust is adopted on first read.
   const VotingDriveJobProvider._(
       {required VotingDriveJobFamily super.from,
-      required String super.argument})
+      required (
+        String,
+        int,
+      )
+          super.argument})
       : super(
           retry: null,
           name: r'votingDriveJobProvider',
@@ -1513,7 +1607,7 @@ final class VotingDriveJobProvider
   String toString() {
     return r'votingDriveJobProvider'
         ''
-        '($argument)';
+        '$argument';
   }
 
   @$internal
@@ -1539,7 +1633,7 @@ final class VotingDriveJobProvider
   }
 }
 
-String _$votingDriveJobHash() => r'683928d706c3fed628fee0f445c3dfbb1102ebb1';
+String _$votingDriveJobHash() => r'dcd077904c83d81eb8351ee05c9a7e01c49e24ca';
 
 /// Submission job for one round. `prepare` persists the bundle layout and
 /// returns the eligibility preview the UI shows before the voter commits;
@@ -1549,8 +1643,15 @@ String _$votingDriveJobHash() => r'683928d706c3fed628fee0f445c3dfbb1102ebb1';
 
 final class VotingDriveJobFamily extends $Family
     with
-        $ClassFamilyOverride<VotingDriveJob, VotingDriveJobState,
-            VotingDriveJobState, VotingDriveJobState, String> {
+        $ClassFamilyOverride<
+            VotingDriveJob,
+            VotingDriveJobState,
+            VotingDriveJobState,
+            VotingDriveJobState,
+            (
+              String,
+              int,
+            )> {
   const VotingDriveJobFamily._()
       : super(
           retry: null,
@@ -1568,8 +1669,12 @@ final class VotingDriveJobFamily extends $Family
 
   VotingDriveJobProvider call(
     String roundId,
+    int account,
   ) =>
-      VotingDriveJobProvider._(argument: roundId, from: this);
+      VotingDriveJobProvider._(argument: (
+        roundId,
+        account,
+      ), from: this);
 
   @override
   String toString() => r'votingDriveJobProvider';
@@ -1582,17 +1687,23 @@ final class VotingDriveJobFamily extends $Family
 /// navigation; a run already live in Rust is adopted on first read.
 
 abstract class _$VotingDriveJob extends $Notifier<VotingDriveJobState> {
-  late final _$args = ref.$arg as String;
-  String get roundId => _$args;
+  late final _$args = ref.$arg as (
+    String,
+    int,
+  );
+  String get roundId => _$args.$1;
+  int get account => _$args.$2;
 
   VotingDriveJobState build(
     String roundId,
+    int account,
   );
   @$mustCallSuper
   @override
   void runBuild() {
     final created = build(
-      _$args,
+      _$args.$1,
+      _$args.$2,
     );
     final ref = this.ref as $Ref<VotingDriveJobState, VotingDriveJobState>;
     final element = ref.element as $ClassProviderElement<
@@ -1647,7 +1758,7 @@ final class VotingDriveStopAllProvider
 }
 
 String _$votingDriveStopAllHash() =>
-    r'bf6da0fb2895b3d183bf0f230921c7b2973a6604';
+    r'1a6879dc0f9cd20551afa0ab28b54df794430f5d';
 
 /// Re-runnable trigger to stop every live driver run for the current wallet.
 /// Backgrounding and wallet switches invoke it so no run outlives its wallet;

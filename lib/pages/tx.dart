@@ -19,11 +19,13 @@ import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
+import 'package:zkool/router.dart';
 
 class TxPage extends ConsumerStatefulWidget {
   final PcztPackage pczt;
   final ContinuationContext? continuation;
-  const TxPage(this.pczt, {this.continuation, super.key});
+  final int account;
+  const TxPage(this.pczt, {this.continuation, required this.account, super.key});
 
   @override
   ConsumerState<TxPage> createState() => TxPageState();
@@ -45,8 +47,8 @@ class TxPageState extends ConsumerState<TxPage> {
     Future(() async {
       final settings = ref.read(appSettingsProvider).requireValue;
       final canBroadcast = !settings.offline;
-      final account = await ref.read(selectedAccountProvider.future);
-      final details = await ref.read(accountProvider(account!.id).future);
+      final details = await ref.read(accountProvider(widget.account).future);
+      final account = details.account;
       setState(() {
         this.account = account;
         this.details = details;
@@ -167,7 +169,7 @@ class TxPageState extends ConsumerState<TxPage> {
   }
 
   void onFrost() async {
-    await GoRouter.of(context).push("/frost1", extra: widget.pczt);
+    await GoRouter.of(context).push(accountRoute("/frost1", widget.account), extra: widget.pczt);
   }
 
   Future<void> _confirmAndSend() async {
@@ -243,7 +245,7 @@ class TxPageState extends ConsumerState<TxPage> {
             final summary = await continuation.complete(result, account!.id, c);
             if (mounted) {
               ref.invalidate(savedSwapsProvider);
-              unawaited(GoRouter.of(context).pushReplacement<void>('/swap/summary', extra: summary));
+              unawaited(GoRouter.of(context).pushReplacement<void>(accountRoute('/swap/summary', widget.account), extra: summary));
             }
           case null:
             break;
@@ -320,7 +322,7 @@ class TxPageState extends ConsumerState<TxPage> {
   }
 
   void onCancel() {
-    GoRouter.of(context).go("/");
+    GoRouter.of(context).go(accountRoute("/", widget.account));
   }
 }
 

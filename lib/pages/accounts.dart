@@ -15,6 +15,7 @@ import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/widgets/editable_list.dart';
 import 'package:zkool/widgets/exchange_rate.dart';
 import 'package:zkool/widgets/theme.dart';
+import 'package:zkool/router.dart';
 
 class AccountListPage extends ConsumerStatefulWidget {
   const AccountListPage({super.key});
@@ -247,19 +248,10 @@ class AccountListPageState extends ConsumerState<AccountListPage> {
     }
   }
 
-  void onOpen(BuildContext context, Account account) async {
+  void onOpen(BuildContext context, Account account) {
     // Invalidate cache to ensure fresh data
-    ref.invalidate(getCurrentAccountProvider);
     ref.invalidate(accountProvider(account.id));
-    ref.read(selectedAccountIdProvider.notifier).set(account.id);
-    // Wait for getCurrentAccountProvider (what the page watches) to complete
-    await ref.read(getCurrentAccountProvider.future);
-    if (!context.mounted) return;
-    if (GoRouter.of(context).canPop()) {
-      GoRouter.of(context).pop();
-    } else {
-      GoRouter.of(context).go('/');
-    }
+    GoRouter.of(context).go(accountRoute('/', account.id));
   }
 
   void onReorder(int oldIndex, int newIndex) async {
