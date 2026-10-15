@@ -125,7 +125,7 @@ class SpendingChartState extends ConsumerState<SpendingChart> with AutomaticKeep
   Future<void> refresh() async {
     final f = widget.from?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
     final t = widget.to?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
-    final amounts = await fetchCategoryAmounts(from: f, to: t, c: c);
+    final amounts = await fetchCategoryAmounts(from: f, to: t, account: ref.read(selectedAccountIdProvider), c: c);
     income.clear();
     spending.clear();
     for (var (c, a, i) in amounts) {
@@ -298,7 +298,7 @@ class CategoryChartState extends ConsumerState<CategoryChart> with AutomaticKeep
   Future<void> refresh() async {
     final f = widget.from?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
     final t = widget.to?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
-    amounts = await fetchAmounts(from: f, to: t, category: category!, c: c);
+    amounts = await fetchAmounts(from: f, to: t, category: category!, account: ref.read(selectedAccountIdProvider), c: c);
     setState(() {
       epoch += 1;
     });

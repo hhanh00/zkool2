@@ -10,6 +10,7 @@ import 'package:zkool/store.dart'
     show
         VotingDriveJobState,
         appSettingsProvider,
+        selectedAccountIdProvider,
         coinContext,
         votingDriveJobProvider,
         votingQuiescenceLabel;
@@ -27,6 +28,7 @@ class VotingRoundPage extends ConsumerStatefulWidget {
 class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
   int _currentStep = 0;
   late final _coin = coinContext.coin;
+  late final _account = ref.read(selectedAccountIdProvider);
   bool _loading = true;
   bool _saving = false;
   String? _loadError;
@@ -62,7 +64,7 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
   /// without a resident background driver.
   Future<void> _refreshShares() async {
     try {
-      final status = await votingDriveStatus(roundId: widget.round.roundId, c: _coin);
+      final status = await votingDriveStatus(roundId: widget.round.roundId, account: _account, c: _coin);
       if (!mounted) return;
       final pending = status.sharesTotal > status.sharesConfirmed;
       if (!pending) {
@@ -91,6 +93,7 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
         roundId: widget.round.roundId,
         helperUrls: widget.round.helperUrls,
         voteEndTimeSeconds: widget.round.voteEndTime,
+        account: _account,
         c: _coin,
       );
     } on Exception {
@@ -106,7 +109,7 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
       _loadError = null;
     });
     try {
-      final selections = await votingLoadSelections(roundId: widget.round.roundId, c: _coin);
+      final selections = await votingLoadSelections(roundId: widget.round.roundId, account: _account, c: _coin);
       if (!mounted) return;
       setState(() {
         _selections.clear();
@@ -145,13 +148,14 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
     setState(() => _saving = true);
     try {
       if (decision == null) {
-        await votingClearSelection(roundId: widget.round.roundId, proposalId: proposal.proposalId, c: _coin);
+        await votingClearSelection(roundId: widget.round.roundId, proposalId: proposal.proposalId, account: _account, c: _coin);
       } else {
         await votingSaveSelection(
           roundId: widget.round.roundId,
           proposalId: proposal.proposalId,
           decision: decision,
           numOptions: proposal.options.length,
+          account: _account,
           c: _coin,
         );
       }

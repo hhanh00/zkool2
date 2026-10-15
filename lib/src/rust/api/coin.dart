@@ -5,10 +5,8 @@
 
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
-import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
-part 'coin.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `build_tor`, `client`, `connect_over_nym`, `connect_over_proxy`, `connect_over_tor`, `get_connect_options`, `get_connection`, `get_pool`, `http_connect_tunnel`, `is_mixnet`, `network`, `open_proxied_stream`, `try_open`
+// These functions are ignored because they are not marked as `pub`: `build_tor`, `client`, `close_pool_for`, `connect_over_nym`, `connect_over_proxy`, `connect_over_tor`, `get_connect_options`, `get_connection`, `get_pool`, `http_connect_tunnel`, `is_mixnet`, `network`, `open_proxied_stream`, `try_open`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`
 
 Future<void> initDatadir({required String directory}) =>
@@ -16,42 +14,21 @@ Future<void> initDatadir({required String directory}) =>
 
 Future<void> getTorClient() => RustLib.instance.api.crateApiCoinGetTorClient();
 
-Future<void> closePool({required String dbFilepath}) =>
-    RustLib.instance.api.crateApiCoinClosePool(dbFilepath: dbFilepath);
+// Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>>
+abstract class Coin implements RustOpaqueInterface {
+  /// Network id: 0 mainnet, 1 testnet, 2 regtest, 3 ZSA regtest.
+  int get coin;
 
-@freezed
-sealed class Coin with _$Coin {
-  const Coin._();
-  const factory Coin.raw({
-    required int coin,
-    required int account,
-    required String dbFilepath,
-    required String url,
-    required int serverType,
-    required int transport,
-    required String proxy,
-  }) = _Coin;
-  Future<void> getName() => RustLib.instance.api.crateApiCoinCoinGetName(
-        that: this,
-      );
+  Future<void> getName();
 
   factory Coin({int? defaultCoin}) =>
       RustLib.instance.api.crateApiCoinCoinNew(defaultCoin: defaultCoin);
 
-  Future<Coin> openDatabase({required String dbFilepath, String? password}) =>
-      RustLib.instance.api.crateApiCoinCoinOpenDatabase(
-          that: this, dbFilepath: dbFilepath, password: password);
+  Future<Coin> openDatabase({required String dbFilepath, String? password});
 
-  Future<Coin> setAccount({required int account}) => RustLib.instance.api
-      .crateApiCoinCoinSetAccount(that: this, account: account);
+  Coin setLwd({required int serverType, required String url});
 
-  Coin setLwd({required int serverType, required String url}) =>
-      RustLib.instance.api
-          .crateApiCoinCoinSetLwd(that: this, serverType: serverType, url: url);
+  Coin setProxy({required String proxy});
 
-  Coin setProxy({required String proxy}) =>
-      RustLib.instance.api.crateApiCoinCoinSetProxy(that: this, proxy: proxy);
-
-  Coin setTransport({required int transport}) => RustLib.instance.api
-      .crateApiCoinCoinSetTransport(that: this, transport: transport);
+  Coin setTransport({required int transport});
 }

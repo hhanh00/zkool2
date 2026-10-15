@@ -15,25 +15,29 @@ fn transport(c: &Coin) -> crate::near_intents::Transport {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn near_intents_list_swaps(pending_only: bool, c: &Coin) -> Result<Vec<SavedSwap>> {
+pub async fn near_intents_list_swaps(
+    pending_only: bool,
+    account: u32,
+    c: &Coin,
+) -> Result<Vec<SavedSwap>> {
     let mut connection = c.get_connection().await?;
-    crate::near_intents::read_swaps(&mut connection, c.account, pending_only).await
+    crate::near_intents::read_swaps(&mut connection, account, pending_only).await
 }
 
-/// Permanently remove closed swaps belonging to the current account.
+/// Permanently remove closed swaps belonging to the account.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn near_intents_clear_closed_swaps(c: &Coin) -> Result<()> {
-    ensure!(c.account != 0, "Select an account");
+pub async fn near_intents_clear_closed_swaps(account: u32, c: &Coin) -> Result<()> {
+    ensure!(account != 0, "Select an account");
     let mut connection = c.get_connection().await?;
-    crate::near_intents::clear_closed_swaps(&mut connection, c.account).await
+    crate::near_intents::clear_closed_swaps(&mut connection, account).await
 }
 
-/// Permanently remove one swap belonging to the current account.
+/// Permanently remove one swap belonging to the account.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn near_intents_delete_closed_swap(id_swap: i64, c: &Coin) -> Result<()> {
-    ensure!(c.account != 0, "Select an account");
+pub async fn near_intents_delete_closed_swap(id_swap: i64, account: u32, c: &Coin) -> Result<()> {
+    ensure!(account != 0, "Select an account");
     let mut connection = c.get_connection().await?;
-    crate::near_intents::delete_closed_swap(&mut connection, c.account, id_swap).await
+    crate::near_intents::delete_closed_swap(&mut connection, account, id_swap).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -53,35 +57,43 @@ pub async fn near_intents_quote(request: SwapRequest, c: &Coin) -> Result<SwapQu
 
 /// Create a deposit quote and persist it before any wallet payment is prepared.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn near_intents_create_swap(mut request: SwapRequest, c: &Coin) -> Result<SavedSwap> {
-    ensure!(c.account != 0, "Select an account");
+pub async fn near_intents_create_swap(
+    mut request: SwapRequest,
+    account: u32,
+    c: &Coin,
+) -> Result<SavedSwap> {
+    ensure!(account != 0, "Select an account");
     request.dry = false;
     let response = near_intents_quote(request.clone(), c).await?;
     let mut connection = c.get_connection().await?;
-    crate::near_intents::save_swap(&mut connection, c.account, &request, &response).await
+    crate::near_intents::save_swap(&mut connection, account, &request, &response).await
 }
 
-async fn saved_swap(id_swap: i64, c: &Coin) -> Result<SavedSwap> {
+async fn saved_swap(id_swap: i64, account: u32, c: &Coin) -> Result<SavedSwap> {
     let mut connection = c.get_connection().await?;
-    crate::near_intents::read_swaps(&mut connection, c.account, false)
+    crate::near_intents::read_swaps(&mut connection, account, false)
         .await?
         .into_iter()
         .find(|s| s.id_swap == id_swap)
-        .context("Swap not found for the current account")
+        .context("Swap not found for the account")
 }
 
 /// Prepare the exact saved deposit for the normal transaction UI.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn near_intents_prepare_swap(id_swap: i64, c: &Coin) -> Result<crate::api::pay::PcztPackage> {
+pub async fn near_intents_prepare_swap(
+    id_swap: i64,
+    account: u32,
+    c: &Coin,
+) -> Result<crate::api::pay::PcztPackage> {
     use zcash_protocol::consensus::{NetworkType, Parameters};
-    ensure!(c.account != 0 && c.network().network_type() == NetworkType::Main, "Select a Zcash mainnet account");
-    let swap = saved_swap(id_swap, c).await?;
+    ensure!(account != 0 && c.network().network_type() == NetworkType::Main, "Select a Zcash mainnet account");
+    let swap = saved_swap(id_swap, account, c).await?;
     ensure!(swap.deposit_tx_hash.is_none(), "Swap deposit already sent");
     let recipient = funding_recipient(&swap)?;
     ensure_swap_deadline(&swap, c).await?;
     crate::api::pay::prepare(&[recipient], crate::api::pay::PaymentOptions {
         src_pools: 15, recipient_pays_fee: false, smart_transparent: false, category: None,
-    }, c).await
+    }, account, c).await
 }
 
 async fn ensure_swap_deadline(swap: &SavedSwap, c: &Coin) -> Result<()> {
@@ -130,7 +142,12 @@ fn funding_recipient(swap: &SavedSwap) -> Result<crate::pay::Recipient> {
 /// Persist an already broadcast deposit before notifying the provider. Retrying
 /// notification never sends another wallet transaction.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn near_intents_record_deposit(id_swap: i64, tx_hash: String, c: &Coin) -> Result<()> {
+pub async fn near_intents_record_deposit(
+    id_swap: i64,
+    tx_hash: String,
+    account: u32,
+    c: &Coin,
+) -> Result<()> {
     ensure!(
         tx_hash.len() == 64 && tx_hash.bytes().all(|b| b.is_ascii_hexdigit()),
         "Invalid Zcash transaction hash"
@@ -144,7 +161,7 @@ pub async fn near_intents_record_deposit(id_swap: i64, tx_hash: String, c: &Coin
         )
         .bind(&tx_hash)
         .bind(id_swap)
-        .bind(c.account)
+        .bind(account)
         .bind(&tx_hash)
         .execute(&mut *connection)
         .await?;
@@ -152,14 +169,14 @@ pub async fn near_intents_record_deposit(id_swap: i64, tx_hash: String, c: &Coin
             result.rows_affected() == 1,
             "Swap not found, not a ZEC deposit, or already funded by another transaction"
         );
-        crate::near_intents::swap_status_snapshot(&mut connection, id_swap, c.account)
+        crate::near_intents::swap_status_snapshot(&mut connection, id_swap, account)
             .await?
             .0
     };
     near_intents_submit_deposit(address, tx_hash, c).await?;
     let mut connection = c.get_connection().await?;
     sqlx::query("UPDATE swaps SET deposit_submitted_at = COALESCE(deposit_submitted_at, unixepoch()), updated_at = unixepoch() WHERE id_swap = ? AND account = ?")
-        .bind(id_swap).bind(c.account).execute(&mut *connection).await?;
+        .bind(id_swap).bind(account).execute(&mut *connection).await?;
     Ok(())
 }
 
@@ -172,13 +189,17 @@ pub async fn near_intents_status(
     crate::near_intents::status(&deposit_address, deposit_memo.as_deref(), &transport(c)).await
 }
 
-/// Refresh a saved swap owned by the current account. Provider failures leave
+/// Refresh a saved swap owned by the account. Provider failures leave
 /// the saved snapshot untouched, and concurrent updates are checked on write.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn near_intents_refresh_swap_status(id_swap: i64, c: &Coin) -> Result<SwapStatus> {
+pub async fn near_intents_refresh_swap_status(
+    id_swap: i64,
+    account: u32,
+    c: &Coin,
+) -> Result<SwapStatus> {
     let (address, memo, previous) = {
         let mut connection = c.get_connection().await?;
-        crate::near_intents::swap_status_snapshot(&mut connection, id_swap, c.account).await?
+        crate::near_intents::swap_status_snapshot(&mut connection, id_swap, account).await?
     };
     // Release the database connection before contacting the provider.
     let current = crate::near_intents::status(&address, memo.as_deref(), &transport(c)).await?;
@@ -186,7 +207,7 @@ pub async fn near_intents_refresh_swap_status(id_swap: i64, c: &Coin) -> Result<
     crate::near_intents::persist_swap_status(
         &mut connection,
         id_swap,
-        c.account,
+        account,
         &address,
         memo.as_deref(),
         previous.as_deref(),

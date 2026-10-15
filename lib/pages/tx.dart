@@ -184,7 +184,7 @@ class TxPageState extends ConsumerState<TxPage> {
       if (!txPlan.canBroadcast) {
         if (account!.hw != 0) {
           final comp = Completer();
-          signLedgerTransaction(package: widget.pczt, c: c).listen(
+          signLedgerTransaction(package: widget.pczt, account: account!.id, c: c).listen(
             (e) {
               switch (e) {
                 case SigningEvent_Progress p:
@@ -203,6 +203,7 @@ class TxPageState extends ConsumerState<TxPage> {
         } else {
           pczt = await signTransaction(
             pczt: widget.pczt,
+            account: account!.id,
             c: c,
           );
         }
@@ -215,6 +216,7 @@ class TxPageState extends ConsumerState<TxPage> {
       final result = await broadcastTransaction(
         height: txPlan.height,
         txBytes: txBytes,
+        account: account!.id,
         c: c,
       );
       logger.i("tx result $result");
@@ -233,11 +235,12 @@ class TxPageState extends ConsumerState<TxPage> {
           txid: txidHex,
           price: pczt.price,
           category: pczt.category,
+          account: account!.id,
           c: c,
         );
         switch (widget.continuation) {
           case SwapContext continuation:
-            final summary = await continuation.complete(result, c);
+            final summary = await continuation.complete(result, account!.id, c);
             if (mounted) {
               ref.invalidate(savedSwapsProvider);
               unawaited(GoRouter.of(context).pushReplacement<void>('/swap/summary', extra: summary));
@@ -297,6 +300,7 @@ class TxPageState extends ConsumerState<TxPage> {
       if (txPlan.canSign) {
         pczt = await signTransaction(
           pczt: widget.pczt,
+          account: account!.id,
           c: c,
         );
       }

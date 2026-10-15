@@ -247,12 +247,13 @@ pub async fn init_sign(
     coordinator: u8,
     funding_account: u32,
     pczt: &PcztPackage,
+    account: u32,
     c: &Coin,
 ) -> Result<()> {
     let mut connection = c.get_connection().await?;
     crate::frost::sign::init_sign(
         &mut *connection,
-        c.account,
+        account,
         funding_account,
         coordinator,
         pczt,

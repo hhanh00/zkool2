@@ -38,9 +38,9 @@ impl From<ZsaAssetRow> for ZsaHolding {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn list_zsa_holdings(c: &Coin) -> Result<Vec<ZsaHolding>> {
+pub async fn list_zsa_holdings(account: u32, c: &Coin) -> Result<Vec<ZsaHolding>> {
     let mut connection = c.get_connection().await?;
-    let rows = crate::db::get_zsa_holdings(&mut connection, c.account).await?;
+    let rows = crate::db::get_zsa_holdings(&mut connection, account).await?;
     Ok(rows.into_iter().map(ZsaHolding::from).collect())
 }
 

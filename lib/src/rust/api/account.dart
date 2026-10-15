@@ -55,14 +55,18 @@ Future<void> reorderAccount(
 Future<int> newAccount({required NewAccount na, required Coin c}) =>
     RustLib.instance.api.crateApiAccountNewAccount(na: na, c: c);
 
-Future<bool> hasTransparentPubKey({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountHasTransparentPubKey(c: c);
+Future<bool> hasTransparentPubKey({required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiAccountHasTransparentPubKey(account: account, c: c);
 
-Future<int> generateNextDindex({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountGenerateNextDindex(c: c);
+Future<int> generateNextDindex({required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiAccountGenerateNextDindex(account: account, c: c);
 
-Future<String?> generateNextChangeAddress({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountGenerateNextChangeAddress(c: c);
+Future<String?> generateNextChangeAddress(
+        {required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiAccountGenerateNextChangeAddress(account: account, c: c);
 
 Future<void> resetSync({required int id, required Coin c}) =>
     RustLib.instance.api.crateApiAccountResetSync(id: id, c: c);
@@ -71,38 +75,50 @@ Future<void> removeAccount({required int accountId, required Coin c}) =>
     RustLib.instance.api
         .crateApiAccountRemoveAccount(accountId: accountId, c: c);
 
-Future<List<Tx>> listTxHistory({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountListTxHistory(c: c);
+Future<List<Tx>> listTxHistory({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountListTxHistory(account: account, c: c);
 
-Future<List<Memo>> listMemos({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountListMemos(c: c);
+Future<List<Memo>> listMemos({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountListMemos(account: account, c: c);
 
-Future<Addresses> getAddresses({required int uaPools, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountGetAddresses(uaPools: uaPools, c: c);
+Future<Addresses> getAddresses(
+        {required int uaPools, required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiAccountGetAddresses(uaPools: uaPools, account: account, c: c);
 
 Future<Addresses> getAccountAddresses(
         {required int account, required int uaPools, required Coin c}) =>
     RustLib.instance.api.crateApiAccountGetAccountAddresses(
         account: account, uaPools: uaPools, c: c);
 
-Future<TxAccount> getTxDetails({required int idTx, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountGetTxDetails(idTx: idTx, c: c);
+Future<TxAccount> getTxDetails(
+        {required int idTx, required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiAccountGetTxDetails(idTx: idTx, account: account, c: c);
 
-Future<List<TxNote>> listNotes({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountListNotes(c: c);
+Future<List<TxNote>> listNotes({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountListNotes(account: account, c: c);
 
 Future<void> lockNote(
-        {required int id, required bool locked, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountLockNote(id: id, locked: locked, c: c);
+        {required int id,
+        required bool locked,
+        required int account,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiAccountLockNote(
+        id: id, locked: locked, account: account, c: c);
 
 Future<List<TAddressTxCount>> fetchTransparentAddressTxCount(
-        {required Coin c}) =>
-    RustLib.instance.api.crateApiAccountFetchTransparentAddressTxCount(c: c);
+        {required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiAccountFetchTransparentAddressTxCount(account: account, c: c);
 
 Future<List<TAddressTxCount>> fetchAddressTxCount(
-        {required Coin c, required bool aggregate, required int poolFilter}) =>
+        {required bool aggregate,
+        required int poolFilter,
+        required int account,
+        required Coin c}) =>
     RustLib.instance.api.crateApiAccountFetchAddressTxCount(
-        c: c, aggregate: aggregate, poolFilter: poolFilter);
+        aggregate: aggregate, poolFilter: poolFilter, account: account, c: c);
 
 Future<Uint8List> exportAccount(
         {required int id, required String passphrase, required Coin c}) =>
@@ -119,8 +135,10 @@ Future<void> importAccount(
 Future<void> printKeys({required int id, required Coin c}) =>
     RustLib.instance.api.crateApiAccountPrintKeys(id: id, c: c);
 
-Future<FrostParams?> getAccountFrostParams({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountGetAccountFrostParams(c: c);
+Future<FrostParams?> getAccountFrostParams(
+        {required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiAccountGetAccountFrostParams(account: account, c: c);
 
 Future<List<Folder>> listFolders({required Coin c}) =>
     RustLib.instance.api.crateApiAccountListFolders(c: c);
@@ -149,33 +167,44 @@ Future<void> renameCategory({required Category category, required Coin c}) =>
 Future<void> deleteCategories({required List<int> ids, required Coin c}) =>
     RustLib.instance.api.crateApiAccountDeleteCategories(ids: ids, c: c);
 
-Future<String> getExportedData({required int type, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountGetExportedData(type: type, c: c);
+Future<String> getExportedData(
+        {required int type, required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiAccountGetExportedData(type: type, account: account, c: c);
 
 Future<void> lockRecentNotes(
-        {required int height, required int threshold, required Coin c}) =>
+        {required int height,
+        required int threshold,
+        required int account,
+        required Coin c}) =>
     RustLib.instance.api.crateApiAccountLockRecentNotes(
-        height: height, threshold: threshold, c: c);
+        height: height, threshold: threshold, account: account, c: c);
 
-Future<void> unlockAllNotes({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountUnlockAllNotes(c: c);
+Future<void> unlockAllNotes({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountUnlockAllNotes(account: account, c: c);
 
-Future<void> toggleAllNotes({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountToggleAllNotes(c: c);
+Future<void> toggleAllNotes({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountToggleAllNotes(account: account, c: c);
 
-Future<BigInt> maxSpendable({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountMaxSpendable(c: c);
+Future<BigInt> maxSpendable({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiAccountMaxSpendable(account: account, c: c);
 
-Future<String> showLedgerSaplingAddress({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountShowLedgerSaplingAddress(c: c);
+Future<String> showLedgerSaplingAddress(
+        {required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiAccountShowLedgerSaplingAddress(account: account, c: c);
 
-Future<String> showLedgerTransparentAddress({required Coin c}) =>
-    RustLib.instance.api.crateApiAccountShowLedgerTransparentAddress(c: c);
+Future<String> showLedgerTransparentAddress(
+        {required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiAccountShowLedgerTransparentAddress(account: account, c: c);
 
 Stream<SigningEvent> signLedgerTransaction(
-        {required PcztPackage package, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiAccountSignLedgerTransaction(package: package, c: c);
+        {required PcztPackage package,
+        required int account,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiAccountSignLedgerTransaction(
+        package: package, account: account, c: c);
 
 Future<void> dummyExport({required SigningEvent a}) =>
     RustLib.instance.api.crateApiAccountDummyExport(a: a);

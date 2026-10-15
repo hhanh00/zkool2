@@ -11,8 +11,9 @@ part 'zsa.freezed.dart';
 
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`, `from`
 
-Future<List<ZsaHolding>> listZsaHoldings({required Coin c}) =>
-    RustLib.instance.api.crateApiZsaListZsaHoldings(c: c);
+Future<List<ZsaHolding>> listZsaHoldings(
+        {required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiZsaListZsaHoldings(account: account, c: c);
 
 /// Set or update the human-readable name for a ZSA asset.
 /// Pass an empty string to clear the name (reverting to the hex fallback display).

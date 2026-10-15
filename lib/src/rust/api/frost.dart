@@ -69,11 +69,13 @@ Future<void> initSign(
         {required int coordinator,
         required int fundingAccount,
         required PcztPackage pczt,
+        required int account,
         required Coin c}) =>
     RustLib.instance.api.crateApiFrostInitSign(
         coordinator: coordinator,
         fundingAccount: fundingAccount,
         pczt: pczt,
+        account: account,
         c: c);
 
 Future<bool> isSigningInProgress({required Coin c}) =>

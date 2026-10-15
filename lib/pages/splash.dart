@@ -91,7 +91,6 @@ class SplashPageState extends ConsumerState<SplashPage> {
     ref.read(selectedAccountIdProvider.notifier).set(savedId);
     ref.invalidate(selectedAccountProvider);
     final account = await ref.read(selectedAccountProvider.future);
-    if (account != null) c = await c.setAccount(account: account.id);
 
     final settings = await ref.read(appSettingsProvider.future);
     if (settings.vault && !settings.offline) {

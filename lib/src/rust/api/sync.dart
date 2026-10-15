@@ -27,8 +27,8 @@ Stream<SyncProgress> synchronize(
         fast: fast,
         c: c);
 
-Future<PoolBalance> balance({required Coin c}) =>
-    RustLib.instance.api.crateApiSyncBalance(c: c);
+Future<PoolBalance> balance({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiSyncBalance(account: account, c: c);
 
 Future<void> cancelSync() => RustLib.instance.api.crateApiSyncCancelSync();
 
@@ -37,8 +37,8 @@ Future<void> rewindSync(
     RustLib.instance.api
         .crateApiSyncRewindSync(height: height, account: account, c: c);
 
-Future<SyncHeight> getDbHeight({required Coin c}) =>
-    RustLib.instance.api.crateApiSyncGetDbHeight(c: c);
+Future<SyncHeight> getDbHeight({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiSyncGetDbHeight(account: account, c: c);
 
 /// Decrypt memos and store transaction details for `account`.
 ///

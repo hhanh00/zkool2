@@ -13,7 +13,7 @@ import 'package:zkool/widgets/error_display.dart';
 
 final savedSwapsProvider = FutureProvider.autoDispose<List<SavedSwap>>((ref) {
   final account = ref.watch(selectedAccountIdProvider);
-  return nearIntentsListSwaps(pendingOnly: false, c: coinContext.coin.copyWith(account: account));
+  return nearIntentsListSwaps(pendingOnly: false, account: account, c: coinContext.coin);
 });
 
 final swapAssetsProvider = FutureProvider.autoDispose<List<SwapAsset>>((ref) {
@@ -36,18 +36,19 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
 
   Future<void> _refresh() async {
     if (_refreshing || _clearing) return;
-    final coin = coinContext.coin.copyWith(account: ref.read(selectedAccountIdProvider));
+    final account = ref.read(selectedAccountIdProvider);
+    final coin = coinContext.coin;
     setState(() {
       _refreshing = true;
       _refreshError = null;
     });
     Object? error;
     try {
-      final swaps = await nearIntentsListSwaps(pendingOnly: true, c: coin);
+      final swaps = await nearIntentsListSwaps(pendingOnly: true, account: account, c: coin);
       for (final swap in swaps) {
-        if (!mounted || ref.read(selectedAccountIdProvider) != coin.account) break;
+        if (!mounted || ref.read(selectedAccountIdProvider) != account) break;
         try {
-          await refreshSingleSwap(swap, coin);
+          await refreshSingleSwap(swap, account, coin);
         } catch (e) {
           error ??= e;
         }
@@ -59,7 +60,7 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
         ref.invalidate(savedSwapsProvider);
         setState(() {
           _refreshing = false;
-          _refreshError = ref.read(selectedAccountIdProvider) == coin.account ? error : null;
+          _refreshError = ref.read(selectedAccountIdProvider) == account ? error : null;
         });
       }
     }
@@ -67,13 +68,14 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
 
   Future<void> _clearClosed() async {
     if (_clearing || _refreshing) return;
-    final coin = coinContext.coin.copyWith(account: ref.read(selectedAccountIdProvider));
+    final account = ref.read(selectedAccountIdProvider);
+    final coin = coinContext.coin;
     final confirmed = await confirmDialog(context,
         title: 'Clear closed swaps?', message: 'Permanently delete completed, refunded, failed, and expired swaps for this account?');
     if (!confirmed || !mounted) return;
     setState(() => _clearing = true);
     try {
-      await nearIntentsClearClosedSwaps(c: coin);
+      await nearIntentsClearClosedSwaps(account: account, c: coin);
       if (mounted) ref.invalidate(savedSwapsProvider);
     } catch (error) {
       if (mounted) await showException(context, error.toString());
@@ -84,12 +86,13 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
 
   Future<void> _deleteSwap(SavedSwap swap) async {
     if (_clearing || _refreshing) return;
-    final coin = coinContext.coin.copyWith(account: ref.read(selectedAccountIdProvider));
+    final account = ref.read(selectedAccountIdProvider);
+    final coin = coinContext.coin;
     final confirmed = await confirmDialog(context, title: 'Delete swap?', message: 'Permanently delete this swap from the database? This stops local tracking but does not cancel the swap or recover funds.');
     if (!confirmed || !mounted) return;
     setState(() => _clearing = true);
     try {
-      await nearIntentsDeleteClosedSwap(idSwap: swap.idSwap, c: coin);
+      await nearIntentsDeleteClosedSwap(idSwap: swap.idSwap, account: account, c: coin);
       if (mounted) ref.invalidate(savedSwapsProvider);
     } catch (error) {
       if (mounted) await showException(context, error.toString());

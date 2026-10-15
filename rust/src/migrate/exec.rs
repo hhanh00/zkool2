@@ -34,12 +34,12 @@ use crate::{
 ///
 /// Returns the fee paid. The inputs are locked as part of the broadcast, so a
 /// re-planned split cannot select them again.
-pub async fn split(c: &Coin, inputs: &[u32], outputs: &[(u64, u8)]) -> Result<u64> {
+pub async fn split(c: &Coin, account: u32, inputs: &[u32], outputs: &[(u64, u8)]) -> Result<u64> {
     let network = c.network();
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
     let height = client.latest_height().await?;
-    let own_address = own_address(c, &mut connection).await?;
+    let own_address = own_address(c, account, &mut connection).await?;
 
     let mut recipients: Vec<Recipient> = Vec::new();
     for &(denom, count) in outputs {
@@ -63,7 +63,7 @@ pub async fn split(c: &Coin, inputs: &[u32], outputs: &[(u64, u8)]) -> Result<u6
         &network,
         &mut connection,
         &mut client,
-        c.account,
+        account,
         PoolMask::from_pool(2).0, // Orchard source
         &recipients,
         false,
@@ -77,19 +77,19 @@ pub async fn split(c: &Coin, inputs: &[u32], outputs: &[(u64, u8)]) -> Result<u6
     )
     .await?;
 
-    broadcast(c, &mut connection, &mut client, height, pczt).await
+    broadcast(c, account, &mut connection, &mut client, height, pczt).await
 }
 
 /// Broadcast the O→I hop: spend one Orchard SD note at `anchor`, mint
 /// `amount` into Ironwood.
 ///
 /// Returns the fee paid.
-pub async fn migrate(c: &Coin, note: u32, amount: u64, anchor: u32) -> Result<u64> {
+pub async fn migrate(c: &Coin, account: u32, note: u32, amount: u64, anchor: u32) -> Result<u64> {
     let network = c.network();
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
     let height = client.latest_height().await?;
-    let own_address = own_address(c, &mut connection).await?;
+    let own_address = own_address(c, account, &mut connection).await?;
 
     // One Ironwood output; the dummy Orchard input and dummy output that pad
     // the bundle are added by the builder.
@@ -111,7 +111,7 @@ pub async fn migrate(c: &Coin, note: u32, amount: u64, anchor: u32) -> Result<u6
         &network,
         &mut connection,
         &mut client,
-        c.account,
+        account,
         PoolMask::from_pool(2).0, // Orchard source
         &recipients,
         false,
@@ -125,7 +125,7 @@ pub async fn migrate(c: &Coin, note: u32, amount: u64, anchor: u32) -> Result<u6
     )
     .await?;
 
-    broadcast(c, &mut connection, &mut client, height, pczt).await
+    broadcast(c, account, &mut connection, &mut client, height, pczt).await
 }
 
 /// Sign, extract, send, and lock the inputs. Returns the fee.
@@ -137,6 +137,7 @@ pub async fn migrate(c: &Coin, note: u32, amount: u64, anchor: u32) -> Result<u6
 /// commit together, which is what a durable-execution transaction step buys.
 async fn broadcast(
     c: &Coin,
+    account: u32,
     connection: &mut sqlx::SqliteConnection,
     client: &mut crate::Client,
     height: u32,
@@ -146,15 +147,19 @@ async fn broadcast(
     let fee = crate::pay::TxPlan::from_package(&network, &pczt)
         .map(|p| p.fee)
         .unwrap_or(0);
-    let pczt = sign_transaction(&mut *connection, c.account, &network, &pczt).await?;
+    let pczt = sign_transaction(&mut *connection, account, &network, &pczt).await?;
     let tx_bytes = extract_transaction(&pczt).await?;
     let _txid = send(client, height, &tx_bytes).await?;
-    crate::pay::lock_spent_notes(&mut *connection, c.account, &tx_bytes).await?;
+    crate::pay::lock_spent_notes(&mut *connection, account, &tx_bytes).await?;
     Ok(fee)
 }
 
-async fn own_address(c: &Coin, connection: &mut sqlx::SqliteConnection) -> Result<String> {
+async fn own_address(
+    c: &Coin,
+    account: u32,
+    connection: &mut sqlx::SqliteConnection,
+) -> Result<String> {
     let network = c.network();
-    let hw = get_account_hw(&mut *connection, c.account).await?;
-    get_account_full_address(&network, &mut *connection, c.account, 0, hw).await
+    let hw = get_account_hw(&mut *connection, account).await?;
+    get_account_full_address(&network, &mut *connection, account, 0, hw).await
 }

@@ -11,13 +11,13 @@ const zecAsset = 'nep141:zec.omft.near';
 
 /// Retry pending deposit notification if needed, then poll provider status.
 /// Notification failure is non-fatal; status failure throws.
-Future<void> refreshSingleSwap(ni.SavedSwap swap, Coin coin) async {
+Future<void> refreshSingleSwap(ni.SavedSwap swap, int account, Coin coin) async {
   if (swap.depositTxHash != null && swap.depositSubmittedAt == null) {
     try {
-      await nearIntentsRecordDeposit(idSwap: swap.idSwap, txHash: swap.depositTxHash!, c: coin);
+      await nearIntentsRecordDeposit(idSwap: swap.idSwap, txHash: swap.depositTxHash!, account: account, c: coin);
     } catch (_) {}
   }
-  await nearIntentsRefreshSwapStatus(idSwap: swap.idSwap, c: coin);
+  await nearIntentsRefreshSwapStatus(idSwap: swap.idSwap, account: account, c: coin);
 }
 
 DateTime swapDeadline(ni.SavedSwap swap) {
@@ -27,14 +27,14 @@ DateTime swapDeadline(ni.SavedSwap swap) {
 }
 
 /// Preview only: requesting a quote does not create a deposit or send funds.
-Future<SwapReviewQuote> loadSwapQuote(SwapDraft draft, Coin coin) async {
+Future<SwapReviewQuote> loadSwapQuote(SwapDraft draft, int account, Coin coin) async {
   if (coin.coin != 0) throw StateError('Swaps require a Zcash mainnet wallet.');
   final assets = await nearIntentsAssets(c: coin);
   final networks = draft.network.blockchainIds;
   final matches = assets.where((asset) => asset.symbol.toUpperCase() == draft.asset.symbol && networks.contains(asset.blockchain.toLowerCase())).toList();
   if (matches.length != 1) throw StateError('Unable to identify ${draft.asset.symbol} on ${draft.network.label}.');
   final asset = matches.single;
-  final addresses = await getAddresses(uaPools: 0, c: coin);
+  final addresses = await getAddresses(uaPools: 0, account: account, c: coin);
   final walletAddress = addresses.taddr;
   if (walletAddress == null || walletAddress.isEmpty) throw StateError('This account needs a transparent Zcash address.');
   final deadline = DateTime.now().toUtc().add(const Duration(minutes: 10));

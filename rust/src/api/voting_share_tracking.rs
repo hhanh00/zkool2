@@ -38,9 +38,11 @@ pub(crate) async fn track_shares_pass(
     round_id: &str,
     helper_urls: &[String],
     vote_end_time_seconds: Option<u64>,
+    account: u32,
     c: &Coin,
 ) -> Result<ShareTrackingReport> {
-    let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet_id(c).await?).await?;
+    let sidecar =
+        VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet_id(account, c).await?).await?;
     let db = sidecar.db();
     let client = HelperClient::new(
         Arc::new(ZkoolHelperTransport::new(c.transport, &c.proxy)),
@@ -79,8 +81,10 @@ pub async fn voting_track_shares_once(
     round_id: &str,
     helper_urls: Vec<String>,
     vote_end_time_seconds: Option<u64>,
+    account: u32,
     c: &Coin,
 ) -> Result<u32> {
-    let report = track_shares_pass(round_id, &helper_urls, vote_end_time_seconds, c).await?;
+    let report =
+        track_shares_pass(round_id, &helper_urls, vote_end_time_seconds, account, c).await?;
     Ok(u32::try_from(report.confirmed.len()).unwrap_or(u32::MAX))
 }

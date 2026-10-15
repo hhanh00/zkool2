@@ -45,6 +45,7 @@ class SwapSummaryPage extends ConsumerStatefulWidget {
 class _SwapSummaryPageState extends ConsumerState<SwapSummaryPage> {
   late SavedSwap _swap = widget.swap;
   final _coin = coinContext.coin;
+  late final _account = ref.read(selectedAccountIdProvider);
   Timer? _timer;
   bool _refreshing = false;
   Object? _error;
@@ -69,9 +70,9 @@ class _SwapSummaryPageState extends ConsumerState<SwapSummaryPage> {
     setState(() => _refreshing = true);
     Object? error;
     try {
-      await refreshSingleSwap(_swap, _coin);
+      await refreshSingleSwap(_swap, _account, _coin);
       if (!mounted) return;
-      final swaps = await nearIntentsListSwaps(pendingOnly: false, c: _coin);
+      final swaps = await nearIntentsListSwaps(pendingOnly: false, account: _account, c: _coin);
       if (!mounted) return;
       _swap = swaps.firstWhere((swap) => swap.idSwap == _swap.idSwap);
       ref.invalidate(savedSwapsProvider);

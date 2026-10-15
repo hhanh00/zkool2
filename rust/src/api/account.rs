@@ -258,24 +258,24 @@ pub async fn new_account(na: &NewAccount, c: &Coin) -> Result<u32> {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn has_transparent_pub_key(c: &Coin) -> Result<bool> {
+pub async fn has_transparent_pub_key(account: u32, c: &Coin) -> Result<bool> {
     let mut connection = c.get_connection().await?;
-    let r = crate::account::has_transparent_pub_key(&mut connection, c.account).await?;
+    let r = crate::account::has_transparent_pub_key(&mut connection, account).await?;
     Ok(r)
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn generate_next_dindex(c: &Coin) -> Result<u32> {
+pub async fn generate_next_dindex(account: u32, c: &Coin) -> Result<u32> {
     let mut connection = c.get_connection().await?;
 
-    crate::account::generate_next_dindex(&c.network(), &mut connection, c.account).await
+    crate::account::generate_next_dindex(&c.network(), &mut connection, account).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn generate_next_change_address(c: &Coin) -> Result<Option<String>> {
+pub async fn generate_next_change_address(account: u32, c: &Coin) -> Result<Option<String>> {
     let mut connection = c.get_connection().await?;
 
-    crate::account::generate_next_change_address(&c.network(), &mut connection, c.account).await
+    crate::account::generate_next_change_address(&c.network(), &mut connection, account).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -375,10 +375,10 @@ pub async fn remove_account(account_id: u32, c: &Coin) -> Result<()> {
     Ok(())
 }
 
-pub async fn list_tx_history(c: &Coin) -> Result<Vec<Tx>> {
-    tracing::debug!("list_tx_history: start for account {}", c.account);
+pub async fn list_tx_history(account: u32, c: &Coin) -> Result<Vec<Tx>> {
+    tracing::debug!("list_tx_history: start for account {}", account);
     let mut connection = c.get_connection().await?;
-    let txs = crate::db::fetch_txs(&mut connection, c.account).await?;
+    let txs = crate::db::fetch_txs(&mut connection, account).await?;
     tracing::debug!("list_tx_history: got {} transactions", txs.len());
     Ok(txs)
 }
@@ -398,16 +398,16 @@ pub struct Memo {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn list_memos(c: &Coin) -> Result<Vec<Memo>> {
+pub async fn list_memos(account: u32, c: &Coin) -> Result<Vec<Memo>> {
     let mut connection = c.get_connection().await?;
-    let memos = crate::db::get_memos(&mut connection, c.account).await?;
+    let memos = crate::db::get_memos(&mut connection, account).await?;
     Ok(memos)
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn get_addresses(ua_pools: u8, c: &Coin) -> Result<Addresses> {
+pub async fn get_addresses(ua_pools: u8, account: u32, c: &Coin) -> Result<Addresses> {
     let mut connection = c.get_connection().await?;
-    crate::account::get_addresses(&c.network(), &mut connection, c.account, ua_pools).await
+    crate::account::get_addresses(&c.network(), &mut connection, account, ua_pools).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -425,40 +425,44 @@ pub struct Addresses {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn get_tx_details(id_tx: u32, c: &Coin) -> Result<TxAccount> {
+pub async fn get_tx_details(id_tx: u32, account: u32, c: &Coin) -> Result<TxAccount> {
     let mut connection = c.get_connection().await?;
-    let tx = crate::account::get_tx_details(&mut connection, c.account, id_tx).await?;
+    let tx = crate::account::get_tx_details(&mut connection, account, id_tx).await?;
     Ok(tx)
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn list_notes(c: &Coin) -> Result<Vec<TxNote>> {
+pub async fn list_notes(account: u32, c: &Coin) -> Result<Vec<TxNote>> {
     let mut connection = c.get_connection().await?;
-    let notes = crate::db::get_notes(&mut connection, c.account).await?;
+    let notes = crate::db::get_notes(&mut connection, account).await?;
     Ok(notes)
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn lock_note(id: u32, locked: bool, c: &Coin) -> Result<()> {
+pub async fn lock_note(id: u32, locked: bool, account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    crate::db::lock_note(&mut connection, c.account, id, locked).await?;
+    crate::db::lock_note(&mut connection, account, id, locked).await?;
     Ok(())
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn fetch_transparent_address_tx_count(c: &Coin) -> Result<Vec<TAddressTxCount>> {
+pub async fn fetch_transparent_address_tx_count(
+    account: u32,
+    c: &Coin,
+) -> Result<Vec<TAddressTxCount>> {
     let mut connection = c.get_connection().await?;
-    crate::db::fetch_transparent_address_tx_count(&mut connection, c.account).await
+    crate::db::fetch_transparent_address_tx_count(&mut connection, account).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn fetch_address_tx_count(
-    c: &Coin,
     aggregate: bool,
     pool_filter: u8,
+    account: u32,
+    c: &Coin,
 ) -> Result<Vec<TAddressTxCount>> {
     let mut connection = c.get_connection().await?;
-    crate::account::fetch_address_tx_count(&c.network(), &mut connection, c.account, aggregate, pool_filter)
+    crate::account::fetch_address_tx_count(&c.network(), &mut connection, account, aggregate, pool_filter)
         .await
 }
 
@@ -523,10 +527,10 @@ pub async fn print_keys(id: u32, c: &Coin) -> Result<()> {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn get_account_frost_params(c: &Coin) -> Result<Option<FrostParams>> {
+pub async fn get_account_frost_params(account: u32, c: &Coin) -> Result<Option<FrostParams>> {
     let mut connection = c.get_connection().await?;
 
-    crate::account::get_account_frost_params(&mut connection, c.account).await
+    crate::account::get_account_frost_params(&mut connection, account).await
 }
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
@@ -606,57 +610,57 @@ pub struct Category {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn get_exported_data(r#type: u8, c: &Coin) -> Result<String> {
+pub async fn get_exported_data(r#type: u8, account: u32, c: &Coin) -> Result<String> {
     let buffer = vec![];
     let mut writer = AsyncWriter::from_writer(buffer);
 
     let mut connection = c.get_connection().await?;
-    crate::db::export_data(&mut connection, c.account, r#type, &mut writer).await?;
+    crate::db::export_data(&mut connection, account, r#type, &mut writer).await?;
     let buffer = writer.into_inner().await?;
     let res = String::from_utf8(buffer).unwrap();
     Ok(res)
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn lock_recent_notes(height: u32, threshold: u32, c: &Coin) -> Result<()> {
+pub async fn lock_recent_notes(height: u32, threshold: u32, account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    crate::db::lock_recent_notes(&mut connection, c.account, height, threshold).await
+    crate::db::lock_recent_notes(&mut connection, account, height, threshold).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn unlock_all_notes(c: &Coin) -> Result<()> {
+pub async fn unlock_all_notes(account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    crate::db::unlock_all_notes(&mut connection, c.account).await
+    crate::db::unlock_all_notes(&mut connection, account).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn toggle_all_notes(c: &Coin) -> Result<()> {
+pub async fn toggle_all_notes(account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    crate::db::toggle_all_notes(&mut connection, c.account).await
+    crate::db::toggle_all_notes(&mut connection, account).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn max_spendable(c: &Coin) -> Result<u64> {
+pub async fn max_spendable(account: u32, c: &Coin) -> Result<u64> {
     let mut connection = c.get_connection().await?;
-    crate::db::max_spendable(&mut connection, c.account).await
+    crate::db::max_spendable(&mut connection, account).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn show_ledger_sapling_address(c: &Coin) -> Result<String> {
+pub async fn show_ledger_sapling_address(account: u32, c: &Coin) -> Result<String> {
     let mut connection = c.get_connection().await?;
-    let ledger = get_ledger(&mut connection, c.account).await?;
+    let ledger = get_ledger(&mut connection, account).await?;
     let r = ledger
-        .show_sapling_address(&c.network(), &mut connection, c.account)
+        .show_sapling_address(&c.network(), &mut connection, account)
         .await?;
     Ok(r)
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn show_ledger_transparent_address(c: &Coin) -> Result<String> {
+pub async fn show_ledger_transparent_address(account: u32, c: &Coin) -> Result<String> {
     let mut connection = c.get_connection().await?;
-    let ledger = get_ledger(&mut connection, c.account).await?;
+    let ledger = get_ledger(&mut connection, account).await?;
     let r = ledger
-        .show_transparent_address(&c.network(), &mut connection, c.account)
+        .show_transparent_address(&c.network(), &mut connection, account)
         .await?;
     Ok(r)
 }
@@ -666,10 +670,10 @@ pub async fn show_ledger_transparent_address(c: &Coin) -> Result<String> {
 pub async fn sign_ledger_transaction(
     sink: StreamSink<SigningEvent>,
     package: PcztPackage,
+    account: u32,
     c: &Coin,
 ) -> Result<()> {
     let c = c.clone();
-    let account = c.account;
     tokio::spawn(async move {
         match sign_ledger_pczt(&sink, package, account, &c).await {
             Ok(pkg) => sink.send(SigningEvent::Result(pkg)).await,

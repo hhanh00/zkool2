@@ -298,13 +298,14 @@ class _IssueAssetPageState extends ConsumerState<IssueAssetPage> {
         firstIssuance: true,
         finalize: true,
         descHash: _descHash,
-        idAccount: coinContext.coin.account,
+        idAccount: ref.read(selectedAccountIdProvider),
         c: coinContext.coin,
       );
       final height = ref.read(currentHeightProvider).value ?? 1;
       final txid = await broadcastTransaction(
         height: height,
         txBytes: txBytes,
+        account: ref.read(selectedAccountIdProvider),
         c: coinContext.coin,
       );
 

@@ -46,11 +46,11 @@ pub struct VotingRoundListItem {
     pub vote_end_time: Option<u64>,
 }
 
-pub(crate) async fn wallet_id(c: &Coin) -> Result<String> {
+pub(crate) async fn wallet_id(account: u32, c: &Coin) -> Result<String> {
     let mut connection = c.get_connection().await?;
-    let fingerprint = crate::db::get_account_fingerprint(&mut connection, c.account)
+    let fingerprint = crate::db::get_account_fingerprint(&mut connection, account)
         .await?
-        .ok_or_else(|| anyhow!("account {} has no seed fingerprint", c.account))?;
+        .ok_or_else(|| anyhow!("account {} has no seed fingerprint", account))?;
     ensure!(
         fingerprint.len() == 32,
         "seed fingerprint must be 32 bytes, got {}",
@@ -79,7 +79,7 @@ fn normalized_status(status: &serde_json::Value) -> String {
 /// The returned action is display-only; execution must obtain a fresh resume
 /// plan from the voting crate.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_round_list(c: &Coin) -> Result<Vec<VotingRoundListItem>> {
+pub async fn voting_round_list(account: u32, c: &Coin) -> Result<Vec<VotingRoundListItem>> {
     let mut connection = c.get_connection().await?;
     let Some(source) = crate::db::get_prop(&mut connection, "voting_config_url")
         .await?
@@ -132,7 +132,7 @@ pub async fn voting_round_list(c: &Coin) -> Result<Vec<VotingRoundListItem>> {
         .collect();
 
     let sidecar =
-        voting::sidecar::VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet_id(c).await?)
+        voting::sidecar::VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet_id(account, c).await?)
             .await?;
     let local: HashMap<_, _> = voting::summary::load_local_summaries(&sidecar, &inputs)
         .await?
@@ -236,8 +236,12 @@ pub struct VotingSelection {
 
 /// Loads selections from the wallet's voting sidecar before submission.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_load_selections(round_id: &str, c: &Coin) -> Result<Vec<VotingSelection>> {
-    let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet_id(c).await?).await?;
+pub async fn voting_load_selections(
+    round_id: &str,
+    account: u32,
+    c: &Coin,
+) -> Result<Vec<VotingSelection>> {
+    let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet_id(account, c).await?).await?;
     let round_id = round_id.to_owned();
     sidecar
         .run(move |db| {
@@ -260,9 +264,10 @@ pub async fn voting_save_selection(
     proposal_id: u32,
     decision: Decision,
     num_options: u32,
+    account: u32,
     c: &Coin,
 ) -> Result<()> {
-    let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet_id(c).await?).await?;
+    let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet_id(account, c).await?).await?;
     ensure_ballot_round(&sidecar, round_id, c).await?;
     let network = voting_network(c)?;
     let round_id = round_id.to_owned();
@@ -304,8 +309,13 @@ async fn ensure_ballot_round(sidecar: &VotingSidecar, round_id: &str, c: &Coin) 
 
 /// Returns a proposal to unanswered, subject to the voting lifecycle guards.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_clear_selection(round_id: &str, proposal_id: u32, c: &Coin) -> Result<()> {
-    let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet_id(c).await?).await?;
+pub async fn voting_clear_selection(
+    round_id: &str,
+    proposal_id: u32,
+    account: u32,
+    c: &Coin,
+) -> Result<()> {
+    let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet_id(account, c).await?).await?;
     let round_id = round_id.to_owned();
     sidecar
         .run(move |db| db.clear_ballot_intent(&round_id, proposal_id))

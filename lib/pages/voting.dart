@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:zkool/store.dart' show coinContext, votingDriveJobProvider, votingQuiescenceLabel;
+import 'package:zkool/store.dart' show coinContext, selectedAccountIdProvider, votingDriveJobProvider, votingQuiescenceLabel;
 import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/widgets/loading_steps.dart';
@@ -28,7 +28,7 @@ class _VotingPageState extends ConsumerState<VotingPage> {
     final generation = ++_loadGeneration;
     try {
       final c = coinContext.coin;
-      final rounds = await votingRoundList(c: c);
+      final rounds = await votingRoundList(account: ref.read(selectedAccountIdProvider), c: c);
       return rounds;
     } finally {
       if (mounted && generation == _loadGeneration) {

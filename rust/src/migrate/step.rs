@@ -31,17 +31,13 @@ pub enum StepOutcome {
 
 /// Run one step for `account`.
 ///
-/// The account is explicit rather than read from `c.account`: a caller holding
-/// a process-wide coin — the GraphQL server does — must step the wallet it was
-/// asked about, not whichever one the coin happens to name.
+/// The handle names the wallet; the account is explicit, so a caller holding
+/// a process-wide coin — the GraphQL server does — steps the account it was
+/// asked about.
 ///
 /// Migration does not synchronize; this plans against the checkpoint the
 /// wallet already has, so the caller syncs first if it wants a current one.
 pub async fn step_once(c: &Coin, account: u32) -> Result<StepOutcome> {
-    let c = &Coin {
-        account,
-        ..c.clone()
-    };
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
     let state = super::state::observe(
@@ -63,14 +59,14 @@ pub async fn step_once(c: &Coin, account: u32) -> Result<StepOutcome> {
     Ok(match next_task(&state, &pacing) {
         MigrationTask::Done => StepOutcome::Complete,
         MigrationTask::Split { inputs, outputs } => StepOutcome::Split {
-            fee: exec::split(c, &inputs, &outputs).await?,
+            fee: exec::split(c, account, &inputs, &outputs).await?,
         },
         MigrationTask::Migrate {
             note,
             amount,
             anchor,
         } => StepOutcome::Migrated {
-            fee: exec::migrate(c, note, amount, anchor).await?,
+            fee: exec::migrate(c, account, note, amount, anchor).await?,
         },
         // Waiting is the caller's business, not a single step's.
         MigrationTask::WaitDelay { .. } | MigrationTask::WaitBoundary { .. } => {

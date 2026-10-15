@@ -24,9 +24,9 @@ pub async fn build_puri(recipients: &[Recipient]) -> Result<String> {
 pub async fn prepare(
     recipients: &[Recipient],
     options: PaymentOptions,
+    account: u32,
     c: &Coin,
 ) -> Result<PcztPackage> {
-    let account = c.account;
     let network = &c.network();
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
@@ -56,9 +56,9 @@ pub async fn prepare(
 pub async fn prepare_migration(
     recipients: &[Recipient],
     src_pools: u8,
+    account: u32,
     c: &Coin,
 ) -> Result<PcztPackage> {
-    let account = c.account;
     let network = &c.network();
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
@@ -83,8 +83,7 @@ pub async fn prepare_migration(
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn sign_transaction(pczt: &PcztPackage, c: &Coin) -> Result<PcztPackage> {
-    let account = c.account;
+pub async fn sign_transaction(pczt: &PcztPackage, account: u32, c: &Coin) -> Result<PcztPackage> {
     let mut connection = c.get_connection().await?;
     let network = c.network();
 
@@ -139,12 +138,17 @@ pub fn unpack_transaction(bytes: &[u8]) -> Result<PcztPackage> {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn broadcast_transaction(height: u32, tx_bytes: &[u8], c: &Coin) -> Result<String> {
+pub async fn broadcast_transaction(
+    height: u32,
+    tx_bytes: &[u8],
+    account: u32,
+    c: &Coin,
+) -> Result<String> {
     let mut client = c.client().await?;
 
     let tx = crate::pay::send(&mut client, height, tx_bytes).await?;
     let mut connection = c.get_connection().await?;
-    crate::pay::lock_spent_notes(&mut connection, c.account, tx_bytes).await?;
+    crate::pay::lock_spent_notes(&mut connection, account, tx_bytes).await?;
     Ok(tx)
 }
 
@@ -154,12 +158,12 @@ pub fn to_plan(package: &PcztPackage, c: &Coin) -> Result<TxPlan> {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn send(height: u32, data: &[u8], c: &Coin) -> Result<String> {
+pub async fn send(height: u32, data: &[u8], account: u32, c: &Coin) -> Result<String> {
     let mut client = c.client().await?;
 
     let tx = crate::pay::send(&mut client, height, data).await?;
     let mut connection = c.get_connection().await?;
-    crate::pay::lock_spent_notes(&mut connection, c.account, data).await?;
+    crate::pay::lock_spent_notes(&mut connection, account, data).await?;
     Ok(tx)
 }
 
@@ -169,10 +173,11 @@ pub async fn store_pending_tx(
     txid: &[u8],
     price: Option<f64>,
     category: Option<u32>,
+    account: u32,
     c: &Coin,
 ) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    crate::db::store_pending_tx(&mut connection, c.account, height, txid, price, category).await?;
+    crate::db::store_pending_tx(&mut connection, account, height, txid, price, category).await?;
 
     Ok(())
 }

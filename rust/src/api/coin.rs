@@ -1,6 +1,5 @@
-use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::{LazyLock, OnceLock};
+use std::sync::OnceLock;
 
 use anyhow::Result;
 use arti_client::config::TorClientConfigBuilder;
@@ -18,30 +17,36 @@ use tower::service_fn;
 use zcash_protocol::consensus::{BlockHeight, OrchardMode};
 use zcash_protocol::local_consensus::LocalNetwork;
 
-use crate::db::{backfill_diversifier_index, create_schema, migrate_sapling_addresses, put_prop};
+use crate::db::{backfill_diversifier_index, create_schema, migrate_sapling_addresses};
 use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
 use crate::net::zebra::ZebraClient;
 use crate::{Client, IntoAnyhow};
 
-#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+/// Wallet handle: which network, which database, and how to reach the
+/// server. Immutable; a settings change builds a new handle through the
+/// `set_*` methods and the caller replaces the one it holds. Opaque to Dart.
+///
+/// The handle deliberately carries no selected account: every account-scoped
+/// operation takes the account explicitly.
+#[cfg_attr(feature = "flutter", frb(opaque))]
 #[derive(Clone)]
 pub struct Coin {
-    pub coin: u8,
-    pub account: u32,
-    pub db_filepath: String,
-    pub url: String,
-    pub server_type: u8,
+    pub(crate) coin: u8,
+    pub(crate) db_filepath: String,
+    pub(crate) pool: Option<SqlitePool>,
+    pub(crate) url: String,
+    pub(crate) server_type: u8,
     /// Transport: 0 = direct, 1 = Tor (arti), 2 = Nym mixnet,
     /// 3 = external proxy (uses `proxy`).
-    pub transport: u8,
+    pub(crate) transport: u8,
     /// Optional external proxy URL: socks5://, socks5h://, http://, https://.
     /// Empty string means a direct connection.
-    pub proxy: String,
+    pub(crate) proxy: String,
 }
 
 impl Coin {
     pub async fn open_database(
-        self,
+        &self,
         db_filepath: String,
         password: Option<String>,
     ) -> Result<Coin> {
@@ -53,10 +58,6 @@ impl Coin {
             None
         };
         let pool = try_open(&db_filepath, &password, hint_coin).await?;
-        {
-            let mut pools = POOLS.lock().unwrap();
-            pools.insert(db_filepath.clone(), pool.clone());
-        }
 
         let mut connection = pool.acquire().await?;
 
@@ -68,10 +69,6 @@ impl Coin {
             .await?
             .unwrap_or(default_coin.to_string());
         let coin = coin.parse::<u8>()?;
-        let account = crate::db::get_prop(&mut connection, "account")
-            .await?
-            .unwrap_or("0".to_string());
-        let account = account.parse::<u32>()?;
 
         migrate_sapling_addresses(&network, &mut connection).await?;
         backfill_diversifier_index(&mut connection).await?;
@@ -82,12 +79,19 @@ impl Coin {
         // `create_schema`.
         crate::voting::sidecar::create_voting_db(PathBuf::from(&db_filepath)).await?;
 
+        drop(connection);
         Ok(Coin {
             coin,
             db_filepath,
-            account,
-            ..self
+            pool: Some(pool),
+            ..self.clone()
         })
+    }
+
+    /// Network id: 0 mainnet, 1 testnet, 2 regtest, 3 ZSA regtest.
+    #[cfg_attr(feature = "flutter", frb(sync, getter))]
+    pub fn coin(&self) -> u8 {
+        self.coin
     }
 
     pub fn get_name(&self) -> &'static str {
@@ -143,9 +147,20 @@ impl Coin {
     }
 
     pub(crate) fn get_pool(&self) -> Result<SqlitePool> {
-        let pools = POOLS.lock().unwrap();
-        let pool = pools.get(&self.db_filepath).expect("Database not opened");
-        Ok(pool.clone())
+        self.pool
+            .clone()
+            .ok_or_else(|| anyhow::anyhow!("Database not opened"))
+    }
+
+    /// Closes this handle's database pool when it serves `db_filepath`, so
+    /// the file can be deleted, renamed or re-keyed. Every clone of the
+    /// handle shares the pool, so they all see it closed.
+    pub(crate) async fn close_pool_for(&self, db_filepath: &str) {
+        if self.db_filepath == db_filepath {
+            if let Some(pool) = &self.pool {
+                pool.close().await;
+            }
+        }
     }
 
     pub(crate) async fn get_connection(&self) -> Result<PoolConnection<Sqlite>> {
@@ -164,30 +179,29 @@ impl Coin {
         result
     }
 
-    #[cfg_attr(feature = "flutter", frb)]
-    pub async fn set_account(self, account: u32) -> Result<Self> {
-        let mut conn = self.get_connection().await?;
-        put_prop(&mut *conn, "account", &account.to_string()).await?;
-        Ok(Coin { account, ..self })
-    }
-
     #[cfg_attr(feature = "flutter", frb(sync))]
-    pub fn set_transport(self, transport: u8) -> Result<Coin> {
-        Ok(Coin { transport, ..self })
-    }
-
-    #[cfg_attr(feature = "flutter", frb(sync))]
-    pub fn set_lwd(self, server_type: u8, url: String) -> Result<Self> {
+    pub fn set_transport(&self, transport: u8) -> Result<Coin> {
         Ok(Coin {
-            url,
-            server_type,
-            ..self
+            transport,
+            ..self.clone()
         })
     }
 
     #[cfg_attr(feature = "flutter", frb(sync))]
-    pub fn set_proxy(self, proxy: String) -> Result<Self> {
-        Ok(Coin { proxy, ..self })
+    pub fn set_lwd(&self, server_type: u8, url: String) -> Result<Self> {
+        Ok(Coin {
+            url,
+            server_type,
+            ..self.clone()
+        })
+    }
+
+    #[cfg_attr(feature = "flutter", frb(sync))]
+    pub fn set_proxy(&self, proxy: String) -> Result<Self> {
+        Ok(Coin {
+            proxy,
+            ..self.clone()
+        })
     }
 
     /// True when traffic to the server goes through the Nym mixnet, either
@@ -564,8 +578,8 @@ impl Coin {
     pub fn new(default_coin: Option<u8>) -> Self {
         Coin {
             coin: default_coin.unwrap_or(0),
-            account: 0,
             db_filepath: String::new(),
+            pool: None,
             server_type: 0,
             url: String::new(),
             transport: 0,
@@ -621,11 +635,3 @@ pub async fn get_tor_client() -> &'static Mutex<TorClient<PreferredRuntime>> {
 
 pub static TOR: OnceCell<Mutex<TorClient<PreferredRuntime>>> = OnceCell::const_new();
 pub static DATADIR: OnceLock<String> = OnceLock::new();
-pub static POOLS: LazyLock<std::sync::Mutex<HashMap<String, SqlitePool>>> =
-    LazyLock::new(|| std::sync::Mutex::new(HashMap::new()));
-
-pub fn close_pool(db_filepath: &str) {
-    let mut pools = POOLS.lock().unwrap();
-    pools.remove(db_filepath);
-    // Dropping the SqlitePool closes all connections, releasing file handles
-}

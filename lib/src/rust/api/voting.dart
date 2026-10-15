@@ -15,14 +15,15 @@ part 'voting.freezed.dart';
 /// Fetches authenticated server rounds and combines them with sidecar state.
 /// The returned action is display-only; execution must obtain a fresh resume
 /// plan from the voting crate.
-Future<List<VotingRoundListItem>> votingRoundList({required Coin c}) =>
-    RustLib.instance.api.crateApiVotingVotingRoundList(c: c);
+Future<List<VotingRoundListItem>> votingRoundList(
+        {required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiVotingVotingRoundList(account: account, c: c);
 
 /// Loads selections from the wallet's voting sidecar before submission.
 Future<List<VotingSelection>> votingLoadSelections(
-        {required String roundId, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiVotingVotingLoadSelections(roundId: roundId, c: c);
+        {required String roundId, required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiVotingVotingLoadSelections(
+        roundId: roundId, account: account, c: c);
 
 /// Saves a selection or skip without submitting a vote.
 Future<void> votingSaveSelection(
@@ -30,19 +31,24 @@ Future<void> votingSaveSelection(
         required int proposalId,
         required Decision decision,
         required int numOptions,
+        required int account,
         required Coin c}) =>
     RustLib.instance.api.crateApiVotingVotingSaveSelection(
         roundId: roundId,
         proposalId: proposalId,
         decision: decision,
         numOptions: numOptions,
+        account: account,
         c: c);
 
 /// Returns a proposal to unanswered, subject to the voting lifecycle guards.
 Future<void> votingClearSelection(
-        {required String roundId, required int proposalId, required Coin c}) =>
+        {required String roundId,
+        required int proposalId,
+        required int account,
+        required Coin c}) =>
     RustLib.instance.api.crateApiVotingVotingClearSelection(
-        roundId: roundId, proposalId: proposalId, c: c);
+        roundId: roundId, proposalId: proposalId, account: account, c: c);
 
 @freezed
 sealed class Decision with _$Decision {

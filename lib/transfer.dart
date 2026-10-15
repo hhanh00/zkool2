@@ -8,6 +8,7 @@ import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
 
 Future<PcztPackage> transferAllBetweenPools({
+  required int account,
   required Coin c,
   required int sourcePools,
   required String destinationAddress,
@@ -18,7 +19,7 @@ Future<PcztPackage> transferAllBetweenPools({
     throw AnyhowException("Destination address is unavailable.");
   }
 
-  final notes = await listNotes(c: c);
+  final notes = await listNotes(account: account, c: c);
   final amount = notes
       .where(
         (note) =>
@@ -46,6 +47,7 @@ Future<PcztPackage> transferAllBetweenPools({
       recipientPaysFee: true,
       smartTransparent: smartTransparent,
     ),
+    account: account,
     c: c,
   );
 }

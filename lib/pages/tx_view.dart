@@ -89,9 +89,9 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
     if (newText == oldText) return;
 
     if (newText.isEmpty) {
-      await setUserMemo(idTx: txd.id, memo: null, c: c);
+      await setUserMemo(idTx: txd.id, memo: null, account: ref.read(selectedAccountIdProvider), c: c);
     } else {
-      await setUserMemo(idTx: txd.id, memo: newText, c: c);
+      await setUserMemo(idTx: txd.id, memo: newText, account: ref.read(selectedAccountIdProvider), c: c);
     }
     ref.invalidate(getTxDetailsProvider(widget.idTx));
     if (account != null) {

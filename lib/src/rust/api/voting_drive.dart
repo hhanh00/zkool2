@@ -24,11 +24,13 @@ Future<VotingEligibilityPreview> votingPrepareRound(
         {required String roundId,
         required String lightwalletdUrl,
         required String roundName,
+        required int account,
         required Coin c}) =>
     RustLib.instance.api.crateApiVotingDriveVotingPrepareRound(
         roundId: roundId,
         lightwalletdUrl: lightwalletdUrl,
         roundName: roundName,
+        account: account,
         c: c);
 
 /// Starts driving one round: delegation (if still owed), vote casting, chain
@@ -41,29 +43,33 @@ Future<bool> votingDriveStart(
         {required String roundId,
         required String lightwalletdUrl,
         required String roundName,
+        required int account,
         required Coin c}) =>
     RustLib.instance.api.crateApiVotingDriveVotingDriveStart(
         roundId: roundId,
         lightwalletdUrl: lightwalletdUrl,
         roundName: roundName,
+        account: account,
         c: c);
 
 /// Polls one round's driver run; idle when nothing was started or it finished.
 Future<VotingDriveStatus> votingDriveStatus(
-        {required String roundId, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiVotingDriveVotingDriveStatus(roundId: roundId, c: c);
+        {required String roundId, required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiVotingDriveVotingDriveStatus(
+        roundId: roundId, account: account, c: c);
 
 /// Cancels one round's driver run, waking any in-flight retry wait.
-Future<bool> votingDriveCancel({required String roundId, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiVotingDriveVotingDriveCancel(roundId: roundId, c: c);
+Future<bool> votingDriveCancel(
+        {required String roundId, required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiVotingDriveVotingDriveCancel(
+        roundId: roundId, account: account, c: c);
 
 /// Cancels every live driver run for the current wallet, leaving other
 /// wallets untouched. Wallet switch and backgrounding call this so no run
 /// outlives its wallet; durable effects stay resumable through a later start.
-Future<BigInt> votingDriveCancelAll({required Coin c}) =>
-    RustLib.instance.api.crateApiVotingDriveVotingDriveCancelAll(c: c);
+Future<BigInt> votingDriveCancelAll({required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiVotingDriveVotingDriveCancelAll(account: account, c: c);
 
 /// Snapshot of one round's driver run for the UI.
 @freezed
