@@ -7,10 +7,19 @@ import '../frb_generated.dart';
 import '../io.dart';
 import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
+import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
+part 'sync.freezed.dart';
 
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `fmt`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `SyncProgress`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`
 
-Stream<SyncProgress> synchronize(
+/// Synchronize `accounts` up to `current_height`, streaming progress and
+/// finally the outcome. A failure is delivered as the stream's error; the
+/// stream never ends without either a `Finished` event or an error.
+///
+/// `fast` skips the memo and transaction-detail pass; the caller fetches
+/// details afterwards.
+Stream<SyncEvent> synchronize(
         {required List<int> accounts,
         required int currentHeight,
         required int actionsPerSync,
@@ -74,23 +83,31 @@ class PoolBalance {
           field0 == other.field0;
 }
 
-class SyncProgress {
-  final int height;
-  final int time;
+@freezed
+sealed class SyncEvent with _$SyncEvent {
+  const SyncEvent._();
 
-  const SyncProgress({
-    required this.height,
-    required this.time,
-  });
+  const factory SyncEvent.progress({
+    required int height,
+    required int time,
+  }) = SyncEvent_Progress;
+  const factory SyncEvent.finished({
+    required SyncOutcome outcome,
+  }) = SyncEvent_Finished;
+}
 
-  @override
-  int get hashCode => height.hashCode ^ time.hashCode;
+@freezed
+sealed class SyncOutcome with _$SyncOutcome {
+  const SyncOutcome._();
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is SyncProgress &&
-          runtimeType == other.runtimeType &&
-          height == other.height &&
-          time == other.time;
+  /// Every account is synced to `height`.
+  const factory SyncOutcome.synced({
+    required int height,
+  }) = SyncOutcome_Synced;
+
+  /// Another sync was already running; nothing was done.
+  const factory SyncOutcome.skipped() = SyncOutcome_Skipped;
+
+  /// Stopped by the user; progress so far is committed.
+  const factory SyncOutcome.cancelled() = SyncOutcome_Cancelled;
 }

@@ -13,14 +13,14 @@ class _FakeCoin implements Coin {
 }
 
 class _Api implements RustLibApi {
-  final streams = <StreamController<SyncProgress>>[];
+  final streams = <StreamController<SyncEvent>>[];
   int cancels = 0;
 
   @override
   Coin crateApiCoinCoinNew({int? defaultCoin}) => _FakeCoin();
 
   @override
-  Stream<SyncProgress> crateApiSyncSynchronize({
+  Stream<SyncEvent> crateApiSyncSynchronize({
     required List<int> accounts,
     required int currentHeight,
     required int actionsPerSync,
@@ -29,7 +29,7 @@ class _Api implements RustLibApi {
     required bool fast,
     required Coin c,
   }) {
-    final stream = StreamController<SyncProgress>();
+    final stream = StreamController<SyncEvent>();
     streams.add(stream);
     return stream.stream;
   }

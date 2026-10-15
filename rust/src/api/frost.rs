@@ -11,6 +11,7 @@ use crate::{
     frost::dkg::{get_dkg_params, get_mailbox_account},
     sync::{synchronize_impl, DEFAULT_ACTIONS_PER_SYNC},
 };
+use crate::api::sync::SyncOutcome;
 #[cfg(feature = "flutter")]
 use crate::frost::dkg::task::DkgTask;
 #[cfg(feature = "flutter")]
@@ -163,7 +164,7 @@ pub(crate) async fn sync_frost_accounts(
             .fetch_all(&mut *connection)
             .await?;
     accounts.push(account);
-    synchronize_impl(
+    let outcome = synchronize_impl(
         (),
         accounts,
         height,
@@ -173,7 +174,16 @@ pub(crate) async fn sync_frost_accounts(
         false,
         c,
     )
-    .await
+    .await?;
+    // A step planned from stale notes can double-spend, so a sync that did
+    // not run is not something to step on; the next block tries again.
+    match outcome {
+        SyncOutcome::Synced { height } => Ok(height),
+        SyncOutcome::Skipped => {
+            anyhow::bail!("a synchronization is already running; FROST will step on the next block")
+        }
+        SyncOutcome::Cancelled => anyhow::bail!("synchronization was cancelled before the FROST step"),
+    }
 }
 
 pub async fn get_dkg_addresses(c: &Coin) -> Result<Vec<String>> {

@@ -654,7 +654,7 @@ abstract class RustLibApi extends BaseApi {
       required int account,
       required Coin c});
 
-  Stream<SyncProgress> crateApiSyncSynchronize(
+  Stream<SyncEvent> crateApiSyncSynchronize(
       {required List<int> accounts,
       required int currentHeight,
       required int actionsPerSync,
@@ -5600,7 +5600,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Stream<SyncProgress> crateApiSyncSynchronize(
+  Stream<SyncEvent> crateApiSyncSynchronize(
       {required List<int> accounts,
       required int currentHeight,
       required int actionsPerSync,
@@ -5608,11 +5608,11 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       required int checkpointAge,
       required bool fast,
       required Coin c}) {
-    final progress = RustStreamSink<SyncProgress>();
+    final progress = RustStreamSink<SyncEvent>();
     unawaited(handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_StreamSink_sync_progress_Sse(progress, serializer);
+        sse_encode_StreamSink_sync_event_Sse(progress, serializer);
         sse_encode_list_prim_u_32_loose(accounts, serializer);
         sse_encode_u_32(currentHeight, serializer);
         sse_encode_u_32(actionsPerSync, serializer);
@@ -5625,7 +5625,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
             funcId: 172, port: port_);
       },
       codec: SseCodec(
-        decodeSuccessData: sse_decode_u_32,
+        decodeSuccessData: sse_decode_unit,
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiSyncSynchronizeConstMeta,
@@ -6708,8 +6708,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  RustStreamSink<SyncProgress> dco_decode_StreamSink_sync_progress_Sse(
-      dynamic raw) {
+  RustStreamSink<SyncEvent> dco_decode_StreamSink_sync_event_Sse(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     throw UnimplementedError();
   }
@@ -6890,6 +6889,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   SwapRequest dco_decode_box_autoadd_swap_request(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     return dco_decode_swap_request(raw);
+  }
+
+  @protected
+  SyncOutcome dco_decode_box_autoadd_sync_outcome(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    return dco_decode_sync_outcome(raw);
   }
 
   @protected
@@ -8043,6 +8048,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SyncEvent dco_decode_sync_event(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    switch (raw[0]) {
+      case 0:
+        return SyncEvent_Progress(
+          height: dco_decode_u_32(raw[1]),
+          time: dco_decode_u_32(raw[2]),
+        );
+      case 1:
+        return SyncEvent_Finished(
+          outcome: dco_decode_box_autoadd_sync_outcome(raw[1]),
+        );
+      default:
+        throw Exception("unreachable");
+    }
+  }
+
+  @protected
   SyncHeight dco_decode_sync_height(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
@@ -8056,15 +8079,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  SyncProgress dco_decode_sync_progress(dynamic raw) {
+  SyncOutcome dco_decode_sync_outcome(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
-    final arr = raw as List<dynamic>;
-    if (arr.length != 2)
-      throw Exception('unexpected arr length: expect 2 but see ${arr.length}');
-    return SyncProgress(
-      height: dco_decode_u_32(arr[0]),
-      time: dco_decode_u_32(arr[1]),
-    );
+    switch (raw[0]) {
+      case 0:
+        return SyncOutcome_Synced(
+          height: dco_decode_u_32(raw[1]),
+        );
+      case 1:
+        return SyncOutcome_Skipped();
+      case 2:
+        return SyncOutcome_Cancelled();
+      default:
+        throw Exception("unreachable");
+    }
   }
 
   @protected
@@ -8595,7 +8623,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  RustStreamSink<SyncProgress> sse_decode_StreamSink_sync_progress_Sse(
+  RustStreamSink<SyncEvent> sse_decode_StreamSink_sync_event_Sse(
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     throw UnimplementedError('Unreachable ()');
@@ -8808,6 +8836,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     return (sse_decode_swap_request(deserializer));
+  }
+
+  @protected
+  SyncOutcome sse_decode_box_autoadd_sync_outcome(
+      SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    return (sse_decode_sync_outcome(deserializer));
   }
 
   @protected
@@ -10257,6 +10292,24 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  SyncEvent sse_decode_sync_event(SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        var var_height = sse_decode_u_32(deserializer);
+        var var_time = sse_decode_u_32(deserializer);
+        return SyncEvent_Progress(height: var_height, time: var_time);
+      case 1:
+        var var_outcome = sse_decode_box_autoadd_sync_outcome(deserializer);
+        return SyncEvent_Finished(outcome: var_outcome);
+      default:
+        throw UnimplementedError('');
+    }
+  }
+
+  @protected
   SyncHeight sse_decode_sync_height(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_pool = sse_decode_u_8(deserializer);
@@ -10266,11 +10319,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  SyncProgress sse_decode_sync_progress(SseDeserializer deserializer) {
+  SyncOutcome sse_decode_sync_outcome(SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    var var_height = sse_decode_u_32(deserializer);
-    var var_time = sse_decode_u_32(deserializer);
-    return SyncProgress(height: var_height, time: var_time);
+
+    var tag_ = sse_decode_i_32(deserializer);
+    switch (tag_) {
+      case 0:
+        var var_height = sse_decode_u_32(deserializer);
+        return SyncOutcome_Synced(height: var_height);
+      case 1:
+        return SyncOutcome_Skipped();
+      case 2:
+        return SyncOutcome_Cancelled();
+      default:
+        throw UnimplementedError('');
+    }
   }
 
   @protected
@@ -10915,13 +10978,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_StreamSink_sync_progress_Sse(
-      RustStreamSink<SyncProgress> self, SseSerializer serializer) {
+  void sse_encode_StreamSink_sync_event_Sse(
+      RustStreamSink<SyncEvent> self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(
         self.setupAndSerialize(
             codec: SseCodec(
-          decodeSuccessData: sse_decode_sync_progress,
+          decodeSuccessData: sse_decode_sync_event,
           decodeErrorData: sse_decode_AnyhowException,
         )),
         serializer);
@@ -11101,6 +11164,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SwapRequest self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_swap_request(self, serializer);
+  }
+
+  @protected
+  void sse_encode_box_autoadd_sync_outcome(
+      SyncOutcome self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_sync_outcome(self, serializer);
   }
 
   @protected
@@ -12233,6 +12303,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
+  void sse_encode_sync_event(SyncEvent self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    switch (self) {
+      case SyncEvent_Progress(height: final height, time: final time):
+        sse_encode_i_32(0, serializer);
+        sse_encode_u_32(height, serializer);
+        sse_encode_u_32(time, serializer);
+      case SyncEvent_Finished(outcome: final outcome):
+        sse_encode_i_32(1, serializer);
+        sse_encode_box_autoadd_sync_outcome(outcome, serializer);
+    }
+  }
+
+  @protected
   void sse_encode_sync_height(SyncHeight self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_8(self.pool, serializer);
@@ -12241,10 +12325,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   }
 
   @protected
-  void sse_encode_sync_progress(SyncProgress self, SseSerializer serializer) {
+  void sse_encode_sync_outcome(SyncOutcome self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
-    sse_encode_u_32(self.height, serializer);
-    sse_encode_u_32(self.time, serializer);
+    switch (self) {
+      case SyncOutcome_Synced(height: final height):
+        sse_encode_i_32(0, serializer);
+        sse_encode_u_32(height, serializer);
+      case SyncOutcome_Skipped():
+        sse_encode_i_32(1, serializer);
+      case SyncOutcome_Cancelled():
+        sse_encode_i_32(2, serializer);
+    }
   }
 
   @protected

@@ -72,6 +72,17 @@ pub struct UnsignedTx {
     pub fee: BigDecimal,
 }
 
+/// The height a sync mutation reports. A skipped run is an error: the
+/// caller asked for a sync and none happened.
+fn synced_height(outcome: crate::api::sync::SyncOutcome, current_height: u32) -> FieldResult<i32> {
+    use crate::api::sync::SyncOutcome;
+    match outcome {
+        SyncOutcome::Synced { height } => Ok(height as i32),
+        SyncOutcome::Cancelled => Ok(current_height as i32),
+        SyncOutcome::Skipped => Err("a synchronization is already running".into()),
+    }
+}
+
 #[graphql_object]
 #[graphql(
     context = Context,
@@ -265,7 +276,7 @@ impl Mutation {
             .unwrap_or(crate::sync::DEFAULT_TRANSPARENT_LIMIT);
         let id_accounts = id_accounts.into_iter().map(|v| v as u32).collect();
         let current_height = crate::api::network::get_current_height(&context.coin).await?;
-        let height = crate::sync::synchronize_impl(
+        let outcome = crate::sync::synchronize_impl(
             (),
             id_accounts,
             current_height,
@@ -276,7 +287,7 @@ impl Mutation {
             &context.coin,
         )
         .await?;
-        Ok(height as i32)
+        synced_height(outcome, current_height)
     }
 
     async fn synchronize_account(
@@ -291,7 +302,7 @@ impl Mutation {
             .map(|v| v as u32)
             .unwrap_or(crate::sync::DEFAULT_TRANSPARENT_LIMIT);
         let current_height = crate::api::network::get_current_height(&context.coin).await?;
-        let height = crate::sync::synchronize_impl(
+        let outcome = crate::sync::synchronize_impl(
             (),
             vec![id_account as u32],
             current_height,
@@ -302,7 +313,7 @@ impl Mutation {
             &context.coin,
         )
         .await?;
-        Ok(height as i32)
+        synced_height(outcome, current_height)
     }
 
     async fn pay(id_account: i32, payment: Payment, context: &Context) -> FieldResult<String> {

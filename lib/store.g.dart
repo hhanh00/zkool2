@@ -850,7 +850,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'f4b704a30c22f06aa777dc73fa0983ba17438a3f';
+    r'a7fb5214c357570d05701c3b4bf35fccc09002dd';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();

@@ -3,6 +3,8 @@ use std::sync::LazyLock;
 use tokio::sync::{broadcast, Mutex};
 
 use crate::api::coin::Coin;
+#[cfg(feature = "flutter")]
+use crate::Sink;
 
 use crate::db::calculate_balance;
 use crate::io::SyncHeight;
@@ -13,11 +15,17 @@ use crate::frb_generated::StreamSink;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 
+/// Synchronize `accounts` up to `current_height`, streaming progress and
+/// finally the outcome. A failure is delivered as the stream's error; the
+/// stream never ends without either a `Finished` event or an error.
+///
+/// `fast` skips the memo and transaction-detail pass; the caller fetches
+/// details afterwards.
 #[cfg(feature = "flutter")]
 #[allow(clippy::too_many_arguments)]
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn synchronize(
-    progress: StreamSink<SyncProgress>,
+    progress: StreamSink<SyncEvent>,
     accounts: Vec<u32>,
     current_height: u32,
     actions_per_sync: u32,
@@ -25,9 +33,9 @@ pub async fn synchronize(
     checkpoint_age: u32,
     fast: bool,
     c: &Coin,
-) -> Result<u32> {
-    crate::sync::synchronize_impl(
-        progress,
+) -> Result<()> {
+    match crate::sync::synchronize_impl(
+        progress.clone(),
         accounts,
         current_height,
         actions_per_sync,
@@ -37,6 +45,11 @@ pub async fn synchronize(
         c,
     )
     .await
+    {
+        Ok(outcome) => progress.send(SyncEvent::Finished { outcome }).await,
+        Err(e) => progress.send_error(e).await,
+    }
+    Ok(())
 }
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -101,6 +114,24 @@ pub async fn cache_block_time(account: u32, height: u32, c: &Coin) -> Result<()>
 pub struct SyncProgress {
     pub height: u32,
     pub time: u32,
+}
+
+/// How a sync run ended. A failure is not an outcome: it is the error.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum SyncOutcome {
+    /// Every account is synced to `height`.
+    Synced { height: u32 },
+    /// Another sync was already running; nothing was done.
+    Skipped,
+    /// Stopped by the user; progress so far is committed.
+    Cancelled,
+}
+
+/// What the sync stream carries: progress while it runs, then how it ended.
+#[derive(Clone, Debug)]
+pub enum SyncEvent {
+    Progress { height: u32, time: u32 },
+    Finished { outcome: SyncOutcome },
 }
 
 pub struct PoolBalance(pub Vec<u64>);

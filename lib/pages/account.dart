@@ -46,7 +46,6 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
   final List<String> tabNames = ["Transactions", "Memos", "Notes", "ZSA Holdings"];
 
   late final c = coinContext.coin;
-  StreamSubscription<SyncProgress>? progressSubscription;
 
   // ZSA Holdings inline editing state
   int? _editingIndex;

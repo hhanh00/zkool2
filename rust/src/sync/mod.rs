@@ -1,25 +1,26 @@
 use anyhow::{Context as _, Result};
 use sqlx::SqliteConnection;
 use sqlx::{sqlite::SqliteRow, Row};
-use std::collections::HashMap;
 use tokio::sync::broadcast;
-use tokio::sync::mpsc::channel;
+use tokio::sync::mpsc::{channel, Sender};
 use tracing::debug;
 
 use crate::api::coin::{Coin, Network};
-use crate::api::sync::{CANCEL_SYNC, SYNCING};
+use crate::api::sync::{SyncEvent, SyncOutcome, SyncProgress, CANCEL_SYNC, SYNCING};
 
 use crate::io::SyncHeight;
 use crate::Sink;
 use std::collections::HashSet;
 
-use crate::api::sync::SyncProgress;
 use sqlx::Connection;
 
 pub mod chain_log;
+pub mod plan;
 mod shielded;
 mod sweep;
 mod transparent;
+
+use plan::{plan_sync, AccountSyncState, SyncRange};
 
 pub use shielded::{
     get_compact_block_range, get_tree_state, preload_account_key_cache, shielded_sync,
@@ -39,23 +40,35 @@ pub struct NoteExtended {
     pub address: Vec<u8>,
     pub memo: Vec<u8>,
 }
+/// Synchronize `accounts` up to `current_height`.
+///
+/// Observe the accounts, plan the ranges to scan (see [`plan::plan_sync`]),
+/// then run each range in order: transparent scan, shielded scan, block
+/// times, and the detail pass unless `skip_details`. Progress streams through
+/// `progress`; the returned outcome says how the run ended. An error is a
+/// failed run; the work committed before it stays.
+///
+/// Only one sync runs at a time: when another holds the lock the call
+/// returns [`SyncOutcome::Skipped`] without touching anything.
 #[allow(clippy::too_many_arguments)]
-pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
+pub async fn synchronize_impl<S: Sink<SyncEvent> + Send + 'static>(
     progress: S,
     accounts: Vec<u32>,
     current_height: u32,
     actions_per_sync: u32,
     transparent_limit: u32,
     checkpoint_age: u32,
-    noskip_details: bool,
+    skip_details: bool,
     c: &Coin,
-) -> Result<u32> {
+) -> Result<SyncOutcome> {
     if accounts.is_empty() {
-        return Ok(current_height);
+        return Ok(SyncOutcome::Synced {
+            height: current_height,
+        });
     }
 
     let Ok(_guard) = SYNCING.try_lock() else {
-        return Ok(current_height);
+        return Ok(SyncOutcome::Skipped);
     };
 
     let (tx_cancel, mut rx_cancel) = broadcast::channel::<()>(16);
@@ -64,224 +77,225 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
         *cancel = Some(tx_cancel.clone());
     }
 
-    let network = c.network();
-    let mut connection = c.get_connection().await?;
-    let progress2 = progress.clone();
-
-    let checkpoint_cutoff = current_height.saturating_sub(checkpoint_age);
-    for account in accounts.iter() {
-        prune_old_checkpoints(&mut connection, *account, checkpoint_cutoff).await?;
-    }
-
-    let mut account_use_internal = HashMap::<u32, bool>::new();
-    let res = async {
-        recover_from_partial_sync(&mut connection, &accounts).await?;
-
-        // Get account heights
-        let mut account_heights = HashMap::new();
-        debug!("Current network height: {}", current_height);
-        for account in accounts.iter() {
-            let r: (Option<u32>, Option<u32>) = sqlx::query_as(
-                r#"SELECT account, MIN(height) FROM sync_heights
-                JOIN accounts ON account = id_account
-                WHERE account = ?"#,
-            )
-            .bind(account)
-            .fetch_one(&mut *connection)
-            .await?;
-            if let (Some(account), Some(height)) = r {
-                debug!(
-                    "Account {} - current DB sync height: {}, next sync height: {}",
-                    account,
-                    height,
-                    height + 1
-                );
-                account_heights.insert(account, height + 1);
-
-                let (use_internal,): (bool,) =
-                    sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
-                        .bind(account)
-                        .fetch_one(&mut *connection)
-                        .await
-                        .context("Fetch use_internal")?;
-                account_use_internal.insert(account, use_internal);
-
-                // Check which pools this account has
-                let t_count: (i64,) = sqlx::query_as(
-                    "SELECT COUNT(*) FROM transparent_address_accounts WHERE account = ?",
-                )
-                .bind(account)
-                .fetch_one(&mut *connection)
-                .await?;
-                debug!(
-                    "Account {} - has {} transparent addresses, use_internal={}",
-                    account, t_count.0, use_internal
-                );
-            } else {
-                debug!(
-                    "Account {} - NO sync_heights entry found, will be skipped",
-                    account
-                );
-            }
-        }
-
-        // Create a sorted list of unique heights
-        let mut unique_heights: Vec<u32> = account_heights.values().cloned().collect();
-        unique_heights.sort_unstable();
-        unique_heights.dedup();
-        debug!(
-            "Unique sync start heights for accounts: {:?}",
-            unique_heights
-        );
-
-        let (tx_progress, mut rx_progress) = channel::<SyncProgress>(1);
-
-        tokio::spawn(async move {
-            while let Some(p) = rx_progress.recv().await {
-                let _ = progress.send(p).await;
-            }
-        });
-
-        // For each unique height, process accounts that need to be synced from that height
-        for (i, &start_height) in unique_heights.iter().enumerate() {
-            // Determine the end height (next height - 1 or current_height)
-            let end_height = if i + 1 < unique_heights.len() {
-                unique_heights[i + 1] - 1
-            } else {
-                current_height
-            };
-
-            // Find accounts that have a height <= this start_height
-            let accounts_to_sync = account_heights
-                .iter()
-                .filter(|&(_, &height)| height <= start_height)
-                .map(|(&account, _)| {
-                    let use_internal = account_use_internal[&account];
-                    (account, use_internal)
-                })
-                .collect::<Vec<_>>();
-
-            // Skip if no accounts to sync
-            if accounts_to_sync.is_empty() {
-                debug!("No accounts to sync for start_height {}", start_height);
-                continue;
-            }
-
-            debug!(
-                "Syncing accounts {:?} from height {} to {}",
-                accounts_to_sync.iter().map(|(a, _)| a).collect::<Vec<_>>(),
-                start_height,
-                end_height
-            );
-
-            let pool = c.get_pool()?;
-            // Update the sync heights for these accounts
-            let mut client = c.client().await?;
-
-            debug!("Start height: {}", start_height);
-            debug!("End height: {}", end_height);
-
-            if start_height > end_height {
-                debug!("Skipping sync: start_height ({}) > end_height ({}), wallet is ahead of network", start_height, end_height);
-                return Ok(());
-            }
-
-            let account_ids = accounts_to_sync
-                .iter()
-                .map(|(account, _)| *account)
-                .collect::<Vec<_>>();
-            transparent_sync(
-                &network,
-                &mut connection,
-                &mut client,
-                &account_ids,
-                start_height,
-                end_height,
-                transparent_limit,
-                tx_cancel.subscribe(),
-            )
-            .await?;
-
-            // Over the mixnet, download blocks in small chunks so each
-            // GetBlockRange stream fits in one nym-rpc session; elsewhere a
-            // single stream for the whole range is cheaper.
-            let chunk_size = c.is_mixnet().then_some(MIXNET_SYNC_CHUNK);
-            shielded_sync(
-                &network,
-                &pool,
-                &mut client,
-                &accounts_to_sync,
-                start_height,
-                end_height,
-                actions_per_sync,
-                chunk_size,
-                tx_progress.clone(),
-                tx_cancel.subscribe(),
-            )
-            .await?;
-
-            debug!("heights_without_time");
-            let heights_without_time =
-                get_heights_without_time(&mut connection, &account_ids, start_height, end_height)
-                    .await?;
-            for h in heights_without_time {
-                debug!("fetch block @{h}");
-                let block = client.block(&network, h).await?;
-                let time = block.time;
-                for account in &account_ids {
-                    chain_log::set_block_time(&mut connection, *account, h, time, true).await?;
-                }
-                let block_header = BlockHeader {
-                    height: h,
-                    hash: block.hash,
-                    time: block.time,
-                };
-                for account in &account_ids {
-                    chain_log::record_relevant_header(&mut connection, *account, &block_header)
-                        .await?;
-                }
-            }
-
-            // Update our local map as well for the next iteration
-            for (account, _) in &accounts_to_sync {
-                account_heights.insert(*account, end_height);
-                if !noskip_details {
-                    crate::memo::fetch_tx_details(&network, &mut connection, &mut client, *account)
-                        .await?;
-                }
-            }
-
-            debug!(
-                "Sync completed for height range {}-{}",
-                start_height, end_height
-            );
-        }
-
-        for account in accounts.iter() {
-            chain_log::apply_pending_metadata(&mut connection, *account, current_height).await?;
-        }
-
-        Ok::<_, anyhow::Error>(())
+    let params = SyncParams {
+        current_height,
+        actions_per_sync,
+        transparent_limit,
+        checkpoint_age,
+        skip_details,
     };
+    let result = run_sync(progress, &accounts, &params, &tx_cancel, c).await;
 
-    let result = res.await;
     // Inner operations may unwind with an error after receiving cancellation.
     // A user-requested stop is normal termination at the API boundary.
     let cancelled = rx_cancel.try_recv().is_ok();
-    if cancelled {
-        debug!("Synchronization cancelled by user");
-    } else if let Err(e) = result {
-        debug!("Error during sync: {:?}", e);
-        progress2.send_error(e).await;
-    }
 
     {
         let mut cancel = CANCEL_SYNC.lock().await;
         *cancel = None;
     }
 
-    Ok(current_height)
+    finish(result, cancelled, current_height)
 }
+
+/// Map the run's result and the cancel flag to the outcome the caller sees.
+fn finish(result: Result<()>, cancelled: bool, height: u32) -> Result<SyncOutcome> {
+    if cancelled {
+        debug!("Synchronization cancelled by user");
+        return Ok(SyncOutcome::Cancelled);
+    }
+    match result {
+        Ok(()) => Ok(SyncOutcome::Synced { height }),
+        Err(e) => {
+            debug!("Error during sync: {:?}", e);
+            Err(e)
+        }
+    }
+}
+
+struct SyncParams {
+    current_height: u32,
+    actions_per_sync: u32,
+    transparent_limit: u32,
+    checkpoint_age: u32,
+    skip_details: bool,
+}
+
+/// Where each account stands, read from the database. Accounts without a
+/// checkpoint row are not synced and are left out.
+async fn observe_accounts(
+    connection: &mut SqliteConnection,
+    accounts: &[u32],
+) -> Result<Vec<AccountSyncState>> {
+    let mut states = Vec::with_capacity(accounts.len());
+    for &account in accounts {
+        let row: (Option<u32>, bool) = sqlx::query_as(
+            "SELECT MIN(s.height), a.use_internal FROM accounts a
+            LEFT JOIN sync_heights s ON s.account = a.id_account
+            WHERE a.id_account = ?",
+        )
+        .bind(account)
+        .fetch_one(&mut *connection)
+        .await
+        .with_context(|| format!("observing account {account}"))?;
+        match row {
+            (Some(height), use_internal) => {
+                debug!(
+                    "Account {} - current DB sync height: {}, next sync height: {}, use_internal={}",
+                    account,
+                    height,
+                    height + 1,
+                    use_internal
+                );
+                states.push(AccountSyncState {
+                    account,
+                    next_height: height + 1,
+                    use_internal,
+                });
+            }
+            (None, _) => {
+                debug!(
+                    "Account {} - NO sync_heights entry found, will be skipped",
+                    account
+                );
+            }
+        }
+    }
+    Ok(states)
+}
+
+/// Observe, plan, and run every range; then merge the pending metadata.
+async fn run_sync<S: Sink<SyncEvent> + Send + 'static>(
+    progress: S,
+    accounts: &[u32],
+    params: &SyncParams,
+    tx_cancel: &broadcast::Sender<()>,
+    c: &Coin,
+) -> Result<()> {
+    let mut connection = c.get_connection().await?;
+
+    let checkpoint_cutoff = params.current_height.saturating_sub(params.checkpoint_age);
+    for account in accounts {
+        prune_old_checkpoints(&mut connection, *account, checkpoint_cutoff).await?;
+    }
+    recover_from_partial_sync(&mut connection, accounts).await?;
+
+    debug!("Current network height: {}", params.current_height);
+    let states = observe_accounts(&mut connection, accounts).await?;
+    let plan = plan_sync(&states, params.current_height);
+    debug!(
+        "Sync plan: {:?}",
+        plan.iter()
+            .map(|r| (r.start, r.end, r.account_ids()))
+            .collect::<Vec<_>>()
+    );
+
+    let (tx_progress, mut rx_progress) = channel::<SyncProgress>(1);
+    tokio::spawn(async move {
+        while let Some(p) = rx_progress.recv().await {
+            let _ = progress
+                .send(SyncEvent::Progress {
+                    height: p.height,
+                    time: p.time,
+                })
+                .await;
+        }
+    });
+
+    for range in &plan {
+        run_range(&mut connection, range, params, &tx_progress, tx_cancel, c).await?;
+    }
+
+    for account in accounts {
+        chain_log::apply_pending_metadata(&mut connection, *account, params.current_height)
+            .await?;
+    }
+    Ok(())
+}
+
+/// Scan one range for its accounts: transparent, then shielded, then the
+/// block times of the transactions found, then the detail pass.
+async fn run_range(
+    connection: &mut SqliteConnection,
+    range: &SyncRange,
+    params: &SyncParams,
+    tx_progress: &Sender<SyncProgress>,
+    tx_cancel: &broadcast::Sender<()>,
+    c: &Coin,
+) -> Result<()> {
+    let network = c.network();
+    let account_ids = range.account_ids();
+    debug!(
+        "Syncing accounts {:?} from height {} to {}",
+        account_ids, range.start, range.end
+    );
+
+    let pool = c.get_pool()?;
+    let mut client = c.client().await?;
+
+    transparent_sync(
+        &network,
+        connection,
+        &mut client,
+        &account_ids,
+        range.start,
+        range.end,
+        params.transparent_limit,
+        tx_cancel.subscribe(),
+    )
+    .await?;
+
+    // Over the mixnet, download blocks in small chunks so each
+    // GetBlockRange stream fits in one nym-rpc session; elsewhere a
+    // single stream for the whole range is cheaper.
+    let chunk_size = c.is_mixnet().then_some(MIXNET_SYNC_CHUNK);
+    shielded_sync(
+        &network,
+        &pool,
+        &mut client,
+        &range.accounts,
+        range.start,
+        range.end,
+        params.actions_per_sync,
+        chunk_size,
+        tx_progress.clone(),
+        tx_cancel.subscribe(),
+    )
+    .await?;
+
+    debug!("heights_without_time");
+    let heights_without_time =
+        get_heights_without_time(connection, &account_ids, range.start, range.end).await?;
+    for h in heights_without_time {
+        debug!("fetch block @{h}");
+        let block = client.block(&network, h).await?;
+        let time = block.time;
+        for account in &account_ids {
+            chain_log::set_block_time(connection, *account, h, time, true).await?;
+        }
+        let block_header = BlockHeader {
+            height: h,
+            hash: block.hash,
+            time: block.time,
+        };
+        for account in &account_ids {
+            chain_log::record_relevant_header(connection, *account, &block_header).await?;
+        }
+    }
+
+    if !params.skip_details {
+        for account in &account_ids {
+            crate::memo::fetch_tx_details(&network, connection, &mut client, *account).await?;
+        }
+    }
+
+    debug!(
+        "Sync completed for height range {}-{}",
+        range.start, range.end
+    );
+    Ok(())
+}
+
 pub async fn recover_from_partial_sync(
     connection: &mut SqliteConnection,
     accounts: &[u32],
@@ -427,6 +441,29 @@ pub async fn get_heights_without_time(
         heights.extend(missing);
     }
     Ok(heights)
+}
+
+#[cfg(test)]
+mod outcome_tests {
+    use super::*;
+
+    #[test]
+    fn cancel_wins_over_both_success_and_error() {
+        assert_eq!(finish(Ok(()), true, 10).unwrap(), SyncOutcome::Cancelled);
+        assert_eq!(
+            finish(Err(anyhow::anyhow!("boom")), true, 10).unwrap(),
+            SyncOutcome::Cancelled
+        );
+    }
+
+    #[test]
+    fn success_reports_the_height_and_errors_propagate() {
+        assert_eq!(
+            finish(Ok(()), false, 10).unwrap(),
+            SyncOutcome::Synced { height: 10 }
+        );
+        assert!(finish(Err(anyhow::anyhow!("boom")), false, 10).is_err());
+    }
 }
 
 #[cfg(test)]

@@ -735,7 +735,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
   bool _handlingAutoSyncHeight = false;
   bool _forceNextAutoSync = false;
   int? _pendingAutoSyncHeight;
-  StreamSubscription<SyncProgress>? syncProgressSubscription;
+  StreamSubscription<SyncEvent>? syncProgressSubscription;
   int retryCount = 0;
 
   @override
@@ -829,10 +829,16 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
         await syncProgressSubscription?.cancel();
 
         final done = Completer<void>();
+        SyncOutcome? outcome;
         syncProgressSubscription = progress.listen(
-          (p) {
-            retryCount = 0;
-            update(p.height, p.time);
+          (event) {
+            switch (event) {
+              case SyncEvent_Progress(:final height, :final time):
+                retryCount = 0;
+                update(height, time);
+              case SyncEvent_Finished(outcome: final finished):
+                outcome = finished;
+            }
           },
           onError: (e) {
             done.completeError(e is AnyhowException ? e : AnyhowException(e.toString()));
@@ -847,6 +853,18 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
 
         // Rust cancellation closes normally, just like a successful sync.
         if (state.cancelling) return;
+        switch (outcome) {
+          case SyncOutcome_Skipped():
+            // Another sync held the lock: nothing ran, nothing to report.
+            logger.i("Synchronization skipped: another sync is running");
+            completer.complete();
+            return await completer.future;
+          case SyncOutcome_Cancelled():
+            logger.i("Synchronization cancelled");
+            completer.complete();
+            return await completer.future;
+          default:
+        }
         if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
           showSnackbar("Synchronization Completed");
         }

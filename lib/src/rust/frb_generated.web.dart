@@ -182,8 +182,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       dynamic raw);
 
   @protected
-  RustStreamSink<SyncProgress> dco_decode_StreamSink_sync_progress_Sse(
-      dynamic raw);
+  RustStreamSink<SyncEvent> dco_decode_StreamSink_sync_event_Sse(dynamic raw);
 
   @protected
   String dco_decode_String(dynamic raw);
@@ -250,6 +249,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SwapRequest dco_decode_box_autoadd_swap_request(dynamic raw);
+
+  @protected
+  SyncOutcome dco_decode_box_autoadd_sync_outcome(dynamic raw);
 
   @protected
   int dco_decode_box_autoadd_u_32(dynamic raw);
@@ -584,10 +586,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SwapType dco_decode_swap_type(dynamic raw);
 
   @protected
+  SyncEvent dco_decode_sync_event(dynamic raw);
+
+  @protected
   SyncHeight dco_decode_sync_height(dynamic raw);
 
   @protected
-  SyncProgress dco_decode_sync_progress(dynamic raw);
+  SyncOutcome dco_decode_sync_outcome(dynamic raw);
 
   @protected
   TAddressTxCount dco_decode_t_address_tx_count(dynamic raw);
@@ -773,7 +778,7 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
-  RustStreamSink<SyncProgress> sse_decode_StreamSink_sync_progress_Sse(
+  RustStreamSink<SyncEvent> sse_decode_StreamSink_sync_event_Sse(
       SseDeserializer deserializer);
 
   @protected
@@ -845,6 +850,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SwapRequest sse_decode_box_autoadd_swap_request(SseDeserializer deserializer);
+
+  @protected
+  SyncOutcome sse_decode_box_autoadd_sync_outcome(SseDeserializer deserializer);
 
   @protected
   int sse_decode_box_autoadd_u_32(SseDeserializer deserializer);
@@ -1196,10 +1204,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   SwapType sse_decode_swap_type(SseDeserializer deserializer);
 
   @protected
+  SyncEvent sse_decode_sync_event(SseDeserializer deserializer);
+
+  @protected
   SyncHeight sse_decode_sync_height(SseDeserializer deserializer);
 
   @protected
-  SyncProgress sse_decode_sync_progress(SseDeserializer deserializer);
+  SyncOutcome sse_decode_sync_outcome(SseDeserializer deserializer);
 
   @protected
   TAddressTxCount sse_decode_t_address_tx_count(SseDeserializer deserializer);
@@ -1395,8 +1406,8 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       RustStreamSink<SigningStatus> self, SseSerializer serializer);
 
   @protected
-  void sse_encode_StreamSink_sync_progress_Sse(
-      RustStreamSink<SyncProgress> self, SseSerializer serializer);
+  void sse_encode_StreamSink_sync_event_Sse(
+      RustStreamSink<SyncEvent> self, SseSerializer serializer);
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);
@@ -1474,6 +1485,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_swap_request(
       SwapRequest self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_sync_outcome(
+      SyncOutcome self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_u_32(int self, SseSerializer serializer);
@@ -1850,10 +1865,13 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_swap_type(SwapType self, SseSerializer serializer);
 
   @protected
+  void sse_encode_sync_event(SyncEvent self, SseSerializer serializer);
+
+  @protected
   void sse_encode_sync_height(SyncHeight self, SseSerializer serializer);
 
   @protected
-  void sse_encode_sync_progress(SyncProgress self, SseSerializer serializer);
+  void sse_encode_sync_outcome(SyncOutcome self, SseSerializer serializer);
 
   @protected
   void sse_encode_t_address_tx_count(

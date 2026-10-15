@@ -8933,7 +8933,7 @@ fn wire__crate__api__sync__synchronize_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_progress = <StreamSink<
-                crate::api::sync::SyncProgress,
+                crate::api::sync::SyncEvent,
                 flutter_rust_bridge::for_generated::SseCodec,
             >>::sse_decode(&mut deserializer);
             let api_accounts = <Vec<u32>>::sse_decode(&mut deserializer);
@@ -10577,7 +10577,7 @@ impl SseDecode
 }
 
 impl SseDecode
-    for StreamSink<crate::api::sync::SyncProgress, flutter_rust_bridge::for_generated::SseCodec>
+    for StreamSink<crate::api::sync::SyncEvent, flutter_rust_bridge::for_generated::SseCodec>
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -12293,6 +12293,32 @@ impl SseDecode for crate::near_intents::SwapType {
     }
 }
 
+impl SseDecode for crate::api::sync::SyncEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut tag_ = <i32>::sse_decode(deserializer);
+        match tag_ {
+            0 => {
+                let mut var_height = <u32>::sse_decode(deserializer);
+                let mut var_time = <u32>::sse_decode(deserializer);
+                return crate::api::sync::SyncEvent::Progress {
+                    height: var_height,
+                    time: var_time,
+                };
+            }
+            1 => {
+                let mut var_outcome = <crate::api::sync::SyncOutcome>::sse_decode(deserializer);
+                return crate::api::sync::SyncEvent::Finished {
+                    outcome: var_outcome,
+                };
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+
 impl SseDecode for crate::io::SyncHeight {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -12307,15 +12333,25 @@ impl SseDecode for crate::io::SyncHeight {
     }
 }
 
-impl SseDecode for crate::api::sync::SyncProgress {
+impl SseDecode for crate::api::sync::SyncOutcome {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
-        let mut var_height = <u32>::sse_decode(deserializer);
-        let mut var_time = <u32>::sse_decode(deserializer);
-        return crate::api::sync::SyncProgress {
-            height: var_height,
-            time: var_time,
-        };
+        let mut tag_ = <i32>::sse_decode(deserializer);
+        match tag_ {
+            0 => {
+                let mut var_height = <u32>::sse_decode(deserializer);
+                return crate::api::sync::SyncOutcome::Synced { height: var_height };
+            }
+            1 => {
+                return crate::api::sync::SyncOutcome::Skipped;
+            }
+            2 => {
+                return crate::api::sync::SyncOutcome::Cancelled;
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
     }
 }
 
@@ -14471,6 +14507,33 @@ impl flutter_rust_bridge::IntoIntoDart<crate::near_intents::SwapType>
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
+impl flutter_rust_bridge::IntoDart for crate::api::sync::SyncEvent {
+    fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
+        match self {
+            crate::api::sync::SyncEvent::Progress { height, time } => [
+                0.into_dart(),
+                height.into_into_dart().into_dart(),
+                time.into_into_dart().into_dart(),
+            ]
+            .into_dart(),
+            crate::api::sync::SyncEvent::Finished { outcome } => {
+                [1.into_dart(), outcome.into_into_dart().into_dart()].into_dart()
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::sync::SyncEvent {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::sync::SyncEvent>
+    for crate::api::sync::SyncEvent
+{
+    fn into_into_dart(self) -> crate::api::sync::SyncEvent {
+        self
+    }
+}
+// Codec=Dco (DartCObject based), see doc to use other codecs
 impl flutter_rust_bridge::IntoDart for crate::io::SyncHeight {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
@@ -14488,23 +14551,25 @@ impl flutter_rust_bridge::IntoIntoDart<crate::io::SyncHeight> for crate::io::Syn
     }
 }
 // Codec=Dco (DartCObject based), see doc to use other codecs
-impl flutter_rust_bridge::IntoDart for crate::api::sync::SyncProgress {
+impl flutter_rust_bridge::IntoDart for crate::api::sync::SyncOutcome {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
-        [
-            self.height.into_into_dart().into_dart(),
-            self.time.into_into_dart().into_dart(),
-        ]
-        .into_dart()
+        match self {
+            crate::api::sync::SyncOutcome::Synced { height } => {
+                [0.into_dart(), height.into_into_dart().into_dart()].into_dart()
+            }
+            crate::api::sync::SyncOutcome::Skipped => [1.into_dart()].into_dart(),
+            crate::api::sync::SyncOutcome::Cancelled => [2.into_dart()].into_dart(),
+            _ => {
+                unimplemented!("");
+            }
+        }
     }
 }
-impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive
-    for crate::api::sync::SyncProgress
+impl flutter_rust_bridge::for_generated::IntoDartExceptPrimitive for crate::api::sync::SyncOutcome {}
+impl flutter_rust_bridge::IntoIntoDart<crate::api::sync::SyncOutcome>
+    for crate::api::sync::SyncOutcome
 {
-}
-impl flutter_rust_bridge::IntoIntoDart<crate::api::sync::SyncProgress>
-    for crate::api::sync::SyncProgress
-{
-    fn into_into_dart(self) -> crate::api::sync::SyncProgress {
+    fn into_into_dart(self) -> crate::api::sync::SyncOutcome {
         self
     }
 }
@@ -15068,7 +15133,7 @@ impl SseEncode
 }
 
 impl SseEncode
-    for StreamSink<crate::api::sync::SyncProgress, flutter_rust_bridge::for_generated::SseCodec>
+    for StreamSink<crate::api::sync::SyncEvent, flutter_rust_bridge::for_generated::SseCodec>
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -16356,6 +16421,26 @@ impl SseEncode for crate::near_intents::SwapType {
     }
 }
 
+impl SseEncode for crate::api::sync::SyncEvent {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        match self {
+            crate::api::sync::SyncEvent::Progress { height, time } => {
+                <i32>::sse_encode(0, serializer);
+                <u32>::sse_encode(height, serializer);
+                <u32>::sse_encode(time, serializer);
+            }
+            crate::api::sync::SyncEvent::Finished { outcome } => {
+                <i32>::sse_encode(1, serializer);
+                <crate::api::sync::SyncOutcome>::sse_encode(outcome, serializer);
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
+    }
+}
+
 impl SseEncode for crate::io::SyncHeight {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -16365,11 +16450,24 @@ impl SseEncode for crate::io::SyncHeight {
     }
 }
 
-impl SseEncode for crate::api::sync::SyncProgress {
+impl SseEncode for crate::api::sync::SyncOutcome {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
-        <u32>::sse_encode(self.height, serializer);
-        <u32>::sse_encode(self.time, serializer);
+        match self {
+            crate::api::sync::SyncOutcome::Synced { height } => {
+                <i32>::sse_encode(0, serializer);
+                <u32>::sse_encode(height, serializer);
+            }
+            crate::api::sync::SyncOutcome::Skipped => {
+                <i32>::sse_encode(1, serializer);
+            }
+            crate::api::sync::SyncOutcome::Cancelled => {
+                <i32>::sse_encode(2, serializer);
+            }
+            _ => {
+                unimplemented!("");
+            }
+        }
     }
 }
 
