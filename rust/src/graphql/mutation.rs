@@ -363,17 +363,8 @@ impl Mutation {
     /// name is not transmitted on-chain). Also useful for renaming.
     async fn set_asset_name(id_asset: i32, name: String, context: &Context) -> FieldResult<bool> {
         check_admin_auth(context)?;
-        let coin = &context.coin;
-        let mut connection = coin.get_connection().await?;
-        let r = sqlx::query("UPDATE assets SET asset_name = ?1 WHERE id_asset = ?2")
-            .bind(&name)
-            .bind(id_asset)
-            .execute(&mut *connection)
-            .await
-            .map_err(|e| format!("Failed to set asset name: {e}"))?;
-        if r.rows_affected() == 0 {
-            return Err(format!("No asset with id_asset={id_asset}").into());
-        }
+        let mut connection = context.coin.get_connection().await?;
+        crate::db::set_asset_name(&mut connection, id_asset, &name).await?;
         Ok(true)
     }
 

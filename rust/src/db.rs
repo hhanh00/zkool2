@@ -1908,6 +1908,21 @@ pub struct ZsaAssetRow {
     pub balance: i64,
 }
 
+/// Sets the display name of an asset; fails when no asset has that id.
+pub async fn set_asset_name(
+    connection: &mut SqliteConnection,
+    id_asset: i32,
+    name: &str,
+) -> Result<()> {
+    let result = sqlx::query("UPDATE assets SET asset_name = ?1 WHERE id_asset = ?2")
+        .bind(name)
+        .bind(id_asset)
+        .execute(&mut *connection)
+        .await?;
+    anyhow::ensure!(result.rows_affected() > 0, "No asset with id_asset={id_asset}");
+    Ok(())
+}
+
 pub async fn get_zsa_holdings(
     connection: &mut SqliteConnection,
     account: u32,

@@ -23,7 +23,6 @@ use bigdecimal::num_bigint::BigInt;
 use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
 use chrono::{DateTime, NaiveDateTime};
 use juniper::{graphql_object, FieldError, FieldResult, GraphQLInputObject};
-use sqlx::Row;
 
 pub struct Query {}
 
@@ -432,33 +431,8 @@ pub async fn prepare_tx(
 
     let mut recipients = vec![];
     for r in payment.recipients {
-        let (asset_base, asset_name) = if let Some(ref desc) = r.asset_desc {
-            if desc.is_empty() {
-                ([0u8; 32].to_vec(), None)
-            } else {
-                let rows = sqlx::query(
-                    "SELECT asset_base, asset_name FROM assets
-                     WHERE asset_name = ?1 OR hex(asset_desc_hash) LIKE ?2 || '%'",
-                )
-                .bind(desc)
-                .bind(desc)
-                .fetch_all(&mut *connection)
-                .await
-                .map_err(|e| format!("Asset lookup failed: {e}"))?;
-
-                match rows.len() {
-                    0 => return Err(format!("No asset matches '{desc}'").into()),
-                    1 => {
-                        let ab: Vec<u8> = rows[0].get(0);
-                        let an: Option<String> = rows[0].get(1);
-                        (ab, an)
-                    }
-                    n => return Err(format!("Ambiguous query '{desc}', matches {n} assets").into()),
-                }
-            }
-        } else {
-            ([0u8; 32].to_vec(), None)
-        };
+        let (asset_base, asset_name) =
+            crate::pay::resolve_asset(&mut connection, r.asset_desc.as_deref()).await?;
 
         let amount: u64 = if asset_base == [0u8; 32] {
             zec_to_zats(r.amount)? as u64

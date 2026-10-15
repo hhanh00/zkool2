@@ -347,6 +347,32 @@ pub struct TxPlanOut {
     pub asset_name: String, // "ZEC" for ZEC, asset name for ZSA
 }
 
+/// Resolves a recipient's asset description to the asset base and name to
+/// pay with. `None` or an empty description means ZEC (the zero asset base).
+/// Otherwise the description must match exactly one asset by name or by a
+/// prefix of its description hash.
+pub async fn resolve_asset(
+    connection: &mut SqliteConnection,
+    desc: Option<&str>,
+) -> Result<(Vec<u8>, Option<String>)> {
+    let Some(desc) = desc.filter(|desc| !desc.is_empty()) else {
+        return Ok(([0u8; 32].to_vec(), None));
+    };
+    let rows = sqlx::query_as::<_, (Vec<u8>, Option<String>)>(
+        "SELECT asset_base, asset_name FROM assets
+         WHERE asset_name = ?1 OR hex(asset_desc_hash) LIKE ?2 || '%'",
+    )
+    .bind(desc)
+    .bind(desc)
+    .fetch_all(&mut *connection)
+    .await?;
+    match rows.len() {
+        0 => anyhow::bail!("No asset matches '{desc}'"),
+        1 => Ok(rows.into_iter().next().unwrap()),
+        n => anyhow::bail!("Ambiguous query '{desc}', matches {n} assets"),
+    }
+}
+
 pub async fn send(client: &mut Client, height: u32, data: &[u8]) -> Result<String> {
     let span = span!(Level::INFO, "transaction");
     let txid = client.post_transaction(height, data).await?;
