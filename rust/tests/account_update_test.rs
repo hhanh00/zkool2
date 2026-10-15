@@ -34,7 +34,7 @@ async fn changing_internal_change_persists_and_materializes_addresses() {
     for use_internal in [true, false] {
         update_account(
             &AccountUpdate {
-                coin: coin.coin,
+                coin: coin.coin(),
                 id,
                 name: None,
                 icon: None,

@@ -11,6 +11,7 @@ import 'package:zkool/services/swap_quote.dart';
 import 'package:zkool/src/rust/near_intents.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/router.dart';
 
 typedef SwapSummaryArgs = ({
   SavedSwap swap,
@@ -22,6 +23,7 @@ typedef SwapSummaryArgs = ({
 });
 
 class SwapSummaryPage extends ConsumerStatefulWidget {
+  final int account;
   final SavedSwap swap;
   final String symbol;
   final int decimals;
@@ -30,7 +32,8 @@ class SwapSummaryPage extends ConsumerStatefulWidget {
   final String? depositNetwork;
 
   const SwapSummaryPage(
-      {required this.swap,
+      {required this.account,
+      required this.swap,
       required this.symbol,
       required this.decimals,
       this.originSymbol = 'ZEC',
@@ -45,7 +48,6 @@ class SwapSummaryPage extends ConsumerStatefulWidget {
 class _SwapSummaryPageState extends ConsumerState<SwapSummaryPage> {
   late SavedSwap _swap = widget.swap;
   final _coin = coinContext.coin;
-  late final _account = ref.read(selectedAccountIdProvider);
   Timer? _timer;
   bool _refreshing = false;
   Object? _error;
@@ -70,9 +72,9 @@ class _SwapSummaryPageState extends ConsumerState<SwapSummaryPage> {
     setState(() => _refreshing = true);
     Object? error;
     try {
-      await refreshSingleSwap(_swap, _account, _coin);
+      await refreshSingleSwap(_swap, widget.account, _coin);
       if (!mounted) return;
-      final swaps = await nearIntentsListSwaps(pendingOnly: false, account: _account, c: _coin);
+      final swaps = await nearIntentsListSwaps(pendingOnly: false, account: widget.account, c: _coin);
       if (!mounted) return;
       _swap = swaps.firstWhere((swap) => swap.idSwap == _swap.idSwap);
       ref.invalidate(savedSwapsProvider);
@@ -116,7 +118,7 @@ class _SwapSummaryPageState extends ConsumerState<SwapSummaryPage> {
     final originDecimals = widget.originDecimals;
     final depositNetwork = widget.depositNetwork;
     if (ref.watch(lifecycleProvider).value ?? false) return PinLock();
-    void dismiss() => GoRouter.of(context).go('/');
+    void dismiss() => GoRouter.of(context).go(accountRoute('/', widget.account));
 
     return PopScope(
       canPop: false,

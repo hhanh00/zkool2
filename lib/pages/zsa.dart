@@ -15,6 +15,7 @@ import 'package:zkool/src/rust/api/zsa.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
+import 'package:zkool/router.dart';
 
 class IssuanceArgs {
   final String? assetName;
@@ -24,7 +25,8 @@ class IssuanceArgs {
 }
 
 class ZsaHoldingsPage extends ConsumerStatefulWidget {
-  const ZsaHoldingsPage({super.key});
+  final int account;
+  const ZsaHoldingsPage({super.key, required this.account});
 
   @override
   ConsumerState<ZsaHoldingsPage> createState() => _ZsaHoldingsPageState();
@@ -78,7 +80,7 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
     final index = _editingIndex;
     if (index == null) return;
 
-    final accountData = ref.read(getCurrentAccountProvider).value;
+    final accountData = ref.read(accountProvider(widget.account)).value;
     if (accountData == null) return;
 
     final h = accountData.zsas[index];
@@ -109,13 +111,13 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
   Widget build(BuildContext context) {
     final tt = Theme.of(context).textTheme;
 
-    final accountData = ref.watch(getCurrentAccountProvider);
+    final accountData = ref.watch(accountProvider(widget.account));
 
     return accountData.when(
       loading: () => blank(context),
       error: (error, stack) => showError(error),
       data: (data) {
-        final zsas = data?.zsas ?? [];
+        final zsas = data.zsas;
 
         return Scaffold(
           appBar: AppBar(
@@ -128,7 +130,7 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
               IconButton(
                 tooltip: "Issue new token",
                 icon: const Icon(Icons.add),
-                onPressed: () => GoRouter.of(context).push("/zsa/issue"),
+                onPressed: () => GoRouter.of(context).push(accountRoute("/zsa/issue", widget.account)),
               ),
             ],
           ),
@@ -199,7 +201,8 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
 
 class IssueAssetPage extends ConsumerStatefulWidget {
   final IssuanceArgs? args;
-  const IssueAssetPage({super.key, this.args});
+  final int account;
+  const IssueAssetPage({super.key, this.args, required this.account});
 
   @override
   ConsumerState<IssueAssetPage> createState() => _IssueAssetPageState();
@@ -298,14 +301,14 @@ class _IssueAssetPageState extends ConsumerState<IssueAssetPage> {
         firstIssuance: true,
         finalize: true,
         descHash: _descHash,
-        idAccount: ref.read(selectedAccountIdProvider),
+        idAccount: widget.account,
         c: coinContext.coin,
       );
       final height = ref.read(currentHeightProvider).value ?? 1;
       final txid = await broadcastTransaction(
         height: height,
         txBytes: txBytes,
-        account: ref.read(selectedAccountIdProvider),
+        account: widget.account,
         c: coinContext.coin,
       );
 

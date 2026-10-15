@@ -18,6 +18,7 @@ import 'package:zkool/src/rust/near_intents.dart' as ni;
 import 'package:zkool/pages/swaps.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/input_amount.dart';
+import 'package:zkool/router.dart';
 
 /// Destination networks offered by the initial frontend.
 enum SwapNetwork {
@@ -98,7 +99,8 @@ typedef SwapQuoteLoader = Future<SwapReviewQuote> Function(SwapDraft draft);
 
 class SwapPage extends ConsumerStatefulWidget {
   final SwapQuoteLoader? quoteLoader;
-  const SwapPage({this.quoteLoader, super.key});
+  final int account;
+  const SwapPage({this.quoteLoader, required this.account, super.key});
 
   @override
   ConsumerState<SwapPage> createState() => _SwapPageState();
@@ -261,14 +263,15 @@ class _SwapPageState extends ConsumerState<SwapPage> {
         recipient: _outgoing ? (form.value['recipient'] as String).trim() : '',
         refundTo: _outgoing ? null : (form.value['recipient'] as String).trim(),
         slippageTolerance: swapSlippageBasisPoints(form.value['slippage'] as String));
-    GoRouter.of(context).push('/swap/review', extra: (draft, widget.quoteLoader));
+    GoRouter.of(context).push(accountRoute('/swap/review', widget.account), extra: (draft, widget.quoteLoader));
   }
 }
 
 class SwapReviewPage extends ConsumerStatefulWidget {
   final SwapDraft draft;
   final SwapQuoteLoader? quoteLoader;
-  const SwapReviewPage({required this.draft, this.quoteLoader, super.key});
+  final int account;
+  const SwapReviewPage({required this.draft, this.quoteLoader, required this.account, super.key});
 
   @override
   ConsumerState<SwapReviewPage> createState() => _SwapReviewPageState();
@@ -281,7 +284,6 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
   bool _submitting = false;
   String _submitStep = '';
   late final _coin = coinContext.coin;
-  late final _account = ref.read(selectedAccountIdProvider);
 
   Future<void> _confirmAndSubmit() async {
     final quote = _displayedQuote!;
@@ -296,7 +298,7 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
       return;
     }
     if (mounted) setState(() => _submitStep = 'Creating swap...');
-    final saved = _createdSwap ??= await nearIntentsCreateSwap(request: quote.request!, account: _account, c: _coin);
+    final saved = _createdSwap ??= await nearIntentsCreateSwap(request: quote.request!, account: widget.account, c: _coin);
     final SwapSummaryArgs summary = (
       swap: saved,
       symbol: widget.draft.destinationSymbol,
@@ -307,13 +309,13 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
     );
     if (widget.draft.direction == SwapDirection.sendZec) {
       if (mounted) setState(() => _submitStep = 'Preparing deposit...');
-      final pczt = await nearIntentsPrepareSwap(idSwap: saved.idSwap, account: _account, c: _coin);
+      final pczt = await nearIntentsPrepareSwap(idSwap: saved.idSwap, account: widget.account, c: _coin);
       if (!mounted) return;
       ref.invalidate(savedSwapsProvider);
-      unawaited(GoRouter.of(context).pushReplacement<void>('/tx', extra: TxPageArgs(pczt, SwapContext(summary))));
+      unawaited(GoRouter.of(context).pushReplacement<void>(accountRoute('/tx', widget.account), extra: TxPageArgs(pczt, SwapContext(summary))));
     } else if (mounted) {
       ref.invalidate(savedSwapsProvider);
-      unawaited(GoRouter.of(context).pushReplacement<void>('/swap/summary', extra: summary));
+      unawaited(GoRouter.of(context).pushReplacement<void>(accountRoute('/swap/summary', widget.account), extra: summary));
     }
   }
 
@@ -353,7 +355,7 @@ class _SwapReviewPageState extends ConsumerState<SwapReviewPage> {
   void _refresh() {
     _displayedQuote = null;
     final loader = widget.quoteLoader;
-    _quote = Future.sync(() => loader != null ? loader(widget.draft) : loadSwapQuote(widget.draft, _account, _coin));
+    _quote = Future.sync(() => loader != null ? loader(widget.draft) : loadSwapQuote(widget.draft, widget.account, _coin));
   }
 
   @override

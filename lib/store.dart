@@ -43,6 +43,9 @@ class HasDb extends _$HasDb {
   }
 }
 
+/// The account the account page last opened, persisted so the next launch
+/// returns to it. Pages receive their account through the route (see
+/// `accountRoute`); this is only the launch default.
 @Riverpod(keepAlive: true)
 class SelectedAccountId extends _$SelectedAccountId {
   @override
@@ -231,15 +234,6 @@ class HeroProgressWidget extends StatelessWidget {
 // AppStore get appStore => AppStoreBase.instance;
 
 @riverpod
-Future<Account?> selectedAccount(Ref ref) async {
-  final accountId = ref.watch(selectedAccountIdProvider);
-  if (accountId == 0) return null;
-  final accounts = await ref.watch(getAccountsProvider.future);
-  final acc = accounts.firstWhereOrNull((a) => a.id == accountId);
-  return acc;
-}
-
-@riverpod
 class SelectedFolder extends _$SelectedFolder {
   @override
   Folder? build() {
@@ -315,15 +309,6 @@ Future<AccountData> account(Ref ref, int id) async {
     zsas: zsas,
     frostParams: frostParams,
   );
-}
-
-@Riverpod(keepAlive: true)
-Future<AccountData?> getCurrentAccount(Ref ref) async {
-  final selectedAccount = await ref.watch(selectedAccountProvider.future);
-  if (selectedAccount == null) {
-    return null;
-  }
-  return await ref.watch(accountProvider(selectedAccount.id).future);
 }
 
 @freezed
@@ -992,13 +977,13 @@ class TransparentScan extends _$TransparentScan {
 
   bool get running => state.isNotEmpty;
 
-  Future<void> run(BuildContext context, int gapLimit, {required void Function() onComplete}) async {
+  Future<void> run(BuildContext context, int account, int gapLimit, {required void Function() onComplete}) async {
     try {
       final c = coinContext.coin;
       final sc = await TransparentScanner.newInstance();
       scanner = sc;
       final endHeight = await getCurrentHeight(c: c);
-      final sub = sc.run(endHeight: endHeight, gapLimit: gapLimit, account: ref.read(selectedAccountIdProvider), c: c);
+      final sub = sc.run(endHeight: endHeight, gapLimit: gapLimit, account: account, c: c);
       progressSubscription = sub.listen(
         (a) {
           state = a;
@@ -1033,9 +1018,8 @@ class TransparentScan extends _$TransparentScan {
 @riverpod
 class GetTxDetails extends _$GetTxDetails {
   @override
-  Future<TxAccount> build(int id) async {
+  Future<TxAccount> build(int id, int account) async {
     final c = coinContext.coin;
-    final account = ref.watch(selectedAccountIdProvider);
     return await getTxDetails(idTx: id, account: account, c: c);
   }
 }
@@ -1132,9 +1116,9 @@ sealed class BasicAccountData with _$BasicAccountData {
 }
 
 @riverpod
-Future<BasicAccountData> basicAccountData(Ref ref) async {
+Future<BasicAccountData> basicAccountData(Ref ref, int account) async {
   final allAccounts = await ref.watch(getAccountsProvider.future);
-  final currentAccount = await ref.watch(getCurrentAccountProvider.future);
+  final currentAccount = await ref.watch(accountProvider(account).future);
 
   return BasicAccountData(
     allAccounts: allAccounts,
@@ -1153,8 +1137,8 @@ sealed class AccountPageData with _$AccountPageData {
 }
 
 @riverpod
-Future<AccountPageData> accountPageData(Ref ref) async {
-  final basicData = await ref.watch(basicAccountDataProvider.future);
+Future<AccountPageData> accountPageData(Ref ref, int account) async {
+  final basicData = await ref.watch(basicAccountDataProvider(account).future);
   final accountId = basicData.currentAccount?.account.id;
   final syncState = accountId != null ? await ref.watch(syncStateAccountProvider(accountId).future) : null;
 
@@ -1178,8 +1162,8 @@ sealed class FullAccountPageData with _$FullAccountPageData {
 }
 
 @riverpod
-Future<FullAccountPageData> fullAccountPageData(Ref ref) async {
-  final accountData = await ref.watch(accountPageDataProvider.future);
+Future<FullAccountPageData> fullAccountPageData(Ref ref, int account) async {
+  final accountData = await ref.watch(accountPageDataProvider(account).future);
   final price = ref.watch(priceProvider);
   final mempool = ref.watch(mempoolProvider);
 
@@ -1368,11 +1352,13 @@ sealed class VotingDriveJobState with _$VotingDriveJobState {
 @Riverpod(keepAlive: true)
 class VotingDriveJob extends _$VotingDriveJob {
   String _roundId = "";
+  int _account = 0;
   Timer? _poll;
 
   @override
-  VotingDriveJobState build(String roundId) {
+  VotingDriveJobState build(String roundId, int account) {
     _roundId = roundId;
+    _account = account;
     ref.onDispose(_stopPolling);
     // Runs are process-local in Rust; a page reopened mid-run adopts the
     // live registry entry instead of showing a stale idle ballot.
@@ -1392,7 +1378,7 @@ class VotingDriveJob extends _$VotingDriveJob {
         roundId: _roundId,
         lightwalletdUrl: lightwalletdUrl,
         roundName: roundName,
-        account: ref.read(selectedAccountIdProvider),
+        account: _account,
         c: coinContext.coin,
       );
       state = state.copyWith(stage: "ready", eligibility: eligibility);
@@ -1416,7 +1402,7 @@ class VotingDriveJob extends _$VotingDriveJob {
         roundId: _roundId,
         lightwalletdUrl: lightwalletdUrl,
         roundName: roundName,
-        account: ref.read(selectedAccountIdProvider),
+        account: _account,
         c: coinContext.coin,
       );
     } on Exception catch (e) {
@@ -1434,7 +1420,7 @@ class VotingDriveJob extends _$VotingDriveJob {
   /// stopped.
   Future<void> cancel() async {
     try {
-      await votingDriveCancel(roundId: _roundId, account: ref.read(selectedAccountIdProvider), c: coinContext.coin);
+      await votingDriveCancel(roundId: _roundId, account: _account, c: coinContext.coin);
     } on Exception catch (e) {
       state = state.copyWith(error: e.toString());
     }
@@ -1442,7 +1428,7 @@ class VotingDriveJob extends _$VotingDriveJob {
 
   Future<void> _adoptLiveRun() async {
     try {
-      final status = await votingDriveStatus(roundId: _roundId, account: ref.read(selectedAccountIdProvider), c: coinContext.coin);
+      final status = await votingDriveStatus(roundId: _roundId, account: _account, c: coinContext.coin);
       if (status.running && state.stage != "driving") {
         state = state.copyWith(stage: "driving", status: status);
         _votingDriveRunningRounds.add(_roundId);
@@ -1467,7 +1453,7 @@ class VotingDriveJob extends _$VotingDriveJob {
 
   Future<void> _pollOnce() async {
     try {
-      final status = await votingDriveStatus(roundId: _roundId, account: ref.read(selectedAccountIdProvider), c: coinContext.coin);
+      final status = await votingDriveStatus(roundId: _roundId, account: _account, c: coinContext.coin);
       state = state.copyWith(status: status);
       if (!status.running) {
         _stopPolling();
@@ -1515,6 +1501,8 @@ class VotingDriveStopAll extends _$VotingDriveStopAll {
 
   Future<void> run() async {
     try {
+      // Wallet-level cleanup with no page behind it: the wallet id comes
+      // from the last opened account.
       final cancelled = await votingDriveCancelAll(account: ref.read(selectedAccountIdProvider), c: coinContext.coin);
       if (cancelled > BigInt.zero) {
         logger.i("[Voting] stopped $cancelled driver run(s) for this wallet");

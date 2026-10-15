@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:zkool/store.dart' show coinContext, selectedAccountIdProvider, votingDriveJobProvider, votingQuiescenceLabel;
+import 'package:zkool/router.dart';
+import 'package:zkool/store.dart' show coinContext, votingDriveJobProvider, votingQuiescenceLabel;
 import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/widgets/loading_steps.dart';
 
 class VotingPage extends ConsumerStatefulWidget {
-  const VotingPage({super.key});
+  final int account;
+  const VotingPage({super.key, required this.account});
 
   @override
   ConsumerState<VotingPage> createState() => _VotingPageState();
@@ -28,7 +30,7 @@ class _VotingPageState extends ConsumerState<VotingPage> {
     final generation = ++_loadGeneration;
     try {
       final c = coinContext.coin;
-      final rounds = await votingRoundList(account: ref.read(selectedAccountIdProvider), c: c);
+      final rounds = await votingRoundList(account: widget.account, c: c);
       return rounds;
     } finally {
       if (mounted && generation == _loadGeneration) {
@@ -96,8 +98,9 @@ class _VotingPageState extends ConsumerState<VotingPage> {
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (context, index) => _VotingRoundTile(
               round: rounds[index],
+              account: widget.account,
               onPressed: () => context.push(
-                '/voting/round',
+                accountRoute('/voting/round', widget.account),
                 extra: rounds[index],
               ),
             ),
@@ -110,9 +113,10 @@ class _VotingPageState extends ConsumerState<VotingPage> {
 
 class _VotingRoundTile extends ConsumerWidget {
   final VotingRoundListItem round;
+  final int account;
   final VoidCallback onPressed;
 
-  const _VotingRoundTile({required this.round, required this.onPressed});
+  const _VotingRoundTile({required this.round, required this.account, required this.onPressed});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -122,7 +126,7 @@ class _VotingRoundTile extends ConsumerWidget {
     ];
     // Submission truth comes from the drive registry, not the round list:
     // a live run (or its last outcome) overrides the tile's default action.
-    final job = ref.watch(votingDriveJobProvider(round.roundId));
+    final job = ref.watch(votingDriveJobProvider(round.roundId, account));
     final driving = job.stage == "driving";
     final running = driving && (job.status?.running ?? true);
 

@@ -13,9 +13,11 @@ import 'package:zkool/store.dart';
 import 'package:zkool/transfer.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
+import 'package:zkool/router.dart';
 
 class MigratePage extends ConsumerStatefulWidget {
-  const MigratePage({super.key});
+  final int account;
+  const MigratePage({super.key, required this.account});
 
   @override
   ConsumerState<MigratePage> createState() => _MigratePageState();
@@ -53,7 +55,7 @@ class _MigratePageState extends ConsumerState<MigratePage> with WidgetsBindingOb
   }) {
     final migration = NoteMigration();
     final source = migration.run(
-      account: ref.read(selectedAccountIdProvider),
+      account: widget.account,
       c: coinContext.coin,
       meanDelayMs: meanDelayMs,
     );
@@ -221,10 +223,10 @@ class _MigratePageState extends ConsumerState<MigratePage> with WidgetsBindingOb
 
     try {
       final c = coinContext.coin;
-      final addresses = await getAddresses(uaPools: 4, account: ref.read(selectedAccountIdProvider), c: c);
+      final addresses = await getAddresses(uaPools: 4, account: widget.account, c: c);
       if (!mounted) return;
       final pczt = await transferAllBetweenPools(
-        account: ref.read(selectedAccountIdProvider),
+        account: widget.account,
         c: c,
         sourcePools: 4,
         destinationAddress: addresses.oaddr ?? "",
@@ -232,7 +234,7 @@ class _MigratePageState extends ConsumerState<MigratePage> with WidgetsBindingOb
       );
       if (!mounted) return;
 
-      await GoRouter.of(context).push("/tx", extra: pczt);
+      await GoRouter.of(context).push(accountRoute("/tx", widget.account), extra: pczt);
     } on AnyhowException catch (e) {
       if (!mounted) return;
       await showException(context, e.message);
