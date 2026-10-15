@@ -3,8 +3,6 @@ use dataloader::cached::Loader;
 use sqlx::SqlitePool;
 use std::collections::HashMap;
 use std::sync::Arc;
-use zcash_keys::address::UnifiedAddress;
-use zcash_keys::encoding::AddressCodec;
 use zcash_keys::keys::UnifiedFullViewingKey;
 
 use crate::api::coin::{Coin, Network};
@@ -21,7 +19,6 @@ use crate::pay::{
     TxPlan,
 };
 
-use crate::keys::{SaplingDiversifiedAddress, ScopeExt};
 use bigdecimal::num_bigint::BigInt;
 use bigdecimal::{BigDecimal, FromPrimitive, ToPrimitive};
 use chrono::{DateTime, NaiveDateTime};
@@ -510,52 +507,17 @@ fn resolve_note(
     ufvk: &UnifiedFullViewingKey,
     n: crate::api::account::TxNote,
 ) -> Result<Note, String> {
-    let (address, diversifier_index) = match n.pool {
-        1 => {
-            let div = n
-                .diversifier
-                .as_ref()
-                .ok_or_else(|| "Sapling note missing diversifier".to_string())?
-                .clone();
-            let d =
-                sapling_crypto::keys::Diversifier(div.clone().try_into().map_err(|_| {
-                    format!("Sapling diversifier wrong length: {} bytes", div.len())
-                })?);
-            let sfvk = ufvk
-                .sapling()
-                .ok_or_else(|| "UFVK missing sapling key".to_string())?;
-            let address = sfvk
-                .diversified_address_for_scope(n.scope, d)
-                .ok_or_else(|| "Sapling diversified address derivation failed".to_string())?;
-            let diversifier_index: Option<u64> = sfvk
-                .decrypt_diversifier(&address)
-                .and_then(|d| d.0.try_into().ok());
-            (Some(address.encode(&network)), diversifier_index)
+    let resolved = match (&n.diversifier, n.pool) {
+        (None, 0) => None,
+        (None, _) => return Err("shielded note missing diversifier".to_string()),
+        (Some(diversifier), pool) => {
+            crate::keys::note_address(network, ufvk, pool, n.scope, diversifier)
+                .map_err(|e| e.to_string())?
         }
-        2 | 3 => {
-            let div = n
-                .diversifier
-                .as_ref()
-                .ok_or_else(|| "Orchard/Ironwood note missing diversifier".to_string())?
-                .clone();
-            let d =
-                orchard::keys::Diversifier::from_bytes(div.clone().try_into().map_err(|_| {
-                    format!("Orchard diversifier wrong length: {} bytes", div.len())
-                })?);
-            let ofvk = ufvk
-                .orchard()
-                .ok_or_else(|| "UFVK missing orchard key".to_string())?;
-            let scope = n.scope.orchard_scope();
-            let ivk = ofvk.to_ivk(scope);
-            let address = ofvk.address(d, scope);
-            let diversifier_index: Option<u64> = ivk
-                .diversifier_index(&address)
-                .and_then(|d| d.try_into().ok());
-            let ua = UnifiedAddress::from_receivers(Some(address), None, None, None, None)
-                .ok_or_else(|| "UnifiedAddress::from_receivers returned None".to_string())?;
-            (Some(ua.encode(&network)), diversifier_index)
-        }
-        _ => (None, None),
+    };
+    let (address, diversifier_index) = match resolved {
+        Some(r) => (Some(r.address), r.diversifier_index),
+        None => (None, None),
     };
 
     let asset_base = if (n.pool == 2 || n.pool == 3) && n.id_asset.is_some() {

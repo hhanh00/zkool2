@@ -192,6 +192,169 @@ pub fn orchard_ivk_and_address(
     (ofvk.to_ivk(s), ofvk.address(d, s))
 }
 
+// ── Note address recovery ────────────────────────────────────────────────
+
+/// The address a shielded note was received on, rebuilt from the note's raw
+/// diversifier, and that address's diversifier index when the viewing key
+/// can recover it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct NoteAddress {
+    pub address: String,
+    pub diversifier_index: Option<u64>,
+}
+
+/// Rebuilds the receiving address of a note from its pool, scope and raw
+/// diversifier. Pool 1 is Sapling; pools 2 and 3 (Orchard, Ironwood) share
+/// the Orchard key. Transparent notes carry no diversifier and yield `None`.
+pub fn note_address(
+    network: &crate::api::coin::Network,
+    ufvk: &zcash_keys::keys::UnifiedFullViewingKey,
+    pool: u8,
+    scope: u8,
+    diversifier: &[u8],
+) -> anyhow::Result<Option<NoteAddress>> {
+    use zcash_keys::encoding::AddressCodec as _;
+
+    let diversifier: [u8; 11] = diversifier.try_into().map_err(|_| {
+        anyhow::anyhow!("diversifier wrong length: {} bytes", diversifier.len())
+    })?;
+    match pool {
+        1 => {
+            let sfvk = ufvk
+                .sapling()
+                .ok_or_else(|| anyhow::anyhow!("UFVK missing sapling key"))?;
+            let address = sfvk
+                .diversified_address_for_scope(scope, sapling_crypto::keys::Diversifier(diversifier))
+                .ok_or_else(|| anyhow::anyhow!("Sapling diversified address derivation failed"))?;
+            let diversifier_index = sfvk
+                .decrypt_diversifier(&address)
+                .and_then(|d| d.0.try_into().ok());
+            Ok(Some(NoteAddress {
+                address: address.encode(network),
+                diversifier_index,
+            }))
+        }
+        2 | 3 => {
+            let ofvk = ufvk
+                .orchard()
+                .ok_or_else(|| anyhow::anyhow!("UFVK missing orchard key"))?;
+            let (ivk, address) =
+                orchard_ivk_and_address(ofvk, scope, orchard::keys::Diversifier::from_bytes(diversifier));
+            let diversifier_index = ivk
+                .diversifier_index(&address)
+                .and_then(|d| d.try_into().ok());
+            let ua = zcash_keys::address::UnifiedAddress::from_receivers(
+                Some(address),
+                None,
+                None,
+                None,
+                None,
+            )
+            .ok_or_else(|| anyhow::anyhow!("UnifiedAddress::from_receivers returned None"))?;
+            Ok(Some(NoteAddress {
+                address: ua.encode(network),
+                diversifier_index,
+            }))
+        }
+        _ => Ok(None),
+    }
+}
+
+#[cfg(test)]
+mod note_address_tests {
+    use super::{note_address, NoteAddress};
+    use crate::api::coin::Network;
+    use zcash_keys::{
+        address::UnifiedAddress,
+        encoding::AddressCodec as _,
+        keys::{UnifiedAddressRequest, UnifiedFullViewingKey, UnifiedSpendingKey},
+    };
+
+    fn ufvk() -> UnifiedFullViewingKey {
+        UnifiedSpendingKey::from_seed(&Network::Main, &[7u8; 32], zip32::AccountId::ZERO)
+            .expect("usk")
+            .to_unified_full_viewing_key()
+    }
+
+    #[test]
+    fn transparent_notes_have_no_address() {
+        assert_eq!(note_address(&Network::Main, &ufvk(), 0, 0, &[0u8; 11]).unwrap(), None);
+    }
+
+    #[test]
+    fn rejects_a_diversifier_of_the_wrong_length() {
+        assert!(note_address(&Network::Main, &ufvk(), 2, 0, &[0u8; 10]).is_err());
+    }
+
+    #[test]
+    fn recovers_the_external_sapling_and_orchard_addresses() {
+        let ufvk = ufvk();
+        let (ua, di) = ufvk
+            .default_address(UnifiedAddressRequest::AllAvailableKeys)
+            .expect("default address");
+        let di = u64::try_from(di).expect("small index");
+
+        let sapling = ua.sapling().expect("sapling receiver");
+        let got = note_address(&Network::Main, &ufvk, 1, 0, &sapling.diversifier().0)
+            .unwrap()
+            .expect("sapling address");
+        assert_eq!(
+            got,
+            NoteAddress {
+                address: sapling.encode(&Network::Main),
+                diversifier_index: Some(di),
+            }
+        );
+
+        let orchard = *ua.orchard().expect("orchard receiver");
+        let expected = UnifiedAddress::from_receivers(Some(orchard), None, None, None, None)
+            .unwrap()
+            .encode(&Network::Main);
+        for pool in [2u8, 3u8] {
+            let got = note_address(&Network::Main, &ufvk, pool, 0, orchard.diversifier().as_array())
+                .unwrap()
+                .expect("orchard address");
+            assert_eq!(
+                got,
+                NoteAddress {
+                    address: expected.clone(),
+                    diversifier_index: Some(di),
+                }
+            );
+        }
+    }
+
+    #[test]
+    fn recovers_internal_addresses_by_scope() {
+        let ufvk = ufvk();
+
+        let ofvk = ufvk.orchard().expect("orchard key");
+        let internal = ofvk.address_at(5u64, orchard::keys::Scope::Internal);
+        let got = note_address(&Network::Main, &ufvk, 2, 1, internal.diversifier().as_array())
+            .unwrap()
+            .expect("orchard change address");
+        assert_eq!(got.diversifier_index, Some(5));
+        assert_eq!(
+            got.address,
+            UnifiedAddress::from_receivers(Some(internal), None, None, None, None)
+                .unwrap()
+                .encode(&Network::Main)
+        );
+        // The same diversifier under the external scope is a different address.
+        let external = note_address(&Network::Main, &ufvk, 2, 0, internal.diversifier().as_array())
+            .unwrap()
+            .unwrap();
+        assert_ne!(external.address, got.address);
+
+        let sfvk = ufvk.sapling().expect("sapling key");
+        let (_, change) = sfvk.change_address();
+        let got = note_address(&Network::Main, &ufvk, 1, 1, &change.diversifier().0)
+            .unwrap()
+            .expect("sapling change address");
+        assert_eq!(got.address, change.encode(&Network::Main));
+    }
+}
+
 // ── Sapling FVK selection ────────────────────────────────────────────────
 
 /// Return the external or internal [`sapling_crypto::keys::FullViewingKey`]
