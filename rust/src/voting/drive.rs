@@ -464,9 +464,10 @@ pub fn start_round_drive(
         let report = zcash_voting::RoundDriver::new(&executor)
             .run(&host, &control, &recorder)
             .await;
-        // Share confirmation is not driven here. The round page owns it with
-        // repeated `track_pending_shares` passes while it is open, so there is
-        // exactly one share mechanism and it is page-scoped.
+        // Share confirmation is not driven here. Whoever watches the round —
+        // the round page while it is open, or the GraphQL submission task —
+        // runs `track_shares_pass` repeatedly, so there is exactly one share
+        // mechanism and no resident worker.
         let mut state = state.lock().unwrap_or_else(|error| error.into_inner());
         state.running = false;
         state.quiescence = Some(quiescence_label(&report.quiescence));

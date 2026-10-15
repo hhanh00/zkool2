@@ -401,10 +401,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TxSpend> dco_decode_list_tx_spend(dynamic raw);
 
   @protected
-  List<VotingPendingShareRound> dco_decode_list_voting_pending_share_round(
-      dynamic raw);
-
-  @protected
   List<VotingProposalListItem> dco_decode_list_voting_proposal_list_item(
       dynamic raw);
 
@@ -635,9 +631,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VotingEligibilityPreview dco_decode_voting_eligibility_preview(dynamic raw);
-
-  @protected
-  VotingPendingShareRound dco_decode_voting_pending_share_round(dynamic raw);
 
   @protected
   VotingProposalListItem dco_decode_voting_proposal_list_item(dynamic raw);
@@ -1002,10 +995,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   List<TxSpend> sse_decode_list_tx_spend(SseDeserializer deserializer);
 
   @protected
-  List<VotingPendingShareRound> sse_decode_list_voting_pending_share_round(
-      SseDeserializer deserializer);
-
-  @protected
   List<VotingProposalListItem> sse_decode_list_voting_proposal_list_item(
       SseDeserializer deserializer);
 
@@ -1246,10 +1235,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VotingEligibilityPreview sse_decode_voting_eligibility_preview(
-      SseDeserializer deserializer);
-
-  @protected
-  VotingPendingShareRound sse_decode_voting_pending_share_round(
       SseDeserializer deserializer);
 
   @protected
@@ -1645,10 +1630,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_list_tx_spend(List<TxSpend> self, SseSerializer serializer);
 
   @protected
-  void sse_encode_list_voting_pending_share_round(
-      List<VotingPendingShareRound> self, SseSerializer serializer);
-
-  @protected
   void sse_encode_list_voting_proposal_list_item(
       List<VotingProposalListItem> self, SseSerializer serializer);
 
@@ -1901,10 +1882,6 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_voting_eligibility_preview(
       VotingEligibilityPreview self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_voting_pending_share_round(
-      VotingPendingShareRound self, SseSerializer serializer);
 
   @protected
   void sse_encode_voting_proposal_list_item(
