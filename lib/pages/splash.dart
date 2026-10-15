@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
@@ -8,6 +9,7 @@ import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
+import 'package:zkool/router.dart';
 
 class SplashPage extends ConsumerStatefulWidget {
   const SplashPage({super.key});
@@ -18,6 +20,7 @@ class SplashPage extends ConsumerStatefulWidget {
 
 class SplashPageState extends ConsumerState<SplashPage> {
   bool? openDatabaseSuccess;
+  int? _restoredAccount;
 
   @override
   void initState() {
@@ -34,9 +37,9 @@ class SplashPageState extends ConsumerState<SplashPage> {
         if (!openDatabaseSuccess!)
           GoRouter.of(context).go('/database_manager');
         else {
-          final account = await ref.read(selectedAccountProvider.future);
+          final account = _restoredAccount;
           if (account != null) {
-            GoRouter.of(context).go("/");
+            GoRouter.of(context).go(accountRoute("/", account));
           } else {
             GoRouter.of(context).go("/accounts");
           }
@@ -89,8 +92,10 @@ class SplashPageState extends ConsumerState<SplashPage> {
     final savedIdStr = await getProp(key: "selected_account", c: c);
     final savedId = int.tryParse(savedIdStr ?? "") ?? 0;
     ref.read(selectedAccountIdProvider.notifier).set(savedId);
-    ref.invalidate(selectedAccountProvider);
-    final account = await ref.read(selectedAccountProvider.future);
+    ref.invalidate(getAccountsProvider);
+    final accounts = await ref.read(getAccountsProvider.future);
+    final account = accounts.firstWhereOrNull((a) => a.id == savedId);
+    _restoredAccount = account?.id;
 
     final settings = await ref.read(appSettingsProvider.future);
     if (settings.vault && !settings.offline) {

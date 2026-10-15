@@ -13,7 +13,8 @@ import 'package:zkool/widgets/plugin_memo_view.dart';
 
 class TxViewPage extends ConsumerStatefulWidget {
   final int idTx;
-  const TxViewPage(this.idTx, {super.key});
+  final int account;
+  const TxViewPage(this.idTx, {super.key, required this.account});
 
   @override
   ConsumerState<TxViewPage> createState() => TxViewPageState();
@@ -35,8 +36,7 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
     super.initState();
     _memoFocusNode.addListener(_onMemoFocusChange);
     Future(() async {
-      final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
-      final account = await ref.read(accountProvider(selectedAccount.id).future);
+      final account = await ref.read(accountProvider(widget.account).future);
       int? idx = account.transactions.indexWhere((tx) => tx.id == widget.idTx);
       if (idx < 0) throw Error();
       final categoryList = await ref.read(getCategoriesProvider.future);
@@ -76,7 +76,7 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
   Future<void> _commitMemoEditing() async {
     _editingMemo = false;
     if (!mounted) return;
-    final txd = ref.read(getTxDetailsProvider(widget.idTx)).value;
+    final txd = ref.read(getTxDetailsProvider(widget.idTx, widget.account)).value;
     if (txd == null) return;
 
     final newText = _memoController.text.trim();
@@ -89,11 +89,11 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
     if (newText == oldText) return;
 
     if (newText.isEmpty) {
-      await setUserMemo(idTx: txd.id, memo: null, account: ref.read(selectedAccountIdProvider), c: c);
+      await setUserMemo(idTx: txd.id, memo: null, account: widget.account, c: c);
     } else {
-      await setUserMemo(idTx: txd.id, memo: newText, account: ref.read(selectedAccountIdProvider), c: c);
+      await setUserMemo(idTx: txd.id, memo: newText, account: widget.account, c: c);
     }
-    ref.invalidate(getTxDetailsProvider(widget.idTx));
+    ref.invalidate(getTxDetailsProvider(widget.idTx, widget.account));
     if (account != null) {
       ref.invalidate(accountProvider(account!.account.id));
     }
@@ -107,7 +107,7 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
     if (pinlock.value ?? false) return PinLock();
 
     final tx = account!.transactions[idx!];
-    final txDetailsAV = ref.watch(getTxDetailsProvider(tx.id));
+    final txDetailsAV = ref.watch(getTxDetailsProvider(tx.id, widget.account));
 
     return Scaffold(
       appBar: AppBar(

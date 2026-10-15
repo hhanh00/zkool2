@@ -10,7 +10,6 @@ import 'package:zkool/store.dart'
     show
         VotingDriveJobState,
         appSettingsProvider,
-        selectedAccountIdProvider,
         coinContext,
         votingDriveJobProvider,
         votingQuiescenceLabel;
@@ -19,7 +18,8 @@ import 'package:zkool/utils.dart' show zatToString;
 class VotingRoundPage extends ConsumerStatefulWidget {
   final VotingRoundListItem round;
 
-  const VotingRoundPage({super.key, required this.round});
+  final int account;
+  const VotingRoundPage({super.key, required this.round, required this.account});
 
   @override
   ConsumerState<VotingRoundPage> createState() => _VotingRoundPageState();
@@ -28,7 +28,6 @@ class VotingRoundPage extends ConsumerStatefulWidget {
 class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
   int _currentStep = 0;
   late final _coin = coinContext.coin;
-  late final _account = ref.read(selectedAccountIdProvider);
   bool _loading = true;
   bool _saving = false;
   String? _loadError;
@@ -64,7 +63,7 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
   /// without a resident background driver.
   Future<void> _refreshShares() async {
     try {
-      final status = await votingDriveStatus(roundId: widget.round.roundId, account: _account, c: _coin);
+      final status = await votingDriveStatus(roundId: widget.round.roundId, account: widget.account, c: _coin);
       if (!mounted) return;
       final pending = status.sharesTotal > status.sharesConfirmed;
       if (!pending) {
@@ -93,7 +92,7 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
         roundId: widget.round.roundId,
         helperUrls: widget.round.helperUrls,
         voteEndTimeSeconds: widget.round.voteEndTime,
-        account: _account,
+        account: widget.account,
         c: _coin,
       );
     } on Exception {
@@ -109,7 +108,7 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
       _loadError = null;
     });
     try {
-      final selections = await votingLoadSelections(roundId: widget.round.roundId, account: _account, c: _coin);
+      final selections = await votingLoadSelections(roundId: widget.round.roundId, account: widget.account, c: _coin);
       if (!mounted) return;
       setState(() {
         _selections.clear();
@@ -148,14 +147,14 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
     setState(() => _saving = true);
     try {
       if (decision == null) {
-        await votingClearSelection(roundId: widget.round.roundId, proposalId: proposal.proposalId, account: _account, c: _coin);
+        await votingClearSelection(roundId: widget.round.roundId, proposalId: proposal.proposalId, account: widget.account, c: _coin);
       } else {
         await votingSaveSelection(
           roundId: widget.round.roundId,
           proposalId: proposal.proposalId,
           decision: decision,
           numOptions: proposal.options.length,
-          account: _account,
+          account: widget.account,
           c: _coin,
         );
       }
@@ -203,10 +202,10 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
       }
       return;
     }
-    final job = ref.read(votingDriveJobProvider(widget.round.roundId).notifier);
+    final job = ref.read(votingDriveJobProvider(widget.round.roundId, widget.account).notifier);
     // A fresh prepare already ran for this ballot: reuse its preview. The
     // eligible note set is snapshot-determined, so it cannot have changed.
-    final cached = ref.read(votingDriveJobProvider(widget.round.roundId));
+    final cached = ref.read(votingDriveJobProvider(widget.round.roundId, widget.account));
     final prepared = (cached.stage == "ready" && cached.eligibility != null) ||
         await job.prepare(
           lightwalletdUrl: settings.lwd,
@@ -214,7 +213,7 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
         );
     if (!prepared) {
       if (mounted) {
-        final error = ref.read(votingDriveJobProvider(widget.round.roundId)).error;
+        final error = ref.read(votingDriveJobProvider(widget.round.roundId, widget.account)).error;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: SelectableText('Could not prepare the round: ${error ?? "unknown error"}'),
@@ -226,14 +225,14 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
     }
     if (!mounted) return;
     final confirmed = await _confirmSubmission(
-      ref.read(votingDriveJobProvider(widget.round.roundId)).eligibility,
+      ref.read(votingDriveJobProvider(widget.round.roundId, widget.account)).eligibility,
     );
     if (!confirmed || !mounted) return;
     await job.start(lightwalletdUrl: settings.lwd, roundName: widget.round.title);
     if (!mounted) return;
-    final stage = ref.read(votingDriveJobProvider(widget.round.roundId)).stage;
+    final stage = ref.read(votingDriveJobProvider(widget.round.roundId, widget.account)).stage;
     if (stage == "error") {
-      final error = ref.read(votingDriveJobProvider(widget.round.roundId)).error;
+      final error = ref.read(votingDriveJobProvider(widget.round.roundId, widget.account)).error;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: SelectableText('Could not start the submission: ${error ?? "unknown error"}'),
@@ -306,7 +305,7 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
 
   @override
   Widget build(BuildContext context) {
-    final job = ref.watch(votingDriveJobProvider(widget.round.roundId));
+    final job = ref.watch(votingDriveJobProvider(widget.round.roundId, widget.account));
     final status = _effectiveStatus(job);
     final showStatus = job.stage == "starting" ||
         job.stage == "driving" ||
@@ -320,11 +319,11 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
         status: status,
         onDone: () => context.pop(),
         onCancel: () =>
-            ref.read(votingDriveJobProvider(widget.round.roundId).notifier).cancel(),
+            ref.read(votingDriveJobProvider(widget.round.roundId, widget.account).notifier).cancel(),
         onResume: () async {
           final lwd = await _lwdUrl();
           await ref
-              .read(votingDriveJobProvider(widget.round.roundId).notifier)
+              .read(votingDriveJobProvider(widget.round.roundId, widget.account).notifier)
               .start(lightwalletdUrl: lwd, roundName: widget.round.title);
         },
       );

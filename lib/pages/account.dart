@@ -33,7 +33,8 @@ import 'package:zkool/widgets/theme.dart';
 import 'package:zkool/widgets/transaction_table.dart';
 
 class AccountViewPage extends ConsumerStatefulWidget {
-  const AccountViewPage({super.key});
+  final int account;
+  const AccountViewPage({super.key, required this.account});
 
   @override
   ConsumerState<AccountViewPage> createState() => AccountViewPageState();
@@ -62,6 +63,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
   @override
   void initState() {
     super.initState();
+    _rememberAccount();
     _focusNode.addListener(_onFocusChange);
     _txSearchController.addListener(_onTxSearchChanged);
     isZsaAvailable(c: c).then((v) {
@@ -119,11 +121,22 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     setState(() {});
   }
 
+  @override
+  void didUpdateWidget(AccountViewPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.account != widget.account) _rememberAccount();
+  }
+
+  /// Record the account as the one to reopen at the next launch.
+  void _rememberAccount() {
+    unawaited(ref.read(selectedAccountIdProvider.notifier).set(widget.account));
+  }
+
   Future<void> _commitEditing() async {
     final index = _editingIndex;
     if (index == null) return;
 
-    final fullData = ref.read(fullAccountPageDataProvider).value;
+    final fullData = ref.read(fullAccountPageDataProvider(widget.account)).value;
     final account = fullData?.currentAccount;
     if (account == null) return;
 
@@ -156,21 +169,23 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     final pinlock = ref.watch(lifecycleProvider);
     if (pinlock.value ?? false) return PinLock();
 
-    final selectedAccountAV = ref.watch(selectedAccountProvider);
+    final accountsAV = ref.watch(getAccountsProvider);
     ref.watch(appSettingsProvider); // rebuild when settings change (e.g. list/table toggle)
-    return selectedAccountAV.when(
+    return accountsAV.when(
       skipLoadingOnReload: true,
       loading: () => blank(context),
       error: (error, stack) => showError(error),
-      data: (selectedAccount) {
-        if (selectedAccount == null) {
+      data: (accounts) {
+        if (!accounts.any((a) => a.id == widget.account)) {
+          // The account is gone (deleted): fall back to the account list.
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (GoRouter.of(context).state.matchedLocation == '/accounts') return;
             GoRouter.of(context).go("/accounts");
           });
+          return blank(context);
         }
 
-        final fullDataAV = ref.watch(fullAccountPageDataProvider);
+        final fullDataAV = ref.watch(fullAccountPageDataProvider(widget.account));
 
         return fullDataAV.when(
           skipLoadingOnReload: true,
@@ -230,7 +245,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                 case "edit_account":
                   await GoRouter.of(context).push("/account/edit", extra: [account.account]);
                 case "swap":
-                  await GoRouter.of(context).push("/swaps");
+                  await GoRouter.of(context).push(accountRoute("/swaps", widget.account));
                 case "market_price":
                   await GoRouter.of(context).push("/market");
                 case "update_fx":
@@ -238,11 +253,11 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                 case "toggle_tx_view":
                   await ref.read(appSettingsProvider.notifier).setTransactionViewMode(!(ref.read(appSettingsProvider).value?.transactionTableMode ?? false));
                 case "charts":
-                  await GoRouter.of(context).push("/chart");
+                  await GoRouter.of(context).push(accountRoute("/chart", widget.account));
                 case "migration":
-                  await GoRouter.of(context).push("/migrate");
+                  await GoRouter.of(context).push(accountRoute("/migrate", widget.account));
                 case "voting":
-                  await GoRouter.of(context).push("/voting");
+                  await GoRouter.of(context).push(accountRoute("/voting", widget.account));
                 case "settings":
                   await GoRouter.of(context).push("/settings");
                 default:
@@ -414,12 +429,12 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                           child: TransactionTable(
                             transactions: _filterTx(account.transactions),
                             currency: currency,
-                            onTap: (id) => gotoTransaction(context, id),
+                            onTap: (id) => gotoTransaction(context, widget.account, id),
                             onMemoChanged: (txId, newMemo) async {
                               await setUserMemo(
                                 idTx: txId,
                                 memo: newMemo,
-                                account: ref.read(selectedAccountIdProvider),
+                                account: widget.account,
                                 c: c,
                               );
                               ref.invalidate(accountProvider);
@@ -432,17 +447,17 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                             height: MediaQuery.of(context).size.height * 0.55,
                             child: showTxHistory(
                               context,
+                              widget.account,
                               _filterTx(account.transactions),
                             ),
                           ),
                         ),
                     ],
                   ),
-                  showMemos(context, account.memos, ref.read(selectedAccountIdProvider), () {
-                    final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
-                    ref.invalidate(accountProvider(selectedAccount.id));
+                  showMemos(context, account.memos, widget.account, () {
+                    ref.invalidate(accountProvider(widget.account));
                   }),
-                  showNotes(ref, account.notes, _showDustNotes, () => setState(() => _showDustNotes = !_showDustNotes), _groupByPool,
+                  showNotes(ref, widget.account, account.notes, _showDustNotes, () => setState(() => _showDustNotes = !_showDustNotes), _groupByPool,
                       () => setState(() => _groupByPool = !_groupByPool)),
                   _showZsaHoldings(context, account.zsas),
                 ],
@@ -462,11 +477,11 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
   }
 
   void onReceive() async {
-    await GoRouter.of(context).push("/receive");
+    await GoRouter.of(context).push(accountRoute("/receive", widget.account));
   }
 
   void onSend() async {
-    await GoRouter.of(context).push("/send");
+    await GoRouter.of(context).push(accountRoute("/send", widget.account));
   }
 
   void onUpdateAllTxPrices() async {
@@ -482,7 +497,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
         builder: (_) => const Center(child: CircularProgressIndicator()),
       ));
       try {
-        final n = await fillMissingTxPrices(api: settings.coingecko, currency: settings.currency, account: ref.read(selectedAccountIdProvider), c: c);
+        final n = await fillMissingTxPrices(api: settings.coingecko, currency: settings.currency, account: widget.account, c: c);
         if (mounted) {
           GoRouter.of(context).pop();
           if (n > 0) {
@@ -501,7 +516,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
   }
 
   void onExport(int index) async {
-    final data = await getExportedData(type: index, account: ref.read(selectedAccountIdProvider), c: c);
+    final data = await getExportedData(type: index, account: widget.account, c: c);
     final filename = await saveFile(data: utf8.encode(data));
     if (!mounted) return;
     if (filename != null) await showMessage(context, "$filename Saved");
@@ -517,7 +532,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
             children: [
               IconButton(
                 tooltip: _zsaAvailable ? "Issue new ZSA token" : "ZSA not available on this network",
-                onPressed: _zsaAvailable ? () => GoRouter.of(context).push("/zsa/issue") : null,
+                onPressed: _zsaAvailable ? () => GoRouter.of(context).push(accountRoute("/zsa/issue", widget.account)) : null,
                 icon: const Icon(Icons.add),
               ),
             ],
@@ -981,7 +996,7 @@ class BalanceWidget extends StatelessWidget {
   }
 }
 
-Widget showTxHistory(BuildContext context, List<Tx> transactions) {
+Widget showTxHistory(BuildContext context, int account, List<Tx> transactions) {
   return ListView.builder(
     itemExtent: 65,
     itemCount: transactions.length,
@@ -995,7 +1010,7 @@ Widget showTxHistory(BuildContext context, List<Tx> transactions) {
         amount: BigInt.from(tx.value),
         date: tx.time,
         id: tx.id,
-        onTap: () => gotoTransaction(context, tx.id),
+        onTap: () => gotoTransaction(context, account, tx.id),
         zsaValue: tx.zsaValue != 0 ? BigInt.from(tx.zsaValue) : null,
         zsaLabel: tx.zsaValue != 0 ? tx.assetDisplay : null,
         contactName: tx.contactName,
@@ -1008,8 +1023,8 @@ Widget showTxHistory(BuildContext context, List<Tx> transactions) {
   );
 }
 
-void gotoTransaction(BuildContext context, int idTx) async {
-  await GoRouter.of(context).push("/tx_view", extra: idTx);
+void gotoTransaction(BuildContext context, int account, int idTx) async {
+  await GoRouter.of(context).push(accountRoute("/tx_view", account), extra: idTx);
 }
 
 Uint8List trimTrailingZeros(Uint8List bytes) {
@@ -1036,7 +1051,7 @@ Widget showMemos(BuildContext context, List<Memo> memos, int account, VoidCallba
   );
 }
 
-Widget showNotes(WidgetRef ref, List<TxNote> notes, bool showDust, VoidCallback onToggleDust, bool groupByPool, VoidCallback onToggleGroup) {
+Widget showNotes(WidgetRef ref, int account, List<TxNote> notes, bool showDust, VoidCallback onToggleDust, bool groupByPool, VoidCallback onToggleGroup) {
   final t = Theme.of(navigatorKey.currentContext!);
   final currentHeight = ref.read(currentHeightProvider).value;
   final dustThreshold = BigInt.from(5000);
@@ -1063,9 +1078,9 @@ Widget showNotes(WidgetRef ref, List<TxNote> notes, bool showDust, VoidCallback 
       if (index == 0)
         return OverflowBar(
           children: [
-            IconButton(onPressed: () => onLockRecent(ref, context, currentHeight), tooltip: "Lock recently mined notes", icon: Icon(Icons.table_rows)),
-            IconButton(onPressed: () => onToggleAll(ref, context), tooltip: "Toggle all notes", icon: Icon(Icons.sync_alt)),
-            IconButton(onPressed: () => onUnlockAll(ref, context), tooltip: "Unlock all notes", icon: Icon(Icons.select_all)),
+            IconButton(onPressed: () => onLockRecent(ref, context, account, currentHeight), tooltip: "Lock recently mined notes", icon: Icon(Icons.table_rows)),
+            IconButton(onPressed: () => onToggleAll(ref, context, account), tooltip: "Toggle all notes", icon: Icon(Icons.sync_alt)),
+            IconButton(onPressed: () => onUnlockAll(ref, context, account), tooltip: "Unlock all notes", icon: Icon(Icons.select_all)),
             IconButton(
               onPressed: onToggleDust,
               tooltip: showDust ? "Hide dust notes" : "Show dust notes",
@@ -1100,7 +1115,7 @@ Widget showNotes(WidgetRef ref, List<TxNote> notes, bool showDust, VoidCallback 
                     ),
                   ),
                   IconButton(
-                    onPressed: () => onTogglePoolNotes(ref, context, g.poolNotes),
+                    onPressed: () => onTogglePoolNotes(ref, context, account, g.poolNotes),
                     tooltip: allLocked ? "Unlock all in pool" : "Lock all in pool",
                     icon: Icon(allLocked ? Icons.lock_open : Icons.lock_outline),
                     visualDensity: VisualDensity.compact,
@@ -1116,7 +1131,7 @@ Widget showNotes(WidgetRef ref, List<TxNote> notes, bool showDust, VoidCallback 
             return ListTile(
               key: ValueKey(note.id),
               dense: true,
-              onTap: () => toggleLock(ref, context, note.id, !note.locked),
+              onTap: () => toggleLock(ref, context, account, note.id, !note.locked),
               leading: Text("${note.height}"),
               title: Text(poolToString(note.pool)),
               trailing: note.idAsset != null ? Text("${note.value} ${note.assetDisplay}", softWrap: false) : zatToText(note.value, selectable: false),
@@ -1133,7 +1148,7 @@ Widget showNotes(WidgetRef ref, List<TxNote> notes, bool showDust, VoidCallback 
       final note = filtered[noteIndex];
       return ListTile(
         key: ValueKey(note.id),
-        onTap: () => toggleLock(ref, context, note.id, !note.locked),
+        onTap: () => toggleLock(ref, context, account, note.id, !note.locked),
         leading: Text("${note.height}"),
         title: Text(poolToString(note.pool)),
         trailing: note.idAsset != null ? Text("${note.value} ${note.assetDisplay}", softWrap: false) : zatToText(note.value, selectable: false),
@@ -1143,7 +1158,7 @@ Widget showNotes(WidgetRef ref, List<TxNote> notes, bool showDust, VoidCallback 
   );
 }
 
-void onLockRecent(WidgetRef ref, BuildContext context, int? currentHeight) async {
+void onLockRecent(WidgetRef ref, BuildContext context, int account, int? currentHeight) async {
   if (currentHeight == null) return;
   final c = coinContext.coin;
   final s = await inputText(context, title: "Enter confirmation threshold");
@@ -1152,50 +1167,45 @@ void onLockRecent(WidgetRef ref, BuildContext context, int? currentHeight) async
     await lockRecentNotes(
       height: currentHeight,
       threshold: threshold,
-      account: ref.read(selectedAccountIdProvider),
+      account: account,
       c: c,
     );
-    final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
-    ref.invalidate(accountProvider(selectedAccount.id));
+    ref.invalidate(accountProvider(account));
   }
 }
 
-void onUnlockAll(WidgetRef ref, BuildContext context) async {
+void onUnlockAll(WidgetRef ref, BuildContext context, int account) async {
   final c = coinContext.coin;
   final confirmed = await confirmDialog(context, title: "Unlock All", message: "Do you want to unlock every note?");
   if (confirmed) {
-    await unlockAllNotes(account: ref.read(selectedAccountIdProvider), c: c);
-    final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
-    ref.invalidate(accountProvider(selectedAccount.id));
+    await unlockAllNotes(account: account, c: c);
+    ref.invalidate(accountProvider(account));
   }
 }
 
-void onToggleAll(WidgetRef ref, BuildContext context) async {
+void onToggleAll(WidgetRef ref, BuildContext context, int account) async {
   final c = coinContext.coin;
   final confirmed = await confirmDialog(context, title: "Toggle All", message: "Do you want to toggle the lock state of every note?");
   if (confirmed) {
-    await toggleAllNotes(account: ref.read(selectedAccountIdProvider), c: c);
-    final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
-    ref.invalidate(accountProvider(selectedAccount.id));
+    await toggleAllNotes(account: account, c: c);
+    ref.invalidate(accountProvider(account));
   }
 }
 
-void onTogglePoolNotes(WidgetRef ref, BuildContext context, List<TxNote> poolNotes) async {
+void onTogglePoolNotes(WidgetRef ref, BuildContext context, int account, List<TxNote> poolNotes) async {
   final allLocked = poolNotes.every((n) => n.locked);
   final target = !allLocked;
   final c = coinContext.coin;
   for (final note in poolNotes) {
-    await lockNote(id: note.id, locked: target, account: ref.read(selectedAccountIdProvider), c: c);
+    await lockNote(id: note.id, locked: target, account: account, c: c);
   }
-  final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
-  ref.invalidate(accountProvider(selectedAccount.id));
+  ref.invalidate(accountProvider(account));
 }
 
-void toggleLock(WidgetRef ref, BuildContext context, int id, bool locked) async {
+void toggleLock(WidgetRef ref, BuildContext context, int account, int id, bool locked) async {
   final c = coinContext.coin;
-  await lockNote(id: id, locked: locked, account: ref.read(selectedAccountIdProvider), c: c);
-  final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
-  ref.invalidate(accountProvider(selectedAccount.id));
+  await lockNote(id: id, locked: locked, account: account, c: c);
+  ref.invalidate(accountProvider(account));
 }
 
 class MemoWidget extends StatefulWidget {
@@ -1270,7 +1280,7 @@ class _MemoWidgetState extends State<MemoWidget> {
     final memoText = widget.memo.memo;
 
     return GestureDetector(
-      onTap: () => gotoTransaction(context, widget.memo.idTx),
+      onTap: () => gotoTransaction(context, widget.account, widget.memo.idTx),
       onLongPress: _startEditing,
       child: Padding(
         padding: const EdgeInsetsGeometry.symmetric(vertical: 4),

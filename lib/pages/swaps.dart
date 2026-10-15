@@ -10,19 +10,19 @@ import 'package:zkool/src/rust/near_intents.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
+import 'package:zkool/router.dart';
 
-final savedSwapsProvider = FutureProvider.autoDispose<List<SavedSwap>>((ref) {
-  final account = ref.watch(selectedAccountIdProvider);
+final savedSwapsProvider = FutureProvider.autoDispose.family<List<SavedSwap>, int>((ref, account) {
   return nearIntentsListSwaps(pendingOnly: false, account: account, c: coinContext.coin);
 });
 
 final swapAssetsProvider = FutureProvider.autoDispose<List<SwapAsset>>((ref) {
-  ref.watch(selectedAccountIdProvider);
   return nearIntentsAssets(c: coinContext.coin);
 });
 
 class SwapsPage extends ConsumerStatefulWidget {
-  const SwapsPage({super.key});
+  final int account;
+  const SwapsPage({super.key, required this.account});
 
   @override
   ConsumerState<SwapsPage> createState() => _SwapsPageState();
@@ -36,7 +36,7 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
 
   Future<void> _refresh() async {
     if (_refreshing || _clearing) return;
-    final account = ref.read(selectedAccountIdProvider);
+    final account = widget.account;
     final coin = coinContext.coin;
     setState(() {
       _refreshing = true;
@@ -46,7 +46,7 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
     try {
       final swaps = await nearIntentsListSwaps(pendingOnly: true, account: account, c: coin);
       for (final swap in swaps) {
-        if (!mounted || ref.read(selectedAccountIdProvider) != account) break;
+        if (!mounted) break;
         try {
           await refreshSingleSwap(swap, account, coin);
         } catch (e) {
@@ -60,7 +60,7 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
         ref.invalidate(savedSwapsProvider);
         setState(() {
           _refreshing = false;
-          _refreshError = ref.read(selectedAccountIdProvider) == account ? error : null;
+          _refreshError = error;
         });
       }
     }
@@ -68,7 +68,7 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
 
   Future<void> _clearClosed() async {
     if (_clearing || _refreshing) return;
-    final account = ref.read(selectedAccountIdProvider);
+    final account = widget.account;
     final coin = coinContext.coin;
     final confirmed = await confirmDialog(context,
         title: 'Clear closed swaps?', message: 'Permanently delete completed, refunded, failed, and expired swaps for this account?');
@@ -86,7 +86,7 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
 
   Future<void> _deleteSwap(SavedSwap swap) async {
     if (_clearing || _refreshing) return;
-    final account = ref.read(selectedAccountIdProvider);
+    final account = widget.account;
     final coin = coinContext.coin;
     final confirmed = await confirmDialog(context, title: 'Delete swap?', message: 'Permanently delete this swap from the database? This stops local tracking but does not cancel the swap or recover funds.');
     if (!confirmed || !mounted) return;
@@ -104,7 +104,7 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
   @override
   Widget build(BuildContext context) {
     if (ref.watch(lifecycleProvider).value ?? false) return PinLock();
-    final swaps = ref.watch(savedSwapsProvider);
+    final swaps = ref.watch(savedSwapsProvider(widget.account));
     final assets = ref.watch(swapAssetsProvider).value ?? <SwapAsset>[];
     return Scaffold(
       appBar: AppBar(title: const Text('Swaps'), actions: [
@@ -113,7 +113,7 @@ class _SwapsPageState extends ConsumerState<SwapsPage> {
             onPressed: _clearing || _refreshing || !(swaps.value?.any((swap) => swap.completedAt != null) ?? false) ? null : _clearClosed,
             icon: const Icon(Icons.delete_forever)),
         IconButton(tooltip: 'Refresh swap status', onPressed: _refreshing || _clearing ? null : _refresh, icon: const Icon(Icons.refresh)),
-        IconButton(tooltip: 'New swap', onPressed: () => context.push('/swap'), icon: const Icon(Icons.add)),
+        IconButton(tooltip: 'New swap', onPressed: () => context.push(accountRoute('/swap', widget.account)), icon: const Icon(Icons.add)),
       ]),
       body: Column(children: [
         if (_refreshing || _clearing) const LinearProgressIndicator(),

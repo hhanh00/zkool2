@@ -2,6 +2,7 @@ import 'package:zkool/services/continuation_context.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/chart.dart';
 import 'package:zkool/pages/category.dart';
@@ -47,6 +48,25 @@ final navigatorKey = GlobalKey<NavigatorState>();
 final accountEditPageKey = GlobalKey<AccountEditPageState>();
 final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
 
+/// Location of an account-scoped page. The account travels as a query
+/// parameter so it is visible in the location; `extra` stays for data that
+/// cannot be encoded in a URL.
+String accountRoute(String path, int account) =>
+    Uri(path: path, queryParameters: {'account': account.toString()}).toString();
+
+extension AccountRouteState on GoRouterState {
+  /// The account this route was opened for, when it carries one.
+  int? get accountIdOrNull => int.tryParse(uri.queryParameters['account'] ?? '');
+
+  /// The account this route was opened for. Account-scoped routes are always
+  /// opened through [accountRoute], so a missing parameter is a bug.
+  int get accountId {
+    final id = accountIdOrNull;
+    if (id == null) throw StateError('route $uri has no account');
+    return id;
+  }
+}
+
 GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLocation}) => GoRouter(
       initialLocation: initialLocation ??
           (!disclaimerAccepted
@@ -59,7 +79,9 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
       routes: [
         GoRoute(
           path: '/',
-          builder: (context, state) => AccountViewPage(),
+          builder: (context, state) => AccountViewPage(
+            account: state.accountIdOrNull ?? ProviderScope.containerOf(context).read(selectedAccountIdProvider),
+          ),
         ),
         GoRoute(
           path: '/accounts',
@@ -80,7 +102,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
         ),
         GoRoute(
           path: '/receive',
-          builder: (context, state) => ReceivePage(),
+          builder: (context, state) => ReceivePage(account: state.accountId),
         ),
         GoRoute(
           path: '/addresses',
@@ -90,27 +112,30 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
               txCounts: extra['txCounts'] as List<TAddressTxCount>,
               availablePools: extra['availablePools'] as int,
               c: extra['c'] as Coin,
+              account: state.accountId,
             );
           },
         ),
         GoRoute(
           path: '/send',
-          builder: (context, state) => SendPage(),
+          builder: (context, state) => SendPage(account: state.accountId),
         ),
         GoRoute(
           path: '/send2',
           builder: (context, state) {
             final (recipients, recipientPaysFee) = state.extra as (List<Recipient>, bool);
-            return Send2Page(recipients, recipientPaysFee: recipientPaysFee);
+            return Send2Page(recipients, account: state.accountId, recipientPaysFee: recipientPaysFee);
           },
         ),
         GoRoute(
             path: '/tx',
             builder: (context, state) {
               final extra = state.extra;
-              return extra is TxPageArgs ? TxPage(extra.pczt, continuation: extra.continuation) : TxPage(extra as PcztPackage);
+              return extra is TxPageArgs
+                  ? TxPage(extra.pczt, continuation: extra.continuation, account: state.accountId)
+                  : TxPage(extra as PcztPackage, account: state.accountId);
             }),
-        GoRoute(path: '/tx_view', builder: (context, state) => TxViewPage(state.extra as int)),
+        GoRoute(path: '/tx_view', builder: (context, state) => TxViewPage(state.extra as int, account: state.accountId)),
         GoRoute(path: '/log', builder: (context, state) => LogviewPage()),
         GoRoute(path: '/scanner', builder: (context, state) => ScannerPage(validator: state.extra as String? Function(String?))),
         GoRoute(
@@ -121,12 +146,12 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
           },
         ),
         GoRoute(path: '/splash', builder: (context, state) => SplashPage()),
-        GoRoute(path: '/swap', builder: (context, state) => const SwapPage()),
+        GoRoute(path: '/swap', builder: (context, state) => SwapPage(account: state.accountId)),
         GoRoute(
           path: '/swap/review',
           builder: (context, state) {
             final (draft, quoteLoader) = state.extra as (SwapDraft, SwapQuoteLoader?);
-            return SwapReviewPage(draft: draft, quoteLoader: quoteLoader);
+            return SwapReviewPage(draft: draft, quoteLoader: quoteLoader, account: state.accountId);
           },
         ),
         GoRoute(
@@ -134,6 +159,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
           builder: (context, state) {
             final args = state.extra as SwapSummaryArgs;
             return SwapSummaryPage(
+              account: state.accountId,
               swap: args.swap,
               symbol: args.symbol,
               decimals: args.decimals,
@@ -143,7 +169,7 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
             );
           },
         ),
-        GoRoute(path: '/swaps', builder: (context, state) => const SwapsPage()),
+        GoRoute(path: '/swaps', builder: (context, state) => SwapsPage(account: state.accountId)),
         GoRoute(path: '/market', builder: (context, state) => MarketPrice()),
         GoRoute(path: '/mempool', builder: (context, state) => MempoolPage()),
         GoRoute(path: '/mempool_view', builder: (context, state) => MempoolTxViewPage(state.extra as Uint8List)),
@@ -154,8 +180,8 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
         GoRoute(path: '/dkg1', builder: (context, state) => DKGPage1()),
         GoRoute(path: '/dkg2', builder: (context, state) => DKGPage2()),
         GoRoute(path: '/dkg3', builder: (context, state) => DKGPage3()),
-        GoRoute(path: '/frost1', builder: (context, state) => FrostPage1(state.extra as PcztPackage)),
-        GoRoute(path: '/frost2', builder: (context, state) => FrostPage2()),
+        GoRoute(path: '/frost1', builder: (context, state) => FrostPage1(state.extra as PcztPackage, account: state.accountId)),
+        GoRoute(path: '/frost2', builder: (context, state) => FrostPage2(account: state.accountId)),
         GoRoute(
             path: '/settings',
             routes: [
@@ -177,19 +203,20 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
             builder: (context, state) => SettingsPage()),
         GoRoute(path: '/database_manager', builder: (context, state) => DatabaseManagerPage()),
         GoRoute(path: '/disclaimer', builder: (context, state) => DisclaimerPage()),
-        GoRoute(path: '/chart', builder: (context, state) => ChartPage()),
+        GoRoute(path: '/chart', builder: (context, state) => ChartPage(account: state.accountId)),
         GoRoute(path: '/lwd_select', builder: (context, state) => const LWDSelectPage()),
         GoRoute(path: '/show_animated_qr', builder: (context, state) => ShowAnimatedQRPage(state.extra as List<Uint8List>)),
-        GoRoute(path: '/migrate', builder: (context, state) => const MigratePage()),
-        GoRoute(path: '/voting', builder: (context, state) => const VotingPage()),
+        GoRoute(path: '/migrate', builder: (context, state) => MigratePage(account: state.accountId)),
+        GoRoute(path: '/voting', builder: (context, state) => VotingPage(account: state.accountId)),
         GoRoute(
           path: '/voting/round',
           builder: (context, state) => VotingRoundPage(
+            account: state.accountId,
             round: state.extra as VotingRoundListItem,
           ),
         ),
-        GoRoute(path: '/zsa', builder: (context, state) => const ZsaHoldingsPage()),
-        GoRoute(path: '/zsa/issue', builder: (context, state) => IssueAssetPage(args: state.extra as IssuanceArgs?)),
+        GoRoute(path: '/zsa', builder: (context, state) => ZsaHoldingsPage(account: state.accountId)),
+        GoRoute(path: '/zsa/issue', builder: (context, state) => IssueAssetPage(args: state.extra as IssuanceArgs?, account: state.accountId)),
         GoRoute(path: '/scan_animated_qr', builder: (context, state) => ScanAnimatedQRPage()),
       ],
     );

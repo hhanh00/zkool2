@@ -50,7 +50,7 @@ void main() {
           lwd: config["lwd"] as String,
           docsDir: docsDir.path,
         );
-        final addresses = await getAddresses(uaPools: 6, c: coinContext.coin);
+        final addresses = await getAddresses(uaPools: 6, account: account, c: coinContext.coin);
         debugPrint("[dkg-ui] funding account $account address ${addresses.oaddr}");
         rendezvous.publish("funding_address", addresses.oaddr!);
       });
@@ -94,13 +94,13 @@ void main() {
       final pcztHex = fromOrchestrator!["pczt"] as String;
       debugPrint("[dkg-ui] received PCZT (${pcztHex.length ~/ 2} bytes)");
 
-      // The FROST account has to be the selected one: FrostPage1 reads
-      // `frostParams` off the current account, and the Rust side keys the
-      // signing state off the coin's account.
+      // The signing pages are opened for the FROST account: FrostPage1 reads
+      // `frostParams` off the account it was routed to.
       // DKGPage3 invalidates the account list when it finishes, but make sure
       // we read it after the FROST account was created.
       container.invalidate(getAccountsProvider);
       late final PcztPackage pczt;
+      late final int frostAccountId;
       await tester.runAsync(() async {
         final accounts = await container.read(getAccountsProvider.future);
         final frostAccount = accounts.firstWhere(
@@ -110,19 +110,17 @@ void main() {
           ),
         );
         debugPrint("[dkg-ui] FROST account ${frostAccount.id}");
-        await coinContext.setAccount(account: frostAccount.id);
-        await container.read(selectedAccountIdProvider.notifier).set(frostAccount.id);
+        frostAccountId = frostAccount.id;
         // Interchangeable with zkool_graphql now that both use bincode
         // standard() — see rust/src/api/pay.rs.
         pczt = await unpackTransaction(bytes: _hexToBytes(pcztHex));
       });
-      container.invalidate(selectedAccountProvider);
       await pumpFor(tester, const Duration(seconds: 2));
 
       // ── Phase 3: the signing pages ────────────────────────────────────────
       // /frost1 takes the PCZT as a route `extra`, so navigate there on the
       // router we built rather than starting the app on that route.
-      appRouter.go("/frost1", extra: pczt);
+      appRouter.go(accountRoute("/frost1", frostAccountId), extra: pczt);
       await pumpUntil(
         tester,
         () => find.text("ID of the coordinator").evaluate().isNotEmpty,

@@ -11,7 +11,8 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
 class ChartPage extends ConsumerStatefulWidget {
-  const ChartPage({super.key});
+  final int account;
+  const ChartPage({super.key, required this.account});
 
   @override
   ConsumerState<ChartPage> createState() => ChartPageState();
@@ -80,8 +81,8 @@ class ChartPageState extends ConsumerState<ChartPage> with SingleTickerProviderS
               child: TabBarView(
                 controller: tabController,
                 children: [
-                  SpendingChart(from: from, to: to),
-                  CategoryChart(from: from, to: to),
+                  SpendingChart(account: widget.account, from: from, to: to),
+                  CategoryChart(account: widget.account, from: from, to: to),
                 ],
               ),
             ),
@@ -95,7 +96,8 @@ class ChartPageState extends ConsumerState<ChartPage> with SingleTickerProviderS
 class SpendingChart extends ConsumerStatefulWidget {
   final DateTime? from;
   final DateTime? to;
-  const SpendingChart({super.key, this.from, this.to});
+  final int account;
+  const SpendingChart({super.key, required this.account, this.from, this.to});
 
   @override
   ConsumerState<SpendingChart> createState() => SpendingChartState();
@@ -125,7 +127,7 @@ class SpendingChartState extends ConsumerState<SpendingChart> with AutomaticKeep
   Future<void> refresh() async {
     final f = widget.from?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
     final t = widget.to?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
-    final amounts = await fetchCategoryAmounts(from: f, to: t, account: ref.read(selectedAccountIdProvider), c: c);
+    final amounts = await fetchCategoryAmounts(from: f, to: t, account: widget.account, c: c);
     income.clear();
     spending.clear();
     for (var (c, a, i) in amounts) {
@@ -255,7 +257,8 @@ class SpendingChartState extends ConsumerState<SpendingChart> with AutomaticKeep
 class CategoryChart extends ConsumerStatefulWidget {
   final DateTime? from;
   final DateTime? to;
-  const CategoryChart({super.key, this.from, this.to});
+  final int account;
+  const CategoryChart({super.key, required this.account, this.from, this.to});
 
   @override
   ConsumerState<CategoryChart> createState() => CategoryChartState();
@@ -298,7 +301,7 @@ class CategoryChartState extends ConsumerState<CategoryChart> with AutomaticKeep
   Future<void> refresh() async {
     final f = widget.from?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
     final t = widget.to?.let((dt) => dt.millisecondsSinceEpoch ~/ 1000);
-    amounts = await fetchAmounts(from: f, to: t, category: category!, account: ref.read(selectedAccountIdProvider), c: c);
+    amounts = await fetchAmounts(from: f, to: t, category: category!, account: widget.account, c: c);
     setState(() {
       epoch += 1;
     });

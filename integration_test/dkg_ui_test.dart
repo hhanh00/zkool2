@@ -48,7 +48,7 @@ void main() {
           docsDir: docsDir.path,
         );
         // uaPools 6 = sapling|orchard, matching the GraphQL `ironwood` address.
-        final addresses = await getAddresses(uaPools: 6, c: coinContext.coin);
+        final addresses = await getAddresses(uaPools: 6, account: account, c: coinContext.coin);
         debugPrint("[dkg-ui] funding account $account address ${addresses.oaddr}");
         rendezvous.publish("funding_address", addresses.oaddr!);
       });

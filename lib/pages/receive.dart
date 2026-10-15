@@ -12,9 +12,11 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/widgets/pool_select.dart';
+import 'package:zkool/router.dart';
 
 class ReceivePage extends ConsumerStatefulWidget {
-  const ReceivePage({super.key});
+  final int account;
+  const ReceivePage({super.key, required this.account});
 
   @override
   ConsumerState<ReceivePage> createState() => ReceivePageState();
@@ -32,11 +34,10 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
     super.initState();
 
     Future(() async {
-      final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
-      final a = await ref.read(accountProvider(selectedAccount.id).future);
+      final a = await ref.read(accountProvider(widget.account).future);
       final pools = a.pool; // All pools including transparent
       final defaultPools = pools & 6; // Default to shielded pools only
-      final addrs = await getAddresses(uaPools: defaultPools, account: selectedAccount.id, c: c);
+      final addrs = await getAddresses(uaPools: defaultPools, account: widget.account, c: c);
       setState(() {
         account = a.account;
         addresses = addrs;
@@ -139,7 +140,7 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
   void onCheckSapling() async {
     showSnackbar("Check address on the device");
     try {
-      await showLedgerSaplingAddress(account: ref.read(selectedAccountIdProvider), c: c);
+      await showLedgerSaplingAddress(account: widget.account, c: c);
     } on AnyhowException catch (e) {
       await showException(context, e.message);
     }
@@ -148,7 +149,7 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
   void onCheckTransparent() async {
     showSnackbar("Check address on the device");
     try {
-      await showLedgerTransparentAddress(account: ref.read(selectedAccountIdProvider), c: c);
+      await showLedgerTransparentAddress(account: widget.account, c: c);
     } on AnyhowException catch (e) {
       await showException(context, e.message);
     }
@@ -156,7 +157,7 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
 
   void onChangedUAPools(int pools) async {
     uaPools = pools;
-    addresses = await getAddresses(uaPools: uaPools, account: ref.read(selectedAccountIdProvider), c: c);
+    addresses = await getAddresses(uaPools: uaPools, account: widget.account, c: c);
     setState(() {});
   }
 
@@ -167,8 +168,8 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
       if (!confirmed) return;
       if (!mounted) return;
       final dialog = showLoadingDialog(context, "Please wait for the address generation\nCheck your Ledger");
-      await generateNextDindex(account: ref.read(selectedAccountIdProvider), c: c); // This takes a while on the Ledger
-      addresses = await getAddresses(uaPools: uaPools, account: ref.read(selectedAccountIdProvider), c: c);
+      await generateNextDindex(account: widget.account, c: c); // This takes a while on the Ledger
+      addresses = await getAddresses(uaPools: uaPools, account: widget.account, c: c);
       dialog.dismiss();
       setState(() {});
     } on AnyhowException catch (e) {
@@ -181,12 +182,12 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
   }
 
   void onViewAddresses() async {
-    final account = ref.read(selectedAccountIdProvider);
+    final account = widget.account;
     final availablePools = await getAccountPools(account: account, c: c);
     final poolFilter = availablePools; // default: all available
     final txCounts = await fetchAddressTxCount(aggregate: false, poolFilter: poolFilter, account: account, c: c);
     if (!mounted) return;
-    await GoRouter.of(context).push("/addresses", extra: {
+    await GoRouter.of(context).push(accountRoute("/addresses", widget.account), extra: {
       'txCounts': txCounts,
       'availablePools': availablePools,
       'c': c,
@@ -194,7 +195,7 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
   }
 
   void onSweep() async {
-    await showTransparentScan(ref, context);
+    await showTransparentScan(ref, context, widget.account);
   }
 }
 
@@ -203,7 +204,8 @@ class AddressesPage extends ConsumerStatefulWidget {
   final int availablePools;
   final Coin c;
 
-  const AddressesPage({super.key, required this.txCounts, required this.availablePools, required this.c});
+  final int account;
+  const AddressesPage({super.key, required this.txCounts, required this.availablePools, required this.c, required this.account});
 
   @override
   ConsumerState<AddressesPage> createState() => _AddressesPageState();
@@ -232,7 +234,7 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
 
   Future<void> _refetch() async {
     final mask = _selectedPools.fold(0, (acc, p) => acc | _poolBits[p]!);
-    final txCounts = await fetchAddressTxCount(aggregate: _aggregate, poolFilter: mask, account: ref.read(selectedAccountIdProvider), c: widget.c);
+    final txCounts = await fetchAddressTxCount(aggregate: _aggregate, poolFilter: mask, account: widget.account, c: widget.c);
     if (mounted) setState(() => _txCounts = txCounts);
   }
 

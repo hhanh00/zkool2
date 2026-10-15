@@ -19,6 +19,7 @@ import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/validators.dart';
 import 'package:zkool/widgets/pool_select.dart';
+import 'package:zkool/router.dart';
 
 class NewAccountPage extends ConsumerStatefulWidget {
   const NewAccountPage({super.key});
@@ -456,7 +457,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         await ref.read(selectedAccountIdProvider.notifier).set(account);
 
         if ((key.isNotEmpty && await hasTransparentPubKey(account: account, c: c)) || ledger) {
-          if (mounted) await showTransparentScan(ref, context);
+          if (mounted) await showTransparentScan(ref, context, account);
         }
 
         final seed = await getAccountSeed(account: account, c: c);
@@ -484,7 +485,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
             unawaited(ref.read(synchronizerProvider.notifier).syncIfNeeded(currentHeight, now: true));
           }
         }
-        if (mounted) GoRouter.of(context).pop();
+        if (mounted) GoRouter.of(context).go(accountRoute("/", account));
       } on AnyhowException catch (e) {
         if (mounted) await showException(context, e.message);
         dialog?.dismiss();

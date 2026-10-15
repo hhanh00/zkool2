@@ -37,7 +37,8 @@ import 'package:zkool/widgets/scanner.dart';
 final zecBase = Uint8List(32);
 
 class SendPage extends ConsumerStatefulWidget {
-  const SendPage({super.key});
+  final int account;
+  const SendPage({super.key, required this.account});
 
   @override
   ConsumerState<SendPage> createState() => SendPageState();
@@ -69,11 +70,10 @@ class SendPageState extends ConsumerState<SendPage> {
     super.initState();
     Future(() async {
       final c = coinContext.coin;
-      final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
-      final data = (await ref.read(accountProvider(selectedAccount.id).future));
-      final bal = await balance(account: selectedAccount.id, c: c);
-      final addrs = await getAddresses(uaPools: data.pool, account: selectedAccount.id, c: c);
-      final zsaHoldings = await listZsaHoldings(account: selectedAccount.id, c: c);
+      final data = (await ref.read(accountProvider(widget.account).future));
+      final bal = await balance(account: widget.account, c: c);
+      final addrs = await getAddresses(uaPools: data.pool, account: widget.account, c: c);
+      final zsaHoldings = await listZsaHoldings(account: widget.account, c: c);
 
       // Preload contacts for @contactname autocomplete
       try {
@@ -272,7 +272,7 @@ class SendPageState extends ConsumerState<SendPage> {
     try {
       final pczt = await unpackTransaction(bytes: data!);
       if (!mounted) return;
-      GoRouter.of(context).go("/tx", extra: pczt.copyWith(canSign: true));
+      GoRouter.of(context).go(accountRoute("/tx", widget.account), extra: pczt.copyWith(canSign: true));
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
@@ -280,7 +280,7 @@ class SendPageState extends ConsumerState<SendPage> {
 
   void onMax() async {
     final form = formKey.currentState!;
-    final total = await maxSpendable(account: ref.read(selectedAccountIdProvider), c: c);
+    final total = await maxSpendable(account: widget.account, c: c);
     final a = zatToString(total);
     form.fields['amount']?.didChange(a);
     setState(() {
@@ -310,14 +310,14 @@ class SendPageState extends ConsumerState<SendPage> {
     }
     try {
       final pczt = await transferAllBetweenPools(
-        account: ref.read(selectedAccountIdProvider),
+        account: widget.account,
         c: c,
         sourcePools: 1,
         destinationAddress: addresses?.oaddr ?? addresses?.saddr ?? "",
         smartTransparent: smartTransparent,
       );
 
-      GoRouter.of(navigatorKey.currentContext!).go("/tx", extra: pczt);
+      GoRouter.of(navigatorKey.currentContext!).go(accountRoute("/tx", widget.account), extra: pczt);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
@@ -326,13 +326,13 @@ class SendPageState extends ConsumerState<SendPage> {
   void onUnshield() async {
     try {
       final pczt = await transferAllBetweenPools(
-        account: ref.read(selectedAccountIdProvider),
+        account: widget.account,
         c: c,
         sourcePools: 14, // Sapling | Orchard | Ironwood
         destinationAddress: addresses?.taddr ?? "",
       );
 
-      GoRouter.of(navigatorKey.currentContext!).go("/tx", extra: pczt);
+      GoRouter.of(navigatorKey.currentContext!).go(accountRoute("/tx", widget.account), extra: pczt);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
@@ -378,7 +378,7 @@ class SendPageState extends ConsumerState<SendPage> {
 
     if (!mounted) return;
     onClear();
-    if (recipients.isNotEmpty) await GoRouter.of(context).push("/send2", extra: (recipients, _recipientPaysFee));
+    if (recipients.isNotEmpty) await GoRouter.of(context).push(accountRoute("/send2", widget.account), extra: (recipients, _recipientPaysFee));
   }
 
   void onScan() async {
@@ -660,7 +660,8 @@ class SendPageState extends ConsumerState<SendPage> {
 class Send2Page extends ConsumerStatefulWidget {
   final List<Recipient> recipients;
   final bool recipientPaysFee;
-  const Send2Page(this.recipients, {super.key, this.recipientPaysFee = false});
+  final int account;
+  const Send2Page(this.recipients, {super.key, required this.account, this.recipientPaysFee = false});
 
   @override
   ConsumerState<Send2Page> createState() => Send2PageState();
@@ -685,8 +686,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
       // Payment URIs (ZIP-321) do not support ZSA assets.
       final uri = hasZsa ? "" : await buildPuri(recipients: widget.recipients);
       final categoryList = await ref.read(getCategoriesProvider.future);
-      final selectedAccount = ref.read(selectedAccountProvider).requireValue!;
-      final data = (await ref.read(accountProvider(selectedAccount.id).future));
+      final data = (await ref.read(accountProvider(widget.account).future));
       setState(() {
         account = data;
         puri = uri;
@@ -822,7 +822,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
 
     // Check if wallet is synced before computing the transaction plan
     final currentHeight = ref.read(currentHeightProvider).value;
-    final accountHeight = ref.read(selectedAccountProvider).value?.height;
+    final accountHeight = account?.account.height;
     if (currentHeight != null && accountHeight != null && accountHeight < currentHeight) {
       final syncChoice = await _showSyncWarning(currentHeight, accountHeight);
       if (syncChoice == null) return; // user dismissed the dialog
@@ -846,11 +846,11 @@ class Send2PageState extends ConsumerState<Send2Page> {
       final pczt = await prepare(
         recipients: widget.recipients,
         options: options,
-        account: ref.read(selectedAccountIdProvider),
+        account: widget.account,
         c: c,
       );
 
-      await GoRouter.of(navigatorKey.currentContext!).push("/tx", extra: pczt);
+      await GoRouter.of(navigatorKey.currentContext!).push(accountRoute("/tx", widget.account), extra: pczt);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }
