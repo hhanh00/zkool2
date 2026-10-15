@@ -15,7 +15,7 @@ use crate::{
     },
     key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
     keys::{sapling_dfvk_to_fvk, SaplingAddressDerivation, ScopeExt},
-    ledger::HwKind,
+    ledger::{HwKind, LedgerHandle},
     pay::pool::PoolMask,
     tiu,
 };
@@ -110,377 +110,54 @@ pub async fn new_account(
         key = generate_seed()?;
     }
 
-    let pools = na.pools.unwrap_or_else(|| default_pools(ledger_kind));
-    if pools == 0 {
-        anyhow::bail!("an account must support at least one pool");
-    }
+    let pools = resolve_pools(ledger_kind, na.pools)?;
+    let source = classify_key(network, ledger_kind, &key)?;
+    let passphrase = na.passphrase.clone().unwrap_or_default();
 
-    let ledger_kind = if ledger_kind.is_ledger() {
-        match ledger_kind {
-            HwKind::Official => {
-                if pools & !(POOL_TRANSPARENT | POOL_IRONWOOD) != 0 {
-                    anyhow::bail!(
-                        "Official Ledger accounts support transparent and ironwood pools only"
-                    );
-                }
-                if !key.is_empty() && !is_valid_phrase(&key) {
-                    anyhow::bail!(
-                        "Official Ledger accounts accept a seed phrase or no key to import the viewing key from the device"
-                    );
-                }
-            }
-            HwKind::Zondax => {
-                if pools & !(POOL_TRANSPARENT | POOL_SAPLING) != 0 {
-                    anyhow::bail!(
-                        "Zondax Ledger accounts support transparent and sapling pools only"
-                    );
-                }
-            }
-            _ => anyhow::bail!("unknown Ledger app"),
+    let keys = match source {
+        KeySource::ZondaxSeed(mnemonic) => {
+            derive_zondax_seed_keys(network, &mnemonic, na.aindex, pools).await?
         }
-        Some(ledger_kind)
-    } else {
-        None
+        KeySource::ZondaxDevice => {
+            store_account_hw(&mut db_tx, account, HwKind::Zondax as u8, na.aindex).await?;
+            let ledger = get_ledger(&mut db_tx, account).await?;
+            derive_zondax_device_keys(network, &ledger, na.aindex, pools).await?
+        }
+        KeySource::OfficialDevice => {
+            store_account_hw(&mut db_tx, account, HwKind::Official as u8, na.aindex).await?;
+            let ledger = get_ledger(&mut db_tx, account).await?;
+            derive_official_device_keys(network, &ledger, na.aindex, pools).await?
+        }
+        source => derive_account_keys(network, source, &passphrase, na.aindex, pools)?,
     };
 
-    if ledger_kind == Some(HwKind::Zondax) {
-        let has_seed = !key.is_empty();
-        if !has_seed {
-            store_account_hw(&mut db_tx, account, HwKind::Zondax as u8, na.aindex).await?;
-        }
-
-        let ledger = get_ledger(&mut db_tx, account).await?;
-
-        // we must do sapling derivation first to know a valid dindex
-        // because in sapling some indices are invalid
-        let mut dindex = 0;
-        if pools & POOL_SAPLING != 0 {
-            init_account_sapling(network, &mut db_tx, account, birth).await?;
-            if has_seed {
-                let sxsk = crate::recover::recover_ledger_seed(&key, na.aindex).await?;
-                store_account_sapling_sk(&mut db_tx, account, &sxsk).await?;
-                let sxvk = sxsk.to_diversifiable_full_viewing_key();
-                let (di, _) = sxvk.default_address();
-                let di: u128 = di.into();
-                dindex = di as u32;
-                let address = derive_sapling_address(network, &sxvk, dindex);
-                store_account_sapling_vk(&mut db_tx, account, &sxvk, &address).await?;
-            } else {
-                let fvk = ledger.import_sapling_fvk(network, na.aindex).await?;
-                let mut dfvk = fvk.to_bytes().to_vec();
-                dfvk.extend_from_slice(&[0u8; 32]); // add a dummy dk because we cannot get the one from the Ledger
-                let xvk = DiversifiableFullViewingKey::from_bytes(&tiu!(dfvk)).unwrap();
-                // We should get the default address dindex by using the get_div_list
-                // api but it is currently not working
-                // instead, we "assume" the dindex = 0 is the default sapling address
-                // let (dindex, address) = get_hw_next_diversifier_address(&network, na.aindex, 0).await?;
-                let address = ledger.get_sapling_address(network, na.aindex).await?;
-                store_account_sapling_vk(&mut db_tx, account, &xvk, &address).await?;
-            }
-        }
-        if pools & POOL_TRANSPARENT != 0 && !has_seed {
-            init_account_transparent(&mut db_tx, account, birth).await?;
-            let (pk, taddr) = ledger
-                .get_transparent_pubkey(network, na.aindex, 0, dindex)
-                .await?;
-            store_account_transparent_addr(
-                &mut db_tx,
-                account,
-                0,
-                dindex,
-                None,
-                &pk,
-                &taddr.encode(network),
-                false,
-            )
-            .await?;
-        }
-        update_dindex(&mut db_tx, account, dindex, true).await?;
-    } else if ledger_kind == Some(HwKind::Official) && key.is_empty() {
-        // import the viewing key from the Official Ledger device
-        store_account_hw(&mut db_tx, account, HwKind::Official as u8, na.aindex).await?;
-        let ledger = get_ledger(&mut db_tx, account).await?;
-        let ufvk = ledger.get_ufvk(network, na.aindex).await?;
-        let uvk = UnifiedFullViewingKey::decode(network, &ufvk)
-            .map_err(|_| anyhow!("Invalid viewing key from the device"))?;
-
-        // no sapling key on the device, so there is no derived default
-        // diversifier index; use 0
-        let dindex: u32 = 0;
-        if pools & POOL_TRANSPARENT != 0 {
-            let tvk = uvk
-                .p2pkh()
-                .ok_or_else(|| anyhow!("device viewing key has no transparent key"))?;
-            init_account_transparent(&mut db_tx, account, birth).await?;
-            store_account_transparent_vk(&mut db_tx, account, tvk).await?;
-            let (pk, address) = derive_transparent_address(tvk, 0, dindex, false)?;
-            store_account_transparent_addr(
-                &mut db_tx,
-                account,
-                0,
-                dindex,
-                None,
-                &pk,
-                &address.encode(&network),
-                false,
-            )
-            .await?;
-        }
-        if pools & (POOL_ORCHARD | POOL_IRONWOOD) != 0 {
-            let ovk = uvk
-                .orchard()
-                .ok_or_else(|| anyhow!("device viewing key has no orchard key"))?;
-            init_account_orchard(network, &mut db_tx, account, birth).await?;
-            store_account_orchard_vk(&mut db_tx, account, ovk).await?;
-        }
-        update_dindex(&mut db_tx, account, dindex, true).await?;
-    } else if is_valid_phrase(&key) {
-        let seed_phrase = bip39::Mnemonic::from_str(&key)?;
-        let passphrase = na.passphrase.clone().unwrap_or_default();
-        let seed = seed_phrase.to_seed(&passphrase);
-
-        let seed_fingerprint = SeedFingerprint::from_seed(&seed).unwrap().to_bytes();
-
-        store_account_seed(
-            &mut db_tx,
-            account,
-            &key,
-            &passphrase,
-            &seed_fingerprint,
-            na.aindex,
-        )
-        .await?;
-        let usk = UnifiedSpendingKey::from_seed(
-            &network,
-            &seed,
-            AccountId::try_from(na.aindex).unwrap(),
-        )?;
-        let uvk = usk.to_unified_full_viewing_key();
-        let (_, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
-        let dindex: u32 = di.try_into()?;
-
-        if pools & POOL_TRANSPARENT != 0 {
-            init_account_transparent(&mut db_tx, account, birth).await?;
-            let tsk = usk.transparent();
-            store_account_transparent_sk(&mut db_tx, account, tsk).await?;
-            let tvk = &tsk.to_account_pubkey();
-            store_account_transparent_vk(&mut db_tx, account, tvk).await?;
-            for di in &[0, dindex] {
-                let sk = derive_transparent_sk(tsk, 0, *di)?;
-                let (pk, taddr) = derive_transparent_address(tvk, 0, *di, false)?;
-                store_account_transparent_addr(
-                    &mut db_tx,
-                    account,
-                    0,
-                    *di,
-                    Some(sk),
-                    &pk,
-                    &taddr.encode(&network),
-                    false,
-                )
-                .await?;
-                // do not create two taddrs if dindex == 0
-                if dindex == 0 {
-                    break;
-                }
-            }
-        }
-
-        if pools & POOL_SAPLING != 0 {
-            init_account_sapling(network, &mut db_tx, account, birth).await?;
-            let sxsk = usk.sapling();
-            store_account_sapling_sk(&mut db_tx, account, sxsk).await?;
-            let sxvk = sxsk.to_diversifiable_full_viewing_key();
-            let address = derive_sapling_address(network, &sxvk, dindex);
-            store_account_sapling_vk(&mut db_tx, account, &sxvk, &address).await?;
-        }
-
-        if pools & (POOL_ORCHARD | POOL_IRONWOOD) != 0 {
-            init_account_orchard(network, &mut db_tx, account, birth).await?;
-            let oxsk = usk.orchard();
-            store_account_orchard_sk(&mut db_tx, account, oxsk).await?;
-            let oxvk = FullViewingKey::from(oxsk);
-            store_account_orchard_vk(&mut db_tx, account, &oxvk).await?;
-        }
-
-        update_dindex(&mut db_tx, account, dindex, true).await?;
-    } else if is_valid_transparent_key(&key) {
-        init_account_transparent(&mut db_tx, account, birth).await?;
-        if let Ok(xsk) = ExtendedPrivateKey::<SecretKey>::from_str(&key) {
-            let xsk = AccountPrivKey::from_extended_privkey(xsk);
-            store_account_transparent_sk(&mut db_tx, account, &xsk).await?;
-            let xvk = xsk.to_account_pubkey();
-            store_account_transparent_vk(&mut db_tx, account, &xvk).await?;
-            let sk = derive_transparent_sk(&xsk, 0, 0)?;
-            let (pk, address) = derive_transparent_address(&xvk, 0, 0, false)?;
-            store_account_transparent_addr(
-                &mut db_tx,
-                account,
-                0,
-                0,
-                Some(sk),
-                &pk,
-                &address.encode(&network),
-                false,
-            )
-            .await?;
-        } else if let Ok(xvk) = ExtendedPublicKey::<PublicKey>::from_str(&key) {
-            // No AccountPubKey::from_extended_pubkey, we need to use the bytes
-            let mut buf = xvk.attrs().chain_code.to_vec();
-            buf.extend_from_slice(&xvk.to_bytes());
-            let xvk = AccountPubKey::deserialize(&buf.try_into().unwrap()).unwrap();
-            store_account_transparent_vk(&mut db_tx, account, &xvk).await?;
-            let (pk, address) = derive_transparent_address(&xvk, 0, 0, false)?;
-            store_account_transparent_addr(
-                &mut db_tx,
-                account,
-                0,
-                0,
-                None,
-                &pk,
-                &address.encode(&network),
-                false,
-            )
-            .await?;
-        } else if let Ok(sk) = bip38::import_tsk(&key) {
-            let pk = sk.0.public_key();
-            let tpk = if sk.1 {
-                pk.serialize_uncompressed().to_vec()
-            } else {
-                pk.serialize().to_vec()
-            };
-            let pkh: [u8; 20] = Ripemd160::digest(Sha256::digest(&tpk)).into();
-            let addr = TransparentAddress::PublicKeyHash(pkh);
-            let address_str = addr.encode(&network);
-            store_account_transparent_addr(
-                &mut db_tx,
-                account,
-                0,
-                0,
-                Some(sk.0.to_bytes().to_vec()),
-                &tpk,
-                &address_str,
-                sk.1,
-            )
-            .await?;
-        } else if let Ok((_hrp, tpk)) = bech32::decode(&key) {
-            let pkh: [u8; 20] = Ripemd160::digest(Sha256::digest(&tpk)).into();
-            let addr = TransparentAddress::PublicKeyHash(pkh);
-            store_account_transparent_addr(
-                &mut db_tx,
-                account,
-                0,
-                0,
-                None,
-                &tpk,
-                &addr.encode(&network),
-                false,
-            )
-            .await?;
-            let pkh: [u8; 20] = Ripemd160::digest(Sha256::digest(&tpk)).into();
-            let addr = TransparentAddress::PublicKeyHash(pkh);
-            store_account_transparent_addr(
-                &mut db_tx,
-                account,
-                0,
-                0,
-                None,
-                &tpk,
-                &addr.encode(&network),
-                false,
-            )
-            .await?;
-        }
-    } else if is_valid_sapling_key(network, &key) {
-        init_account_sapling(network, &mut db_tx, account, birth).await?;
-        let di = if let Ok(xsk) = zcash_keys::encoding::decode_extended_spending_key(
-            network.hrp_sapling_extended_spending_key(),
-            &key,
-        ) {
-            store_account_sapling_sk(&mut db_tx, account, &xsk).await?;
-            let xvk = xsk.to_diversifiable_full_viewing_key();
-            let (di, address) = xvk.default_address();
-            let address = address.encode(&network);
-            store_account_sapling_vk(&mut db_tx, account, &xvk, &address).await?;
-            di
-        } else if let Ok(xvk) = zcash_keys::encoding::decode_extended_full_viewing_key(
-            network.hrp_sapling_extended_full_viewing_key(),
-            &key,
-        ) {
-            let (di, address) = xvk.default_address();
-            let address = address.encode(&network);
-            store_account_sapling_vk(
-                &mut db_tx,
-                account,
-                &xvk.to_diversifiable_full_viewing_key(),
-                &address,
-            )
-            .await?;
-            di
-        } else {
-            return Err(anyhow!("Invalid Sapling Key"));
-        };
-        let dindex: u32 = di.try_into()?;
-        update_dindex(&mut db_tx, account, dindex, true).await?;
-    } else if is_valid_ufvk(network, &key) {
-        let uvk =
-            UnifiedFullViewingKey::decode(&network, &key).map_err(|_| anyhow!("Invalid Key"))?;
-        let (ua, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
-        let dindex: u32 = di.try_into()?;
-
-        match uvk.p2pkh() {
-            Some(tvk) if pools & POOL_TRANSPARENT != 0 => {
-                init_account_transparent(&mut db_tx, account, birth).await?;
-                store_account_transparent_vk(&mut db_tx, account, tvk).await?;
-                let (pk, address) = derive_transparent_address(tvk, 0, dindex, false)?;
-                store_account_transparent_addr(
-                    &mut db_tx,
-                    account,
-                    0,
-                    dindex,
-                    None,
-                    &pk,
-                    &address.encode(&network),
-                    false,
-                )
-                .await?;
-            }
-            _ => {}
-        }
-        match uvk.sapling() {
-            Some(sxvk) if pools & POOL_SAPLING != 0 => {
-                init_account_sapling(network, &mut db_tx, account, birth).await?;
-                let address = ua.sapling().unwrap();
-                let address = address.encode(&network);
-                store_account_sapling_vk(&mut db_tx, account, sxvk, &address).await?;
-            }
-            _ => {}
-        }
-        match uvk.orchard() {
-            Some(ovk) if pools & POOL_ORCHARD != 0 => {
-                init_account_orchard(network, &mut db_tx, account, birth).await?;
-                store_account_orchard_vk(&mut db_tx, account, ovk).await?;
-            }
-            _ => {}
-        }
-        update_dindex(&mut db_tx, account, dindex, true).await?;
-    } else {
-        anyhow::bail!("Unsupported key");
-    }
-
-    let external_indexes: Vec<u32> = sqlx::query(
-        "SELECT dindex FROM transparent_address_accounts WHERE account = ? AND scope = 0",
-    )
-    .bind(account)
-    .map(|row: SqliteRow| row.get(0))
-    .fetch_all(&mut *db_tx)
-    .await?;
-    for di in external_indexes {
-        ensure_internal_change_address(network, &mut *db_tx, account, di).await?;
-    }
+    store_account_keys(network, &mut db_tx, account, birth, keys).await?;
 
     db_tx.commit().await?;
     Ok(account)
+}
+
+/// Resolve the pools a new account supports, applying the per-wallet-kind
+/// default and the Ledger app restrictions.
+fn resolve_pools(hw: HwKind, requested: Option<u8>) -> Result<u8> {
+    let pools = requested.unwrap_or_else(|| default_pools(hw));
+    if pools == 0 {
+        anyhow::bail!("an account must support at least one pool");
+    }
+    match hw {
+        HwKind::Official => {
+            if pools & !(POOL_TRANSPARENT | POOL_IRONWOOD) != 0 {
+                anyhow::bail!("Official Ledger accounts support transparent and ironwood pools only");
+            }
+        }
+        HwKind::Zondax => {
+            if pools & !(POOL_TRANSPARENT | POOL_SAPLING) != 0 {
+                anyhow::bail!("Zondax Ledger accounts support transparent and sapling pools only");
+            }
+        }
+        HwKind::Software => {}
+    }
+    Ok(pools)
 }
 
 fn default_pools(hw: HwKind) -> u8 {
@@ -491,25 +168,690 @@ fn default_pools(hw: HwKind) -> u8 {
     }
 }
 
+/// What a new account's key material is, decoded from the user supplied key
+/// string. Classification decides the derivation path; it does not touch the
+/// database or any device.
+enum KeySource {
+    /// BIP-39 seed phrase; the account owns every pool it supports.
+    Seed(String),
+    /// Transparent extended private key (xprv).
+    TransparentSk(AccountPrivKey),
+    /// Transparent extended public key (xpub).
+    TransparentVk(AccountPubKey),
+    /// Single transparent key: a BIP-38 secret key, or a bare `zpk` public key.
+    TransparentSingle {
+        sk: Option<Vec<u8>>,
+        pk: Vec<u8>,
+        uncompressed: bool,
+    },
+    SaplingSk(Box<ExtendedSpendingKey>),
+    SaplingVk(Box<sapling_crypto::zip32::ExtendedFullViewingKey>),
+    Ufvk(Box<UnifiedFullViewingKey>),
+    /// Zondax Ledger account recovered from its seed phrase (no device).
+    ZondaxSeed(String),
+    /// Zondax Ledger account whose keys are read from the device.
+    ZondaxDevice,
+    /// Official Ledger account whose viewing key is read from the device.
+    OfficialDevice,
+}
+
+fn classify_key(network: &Network, hw: HwKind, key: &str) -> Result<KeySource> {
+    match hw {
+        HwKind::Zondax => {
+            return Ok(if key.is_empty() {
+                KeySource::ZondaxDevice
+            } else {
+                KeySource::ZondaxSeed(key.to_string())
+            });
+        }
+        HwKind::Official => {
+            if key.is_empty() {
+                return Ok(KeySource::OfficialDevice);
+            }
+            if !is_valid_phrase(key) {
+                anyhow::bail!(
+                    "Official Ledger accounts accept a seed phrase or no key to import the viewing key from the device"
+                );
+            }
+        }
+        HwKind::Software => {}
+    }
+
+    if is_valid_phrase(key) {
+        Ok(KeySource::Seed(key.to_string()))
+    } else if is_valid_transparent_key(key) {
+        if let Ok(xsk) = ExtendedPrivateKey::<SecretKey>::from_str(key) {
+            Ok(KeySource::TransparentSk(AccountPrivKey::from_extended_privkey(xsk)))
+        } else if let Ok(xvk) = ExtendedPublicKey::<PublicKey>::from_str(key) {
+            // No AccountPubKey::from_extended_pubkey, we need to use the bytes
+            let mut buf = xvk.attrs().chain_code.to_vec();
+            buf.extend_from_slice(&xvk.to_bytes());
+            let xvk = AccountPubKey::deserialize(&buf.try_into().unwrap()).unwrap();
+            Ok(KeySource::TransparentVk(xvk))
+        } else if let Ok(sk) = bip38::import_tsk(key) {
+            let pk = sk.0.public_key();
+            let tpk = if sk.1 {
+                pk.serialize_uncompressed().to_vec()
+            } else {
+                pk.serialize().to_vec()
+            };
+            Ok(KeySource::TransparentSingle {
+                sk: Some(sk.0.to_bytes().to_vec()),
+                pk: tpk,
+                uncompressed: sk.1,
+            })
+        } else if let Ok((_hrp, tpk)) = bech32::decode(key) {
+            Ok(KeySource::TransparentSingle {
+                sk: None,
+                pk: tpk,
+                uncompressed: false,
+            })
+        } else {
+            Err(anyhow!("Unsupported transparent key"))
+        }
+    } else if is_valid_sapling_key(network, key) {
+        if let Ok(xsk) = zcash_keys::encoding::decode_extended_spending_key(
+            network.hrp_sapling_extended_spending_key(),
+            key,
+        ) {
+            Ok(KeySource::SaplingSk(Box::new(xsk)))
+        } else if let Ok(xvk) = zcash_keys::encoding::decode_extended_full_viewing_key(
+            network.hrp_sapling_extended_full_viewing_key(),
+            key,
+        ) {
+            Ok(KeySource::SaplingVk(Box::new(xvk)))
+        } else {
+            Err(anyhow!("Invalid Sapling Key"))
+        }
+    } else if is_valid_ufvk(network, key) {
+        let uvk =
+            UnifiedFullViewingKey::decode(network, key).map_err(|_| anyhow!("Invalid Key"))?;
+        Ok(KeySource::Ufvk(Box::new(uvk)))
+    } else {
+        Err(anyhow!("Unsupported key"))
+    }
+}
+
+/// Everything `store_account_keys` writes for a new account: the per-pool key
+/// material the account has, the transparent addresses to register, and the
+/// default diversifier index.
+#[derive(Default)]
+struct AccountKeys {
+    seed: Option<SeedKeys>,
+    transparent: Option<TransparentKeys>,
+    sapling: Option<SaplingKeys>,
+    orchard: Option<OrchardKeys>,
+    dindex: u32,
+}
+
+struct SeedKeys {
+    mnemonic: String,
+    passphrase: String,
+    fingerprint: [u8; 32],
+    aindex: u32,
+}
+
+#[derive(Default)]
+struct TransparentKeys {
+    sk: Option<AccountPrivKey>,
+    vk: Option<AccountPubKey>,
+    /// External (scope 0) addresses to register.
+    addresses: Vec<TransparentAddr>,
+}
+
+struct TransparentAddr {
+    dindex: u32,
+    sk: Option<Vec<u8>>,
+    pk: Vec<u8>,
+    address: String,
+    uncompressed: bool,
+}
+
+struct SaplingKeys {
+    sk: Option<ExtendedSpendingKey>,
+    vk: DiversifiableFullViewingKey,
+    address: String,
+}
+
+struct OrchardKeys {
+    sk: Option<orchard::keys::SpendingKey>,
+    vk: FullViewingKey,
+}
+
+fn transparent_addr(
+    network: &Network,
+    tvk: &AccountPubKey,
+    tsk: Option<&AccountPrivKey>,
+    dindex: u32,
+) -> Result<TransparentAddr> {
+    let sk = tsk.map(|tsk| derive_transparent_sk(tsk, 0, dindex)).transpose()?;
+    let (pk, taddr) = derive_transparent_address(tvk, 0, dindex, false)?;
+    Ok(TransparentAddr {
+        dindex,
+        sk,
+        pk,
+        address: taddr.encode(network),
+        uncompressed: false,
+    })
+}
+
+/// The external transparent addresses a new account registers: index 0 and
+/// the account's default diversifier index (once, when they coincide).
+fn external_transparent_addrs(
+    network: &Network,
+    tvk: &AccountPubKey,
+    tsk: Option<&AccountPrivKey>,
+    dindex: u32,
+) -> Result<Vec<TransparentAddr>> {
+    let mut addresses = vec![transparent_addr(network, tvk, tsk, 0)?];
+    if dindex != 0 {
+        addresses.push(transparent_addr(network, tvk, tsk, dindex)?);
+    }
+    Ok(addresses)
+}
+
+/// Derive the keys of a software account from its classified key source.
+/// Pure: no database, no device.
+fn derive_account_keys(
+    network: &Network,
+    source: KeySource,
+    passphrase: &str,
+    aindex: u32,
+    pools: u8,
+) -> Result<AccountKeys> {
+    let mut keys = AccountKeys::default();
+    match source {
+        KeySource::Seed(mnemonic) => {
+            let seed_phrase = bip39::Mnemonic::from_str(&mnemonic)?;
+            let seed = seed_phrase.to_seed(passphrase);
+            let fingerprint = SeedFingerprint::from_seed(&seed).unwrap().to_bytes();
+            keys.seed = Some(SeedKeys {
+                mnemonic,
+                passphrase: passphrase.to_string(),
+                fingerprint,
+                aindex,
+            });
+            let usk =
+                UnifiedSpendingKey::from_seed(network, &seed, AccountId::try_from(aindex).unwrap())?;
+            let uvk = usk.to_unified_full_viewing_key();
+            let (_, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
+            let dindex: u32 = di.try_into()?;
+            keys.dindex = dindex;
+
+            if pools & POOL_TRANSPARENT != 0 {
+                let tsk = usk.transparent();
+                let tvk = tsk.to_account_pubkey();
+                let addresses = external_transparent_addrs(network, &tvk, Some(tsk), dindex)?;
+                keys.transparent = Some(TransparentKeys {
+                    sk: Some(tsk.clone()),
+                    vk: Some(tvk),
+                    addresses,
+                });
+            }
+            if pools & POOL_SAPLING != 0 {
+                let sxsk = usk.sapling();
+                let sxvk = sxsk.to_diversifiable_full_viewing_key();
+                let address = derive_sapling_address(network, &sxvk, dindex);
+                keys.sapling = Some(SaplingKeys {
+                    sk: Some(sxsk.clone()),
+                    vk: sxvk,
+                    address,
+                });
+            }
+            if pools & (POOL_ORCHARD | POOL_IRONWOOD) != 0 {
+                let oxsk = usk.orchard();
+                keys.orchard = Some(OrchardKeys {
+                    sk: Some(oxsk.clone()),
+                    vk: FullViewingKey::from(oxsk),
+                });
+            }
+        }
+        KeySource::TransparentSk(xsk) => {
+            let xvk = xsk.to_account_pubkey();
+            let addresses = external_transparent_addrs(network, &xvk, Some(&xsk), 0)?;
+            keys.transparent = Some(TransparentKeys {
+                sk: Some(xsk),
+                vk: Some(xvk),
+                addresses,
+            });
+        }
+        KeySource::TransparentVk(xvk) => {
+            let addresses = external_transparent_addrs(network, &xvk, None, 0)?;
+            keys.transparent = Some(TransparentKeys {
+                sk: None,
+                vk: Some(xvk),
+                addresses,
+            });
+        }
+        KeySource::TransparentSingle {
+            sk,
+            pk,
+            uncompressed,
+        } => {
+            let pkh: [u8; 20] = Ripemd160::digest(Sha256::digest(&pk)).into();
+            let address = TransparentAddress::PublicKeyHash(pkh).encode(network);
+            keys.transparent = Some(TransparentKeys {
+                sk: None,
+                vk: None,
+                addresses: vec![TransparentAddr {
+                    dindex: 0,
+                    sk,
+                    pk,
+                    address,
+                    uncompressed,
+                }],
+            });
+        }
+        KeySource::SaplingSk(xsk) => {
+            let xvk = xsk.to_diversifiable_full_viewing_key();
+            let (di, address) = xvk.default_address();
+            keys.dindex = di.try_into()?;
+            keys.sapling = Some(SaplingKeys {
+                sk: Some(*xsk),
+                vk: xvk,
+                address: address.encode(network),
+            });
+        }
+        KeySource::SaplingVk(xvk) => {
+            let (di, address) = xvk.default_address();
+            keys.dindex = di.try_into()?;
+            keys.sapling = Some(SaplingKeys {
+                sk: None,
+                vk: xvk.to_diversifiable_full_viewing_key(),
+                address: address.encode(network),
+            });
+        }
+        KeySource::Ufvk(uvk) => {
+            let (ua, di) = uvk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
+            let dindex: u32 = di.try_into()?;
+            keys.dindex = dindex;
+            if let Some(tvk) = uvk.p2pkh().filter(|_| pools & POOL_TRANSPARENT != 0) {
+                let addresses = external_transparent_addrs(network, tvk, None, dindex)?;
+                keys.transparent = Some(TransparentKeys {
+                    sk: None,
+                    vk: Some(tvk.clone()),
+                    addresses,
+                });
+            }
+            if let Some(sxvk) = uvk.sapling().filter(|_| pools & POOL_SAPLING != 0) {
+                let address = ua.sapling().unwrap().encode(network);
+                keys.sapling = Some(SaplingKeys {
+                    sk: None,
+                    vk: sxvk.clone(),
+                    address,
+                });
+            }
+            if let Some(ovk) = uvk.orchard().filter(|_| pools & POOL_ORCHARD != 0) {
+                keys.orchard = Some(OrchardKeys {
+                    sk: None,
+                    vk: ovk.clone(),
+                });
+            }
+        }
+        KeySource::ZondaxSeed(_) | KeySource::ZondaxDevice | KeySource::OfficialDevice => {
+            anyhow::bail!("Ledger accounts are derived with the device helpers");
+        }
+    }
+    Ok(keys)
+}
+
+/// Zondax Ledger account recovered from its seed phrase: only the sapling
+/// spending key is recoverable, there is no device and no transparent key.
+async fn derive_zondax_seed_keys(
+    network: &Network,
+    mnemonic: &str,
+    aindex: u32,
+    pools: u8,
+) -> Result<AccountKeys> {
+    let mut keys = AccountKeys::default();
+    if pools & POOL_SAPLING != 0 {
+        let sxsk = crate::recover::recover_ledger_seed(mnemonic, aindex).await?;
+        let sxvk = sxsk.to_diversifiable_full_viewing_key();
+        let (di, _) = sxvk.default_address();
+        let di: u128 = di.into();
+        keys.dindex = di as u32;
+        let address = derive_sapling_address(network, &sxvk, keys.dindex);
+        keys.sapling = Some(SaplingKeys {
+            sk: Some(sxsk),
+            vk: sxvk,
+            address,
+        });
+    }
+    Ok(keys)
+}
+
+/// Zondax Ledger account: the sapling viewing key and the transparent address
+/// are read from the device.
+async fn derive_zondax_device_keys(
+    network: &Network,
+    ledger: &LedgerHandle,
+    aindex: u32,
+    pools: u8,
+) -> Result<AccountKeys> {
+    let mut keys = AccountKeys::default();
+    // we must do sapling derivation first to know a valid dindex
+    // because in sapling some indices are invalid
+    if pools & POOL_SAPLING != 0 {
+        let fvk = ledger.import_sapling_fvk(network, aindex).await?;
+        let mut dfvk = fvk.to_bytes().to_vec();
+        dfvk.extend_from_slice(&[0u8; 32]); // add a dummy dk because we cannot get the one from the Ledger
+        let xvk = DiversifiableFullViewingKey::from_bytes(&tiu!(dfvk)).unwrap();
+        // We should get the default address dindex by using the get_div_list
+        // api but it is currently not working
+        // instead, we "assume" the dindex = 0 is the default sapling address
+        let address = ledger.get_sapling_address(network, aindex).await?;
+        keys.sapling = Some(SaplingKeys {
+            sk: None,
+            vk: xvk,
+            address,
+        });
+    }
+    if pools & POOL_TRANSPARENT != 0 {
+        // Zondax accounts only ever register the transparent address at index
+        // 0, regardless of the sapling default diversifier index.
+        let (pk, taddr) = ledger
+            .get_transparent_pubkey(network, aindex, 0, 0)
+            .await?;
+        keys.transparent = Some(TransparentKeys {
+            addresses: vec![TransparentAddr {
+                dindex: 0,
+                sk: None,
+                pk,
+                address: taddr.encode(network),
+                uncompressed: false,
+            }],
+            ..Default::default()
+        });
+    }
+    Ok(keys)
+}
+
+/// Official Ledger account: the unified viewing key is read from the device.
+async fn derive_official_device_keys(
+    network: &Network,
+    ledger: &LedgerHandle,
+    aindex: u32,
+    pools: u8,
+) -> Result<AccountKeys> {
+    let ufvk = ledger.get_ufvk(network, aindex).await?;
+    let uvk = UnifiedFullViewingKey::decode(network, &ufvk)
+        .map_err(|_| anyhow!("Invalid viewing key from the device"))?;
+
+    // no sapling key on the device, so there is no derived default
+    // diversifier index; use 0
+    let mut keys = AccountKeys::default();
+    if pools & POOL_TRANSPARENT != 0 {
+        let tvk = uvk
+            .p2pkh()
+            .ok_or_else(|| anyhow!("device viewing key has no transparent key"))?;
+        let addresses = external_transparent_addrs(network, tvk, None, keys.dindex)?;
+        keys.transparent = Some(TransparentKeys {
+            sk: None,
+            vk: Some(tvk.clone()),
+            addresses,
+        });
+    }
+    if pools & (POOL_ORCHARD | POOL_IRONWOOD) != 0 {
+        let ovk = uvk
+            .orchard()
+            .ok_or_else(|| anyhow!("device viewing key has no orchard key"))?;
+        keys.orchard = Some(OrchardKeys {
+            sk: None,
+            vk: ovk.clone(),
+        });
+    }
+    Ok(keys)
+}
+
+/// Write a new account's derived keys. The account metadata row must exist.
+async fn store_account_keys(
+    network: &Network,
+    db_tx: &mut SqliteConnection,
+    account: u32,
+    birth: u32,
+    keys: AccountKeys,
+) -> Result<()> {
+    if let Some(seed) = &keys.seed {
+        store_account_seed(
+            db_tx,
+            account,
+            &seed.mnemonic,
+            &seed.passphrase,
+            &seed.fingerprint,
+            seed.aindex,
+        )
+        .await?;
+    }
+
+    if let Some(t) = &keys.transparent {
+        init_account_transparent(db_tx, account, birth).await?;
+        if let Some(sk) = &t.sk {
+            store_account_transparent_sk(db_tx, account, sk).await?;
+        }
+        if let Some(vk) = &t.vk {
+            store_account_transparent_vk(db_tx, account, vk).await?;
+        }
+        for a in &t.addresses {
+            store_account_transparent_addr(
+                db_tx,
+                account,
+                0,
+                a.dindex,
+                a.sk.clone(),
+                &a.pk,
+                &a.address,
+                a.uncompressed,
+            )
+            .await?;
+        }
+    }
+
+    if let Some(s) = &keys.sapling {
+        init_account_sapling(network, db_tx, account, birth).await?;
+        if let Some(sk) = &s.sk {
+            store_account_sapling_sk(db_tx, account, sk).await?;
+        }
+        store_account_sapling_vk(db_tx, account, &s.vk, &s.address).await?;
+    }
+
+    if let Some(o) = &keys.orchard {
+        init_account_orchard(network, db_tx, account, birth).await?;
+        if let Some(sk) = &o.sk {
+            store_account_orchard_sk(db_tx, account, sk).await?;
+        }
+        store_account_orchard_vk(db_tx, account, &o.vk).await?;
+    }
+
+    update_dindex(db_tx, account, keys.dindex, true).await?;
+
+    if let Some(t) = &keys.transparent {
+        for a in &t.addresses {
+            ensure_internal_change_address(network, db_tx, account, a.dindex).await?;
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
-mod tests {
-    use super::default_pools;
-    use crate::{
-        ledger::HwKind,
-        pay::pool::{ALL_POOLS, POOL_IRONWOOD, POOL_SAPLING, POOL_TRANSPARENT},
-    };
+mod new_account_tests {
+    use super::*;
+    use crate::pay::pool::{ALL_POOLS, POOL_IRONWOOD, POOL_ORCHARD, POOL_SAPLING, POOL_TRANSPARENT};
+    use bip32::Prefix;
+
+    const MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    const NETWORK: Network = Network::Main;
+
+    fn seed_keys(pools: u8) -> AccountKeys {
+        derive_account_keys(&NETWORK, KeySource::Seed(MNEMONIC.to_string()), "", 0, pools).unwrap()
+    }
+
+    fn usk() -> UnifiedSpendingKey {
+        let seed = bip39::Mnemonic::from_str(MNEMONIC).unwrap().to_seed("");
+        UnifiedSpendingKey::from_seed(&NETWORK, &seed, AccountId::ZERO).unwrap()
+    }
 
     #[test]
     fn account_pool_defaults_match_wallet_kind() {
-        assert_eq!(default_pools(HwKind::Software), ALL_POOLS);
+        assert_eq!(resolve_pools(HwKind::Software, None).unwrap(), ALL_POOLS);
         assert_eq!(
-            default_pools(HwKind::Zondax),
+            resolve_pools(HwKind::Zondax, None).unwrap(),
             POOL_TRANSPARENT | POOL_SAPLING
         );
         assert_eq!(
-            default_pools(HwKind::Official),
+            resolve_pools(HwKind::Official, None).unwrap(),
             POOL_TRANSPARENT | POOL_IRONWOOD
         );
+    }
+
+    #[test]
+    fn resolve_pools_rejects_unsupported_requests() {
+        assert!(resolve_pools(HwKind::Software, Some(0)).is_err());
+        assert!(resolve_pools(HwKind::Zondax, Some(POOL_ORCHARD)).is_err());
+        assert!(resolve_pools(HwKind::Official, Some(POOL_SAPLING)).is_err());
+        assert_eq!(
+            resolve_pools(HwKind::Software, Some(POOL_SAPLING)).unwrap(),
+            POOL_SAPLING
+        );
+        assert_eq!(
+            resolve_pools(HwKind::Official, Some(POOL_TRANSPARENT)).unwrap(),
+            POOL_TRANSPARENT
+        );
+    }
+
+    #[test]
+    fn classify_ledger_keys() {
+        assert!(matches!(
+            classify_key(&NETWORK, HwKind::Zondax, "").unwrap(),
+            KeySource::ZondaxDevice
+        ));
+        assert!(matches!(
+            classify_key(&NETWORK, HwKind::Zondax, MNEMONIC).unwrap(),
+            KeySource::ZondaxSeed(_)
+        ));
+        assert!(matches!(
+            classify_key(&NETWORK, HwKind::Official, "").unwrap(),
+            KeySource::OfficialDevice
+        ));
+        // An Official account restored from its phrase is a software seed account.
+        assert!(matches!(
+            classify_key(&NETWORK, HwKind::Official, MNEMONIC).unwrap(),
+            KeySource::Seed(_)
+        ));
+        assert!(classify_key(&NETWORK, HwKind::Official, "not a phrase").is_err());
+    }
+
+    #[test]
+    fn classify_software_keys() {
+        assert!(matches!(
+            classify_key(&NETWORK, HwKind::Software, MNEMONIC).unwrap(),
+            KeySource::Seed(_)
+        ));
+
+        let seed = bip39::Mnemonic::from_str(MNEMONIC).unwrap().to_seed("");
+        let xprv = ExtendedPrivateKey::<SecretKey>::new(&seed).unwrap();
+        let xprv_str = xprv.to_extended_key(Prefix::XPRV).to_string();
+        let xpub_str = xprv.public_key().to_extended_key(Prefix::XPUB).to_string();
+        assert!(matches!(
+            classify_key(&NETWORK, HwKind::Software, &xprv_str).unwrap(),
+            KeySource::TransparentSk(_)
+        ));
+        assert!(matches!(
+            classify_key(&NETWORK, HwKind::Software, &xpub_str).unwrap(),
+            KeySource::TransparentVk(_)
+        ));
+
+        let usk = usk();
+        let sxsk = usk.sapling();
+        let sxsk_str = zcash_keys::encoding::encode_extended_spending_key(
+            NETWORK.hrp_sapling_extended_spending_key(),
+            sxsk,
+        );
+        let sxvk_str = zcash_keys::encoding::encode_extended_full_viewing_key(
+            NETWORK.hrp_sapling_extended_full_viewing_key(),
+            &sxsk.to_extended_full_viewing_key(),
+        );
+        assert!(matches!(
+            classify_key(&NETWORK, HwKind::Software, &sxsk_str).unwrap(),
+            KeySource::SaplingSk(_)
+        ));
+        assert!(matches!(
+            classify_key(&NETWORK, HwKind::Software, &sxvk_str).unwrap(),
+            KeySource::SaplingVk(_)
+        ));
+
+        let ufvk = usk.to_unified_full_viewing_key().encode(&NETWORK).unwrap();
+        assert!(matches!(
+            classify_key(&NETWORK, HwKind::Software, &ufvk).unwrap(),
+            KeySource::Ufvk(_)
+        ));
+
+        assert!(classify_key(&NETWORK, HwKind::Software, "garbage").is_err());
+    }
+
+    #[test]
+    fn seed_derivation_covers_requested_pools() {
+        let keys = seed_keys(ALL_POOLS);
+        let seed = keys.seed.as_ref().unwrap();
+        assert_eq!(seed.mnemonic, MNEMONIC);
+        assert_eq!(seed.aindex, 0);
+
+        let t = keys.transparent.as_ref().unwrap();
+        assert!(t.sk.is_some() && t.vk.is_some());
+        assert_eq!(t.addresses[0].dindex, 0);
+        assert_eq!(t.addresses.last().unwrap().dindex, keys.dindex);
+        assert!(t.addresses.iter().all(|a| a.sk.is_some()));
+        let distinct: std::collections::HashSet<u32> =
+            t.addresses.iter().map(|a| a.dindex).collect();
+        assert_eq!(distinct.len(), t.addresses.len());
+
+        let s = keys.sapling.as_ref().unwrap();
+        assert!(s.sk.is_some());
+        assert_eq!(s.address, derive_sapling_address(&NETWORK, &s.vk, keys.dindex));
+        assert!(keys.orchard.as_ref().unwrap().sk.is_some());
+
+        let keys = seed_keys(POOL_SAPLING);
+        assert!(keys.transparent.is_none());
+        assert!(keys.sapling.is_some());
+        assert!(keys.orchard.is_none());
+
+        let keys = seed_keys(POOL_IRONWOOD);
+        assert!(keys.orchard.is_some());
+    }
+
+    #[test]
+    fn ufvk_derivation_matches_seed_derivation() {
+        let from_seed = seed_keys(ALL_POOLS);
+        let ufvk = usk().to_unified_full_viewing_key().encode(&NETWORK).unwrap();
+        let source = classify_key(&NETWORK, HwKind::Software, &ufvk).unwrap();
+        let from_ufvk = derive_account_keys(&NETWORK, source, "", 0, ALL_POOLS).unwrap();
+
+        assert!(from_ufvk.seed.is_none());
+        assert_eq!(from_ufvk.dindex, from_seed.dindex);
+
+        let (st, ut) = (
+            from_seed.transparent.unwrap(),
+            from_ufvk.transparent.unwrap(),
+        );
+        assert!(ut.sk.is_none() && ut.vk.is_some());
+        let addrs = |t: &TransparentKeys| -> Vec<(u32, String)> {
+            t.addresses.iter().map(|a| (a.dindex, a.address.clone())).collect()
+        };
+        assert_eq!(addrs(&st), addrs(&ut));
+        assert!(ut.addresses.iter().all(|a| a.sk.is_none()));
+
+        let (ss, us) = (from_seed.sapling.unwrap(), from_ufvk.sapling.unwrap());
+        assert!(us.sk.is_none());
+        assert_eq!(ss.address, us.address);
+        assert_eq!(ss.vk.to_bytes(), us.vk.to_bytes());
+
+        let (so, uo) = (from_seed.orchard.unwrap(), from_ufvk.orchard.unwrap());
+        assert!(uo.sk.is_none());
+        assert_eq!(so.vk.to_bytes(), uo.vk.to_bytes());
+    }
+
+    #[test]
+    fn ledger_sources_are_not_software_derivable() {
+        assert!(derive_account_keys(&NETWORK, KeySource::ZondaxDevice, "", 0, ALL_POOLS).is_err());
     }
 }
 
