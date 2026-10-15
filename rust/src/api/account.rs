@@ -441,7 +441,7 @@ pub async fn list_notes(account: u32, c: &Coin) -> Result<Vec<TxNote>> {
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn lock_note(id: u32, locked: bool, account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    crate::db::lock_note(&mut connection, account, id, locked).await?;
+    crate::sync::chain_log::set_note_lock(&mut connection, account, id, locked).await?;
     Ok(())
 }
 
@@ -624,19 +624,24 @@ pub async fn get_exported_data(r#type: u8, account: u32, c: &Coin) -> Result<Str
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn lock_recent_notes(height: u32, threshold: u32, account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    crate::db::lock_recent_notes(&mut connection, account, height, threshold).await
+    crate::sync::chain_log::lock_notes_above(
+        &mut connection,
+        account,
+        height.saturating_sub(threshold),
+    )
+    .await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn unlock_all_notes(account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    crate::db::unlock_all_notes(&mut connection, account).await
+    crate::sync::chain_log::unlock_all(&mut connection, account).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn toggle_all_notes(account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    crate::db::toggle_all_notes(&mut connection, account).await
+    crate::sync::chain_log::toggle_all_locks(&mut connection, account).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]

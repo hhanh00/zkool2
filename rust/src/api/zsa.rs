@@ -49,15 +49,7 @@ pub async fn list_zsa_holdings(account: u32, c: &Coin) -> Result<Vec<ZsaHolding>
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn set_asset_name(id_asset: i64, name: String, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    let r = sqlx::query("UPDATE assets SET asset_name = ?1 WHERE id_asset = ?2")
-        .bind(&name)
-        .bind(id_asset)
-        .execute(&mut *connection)
-        .await?;
-    if r.rows_affected() == 0 {
-        anyhow::bail!("No asset with id_asset={id_asset}");
-    }
-    Ok(())
+    crate::sync::chain_log::set_asset_name(&mut connection, id_asset, &name).await
 }
 
 /// Check whether ZSA (Zcash Shielded Assets) is available on the current network.

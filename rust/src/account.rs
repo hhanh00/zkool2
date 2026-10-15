@@ -57,7 +57,7 @@ use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
 use zcash_keys::{
     address::UnifiedAddress, encoding::AddressCodec as _, keys::UnifiedAddressRequest,
 };
-use zcash_protocol::consensus::{NetworkConstants, NetworkUpgrade, Parameters};
+use zcash_protocol::consensus::{NetworkConstants, Parameters};
 use zcash_transparent::keys::{
     AccountPrivKey, AccountPubKey, NonHardenedChildIndex, TransparentKeyScope,
 };
@@ -66,7 +66,7 @@ use zip32::{fingerprint::SeedFingerprint, AccountId};
 
 use crate::{
     api::account::FrostParams,
-    sync::trim_sync_data,
+    sync::chain_log,
     warp::{AuthPath, Witness, MERKLE_DEPTH},
 };
 
@@ -1610,51 +1610,11 @@ pub async fn reset_sync(
     connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<()> {
-    let birth_height = sqlx::query("SELECT birth FROM accounts WHERE id_account = ?")
-        .bind(account)
-        .map(|row: SqliteRow| row.get::<u32, _>(0))
-        .fetch_one(&mut *connection)
-        .await?;
-    trim_sync_data(&mut *connection, account, 0).await?;
-    init_sync_heights(network, &mut *connection, account, birth_height).await?;
-    Ok(())
-}
-
-pub async fn init_sync_heights(
-    network: &Network,
-    connection: &mut SqliteConnection,
-    account: u32,
-    birth_height: u32,
-) -> Result<()> {
-    let max_pool = if network.activation_height(NetworkUpgrade::Nu6_3).is_some() {
-        4
-    } else {
-        3
-    };
-    for pool in 0..max_pool {
-        let activation_height: u32 = match pool {
-            0 => 0,
-            1 => network
-                .activation_height(NetworkUpgrade::Sapling)
-                .unwrap()
-                .into(),
-            2 => network
-                .activation_height(NetworkUpgrade::Nu5)
-                .unwrap()
-                .into(),
-            3 => network
-                .activation_height(NetworkUpgrade::Nu6_3)
-                .unwrap()
-                .into(),
-            _ => unreachable!(),
-        };
-        sqlx::query("UPDATE sync_heights SET height = ?3 WHERE account = ?1 AND pool = ?2")
-            .bind(account)
-            .bind(pool)
-            .bind(birth_height.max(activation_height))
-            .execute(&mut *connection)
-            .await?;
-    }
+    let birth_height = get_birth_height(&mut *connection, account).await?;
+    let mut db_tx = connection.begin().await?;
+    chain_log::trim_to(&mut db_tx, account, 0).await?;
+    chain_log::init_checkpoints(&mut db_tx, network, account, birth_height).await?;
+    db_tx.commit().await?;
     Ok(())
 }
 
@@ -2177,10 +2137,7 @@ pub async fn rename_category(connection: &mut SqliteConnection, category: &Categ
 
 pub async fn delete_categories(connection: &mut SqliteConnection, ids: &[u32]) -> Result<()> {
     for id in ids {
-        sqlx::query("UPDATE transactions SET category = NULL where category = ?1")
-            .bind(id)
-            .execute(&mut *connection)
-            .await?;
+        chain_log::clear_category(&mut *connection, *id).await?;
 
         sqlx::query("DELETE FROM categories WHERE id_category = ?1")
             .bind(id)

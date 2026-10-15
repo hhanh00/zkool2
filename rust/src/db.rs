@@ -25,7 +25,6 @@ use crate::api::account::TxNote;
 use crate::api::account::{Account, Memo, Tx};
 use crate::api::coin::Network;
 use crate::api::sync::PoolBalance;
-use crate::sync::BlockHeader;
 
 /// Schema version. Bump only when the export format changes (IOAccount or any
 /// embedded struct gains/removes/changes a field). Do NOT bump for runtime-only
@@ -879,43 +878,6 @@ async fn migrate_headers(connection: &mut SqliteConnection) -> Result<()> {
     Ok(())
 }
 
-pub async fn store_block_header(
-    connection: &mut SqliteConnection,
-    account: u32,
-    block_header: &BlockHeader,
-) -> Result<()> {
-    sqlx::query(
-        "INSERT INTO headers (account, height, hash, time)
-                    VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
-    )
-    .bind(account)
-    .bind(block_header.height)
-    .bind(&block_header.hash)
-    .bind(block_header.time)
-    .execute(&mut *connection)
-    .await?;
-    Ok(())
-}
-
-pub async fn store_synced_height(
-    connection: &mut SqliteConnection,
-    account: u32,
-    pool: u8,
-    height: u32,
-) -> Result<()> {
-    sqlx::query(
-        "INSERT OR REPLACE INTO sync_heights(account, pool, height)
-        VALUES (?, ?, ?)",
-    )
-    .bind(account)
-    .bind(pool)
-    .bind(height)
-    .execute(&mut *connection)
-    .await?;
-
-    Ok(())
-}
-
 pub async fn store_account_seed(
     connection: &mut SqliteConnection,
     account: u32,
@@ -952,7 +914,7 @@ pub async fn init_account_transparent(
         .bind(account)
         .execute(&mut *connection)
         .await?;
-    store_synced_height(connection, account, 0, birth).await?;
+    crate::sync::chain_log::set_checkpoint(connection, account, 0, birth).await?;
 
     Ok(())
 }
@@ -1049,7 +1011,7 @@ pub async fn init_account_sapling(
         .activation_height(NetworkUpgrade::Sapling)
         .unwrap()
         .into();
-    store_synced_height(connection, account, 1, birth.max(activation_height)).await?;
+    crate::sync::chain_log::set_checkpoint(connection, account, 1, birth.max(activation_height)).await?;
 
     Ok(())
 }
@@ -1104,7 +1066,7 @@ pub async fn init_account_orchard(
         .activation_height(NetworkUpgrade::Nu5)
         .unwrap()
         .into();
-    store_synced_height(connection, account, 2, birth.max(activation_height)).await?;
+    crate::sync::chain_log::set_checkpoint(connection, account, 2, birth.max(activation_height)).await?;
 
     Ok(())
 }
@@ -1389,38 +1351,7 @@ pub async fn delete_account(connection: &mut SqliteConnection, account: u32) -> 
         .execute(&mut *tx)
         .await?;
 
-    sqlx::query("DELETE FROM outputs WHERE account = ?")
-        .bind(account)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM memos WHERE account = ?")
-        .bind(account)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM witnesses WHERE account = ?")
-        .bind(account)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM notes WHERE account = ?")
-        .bind(account)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM spends WHERE account = ?")
-        .bind(account)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM transactions WHERE account = ?")
-        .bind(account)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM headers WHERE account = ?")
-        .bind(account)
-        .execute(&mut *tx)
-        .await?;
-    sqlx::query("DELETE FROM sync_heights WHERE account = ?")
-        .bind(account)
-        .execute(&mut *tx)
-        .await?;
+    crate::sync::chain_log::delete_account_data(&mut tx, account).await?;
     sqlx::query("DELETE FROM transparent_accounts WHERE account = ?")
         .bind(account)
         .execute(&mut *tx)
@@ -1880,21 +1811,6 @@ fn row_to_note(row: SqliteRow) -> TxNote {
     }
 }
 
-pub async fn lock_note(
-    connection: &mut SqliteConnection,
-    account: u32,
-    id: u32,
-    locked: bool,
-) -> Result<()> {
-    sqlx::query("UPDATE notes SET locked = ? WHERE account = ? AND id_note = ?")
-        .bind(locked)
-        .bind(account)
-        .bind(id)
-        .execute(&mut *connection)
-        .await?;
-    Ok(())
-}
-
 /// Raw row from the assets table joined with unspent note balances.
 #[derive(Clone, Debug)]
 pub struct ZsaAssetRow {
@@ -1906,21 +1822,6 @@ pub struct ZsaAssetRow {
     pub finalized: bool,
     pub first_seen_height: i32,
     pub balance: i64,
-}
-
-/// Sets the display name of an asset; fails when no asset has that id.
-pub async fn set_asset_name(
-    connection: &mut SqliteConnection,
-    id_asset: i32,
-    name: &str,
-) -> Result<()> {
-    let result = sqlx::query("UPDATE assets SET asset_name = ?1 WHERE id_asset = ?2")
-        .bind(name)
-        .bind(id_asset)
-        .execute(&mut *connection)
-        .await?;
-    anyhow::ensure!(result.rows_affected() > 0, "No asset with id_asset={id_asset}");
-    Ok(())
 }
 
 pub async fn get_zsa_holdings(
@@ -2210,32 +2111,6 @@ pub async fn set_user_memo(
     Ok(())
 }
 
-pub async fn set_tx_category(
-    connection: &mut SqliteConnection,
-    id: u32,
-    category: Option<u32>,
-) -> Result<()> {
-    sqlx::query("UPDATE transactions SET category = ?2 WHERE id_tx = ?1")
-        .bind(id)
-        .bind(category)
-        .execute(&mut *connection)
-        .await?;
-    Ok(())
-}
-
-pub async fn set_tx_price(
-    connection: &mut SqliteConnection,
-    id: u32,
-    price: Option<f64>,
-) -> Result<()> {
-    sqlx::query("UPDATE transactions SET price = ?2 WHERE id_tx = ?1")
-        .bind(id)
-        .bind(price)
-        .execute(&mut *connection)
-        .await?;
-    Ok(())
-}
-
 pub async fn export_data(
     connection: &mut SqliteConnection,
     account: u32,
@@ -2286,37 +2161,6 @@ fn get_sqlite_column_value(row: &SqliteRow, index: usize) -> Result<String> {
     };
 
     Ok(v)
-}
-
-pub async fn lock_recent_notes(
-    connection: &mut SqliteConnection,
-    account: u32,
-    height: u32,
-    threshold: u32,
-) -> Result<()> {
-    let max_height = height.saturating_sub(threshold);
-    sqlx::query("UPDATE notes SET locked = TRUE WHERE account = ?1 AND height > ?2")
-        .bind(account)
-        .bind(max_height)
-        .execute(connection)
-        .await?;
-    Ok(())
-}
-
-pub async fn toggle_all_notes(connection: &mut SqliteConnection, account: u32) -> Result<()> {
-    sqlx::query("UPDATE notes SET locked = NOT locked WHERE account = ?1")
-        .bind(account)
-        .execute(connection)
-        .await?;
-    Ok(())
-}
-
-pub async fn unlock_all_notes(connection: &mut SqliteConnection, account: u32) -> Result<()> {
-    sqlx::query("UPDATE notes SET locked = FALSE WHERE account = ?1")
-        .bind(account)
-        .execute(connection)
-        .await?;
-    Ok(())
 }
 
 // TODO: Include pool filter

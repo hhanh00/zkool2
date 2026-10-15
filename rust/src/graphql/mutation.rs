@@ -363,7 +363,7 @@ impl Mutation {
     async fn set_asset_name(id_asset: i32, name: String, context: &Context) -> FieldResult<bool> {
         check_admin_auth(context)?;
         let mut connection = context.coin.get_connection().await?;
-        crate::db::set_asset_name(&mut connection, id_asset, &name).await?;
+        crate::sync::chain_log::set_asset_name(&mut connection, id_asset as i64, &name).await?;
         Ok(true)
     }
 

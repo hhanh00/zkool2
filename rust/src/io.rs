@@ -17,6 +17,10 @@ use zstd::DEFAULT_COMPRESSION_LEVEL;
 
 use crate::api::coin::Network;
 use crate::db::DB_VERSION;
+use crate::sync::chain_log::{
+    self, AssetRow, MemoRow, NoteKey, NoteRow, OutputRow, SpendRow, TransactionRow,
+};
+use crate::sync::BlockHeader;
 
 pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> Result<Vec<u8>> {
     info!("Exporting account {}", account);
@@ -515,25 +519,23 @@ pub async fn import_account(
 
     let mut new_assets: HashMap<u32, u32> = HashMap::new();
     for asset in io_account.assets.iter() {
-        sqlx::query(
-            "INSERT OR IGNORE INTO assets(asset_desc_hash, ik, asset_base, finalized, first_seen_height)
-             VALUES (?1, ?2, ?3, ?4, ?5)",
+        chain_log::record_asset(
+            &mut tx,
+            &AssetRow {
+                desc_hash: &asset.asset_desc_hash.0,
+                ik: &asset.ik.0,
+                base: &asset.asset_base.0,
+                name: None,
+                finalized: asset.finalized,
+                first_seen_height: asset.first_seen_height,
+            },
         )
-        .bind(&asset.asset_desc_hash)
-        .bind(&asset.ik)
-        .bind(&asset.asset_base)
-        .bind(asset.finalized)
-        .bind(asset.first_seen_height)
-        .execute(&mut *tx)
         .await?;
         // Look up the id_asset (either newly created or existing)
-        let new_id_asset: (u32,) =
-            sqlx::query_as("SELECT id_asset FROM assets WHERE asset_desc_hash = ?1 AND ik = ?2")
-                .bind(&asset.asset_desc_hash)
-                .bind(&asset.ik)
-                .fetch_one(&mut *tx)
-                .await?;
-        new_assets.insert(asset.id_asset, new_id_asset.0);
+        let new_id_asset = chain_log::asset_id(&mut tx, &asset.asset_desc_hash.0, &asset.ik.0)
+            .await?
+            .ok_or_else(|| anyhow!("asset {} was not stored", asset.id_asset))?;
+        new_assets.insert(asset.id_asset, new_id_asset);
     }
 
     let mut folder: Option<u32> = None;
@@ -660,15 +662,8 @@ pub async fn import_account(
 
     info!("Importing sync heights");
     for sync_height in io_account.sync_heights.iter() {
-        sqlx::query(
-            "INSERT INTO sync_heights
-            (account, pool, height) VALUES (?, ?, ?)",
-        )
-        .bind(new_id_account)
-        .bind(sync_height.pool)
-        .bind(sync_height.height)
-        .execute(&mut *tx)
-        .await?;
+        chain_log::set_checkpoint(&mut tx, new_id_account, sync_height.pool, sync_height.height)
+            .await?;
     }
 
     info!("Importing transactions");
@@ -679,23 +674,23 @@ pub async fn import_account(
             .category
             .and_then(|c| category_map.get(&c))
             .cloned();
-        let r = sqlx::query(
-            "INSERT INTO transactions
-            (account, txid, height, time, details, tpe, value, fee, price, category) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        let new_id_tx = chain_log::record_transaction(
+            &mut tx,
+            new_id_account,
+            &TransactionRow {
+                txid: &transaction.txid.0,
+                height: transaction.height,
+                time: transaction.time,
+                details: transaction.details,
+                tpe: Some(transaction.tpe),
+                value: transaction.value,
+                fee: transaction.fee as i64,
+                price: transaction.price,
+                category,
+            },
         )
-        .bind(new_id_account)
-        .bind(&transaction.txid)
-        .bind(transaction.height)
-        .bind(transaction.time)
-        .bind(transaction.details)
-        .bind(transaction.tpe)
-        .bind(transaction.value)
-        .bind(transaction.fee as i64)
-        .bind(transaction.price)
-        .bind(category)
-        .execute(&mut *tx)
-        .await?;
-        let new_id_tx = r.last_insert_rowid() as u32;
+        .await?
+        .ok_or_else(|| anyhow!("duplicate transaction {} in backup", transaction.id_tx))?;
         new_txs.insert(transaction.id_tx, new_id_tx);
 
         for note in transaction.notes.iter() {
@@ -703,80 +698,80 @@ pub async fn import_account(
                 .taddress
                 .and_then(|id_taddress| new_taddresses.get(&id_taddress));
             let new_id_asset = note.id_asset.and_then(|id_asset| new_assets.get(&id_asset));
-            let r = sqlx::query("INSERT INTO notes
-                (tx, height, account, pool, scope, nullifier, value, cmx, taddress, position, diversifier,
-                rcm, rho, locked, id_asset)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
-                .bind(new_id_tx)
-                .bind(note.height)
-                .bind(new_id_account)
-                .bind(note.pool)
-                .bind(note.scope)
-                .bind(&note.nullifier)
-                .bind(note.value as i64)
-                .bind(&note.cmx)
-                .bind(new_taddress)
-                .bind(note.position)
-                .bind(&note.diversifier)
-                .bind(&note.rcm)
-                .bind(&note.rho)
-                .bind(note.locked)
-                .bind(new_id_asset)
-                .execute(&mut *tx)
-                .await?;
-            let new_id_note = r.last_insert_rowid() as u32;
+            let new_id_note = chain_log::record_note(
+                &mut tx,
+                new_id_account,
+                &NoteRow {
+                    id_tx: new_id_tx,
+                    height: note.height,
+                    pool: note.pool,
+                    scope: note.scope,
+                    nullifier: &note.nullifier.0,
+                    value: note.value as i64,
+                    cmx: note.cmx.as_ref().map(|b| b.0.as_slice()),
+                    taddress: new_taddress.copied(),
+                    position: note.position,
+                    diversifier: note.diversifier.as_ref().map(|b| b.0.as_slice()),
+                    rcm: note.rcm.as_ref().map(|b| b.0.as_slice()),
+                    rho: note.rho.as_ref().map(|b| b.0.as_slice()),
+                    locked: note.locked,
+                    id_asset: new_id_asset.copied(),
+                    diversifier_index: None,
+                },
+            )
+            .await?
+            .ok_or_else(|| anyhow!("duplicate note {} in backup", note.id_note))?;
             new_notes.insert(note.id_note, new_id_note);
 
-            if let Some(vout) = note.vout {
-                sqlx::query(
-                    "INSERT INTO memos
-                    (account, height, tx, pool, vout, note, memo_text, memo_bytes)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            if let (Some(vout), Some(memo_bytes)) = (note.vout, &note.memo_bytes) {
+                chain_log::record_memo(
+                    &mut tx,
+                    new_id_account,
+                    &MemoRow {
+                        id_tx: new_id_tx,
+                        height: note.height,
+                        pool: note.pool,
+                        vout,
+                        note: Some(new_id_note),
+                        output: None,
+                        text: note.memo_text.as_deref(),
+                        bytes: &memo_bytes.0,
+                    },
                 )
-                .bind(new_id_account)
-                .bind(note.height)
-                .bind(new_id_tx)
-                .bind(note.pool)
-                .bind(vout)
-                .bind(new_id_note)
-                .bind(&note.memo_text)
-                .bind(&note.memo_bytes)
-                .execute(&mut *tx)
                 .await?;
             }
         }
 
         for output in transaction.outputs.iter() {
-            let r = sqlx::query(
-                "INSERT INTO outputs
-                (tx, height, account, pool, value, address, vout) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            let new_id_output = chain_log::record_output(
+                &mut tx,
+                new_id_account,
+                &OutputRow {
+                    id_tx: new_id_tx,
+                    height: output.height,
+                    pool: output.pool,
+                    vout: output.vout,
+                    value: output.value as i64,
+                    address: &output.address,
+                },
             )
-            .bind(new_id_tx)
-            .bind(output.height)
-            .bind(new_id_account)
-            .bind(output.pool)
-            .bind(output.value as i64)
-            .bind(&output.address)
-            .bind(output.vout)
-            .execute(&mut *tx)
             .await?;
-            let new_id_output = r.last_insert_rowid() as u32;
 
             if let Some(memo_bytes) = &output.memo_bytes {
-                sqlx::query(
-                    "INSERT INTO memos
-                    (account, height, tx, pool, vout, output, memo_text, memo_bytes)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                chain_log::record_memo(
+                    &mut tx,
+                    new_id_account,
+                    &MemoRow {
+                        id_tx: new_id_tx,
+                        height: output.height,
+                        pool: output.pool,
+                        vout: output.vout,
+                        note: None,
+                        output: Some(new_id_output),
+                        text: output.memo_text.as_deref(),
+                        bytes: &memo_bytes.0,
+                    },
                 )
-                .bind(new_id_account)
-                .bind(output.height)
-                .bind(new_id_tx)
-                .bind(output.pool)
-                .bind(output.vout)
-                .bind(new_id_output) // Assuming output is linked to the note
-                .bind(&output.memo_text)
-                .bind(memo_bytes)
-                .execute(&mut *tx)
                 .await?;
             }
         }
@@ -790,18 +785,18 @@ pub async fn import_account(
         for spend in transaction.spends.iter() {
             let new_id_note = new_notes
                 .get(&spend.id_note)
-                .expect("new_id_note not found");
-            sqlx::query(
-                "INSERT INTO spends
-                (id_note, tx, height, account, pool, value) VALUES (?, ?, ?, ?, ?, ?)",
+                .ok_or_else(|| anyhow!("spend of unknown note {} in backup", spend.id_note))?;
+            chain_log::record_spend(
+                &mut tx,
+                new_id_account,
+                &SpendRow {
+                    note: NoteKey::Id(*new_id_note),
+                    id_tx: *new_id_tx,
+                    height: spend.height,
+                    pool: spend.pool,
+                    value: spend.value as i64,
+                },
             )
-            .bind(new_id_note)
-            .bind(new_id_tx)
-            .bind(spend.height)
-            .bind(new_id_account)
-            .bind(spend.pool)
-            .bind(spend.value as i64)
-            .execute(&mut *tx)
             .await?;
         }
     }
@@ -823,28 +818,28 @@ pub async fn import_account(
 
     info!("Importing checkpoints");
     for block in io_account.blocks.iter() {
-        sqlx::query(
-            "INSERT INTO headers
-            (account, height, hash, time) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING",
+        chain_log::store_header(
+            &mut tx,
+            new_id_account,
+            &BlockHeader {
+                height: block.height,
+                hash: block.hash.0.clone(),
+                time: block.time,
+            },
         )
-        .bind(new_id_account)
-        .bind(block.height)
-        .bind(&block.hash)
-        .bind(block.time)
-        .execute(&mut *tx)
         .await?;
 
         for witness in block.witness.iter() {
-            let new_id_note = new_notes.get(&witness.note).unwrap();
-            sqlx::query(
-                "INSERT INTO witnesses
-                (account, height, note, witness) VALUES (?, ?, ?, ?)",
+            let new_id_note = new_notes
+                .get(&witness.note)
+                .ok_or_else(|| anyhow!("witness of unknown note {} in backup", witness.note))?;
+            chain_log::record_witness(
+                &mut tx,
+                new_id_account,
+                NoteKey::Id(*new_id_note),
+                witness.height,
+                &witness.witness.0,
             )
-            .bind(new_id_account)
-            .bind(witness.height)
-            .bind(new_id_note)
-            .bind(&witness.witness)
-            .execute(&mut *tx)
             .await?;
         }
     }

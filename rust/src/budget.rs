@@ -96,11 +96,7 @@ async fn fill_historical_prices(txs: &mut [TxUSD], pqs: &[PriceQuote]) -> Result
 
 pub async fn store_tx_prices(connection: &mut SqliteConnection, txs: &[TxUSD]) -> Result<()> {
     for tx in txs {
-        sqlx::query("UPDATE transactions SET price = ?2 WHERE id_tx = ?1")
-            .bind(tx.id)
-            .bind(tx.price)
-            .execute(&mut *connection)
-            .await?;
+        crate::sync::chain_log::set_transaction_price(connection, tx.id, Some(tx.price)).await?;
     }
     Ok(())
 }
@@ -129,38 +125,10 @@ pub async fn update_historical_prices(
     currency: &str,
     exchange_rate: f64,
 ) -> Result<()> {
-    sqlx::query("UPDATE transactions SET price = price * ?1 WHERE price IS NOT NULL")
-        .bind(exchange_rate)
-        .execute(&mut *connection)
-        .await?;
+    crate::sync::chain_log::scale_transaction_prices(connection, exchange_rate).await?;
     // Upsert the currency prop
     sqlx::query("INSERT OR REPLACE INTO props (key, value) VALUES ('currency', ?1)")
         .bind(currency)
-        .execute(&mut *connection)
-        .await?;
-    Ok(())
-}
-
-pub async fn merge_pending_txs(
-    connection: &mut SqliteConnection,
-    account: u32,
-    height: u32,
-) -> Result<()> {
-    sqlx::query(
-        "WITH upd AS (SELECT t.id_tx, p.price, p.category
-        FROM pending_txs p JOIN transactions t ON p.txid = t.txid
-        WHERE t.account = ?1)
-        UPDATE transactions SET price = upd.price, category = upd.category
-        FROM upd WHERE upd.id_tx = transactions.id_tx",
-    )
-    .bind(account)
-    .execute(&mut *connection)
-    .await?;
-    // delete pending txs that could not be merged for more than 100 blocks
-    // they were probably never mined
-    sqlx::query("DELETE FROM pending_txs WHERE account = ?1 AND height < ?2")
-        .bind(account)
-        .bind(height.saturating_sub(100))
         .execute(&mut *connection)
         .await?;
     Ok(())
