@@ -1,3 +1,4 @@
+use crate::sync::chain_log::{self, MemoRow, NoteKey, OutputRow, TransactionDetails};
 use anyhow::{Context as _, Result};
 use orchard::{
     keys::Scope,
@@ -44,15 +45,16 @@ pub async fn fetch_tx_details(
     for (id_tx, txid) in txids.iter() {
         decrypt_memo(network, connection, client, account, txid).await?;
         let (tpe, value, asset_id, zsa_value) = summarize_tx(connection, *id_tx).await?;
-        sqlx::query(
-            "UPDATE transactions SET details = TRUE, tpe = ?, value = ?, zsa_value = ?, asset_id = ? WHERE id_tx = ?",
+        chain_log::set_transaction_details(
+            connection,
+            *id_tx,
+            &TransactionDetails {
+                tpe,
+                value,
+                zsa_value,
+                asset_id,
+            },
         )
-        .bind(tpe)
-        .bind(value)
-        .bind(zsa_value)
-        .bind(asset_id)
-        .bind(*id_tx)
-        .execute(&mut *connection)
         .await?;
     }
 
@@ -218,13 +220,9 @@ pub async fn decrypt_memo(
 
     let tx_data = tx.into_data();
 
-    let (id_tx,): (u32,) =
-        sqlx::query_as("SELECT id_tx FROM transactions WHERE account = ? AND txid = ?")
-            .bind(account)
-            .bind(txid)
-            .fetch_one(&mut *connection)
-            .await
-            .context("Failed to find transaction")?;
+    let (id_tx, _) = chain_log::transaction_ref(connection, account, txid)
+        .await
+        .context("Failed to find transaction")?;
 
     let mut fee_manager = FeeManager::default();
     let svk = get_sapling_vk(connection, account).await?;
@@ -272,13 +270,9 @@ pub async fn decrypt_memo(
                     try_note_decryption(&domain, &pivk, sout)
                 {
                     let cmx = &note.cmu().to_bytes();
-                    let id_note =
-                        sqlx::query("SELECT id_note FROM notes WHERE account = ? AND cmx = ?")
-                            .bind(account)
-                            .bind(cmx.as_slice())
-                            .map(|row: SqliteRow| row.get::<u32, _>(0))
-                            .fetch_optional(&mut *connection)
-                            .await?;
+                    let id_note = chain_log::find_note(connection, account, NoteKey::Cmx(cmx))
+                        .await?
+                        .map(|(id, _)| id);
 
                     process_memo(
                         connection,
@@ -356,12 +350,9 @@ pub async fn decrypt_memo(
                         // without a note link like the sapling path instead
                         // of failing the whole tx.
                         let id_note =
-                            sqlx::query("SELECT id_note FROM notes WHERE account = ? AND cmx = ?")
-                                .bind(account)
-                                .bind(&cmx.to_bytes()[..])
-                                .map(|row: SqliteRow| row.get::<u32, _>(0))
-                                .fetch_optional(&mut *connection)
-                                .await?;
+                            chain_log::find_note(connection, account, NoteKey::Cmx(&cmx.to_bytes()))
+                                .await?
+                                .map(|(id, _)| id);
 
                         process_memo(
                             connection,
@@ -418,13 +409,11 @@ pub async fn decrypt_memo(
                         ) {
                             let (note, address, memo_bytes) = zsa_action;
                             let cmx: ExtractedNoteCommitment = note.commitment().into();
-                            if let Ok(Some(id_note)) = sqlx::query(
-                                "SELECT id_note FROM notes WHERE account = ? AND cmx = ?",
+                            if let Ok(Some((id_note, _))) = chain_log::find_note(
+                                connection,
+                                account,
+                                NoteKey::Cmx(&cmx.to_bytes()),
                             )
-                            .bind(account)
-                            .bind(&cmx.to_bytes()[..])
-                            .map(|row: SqliteRow| row.get::<u32, _>(0))
-                            .fetch_optional(&mut *connection)
                             .await
                             {
                                 process_memo(
@@ -480,12 +469,7 @@ pub async fn decrypt_memo(
             hex::encode(txid)
         );
     }
-    let fee = fee_manager.fee();
-    sqlx::query("UPDATE transactions SET fee = ? WHERE id_tx = ?")
-        .bind(fee as i64)
-        .bind(id_tx)
-        .execute(&mut *connection)
-        .await?;
+    chain_log::set_transaction_fee(connection, id_tx, fee_manager.fee()).await?;
 
     Ok(())
 }
@@ -504,45 +488,26 @@ async fn process_memo(
 ) -> Result<()> {
     debug!("memo bytes: {}", hex::encode(&memo_bytes[0..32]));
     if let Ok(memo) = Memo::from_bytes(memo_bytes) {
-        match memo {
-            Memo::Empty => {}
-            Memo::Text(text_memo) => {
-                let text = &*text_memo;
-                sqlx::query(
-                    "INSERT INTO memos
-                (account, height, tx, pool, vout, note, output, memo_text, memo_bytes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
-                )
-                .bind(account)
-                .bind(height)
-                .bind(id_tx)
-                .bind(pool)
-                .bind(vout)
-                .bind(id_note)
-                .bind(id_output)
-                .bind(text)
-                .bind(memo_bytes)
-                .execute(&mut *connection)
-                .await?;
-            }
-            Memo::Future(_) | Memo::Arbitrary(_) => {
-                sqlx::query(
-                    "INSERT INTO memos
-                (account, height, tx, pool, vout, note, output, memo_bytes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
-                )
-                .bind(account)
-                .bind(height)
-                .bind(id_tx)
-                .bind(pool)
-                .bind(vout)
-                .bind(id_note)
-                .bind(id_output)
-                .bind(memo_bytes)
-                .execute(&mut *connection)
-                .await?;
-            }
-        }
+        let text = match &memo {
+            Memo::Empty => return Ok(()),
+            Memo::Text(text_memo) => Some(&**text_memo),
+            Memo::Future(_) | Memo::Arbitrary(_) => None,
+        };
+        chain_log::record_memo(
+            connection,
+            account,
+            &MemoRow {
+                id_tx,
+                height,
+                pool,
+                vout,
+                note: id_note,
+                output: id_output,
+                text,
+                bytes: memo_bytes,
+            },
+        )
+        .await?;
     }
 
     Ok(())
@@ -559,31 +524,19 @@ async fn store_output(
     value: u64,
     address: &str,
 ) -> Result<u32> {
-    sqlx::query(
-        "INSERT INTO outputs
-        (account, height, tx, pool, vout, value, address)
-        VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
+    chain_log::record_output(
+        connection,
+        account,
+        &OutputRow {
+            id_tx,
+            height,
+            pool,
+            vout,
+            value: value as i64,
+            address,
+        },
     )
-    .bind(account)
-    .bind(height)
-    .bind(id_tx)
-    .bind(pool) // Sapling pool
-    .bind(vout)
-    .bind(value as i64)
-    .bind(address)
-    .execute(&mut *connection)
-    .await?;
-    let id_output =
-        sqlx::query("SELECT id_output FROM outputs WHERE tx = ? AND pool = ? AND vout = ?")
-            .bind(id_tx)
-            .bind(pool) // Sapling pool
-            .bind(vout)
-            .map(|row: SqliteRow| row.get::<u32, _>(0))
-            .fetch_one(&mut *connection)
-            .await
-            .context("Failed to find output")?;
-
-    Ok(id_output)
+    .await
 }
 
 #[cfg(test)]

@@ -46,14 +46,14 @@ pub async fn set_user_memo(
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn set_tx_category(id: u32, category: Option<u32>, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    crate::db::set_tx_category(&mut connection, id, category).await?;
+    crate::sync::chain_log::set_transaction_category(&mut connection, id, category).await?;
     Ok(())
 }
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn set_tx_price(id: u32, price: Option<f64>, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
-    crate::db::set_tx_price(&mut connection, id, price).await?;
+    crate::sync::chain_log::set_transaction_price(&mut connection, id, price).await?;
     Ok(())
 }
 

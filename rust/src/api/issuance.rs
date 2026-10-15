@@ -141,17 +141,17 @@ pub async fn issue_asset(
     // Only needed for first issuance; reissuance already has the asset row.
     if !is_reissuance {
         let first_seen_height = client.latest_height().await?;
-        sqlx::query(
-            "INSERT OR IGNORE INTO assets(asset_desc_hash, ik, asset_base, asset_name, finalized, first_seen_height)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        crate::sync::chain_log::record_asset(
+            &mut connection,
+            &crate::sync::chain_log::AssetRow {
+                desc_hash: &desc_hash,
+                ik: &ik.encode(),
+                base: &asset_base_bytes,
+                name: Some(&asset_name),
+                finalized: finalize,
+                first_seen_height,
+            },
         )
-        .bind(desc_hash.to_vec())
-        .bind(ik.encode())
-        .bind(&asset_base_bytes)
-        .bind(&asset_name)
-        .bind(finalize)
-        .bind(first_seen_height)
-        .execute(&mut *connection)
         .await?;
     }
 

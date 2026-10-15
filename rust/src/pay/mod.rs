@@ -447,12 +447,5 @@ pub async fn lock_spent_notes(
         }
     }
 
-    for nf in nullifiers.iter() {
-        sqlx::query("UPDATE notes SET locked = TRUE WHERE account = ? AND nullifier = ?")
-            .bind(account)
-            .bind(nf)
-            .execute(&mut *conn)
-            .await?;
-    }
-    Ok(())
+    crate::sync::chain_log::lock_notes(conn, account, &nullifiers).await
 }

@@ -2,7 +2,7 @@ use std::{collections::HashSet, time::Duration};
 
 use anyhow::{Context as _, Result};
 use shielded::Synchronizer;
-use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
+use sqlx::SqliteConnection;
 use tokio::sync::{broadcast, mpsc::Sender};
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tracing::debug;
@@ -109,11 +109,7 @@ pub async fn warp_sync(
     // Check every account: accounts at the same height can still be on different chains.
     let mut frontier_hashes = Vec::new();
     for (account, _) in accounts {
-        let hash = sqlx::query("SELECT hash FROM headers WHERE account = ? AND height = ?")
-            .bind(account)
-            .bind(start_height - 1)
-            .map(|row: SqliteRow| row.get::<Vec<u8>, _>(0))
-            .fetch_optional(&mut *connection)
+        let hash = crate::sync::chain_log::header_hash(&mut *connection, *account, start_height - 1)
             .await
             .context("reading account frontier header")?;
         if let Some(hash) = hash {

@@ -93,7 +93,7 @@ pub async fn cache_block_time(account: u32, height: u32, c: &Coin) -> Result<()>
         hash: block.hash,
         time: block.time,
     };
-    crate::db::store_block_header(&mut connection, account, &bh).await?;
+    crate::sync::chain_log::store_header(&mut connection, account, &bh).await?;
     Ok(())
 }
 

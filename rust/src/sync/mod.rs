@@ -12,15 +12,13 @@ use zcash_transparent::address::TransparentAddress;
 use crate::api::account::get_ledger;
 use crate::api::coin::{Coin, Network};
 use crate::api::sync::{CANCEL_SYNC, SYNCING};
-use crate::budget::merge_pending_txs;
 
-use crate::db::store_block_header;
 use crate::io::SyncHeight;
 use crate::{Client, Sink};
 use std::{collections::HashSet, mem};
 
 use crate::{
-    account::{derive_transparent_address, derive_transparent_sk, get_birth_height, has_pool},
+    account::{derive_transparent_address, derive_transparent_sk, get_birth_height},
     api::sync::SyncProgress,
     db::{
         get_account_aindex, get_account_dindex, get_account_hw, select_account_transparent,
@@ -30,8 +28,11 @@ use crate::{
     warp::{legacy::CommitmentTreeFrontier, sync::warp_sync},
 };
 use bincode::config;
+use chain_log::{NoteKey, NoteRow, SpendRow, TransactionRow};
 use sqlx::pool::PoolConnection;
 use sqlx::{Connection, Sqlite, SqlitePool};
+
+pub mod chain_log;
 use tokio::sync::mpsc::Sender;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_util::sync::CancellationToken;
@@ -264,12 +265,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
                 let block = client.block(&network, h).await?;
                 let time = block.time;
                 for account in &account_ids {
-                    sqlx::query("UPDATE transactions SET time = ? WHERE height = ? AND time = 0 AND account = ?")
-                    .bind(time)
-                    .bind(h)
-                    .bind(account)
-                    .execute(&mut *connection)
-                    .await?;
+                    chain_log::set_block_time(&mut connection, *account, h, time, true).await?;
                 }
                 let block_header = BlockHeader {
                     height: h,
@@ -277,7 +273,8 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
                     time: block.time,
                 };
                 for account in &account_ids {
-                    store_relevant_block_header(&mut connection, *account, &block_header).await?;
+                    chain_log::record_relevant_header(&mut connection, *account, &block_header)
+                        .await?;
                 }
             }
 
@@ -297,7 +294,7 @@ pub async fn synchronize_impl<S: Sink<SyncProgress> + Send + 'static>(
         }
 
         for account in accounts.iter() {
-            merge_pending_txs(&mut connection, *account, current_height).await?;
+            chain_log::apply_pending_metadata(&mut connection, *account, current_height).await?;
         }
 
         Ok::<_, anyhow::Error>(())
@@ -406,17 +403,18 @@ pub(crate) async fn transparent_sync(
                             transaction.consensus_branch_id(),
                         );
                         // tx time is available in the block (not here)
-                        let tx_insert_result = sqlx::query("INSERT INTO transactions (account, txid, height, time) VALUES (?, ?, ?, 0) ON CONFLICT DO NOTHING")
-                        .bind(account)
-                        .bind(&txid)
-                        .bind(height)
-                        .execute(&mut *db_tx)
+                        let inserted = chain_log::record_transaction(
+                            &mut db_tx,
+                            *account,
+                            &TransactionRow::chain(&txid, height, 0),
+                        )
                         .await?;
                         debug!(
-                            "transparent_sync: tx {} inserted into transactions (rows_affected={})",
+                            "transparent_sync: tx {} inserted into transactions (new={})",
                             hex::encode(&txid),
-                            tx_insert_result.rows_affected()
+                            inserted.is_some()
                         );
+                        let (id_tx, _) = chain_log::transaction_ref(&mut db_tx, *account, &txid).await?;
 
                         // Access the transparent bundle part
                         if let Some(transparent_bundle) = transaction.transparent_bundle() {
@@ -433,13 +431,9 @@ pub(crate) async fn transparent_sync(
                                 let mut nf = vec![];
                                 vin.prevout().write(&mut nf)?;
 
-                                let row: Option<(u32, i64)> = sqlx::query_as(
-                                "SELECT id_note, value FROM notes WHERE account = ?1 AND nullifier = ?2",
-                            )
-                            .bind(account)
-                            .bind(&nf)
-                            .fetch_optional(&mut *db_tx)
-                            .await?;
+                                let row =
+                                    chain_log::find_note(&mut db_tx, *account, NoteKey::Nullifier(&nf))
+                                        .await?;
 
                                 if let Some((id, amount)) = row {
                                     debug!(
@@ -448,27 +442,20 @@ pub(crate) async fn transparent_sync(
                                         id,
                                         amount
                                     );
-                                    // note was found
-                                    // add a spent entry
-                                    sqlx::query(
-                                        "INSERT INTO spends (account, id_note, pool, tx, height, value)
-                                SELECT ?, ?, 0, tx.id_tx, ?, ? FROM transactions tx WHERE tx.txid = ?
-                                AND account = ? ON CONFLICT DO NOTHING",
+                                    // note was found: add a spent entry (this also
+                                    // releases any broadcast-time lock)
+                                    chain_log::record_spend(
+                                        &mut db_tx,
+                                        *account,
+                                        &SpendRow {
+                                            note: NoteKey::Id(id),
+                                            id_tx,
+                                            height,
+                                            pool: 0,
+                                            value: -amount,
+                                        },
                                     )
-                                    .bind(account)
-                                    .bind(id)
-                                    .bind(height)
-                                    .bind(-amount)
-                                    .bind(&txid)
-                                    .bind(account)
-                                    .execute(&mut *db_tx)
                                     .await?;
-                                    // Release any broadcast-time lock now that the
-                                    // spend is mined (noop if it was not locked).
-                                    sqlx::query("UPDATE notes SET locked = FALSE WHERE id_note = ?")
-                                        .bind(id)
-                                        .execute(&mut *db_tx)
-                                        .await?;
                                 }
                             }
 
@@ -494,24 +481,26 @@ pub(crate) async fn transparent_sync(
                                         let mut nf = transaction.txid().as_ref().to_vec();
                                         nf.extend_from_slice(&(i as u32).to_le_bytes());
 
-                                        let note_result = sqlx::query("INSERT INTO notes (account, height, pool, tx, taddress, nullifier, value)
-                                    SELECT ?, ?, 0, tx.id_tx, ?, ?, ? FROM transactions tx WHERE tx.txid = ?
-                                    AND account = ? ON CONFLICT DO NOTHING")
-                                        .bind(account)
-                                        .bind(height)
-                                        .bind(address_row.0)
-                                        .bind(&nf)
-                                        .bind(vout_value as i64)
-                                        .bind(&txid)
-                                        .bind(account)
-                                        .execute(&mut *db_tx)
+                                        let note = chain_log::record_note(
+                                            &mut db_tx,
+                                            *account,
+                                            &NoteRow {
+                                                id_tx,
+                                                height,
+                                                pool: 0,
+                                                nullifier: &nf,
+                                                value: vout_value as i64,
+                                                taddress: Some(address_row.0),
+                                                ..Default::default()
+                                            },
+                                        )
                                         .await?;
                                         debug!(
-                                            "transparent_sync: tx {} vout[{}] NOTE CREATED value={} rows_affected={}",
+                                            "transparent_sync: tx {} vout[{}] NOTE CREATED value={} new={}",
                                             transaction.txid(),
                                             i,
                                             vout_value,
-                                            note_result.rows_affected()
+                                            note.is_some()
                                         );
                                     }
                                 } else {
@@ -541,11 +530,7 @@ pub(crate) async fn transparent_sync(
             }
         }
 
-        sqlx::query("UPDATE sync_heights SET height = ? WHERE account = ? AND pool = 0")
-            .bind(end_height)
-            .bind(account)
-            .execute(&mut *db_tx)
-            .await?;
+        chain_log::checkpoint(&mut db_tx, *account, 0, end_height).await?;
         db_tx.commit().await?;
     }
 
@@ -778,7 +763,7 @@ async fn shielded_sync_range(
             while let Some(msg) = rx_messages.recv().await {
                 //debug!("Received message: {:?}", msg);
                 if let WarpSyncMessage::Commit = msg {
-                    let mut db_tx = writer_connection.begin().await.unwrap();
+                    let mut db_tx = writer_connection.begin().await?;
                     let mut new_messages = vec![];
                     mem::swap(&mut new_messages, &mut messages);
                     for msg in new_messages {
@@ -799,14 +784,14 @@ async fn shielded_sync_range(
                             }
                         }
                     }
-                    db_tx.commit().await.unwrap();
+                    db_tx.commit().await?;
                     debug!("Committing transaction");
                 } else {
                     messages.push(msg);
                 }
             }
 
-            let mut db_tx = writer_connection.begin().await.unwrap();
+            let mut db_tx = writer_connection.begin().await?;
             for msg in messages {
                 match handle_message(
                     &network,
@@ -825,7 +810,7 @@ async fn shielded_sync_range(
                     }
                 }
             }
-            db_tx.commit().await.unwrap();
+            db_tx.commit().await?;
 
             debug!("[db handler] stopped");
             check_witness_consistency(&mut writer_connection, &account_ids).await?;
@@ -876,76 +861,30 @@ async fn handle_message(
     tracing::debug!(target: "warp", "Warp Message: {msg:?}");
     match msg {
         WarpSyncMessage::Issuance(iss) => {
-            sqlx::query(
-                "INSERT OR IGNORE INTO assets(asset_desc_hash, ik, asset_base, finalized, first_seen_height)
-                 VALUES (?1, ?2, ?3, ?4, ?5)",
-            )
-            .bind(&iss.asset_desc_hash)
-            .bind(&iss.ik)
-            .bind(&iss.asset_base)
-            .bind(iss.finalized)
-            .bind(iss.height)
-            .execute(&mut **db_tx)
-            .await?;
+            chain_log::record_issuance(db_tx, &iss).await?;
             tracing::debug!("asset base {}", hex::encode(&iss.asset_base));
-
-            if iss.finalized {
-                sqlx::query(
-                    "UPDATE assets SET finalized = TRUE WHERE asset_desc_hash = ?1 AND ik = ?2",
-                )
-                .bind(&iss.asset_desc_hash)
-                .bind(&iss.ik)
-                .execute(&mut **db_tx)
-                .await?;
-            }
             debug!(
                 "Processing Issuance: height={}, finalized={}",
                 iss.height, iss.finalized
             );
         }
         WarpSyncMessage::Transaction(tx) => {
-            // ignore duplicate transactions because they could have been created
-            // by a previous type of scan (i.e transparent)
-            sqlx::query(
-                "INSERT INTO transactions (account, txid, height, time) VALUES (?, ?, ?, ?)
-                ON CONFLICT DO NOTHING",
+            // duplicates are ignored: the transparent scan may have created
+            // the transaction already
+            chain_log::record_transaction(
+                db_tx,
+                tx.account,
+                &TransactionRow::chain(&tx.txid, tx.height, tx.time),
             )
-            .bind(tx.account)
-            .bind(&tx.txid)
-            .bind(tx.height)
-            .bind(tx.time)
-            .execute(&mut **db_tx)
             .await?;
             debug!("Processing Transaction: id={}, height={}", tx.id, tx.height);
         }
         WarpSyncMessage::Note(note) => {
-            // Resolve id_asset via LEFT JOIN on the assets table.
-            // For ZSA notes (non-empty asset_base), the JOIN finds the
-            // matching row inserted earlier by an Issuance message.
-            // For vanilla ZEC notes, asset_base is empty and id_asset
-            // resolves to NULL.
             tracing::debug!("note asset base {}", hex::encode(&note.asset_base));
-
-            // Auto-register ZSA assets discovered through decryption.
-            // Issuance messages insert with known desc_hash+ik; for encrypted
-            // ZSA transfers we only know the asset_base. Use the asset_base
-            // itself as a unique key so the LEFT JOIN below can resolve id_asset.
-            if note.asset_base.len() == 32 && note.asset_base != [0u8; 32] {
-                // Use asset_base as the desc_hash placeholder and a zero-prefixed
-                // asset_base as the ik placeholder to get a unique (desc_hash, ik).
-                let mut ik_placeholder = vec![0u8; 33];
-                ik_placeholder[1..].copy_from_slice(&note.asset_base[..32]);
-                sqlx::query(
-                    "INSERT OR IGNORE INTO assets(asset_desc_hash, ik, asset_base, finalized, first_seen_height)
-                     VALUES (?1, ?2, ?3, 0, ?4)",
-                )
-                .bind(&note.asset_base)
-                .bind(&ik_placeholder)
-                .bind(&note.asset_base)
-                .bind(note.height)
-                .execute(&mut **db_tx)
-                .await?;
-            }
+            // A ZSA note found through decryption registers its asset by
+            // base when no issuance has been seen; a ZEC note has no asset.
+            let id_asset =
+                chain_log::asset_id_for_base(db_tx, &note.asset_base, note.height).await?;
 
             // Resolve diversifier_index from the preloaded key cache
             let diversifier_index = resolve_diversifier_index(
@@ -956,104 +895,87 @@ async fn handle_message(
                 &note.diversifier,
             );
 
-            let r = sqlx::query
-                    ("INSERT INTO notes
-                        (account, height, pool, scope, tx, nullifier, value, cmx, position, diversifier, rcm, rho, id_asset, diversifier_index)
-                        SELECT t.account, ?, ?, ?, t.id_tx, ?, ?, ?, ?, ?, ?, ?, a.id_asset, ?
-                        FROM transactions t
-                        LEFT JOIN assets a ON a.asset_base = ?
-                        WHERE t.account = ? AND t.txid = ?")
-                    .bind(note.height)
-                    .bind(note.pool)
-                    .bind(note.scope)
-                    .bind(&note.nf)
-                    .bind(note.value as i64)
-                    .bind(&note.cmx)
-                    .bind(note.position)
-                    .bind(&note.diversifier)
-                    .bind(&note.rcm)
-                    .bind(&note.rho)
-                    .bind(diversifier_index)
-                    .bind(&note.asset_base)
-                    .bind(note.account)
-                    .bind(&note.txid)
-                    .execute(&mut **db_tx).await?;
+            let (id_tx, _) = chain_log::transaction_ref(db_tx, note.account, &note.txid).await?;
+            let stored = chain_log::record_note(
+                db_tx,
+                note.account,
+                &NoteRow {
+                    id_tx,
+                    height: note.height,
+                    pool: note.pool,
+                    scope: Some(note.scope),
+                    nullifier: &note.nf,
+                    value: note.value as i64,
+                    cmx: Some(&note.cmx),
+                    position: Some(note.position),
+                    diversifier: Some(&note.diversifier),
+                    rcm: Some(&note.rcm),
+                    rho: Some(&note.rho),
+                    id_asset,
+                    diversifier_index,
+                    ..Default::default()
+                },
+            )
+            .await?;
             debug!(
                 "Processing Note: id={}, account={}, height={}",
                 note.id, note.account, note.height
             );
             debug!("{:?}", note);
-            assert_eq!(r.rows_affected(), 1);
+            anyhow::ensure!(
+                stored.is_some(),
+                "note {} of account {} at {} was already recorded",
+                note.id,
+                note.account,
+                note.height
+            );
         }
         WarpSyncMessage::Witness(account, height, cmx, witness) => {
             let w = bincode::encode_to_vec(&witness, config::legacy())?;
-            let r = sqlx::query(
-                "INSERT INTO witnesses (account, note, height, witness)
-                        SELECT ?, n.id_note, ?, ? FROM notes n
-                        WHERE n.account = ? AND n.cmx = ?",
-            )
-            .bind(account)
-            .bind(height)
-            .bind(&w)
-            .bind(account)
-            .bind(&cmx)
-            .execute(&mut **db_tx)
-            .await?;
-            assert_eq!(r.rows_affected(), 1);
+            chain_log::record_witness(db_tx, account, NoteKey::Cmx(&cmx), height, &w).await?;
         }
         WarpSyncMessage::Spend(utxo) => {
-            // note does not belong to the tx because the tx is spending the note
-            // and not creating it, do not join n with t!
-            let r = sqlx::query(
-                "INSERT INTO spends (id_note, account, height, pool, tx, value)
-                    SELECT n.id_note, ?1, t.height, ?2, t.id_tx, ?3 FROM notes n, transactions t
-                    WHERE n.account = ?1 AND n.cmx = ?4
-                    AND t.txid = ?5 AND t.account = ?1",
+            // the spending transaction, not the one that created the note
+            let (id_tx, height) =
+                chain_log::transaction_ref(db_tx, utxo.account, &utxo.txid).await?;
+            let recorded = chain_log::record_spend(
+                db_tx,
+                utxo.account,
+                &SpendRow {
+                    note: NoteKey::Cmx(&utxo.cmx),
+                    id_tx,
+                    height,
+                    pool: utxo.pool,
+                    value: -(utxo.value as i64),
+                },
             )
-            .bind(utxo.account)
-            .bind(utxo.pool)
-            .bind(-(utxo.value as i64))
-            .bind(&utxo.cmx)
-            .bind(&utxo.txid)
-            .execute(&mut **db_tx)
             .await?;
-            // Release any broadcast-time lock now that the spend is mined
-            // (noop if it was not locked).
-            sqlx::query("UPDATE notes SET locked = FALSE WHERE account = ?1 AND cmx = ?2")
-                .bind(utxo.account)
-                .bind(&utxo.cmx)
-                .execute(&mut **db_tx)
-                .await?;
             debug!("Processing Spend: {:?}", &utxo);
-            assert_eq!(r.rows_affected(), 1);
+            anyhow::ensure!(
+                recorded,
+                "spend of note {} by account {} was already recorded",
+                hex::encode(&utxo.cmx),
+                utxo.account
+            );
         }
         WarpSyncMessage::Checkpoint(accounts, pool, height) => {
             for a in accounts {
-                if has_pool(db_tx, a, pool).await? {
-                    sqlx::query(
-                        "INSERT OR REPLACE INTO sync_heights(account, pool, height)
-                        VALUES (?1, ?2, ?3)",
-                    )
-                    .bind(a)
-                    .bind(pool)
-                    .bind(height)
-                    .execute(&mut **db_tx)
-                    .await?;
-                    debug!("Checkpoint for account: {}, height: {}", a, height);
-                }
+                chain_log::checkpoint(db_tx, a, pool, height).await?;
                 let _ = tx_progress.send(SyncProgress { height, time: 0 }).await;
             }
         }
         WarpSyncMessage::BlockHeader(block_header) => {
             debug!("Processing BlockHeader: {:?}", block_header);
             for account in accounts {
-                store_relevant_block_header(db_tx, *account, &block_header).await?;
-                sqlx::query("UPDATE transactions SET time = ? WHERE height = ? AND account = ?")
-                    .bind(block_header.time)
-                    .bind(block_header.height)
-                    .bind(account)
-                    .execute(&mut **db_tx)
-                    .await?;
+                chain_log::record_relevant_header(db_tx, *account, &block_header).await?;
+                chain_log::set_block_time(
+                    db_tx,
+                    *account,
+                    block_header.height,
+                    block_header.time,
+                    false,
+                )
+                .await?;
             }
         }
         WarpSyncMessage::Commit => {
@@ -1099,56 +1021,16 @@ pub async fn recover_from_partial_sync(
     Ok(())
 }
 
-// remove synchronization data (notes, spends, transactions, witnesses) after the given height
-// keep the data at the given height
-// Headers follow the same account checkpoint as witnesses.
+/// Remove the account's synchronization data after `height` (keeping the
+/// data at `height`) in one transaction, or a savepoint when the caller
+/// already holds one.
 pub async fn trim_sync_data(
     connection: &mut SqliteConnection,
     account: u32,
     height: u32,
 ) -> Result<()> {
     let mut db_tx = connection.begin().await?;
-    sqlx::query("DELETE FROM headers WHERE height > ? AND account = ?")
-        .bind(height)
-        .bind(account)
-        .execute(&mut *db_tx)
-        .await?;
-    sqlx::query("DELETE FROM notes WHERE height > ? AND account = ?")
-        .bind(height)
-        .bind(account)
-        .execute(&mut *db_tx)
-        .await?;
-    sqlx::query("DELETE FROM spends WHERE height > ? AND account = ?")
-        .bind(height)
-        .bind(account)
-        .execute(&mut *db_tx)
-        .await?;
-    sqlx::query("DELETE FROM transactions WHERE height > ? AND account = ?")
-        .bind(height)
-        .bind(account)
-        .execute(&mut *db_tx)
-        .await?;
-    sqlx::query("DELETE FROM witnesses WHERE height > ? AND account = ?")
-        .bind(height)
-        .bind(account)
-        .execute(&mut *db_tx)
-        .await?;
-    sqlx::query("DELETE FROM outputs WHERE height > ? AND account = ?")
-        .bind(height)
-        .bind(account)
-        .execute(&mut *db_tx)
-        .await?;
-    sqlx::query("DELETE FROM memos WHERE height > ? AND account = ?")
-        .bind(height)
-        .bind(account)
-        .execute(&mut *db_tx)
-        .await?;
-    sqlx::query("UPDATE sync_heights SET height = ? WHERE account = ?")
-        .bind(height)
-        .bind(account)
-        .execute(&mut *db_tx)
-        .await?;
-
+    chain_log::trim_to(&mut db_tx, account, height).await?;
     db_tx.commit().await?;
     Ok(())
 }
@@ -1158,39 +1040,12 @@ pub async fn check_witness_consistency(
     connection: &mut SqliteConnection,
     accounts: &[u32],
 ) -> Result<()> {
-    if accounts.is_empty() {
-        return Ok(());
-    }
-    let placeholders = vec!["?"; accounts.len()].join(", ");
-    let query = format!(
-        "WITH utxo AS (SELECT * FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note WHERE s.id_note IS NULL),
-    db_height AS (SELECT * FROM sync_heights)
-    SELECT u.account, u.pool, u.height, u.value, d.height FROM utxo u
-    JOIN db_height d ON d.account = u.account AND d.pool = u.pool
-    LEFT JOIN witnesses w ON u.id_note = w.note AND w.account = u.account
-    AND w.height = d.height
-    WHERE w.id_witness IS NULL AND u.pool <> 0 AND u.id_asset IS NULL
-    AND u.account IN ({placeholders})");
-    // Audited: `placeholders` is a generated `?, ?, ...` list; the account
-    // values themselves are bound below.
-    let mut q = sqlx::query(sqlx::AssertSqlSafe(query));
-    for account in accounts {
-        q = q.bind(account);
-    }
-    let notes = q
-        .map(|r: SqliteRow| {
-            let account: u32 = r.get(0);
-            let pool: u8 = r.get(1);
-            let height: u32 = r.get(2);
-            let value: u64 = r.get(3);
-            let db_height: u32 = r.get(4);
-            (account, pool, height, value, db_height)
-        })
-        .fetch_all(connection)
-        .await?;
-
-    for (account, pool, height, value, db_height) in notes.iter() {
-        debug!("Missing witness for note {pool} {height} {value} of account {account} at height {db_height}");
+    let notes = chain_log::notes_missing_witness(connection, accounts).await?;
+    for n in notes.iter() {
+        debug!(
+            "Missing witness for note {} {} {} of account {} at height {}",
+            n.pool, n.height, n.value, n.account, n.checkpoint
+        );
     }
     if !notes.is_empty() {
         anyhow::bail!("Some notes have no witness data. Abort Sync");
@@ -1215,16 +1070,7 @@ pub async fn rewind_sync(
     account: u32,
     height: u32,
 ) -> Result<()> {
-    let prev_height =
-        sqlx::query("SELECT MAX(height) FROM witnesses WHERE height < ? AND account = ?")
-            .bind(height)
-            .bind(account)
-            .map(|row: SqliteRow| {
-                let height: Option<u32> = row.get(0);
-                height
-            })
-            .fetch_one(&mut *connection)
-            .await?;
+    let prev_height = chain_log::last_checkpoint_before(&mut *connection, account, height).await?;
 
     if let Some(prev_height) = prev_height {
         trim_sync_data(&mut *connection, account, prev_height).await?;
@@ -1240,24 +1086,11 @@ pub async fn prune_old_checkpoints(
     account: u32,
     height: u32,
 ) -> Result<()> {
-    // find the latest checkpoint before the given height
-    let checkpoint_height =
-        sqlx::query("SELECT MAX(height) FROM witnesses WHERE account = ? AND height < ?")
-            .bind(account)
-            .bind(height)
-            .map(|row: SqliteRow| {
-                let height: Option<u32> = row.get(0);
-                height
-            })
-            .fetch_one(&mut *connection)
-            .await?;
-    // delete all witnesses before the checkpoint height
-    if let Some(checkpoint_height) = checkpoint_height {
-        sqlx::query("DELETE FROM witnesses WHERE account = ? AND height < ?")
-            .bind(account)
-            .bind(checkpoint_height)
-            .execute(&mut *connection)
-            .await?;
+    // keep the witnesses from the latest checkpoint before the given height
+    if let Some(checkpoint_height) =
+        chain_log::last_checkpoint_before(&mut *connection, account, height).await?
+    {
+        chain_log::prune_witnesses_before(&mut *connection, account, checkpoint_height).await?;
     }
     Ok(())
 }
@@ -1446,29 +1279,6 @@ pub async fn transparent_sweep(
     Ok(())
 }
 
-// A downloaded height is shared by the batch, but its stored header belongs only
-// to accounts with a transaction or checkpoint there. Checkpoints keep the
-// frontier hash available for continuity checks even when there are no transactions.
-async fn store_relevant_block_header(
-    connection: &mut SqliteConnection,
-    account: u32,
-    header: &BlockHeader,
-) -> Result<()> {
-    let relevant: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM transactions WHERE account = ?1 AND height = ?2)
-            OR EXISTS(SELECT 1 FROM sync_heights WHERE account = ?1 AND height = ?2)
-            OR EXISTS(SELECT 1 FROM witnesses WHERE account = ?1 AND height = ?2)",
-    )
-    .bind(account)
-    .bind(header.height)
-    .fetch_one(&mut *connection)
-    .await?;
-    if relevant {
-        store_block_header(connection, account, header).await?;
-    }
-    Ok(())
-}
-
 pub async fn get_heights_without_time(
     connection: &mut SqliteConnection,
     accounts: &[u32],
@@ -1498,7 +1308,8 @@ pub async fn get_heights_without_time(
 #[cfg(test)]
 mod header_tests {
     use super::*;
-    use crate::db::{create_schema, store_synced_height};
+    use crate::db::create_schema;
+    use chain_log::set_checkpoint;
 
     #[tokio::test]
     async fn backfill_headers_only_belong_to_relevant_accounts() -> Result<()> {
@@ -1514,7 +1325,7 @@ mod header_tests {
             .execute(&mut db)
             .await?;
         }
-        store_synced_height(&mut db, 3, 1, 100).await?;
+        set_checkpoint(&mut db, 3, 1, 100).await?;
         let accounts = [1, 2, 3, 4];
         assert_eq!(
             get_heights_without_time(&mut db, &accounts, 1, 200).await?,
@@ -1526,7 +1337,7 @@ mod header_tests {
             time: 123,
         };
         for account in accounts {
-            store_relevant_block_header(&mut db, account, &header).await?;
+            chain_log::record_relevant_header(&mut db, account, &header).await?;
         }
         let owners: Vec<u32> = sqlx::query_scalar("SELECT account FROM headers ORDER BY account")
             .fetch_all(&mut db)
@@ -1540,9 +1351,9 @@ mod header_tests {
         let mut db = SqliteConnection::connect("sqlite::memory:").await?;
         create_schema(&mut db).await?;
         for account in [1, 2] {
-            store_synced_height(&mut db, account, 1, 200).await?;
+            set_checkpoint(&mut db, account, 1, 200).await?;
             for height in [100, 150, 200] {
-                store_block_header(
+                chain_log::store_header(
                     &mut db,
                     account,
                     &BlockHeader {
@@ -1570,7 +1381,7 @@ mod header_tests {
                 .await?;
         assert_eq!(count, 0);
         // A can scan a replacement chain without overwriting B's frontier.
-        store_block_header(
+        chain_log::store_header(
             &mut db,
             1,
             &BlockHeader {
@@ -1592,9 +1403,9 @@ mod header_tests {
     async fn missing_timestamps_are_optional_and_account_scoped() -> Result<()> {
         let mut db = SqliteConnection::connect("sqlite::memory:").await?;
         create_schema(&mut db).await?;
-        store_synced_height(&mut db, 1, 0, 100).await?;
-        store_synced_height(&mut db, 2, 0, 100).await?;
-        store_block_header(
+        set_checkpoint(&mut db, 1, 0, 100).await?;
+        set_checkpoint(&mut db, 2, 0, 100).await?;
+        chain_log::store_header(
             &mut db,
             2,
             &BlockHeader {
