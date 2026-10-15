@@ -1,8 +1,9 @@
+use std::collections::HashMap;
 use std::str::FromStr as _;
 
 use crate::{
     api::{
-        account::{get_ledger, Addresses},
+        account::{get_ledger, Addresses, TAddressTxCount},
         coin::Network,
     },
     bip38,
@@ -13,8 +14,9 @@ use crate::{
         store_account_transparent_sk, store_account_transparent_vk, update_dindex,
     },
     key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
-    keys::{sapling_dfvk_to_fvk, ScopeExt},
+    keys::{sapling_dfvk_to_fvk, SaplingAddressDerivation, ScopeExt},
     ledger::HwKind,
+    pay::pool::PoolMask,
     tiu,
 };
 use crate::{
@@ -24,7 +26,10 @@ use crate::{
         },
         key::generate_seed,
     },
-    db::{get_account_hw, select_account_transparent, store_account_hw, store_account_metadata},
+    db::{
+        get_account_dindex, get_account_hw, select_account_transparent, store_account_hw,
+        store_account_metadata,
+    },
     pay::pool::{ALL_POOLS, POOL_IRONWOOD, POOL_ORCHARD, POOL_SAPLING, POOL_TRANSPARENT},
 };
 use secp256k1::{PublicKey, SecretKey};
@@ -43,7 +48,10 @@ use orchard::{
     Note,
 };
 use ripemd::{Digest as _, Ripemd160};
-use sapling_crypto::{zip32::DiversifiableFullViewingKey, PaymentAddress};
+use sapling_crypto::{
+    zip32::{sapling_derive_internal_fvk, DiversifiableFullViewingKey},
+    PaymentAddress,
+};
 use sha2::Sha256;
 use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
 use zcash_keys::{
@@ -1466,6 +1474,234 @@ pub async fn tx_memos(
     .fetch_all(&mut *connection)
     .await?;
     Ok(memos)
+}
+
+/// Per-address transaction statistics for an account, one row per
+/// (scope, diversifier index, pool) of the selected pools, or one aggregated
+/// unified-address row per slot when `aggregate` is set.
+pub async fn fetch_address_tx_count(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+    aggregate: bool,
+    pool_filter: u8,
+) -> Result<Vec<TAddressTxCount>> {
+    let dindex = get_account_dindex(connection, account).await?;
+
+    let t_pool = crate::db::select_account_transparent(connection, account, dindex).await;
+    let s_pool = crate::db::select_account_sapling(network, connection, account).await;
+    let o_pool = crate::db::select_account_orchard(connection, account).await;
+
+    let enabled_pools = (if t_pool
+        .as_ref()
+        .map(|t| t.xvk.is_some() || t.address.is_some())
+        .unwrap_or(false)
+    {
+        1u8
+    } else {
+        0u8
+    }) | (if s_pool.as_ref().map(|s| s.xvk.is_some()).unwrap_or(false) {
+        2u8
+    } else {
+        0u8
+    }) | (if o_pool.as_ref().map(|o| o.xvk.is_some()).unwrap_or(false) {
+        4u8
+    } else {
+        0u8
+    });
+
+    // Only derive addresses for pools that are both selected and enabled
+    let selected = PoolMask(pool_filter).intersect(&PoolMask(enabled_pools));
+
+    let tkeys = t_pool?;
+    let skeys = s_pool?;
+    let okeys = o_pool?;
+
+    // Fetch per-slot stats for transparent and shielded pools
+    let transparent_stats =
+        crate::db::fetch_transparent_slot_stats(connection, account).await?;
+    let shielded_stats = crate::db::fetch_shielded_slot_stats(connection, account).await?;
+
+    // Per-pool stats lookups (kept separate, not merged)
+    let t_stats: HashMap<(u8, u32), (u64, u32, u32)> = transparent_stats
+        .iter()
+        .map(|s| ((s.scope, s.dindex), (s.amount, s.tx_count, s.time)))
+        .collect();
+    let s_stats: HashMap<(u8, u8, u32), (u64, u32, u32)> = shielded_stats
+        .iter()
+        .map(|s| ((s.pool, s.scope, s.dindex), (s.amount, s.tx_count, s.time)))
+        .collect();
+
+    // Pre-compute internal Sapling IVK
+    let internal_sap_ivk: Option<sapling_crypto::zip32::IncomingViewingKey> =
+        skeys.xvk.as_ref().and_then(|dfvk| {
+            let dfvk_bytes = dfvk.to_bytes();
+            let dk_bytes: [u8; 32] = dfvk_bytes[96..128].try_into().ok()?;
+            let dk = sapling_crypto::zip32::DiversifierKey::from_bytes(dk_bytes);
+            let (int_fvk, int_dk) = sapling_derive_internal_fvk(dfvk.fvk(), &dk)?;
+            let mut ivk_bytes = [0u8; 64];
+            ivk_bytes[..32].copy_from_slice(int_dk.as_bytes());
+            ivk_bytes[32..].copy_from_slice(&int_fvk.vk.ivk().to_repr());
+            sapling_crypto::zip32::IncomingViewingKey::from_bytes(&ivk_bytes).into_option()
+        });
+
+    let mut results = Vec::new();
+
+    for scope in [0u8, 1u8] {
+        for d in 0..=dindex {
+            // Determine if this (scope, d) slot is valid.
+            // Sapling diversifier validity gates the entire slot — if the
+            // account has sapling keys and the address at this diversifier
+            // index is invalid, only the transparent fallback at d=0 applies.
+            let mut valid_dindex = true;
+            if skeys.xvk.is_some() {
+                let dfvk = skeys.xvk.as_ref().unwrap();
+                if !dfvk.has_sapling_address(scope, d as u64, internal_sap_ivk.as_ref()) {
+                    valid_dindex = false;
+                }
+            }
+
+            if valid_dindex {
+                // Per-pool stats
+                let t_st = t_stats.get(&(scope, d)).copied().unwrap_or((0, 0, 0));
+                let s_st = s_stats.get(&(1, scope, d)).copied().unwrap_or((0, 0, 0));
+                let o_st = s_stats.get(&(2, scope, d)).copied().unwrap_or((0, 0, 0));
+
+                // Derive addresses for selected pools
+                let mut t_addr_raw: Option<TransparentAddress> = None;
+                let t_str = if selected.has_pool(0) {
+                    if let Some(tvk) = &tkeys.xvk {
+                        let (_, taddr) = crate::account::derive_transparent_address(
+                            tvk,
+                            scope as u32,
+                            d,
+                            false,
+                        )?;
+                        t_addr_raw = Some(taddr);
+                        Some(taddr.encode(network))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+
+                let mut s_addr_raw: Option<sapling_crypto::PaymentAddress> = None;
+                let s_str = if selected.has_pool(1) {
+                    if let Some(dfvk) = &skeys.xvk {
+                        s_addr_raw =
+                            dfvk.sapling_address_at(scope, d as u64, internal_sap_ivk.as_ref());
+                        s_addr_raw.as_ref().map(|pa| pa.encode(network))
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+
+                let mut o_addr_raw: Option<orchard::Address> = None;
+                let o_str = if selected.has_pool(2) {
+                    if let Some(fvk) = &okeys.xvk {
+                        let s = scope.orchard_scope();
+                        let addr = fvk.address_at(d as u64, s);
+                        o_addr_raw = Some(addr);
+                        Some(
+                            UnifiedAddress::from_receivers(Some(addr), None, None, None, None)
+                                .unwrap()
+                                .encode(network),
+                        )
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+
+                if aggregate {
+                    if let Some(ua) = UnifiedAddress::from_receivers(
+                        o_addr_raw, s_addr_raw, t_addr_raw, None, None,
+                    ) {
+                        results.push(TAddressTxCount {
+                            pool: 0,
+                            address: ua.encode(network),
+                            scope,
+                            dindex: d,
+                            amount: t_st.0.wrapping_add(s_st.0).wrapping_add(o_st.0),
+                            tx_count: t_st.1.wrapping_add(s_st.1).wrapping_add(o_st.1),
+                            time: t_st.2.max(s_st.2).max(o_st.2),
+                        });
+                    }
+                } else {
+                    if let Some(addr) = t_str {
+                        results.push(TAddressTxCount {
+                            pool: 0,
+                            address: addr,
+                            scope,
+                            dindex: d,
+                            amount: t_st.0,
+                            tx_count: t_st.1,
+                            time: t_st.2,
+                        });
+                    }
+                    if let Some(addr) = s_str {
+                        results.push(TAddressTxCount {
+                            pool: 1,
+                            address: addr,
+                            scope,
+                            dindex: d,
+                            amount: s_st.0,
+                            tx_count: s_st.1,
+                            time: s_st.2,
+                        });
+                    }
+                    if let Some(addr) = o_str {
+                        results.push(TAddressTxCount {
+                            pool: 2,
+                            address: addr,
+                            scope,
+                            dindex: d,
+                            amount: o_st.0,
+                            tx_count: o_st.1,
+                            time: o_st.2,
+                        });
+                    }
+                }
+            } else if d == 0 && selected.has_pool(0) {
+                // Fallback: sapling address invalid at this slot, but d=0
+                // always produces a valid transparent address.
+                let t_st = t_stats.get(&(scope, 0)).copied().unwrap_or((0, 0, 0));
+
+                let t_str = if let Some(tvk) = &tkeys.xvk {
+                    let (_, taddr) =
+                        crate::account::derive_transparent_address(tvk, scope as u32, 0, false)?;
+                    Some(taddr.encode(network))
+                } else {
+                    None
+                };
+
+                // Aggregate of 1 taddr is the taddr itself.
+                if let Some(addr) = t_str {
+                    results.push(TAddressTxCount {
+                        pool: 0,
+                        address: addr,
+                        scope,
+                        dindex: 0,
+                        amount: t_st.0,
+                        tx_count: t_st.1,
+                        time: t_st.2,
+                    });
+                }
+            }
+        }
+    }
+
+    results.sort_by(|a, b| {
+        a.scope
+            .cmp(&b.scope)
+            .then(a.dindex.cmp(&b.dindex))
+            .then(a.pool.cmp(&b.pool))
+    });
+    Ok(results)
 }
 
 pub async fn get_account_frost_params(
