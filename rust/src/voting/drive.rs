@@ -29,8 +29,9 @@ use zcash_voting::{
 use zeroize::Zeroizing;
 use zip32::AccountId;
 
-use crate::voting::chain::{ZkoolChainTransport, ZkoolPirTransport, ZkoolTreeTransport};
-use crate::voting::sidecar::ZkoolHelperTransport;
+use crate::voting::chain::{
+    ZkoolChainTransport, ZkoolHelperTransport, ZkoolPirTransport, ZkoolTreeTransport,
+};
 
 /// Transports and endpoints one executor run needs.
 #[derive(Clone, Debug)]

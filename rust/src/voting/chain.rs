@@ -1,20 +1,21 @@
-//! Vote-chain, vote-tree, and PIR HTTP transports routed through zkool.
+//! Vote-chain, vote-tree, PIR, and helper HTTP transports routed through zkool.
 //!
 //! The voting crate asks the host for its own HTTP mechanism so privacy
 //! routing can fail closed. This module supplies one route implementation the
-//! three host transport traits share: direct connections and externally
+//! four host transport traits share: direct connections and externally
 //! configured proxies use the wallet's standard reqwest setup, Tor uses the
 //! wallet's Arti HTTP adapter, and Nym deliberately fails closed until it has
 //! a native HTTP adapter.
 //!
-//! Transport selectors mirror [`crate::voting::sidecar::ZkoolHelperTransport`]:
-//! `0` direct, `1` Tor, `2` Nym (fails closed), `3` external proxy.
+//! Transport selectors: `0` direct, `1` Tor, `2` Nym (fails closed), `3`
+//! external proxy.
 
 use std::time::Duration;
 
 use zcash_voting::{
     ChainHttpRequest, ChainHttpResponse, ChainPostDispatch, ChainTransport, ChainTransportError,
-    ChainTransportFuture, MAX_CHAIN_HTTP_RESPONSE_BYTES,
+    ChainTransportFuture, HelperFuture, HelperResponse, HelperTransport, HelperTransportError,
+    MAX_CHAIN_HTTP_RESPONSE_BYTES, MAX_HELPER_RESPONSE_BYTES,
 };
 
 /// PIR and vote-tree responses are multi-megabyte: the SDK's built-in
@@ -25,12 +26,23 @@ use zcash_voting::{
 const MAX_PIR_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
 const MAX_TREE_RESPONSE_BYTES: usize = 8 * 1024 * 1024;
 
-/// The route failure of one request, before or after the network boundary.
+/// The route failure of one request, classified by where it happened relative
+/// to the network boundary. Each adapter maps this onto its own protocol's
+/// error type: the chain client treats everything past `BeforeSend` as
+/// possibly dispatched, while the helper protocol keeps a refused connection
+/// and a failed body as definite, retryable failures.
 enum RouteFailure {
-    /// The request never left: route construction or request building failed.
+    /// The request never left: unsupported route, route construction, or
+    /// request building failed.
     BeforeSend(anyhow::Error),
     /// The route timed the request out.
     Timeout,
+    /// The TCP connection could not be established (direct and proxy routes
+    /// only; Tor reports every post-construction failure as ambiguous).
+    ConnectFailed(anyhow::Error),
+    /// Response headers arrived but the body could not be read, or exceeded
+    /// the route's body cap.
+    AfterHeaders(anyhow::Error),
     /// Anything else: the request may have crossed the network boundary.
     Ambiguous(anyhow::Error),
 }
@@ -44,23 +56,47 @@ impl RouteFailure {
             RouteFailure::Timeout => {
                 ChainTransportError::possibly_dispatched("request timed out")
             }
-            RouteFailure::Ambiguous(error) => ChainTransportError::possibly_dispatched(
-                format!("request ended before response: {error}"),
-            ),
+            RouteFailure::ConnectFailed(error) => {
+                ChainTransportError::possibly_dispatched(format!("connection failed: {error}"))
+            }
+            RouteFailure::AfterHeaders(error) | RouteFailure::Ambiguous(error) => {
+                ChainTransportError::possibly_dispatched(format!(
+                    "request ended before response: {error}"
+                ))
+            }
+        }
+    }
+
+    fn helper_error(&self) -> HelperTransportError {
+        match self {
+            RouteFailure::BeforeSend(error) => HelperTransportError::Transport(error.to_string()),
+            RouteFailure::Timeout => HelperTransportError::Timeout,
+            RouteFailure::ConnectFailed(error) => {
+                HelperTransportError::Transport(format!("helper connection failed: {error}"))
+            }
+            RouteFailure::AfterHeaders(error) => HelperTransportError::Response(error.to_string()),
+            RouteFailure::Ambiguous(error) => HelperTransportError::Ambiguous(error.to_string()),
         }
     }
 }
 
-fn route_kind(transport: u8) -> Result<(), ChainTransportError> {
+fn route_kind(transport: u8) -> Result<(), RouteFailure> {
     match transport {
         0 | 1 | 3 => Ok(()),
-        2 => Err(ChainTransportError::definitely_unsent(
-            "Nym chain transport is unavailable",
-        )),
-        _ => Err(ChainTransportError::definitely_unsent(
-            "unsupported chain transport",
-        )),
+        2 => Err(RouteFailure::BeforeSend(anyhow::anyhow!(
+            "Nym transport is unavailable"
+        ))),
+        _ => Err(RouteFailure::BeforeSend(anyhow::anyhow!(
+            "unsupported transport"
+        ))),
     }
+}
+
+fn content_type(headers: &[(String, String)]) -> Option<String> {
+    headers
+        .iter()
+        .find(|(name, _)| name.eq_ignore_ascii_case("content-type"))
+        .map(|(_, value)| value.clone())
 }
 
 /// Sends one request over the route, capping the response body.
@@ -81,6 +117,7 @@ async fn route_request(
     max_response_bytes: usize,
     dispatch: Option<&ChainPostDispatch>,
 ) -> Result<zcash_voting::TransportResponse, RouteFailure> {
+    route_kind(transport)?;
     if transport == 1 {
         if let Some(dispatch) = dispatch {
             dispatch.mark_possible();
@@ -91,7 +128,10 @@ async fn route_request(
         .await
         .map(|response| zcash_voting::TransportResponse {
             status: response.status,
-            headers: Vec::new(),
+            headers: response
+                .content_type
+                .map(|value| vec![("content-type".to_owned(), value)])
+                .unwrap_or_default(),
             body: response.body,
         })
         .map_err(|error| {
@@ -121,9 +161,7 @@ async fn route_request(
         Err(_) => return Err(RouteFailure::Timeout),
         Ok(Err(error)) if error.is_timeout() => return Err(RouteFailure::Timeout),
         Ok(Err(error)) if error.is_connect() => {
-            return Err(RouteFailure::Ambiguous(anyhow::anyhow!(
-                "connection failed: {error}"
-            )));
+            return Err(RouteFailure::ConnectFailed(anyhow::anyhow!(error)));
         }
         Ok(Err(error)) => return Err(RouteFailure::Ambiguous(anyhow::anyhow!(error))),
         Ok(Ok(response)) => response,
@@ -138,7 +176,7 @@ async fn route_request(
         .content_length()
         .is_some_and(|length| length as usize > max_response_bytes)
     {
-        return Err(RouteFailure::Ambiguous(anyhow::anyhow!(
+        return Err(RouteFailure::AfterHeaders(anyhow::anyhow!(
             "response exceeds the body limit"
         )));
     }
@@ -147,10 +185,10 @@ async fn route_request(
     use futures::StreamExt;
     while let Some(chunk) = stream.next().await {
         let chunk = chunk.map_err(|error| {
-            RouteFailure::Ambiguous(anyhow::anyhow!("response body read failed: {error}"))
+            RouteFailure::AfterHeaders(anyhow::anyhow!("response body read failed: {error}"))
         })?;
         if body.len().saturating_add(chunk.len()) > max_response_bytes {
-            return Err(RouteFailure::Ambiguous(anyhow::anyhow!(
+            return Err(RouteFailure::AfterHeaders(anyhow::anyhow!(
                 "response exceeds the body limit"
             )));
         }
@@ -190,7 +228,6 @@ impl ZkoolChainTransport {
         body: Vec<u8>,
         dispatch: Option<&ChainPostDispatch>,
     ) -> Result<ChainHttpResponse, ChainTransportError> {
-        route_kind(self.transport)?;
         let result = route_request(
             self.transport,
             &self.proxy,
@@ -207,11 +244,7 @@ impl ZkoolChainTransport {
             Ok(response) => Ok(ChainHttpResponse::new(
                 response.status,
                 response.body,
-                response
-                    .headers
-                    .iter()
-                    .find(|(name, _)| name.eq_ignore_ascii_case("content-type"))
-                    .map(|(_, value)| value.clone()),
+                content_type(&response.headers),
                 response.headers,
             )),
             Err(failure) => Err(failure.chain_error()),
@@ -271,7 +304,6 @@ impl ZkoolPirTransport {
         url: &str,
         body: Vec<u8>,
     ) -> anyhow::Result<zcash_voting::TransportResponse> {
-        route_kind(self.transport).map_err(|error| anyhow::anyhow!(error.to_string()))?;
         route_request(
             self.transport,
             &self.proxy,
@@ -334,10 +366,6 @@ impl vote_commitment_tree_client::transport::Transport for ZkoolTreeTransport {
         vote_commitment_tree_client::transport::TransportResponse,
         vote_commitment_tree_client::transport::TransportError,
     > {
-        let result = route_kind(self.transport).map_err(|error| {
-            vote_commitment_tree_client::transport::TransportError::Request(error.to_string())
-        });
-        result?;
         let proxy = self.proxy.clone();
         let url = url.to_owned();
         TREE_RUNTIME
@@ -364,13 +392,94 @@ impl vote_commitment_tree_client::transport::Transport for ZkoolTreeTransport {
     }
 }
 
+/// Routes voting-helper HTTP requests through zkool's selected transport.
+///
+/// The helper protocol retries a share submission only after a *definite*
+/// failure, so this adapter keeps the finer classification: a refused
+/// connection is `Transport` (never sent) and a body that fails after the
+/// headers arrived is `Response`, where the chain adapter above would report
+/// both as possibly dispatched.
+#[derive(Clone, Debug)]
+pub struct ZkoolHelperTransport {
+    transport: u8,
+    proxy: String,
+}
+
+impl ZkoolHelperTransport {
+    pub fn new(transport: u8, proxy: impl Into<String>) -> Self {
+        Self {
+            transport,
+            proxy: proxy.into(),
+        }
+    }
+
+    async fn route(
+        &self,
+        method: hyper::Method,
+        url: &str,
+        body: Vec<u8>,
+        headers: &[(String, String)],
+        timeout: Duration,
+    ) -> Result<HelperResponse, HelperTransportError> {
+        let response = route_request(
+            self.transport,
+            &self.proxy,
+            method,
+            url,
+            body,
+            headers,
+            timeout,
+            MAX_HELPER_RESPONSE_BYTES,
+            None,
+        )
+        .await
+        .map_err(|failure| failure.helper_error())?;
+        Ok(HelperResponse::new(
+            response.status,
+            response.body,
+            content_type(&response.headers),
+        ))
+    }
+}
+
+impl HelperTransport for ZkoolHelperTransport {
+    fn get<'a>(&'a self, url: &'a str, timeout: Duration) -> HelperFuture<'a> {
+        Box::pin(self.route(hyper::Method::GET, url, Vec::new(), &[], timeout))
+    }
+
+    fn post_json<'a>(&'a self, url: &'a str, body: Vec<u8>, timeout: Duration) -> HelperFuture<'a> {
+        self.post_json_with_headers(url, body, timeout, &[])
+    }
+
+    fn post_json_with_headers<'a>(
+        &'a self,
+        url: &'a str,
+        body: Vec<u8>,
+        timeout: Duration,
+        headers: &'a [(String, String)],
+    ) -> HelperFuture<'a> {
+        Box::pin(async move {
+            let mut request_headers =
+                vec![("content-type".to_string(), "application/json".to_string())];
+            request_headers.extend(headers.iter().cloned());
+            self.route(hyper::Method::POST, url, body, &request_headers, timeout)
+                .await
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::route_kind;
+    use std::time::Duration;
+
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use zcash_voting::{HelperTransport, HelperTransportError};
+
+    use super::{route_kind, route_request, RouteFailure, ZkoolHelperTransport};
 
     #[test]
     fn nym_route_fails_closed() {
-        let error = route_kind(2).unwrap_err();
+        let error = route_kind(2).unwrap_err().chain_error();
         assert!(error.is_definitely_unsent(), "{error}");
     }
 
@@ -382,13 +491,106 @@ mod tests {
         assert!(route_kind(3).is_ok());
     }
 
+    #[tokio::test]
+    async fn nym_helper_route_fails_closed_as_a_definite_failure() {
+        let error = ZkoolHelperTransport::new(2, "")
+            .get("http://127.0.0.1:1/share", Duration::from_secs(1))
+            .await
+            .unwrap_err();
+        assert!(matches!(error, HelperTransportError::Transport(_)), "{error}");
+    }
+
+    /// A URL whose port was just released, so a connection to it is refused.
+    async fn refused_url() -> String {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/", listener.local_addr().unwrap());
+        drop(listener);
+        url
+    }
+
+    /// A refused connection never reached the server. The chain adapter still
+    /// reports it as possibly dispatched, while the helper adapter reports a
+    /// definite `Transport` failure so the share can be retried.
+    #[tokio::test]
+    async fn refused_connection_is_definite_for_helper_and_ambiguous_for_chain() {
+        let url = refused_url().await;
+        let result = route_request(
+            0,
+            "",
+            hyper::Method::GET,
+            &url,
+            Vec::new(),
+            &[],
+            Duration::from_secs(5),
+            1024,
+            None,
+        )
+        .await;
+        let Err(failure) = result else {
+            panic!("a refused connection must fail");
+        };
+        assert!(matches!(failure, RouteFailure::ConnectFailed(_)));
+        assert!(!failure.chain_error().is_definitely_unsent());
+        assert!(matches!(
+            failure.helper_error(),
+            HelperTransportError::Transport(_)
+        ));
+    }
+
+    /// Serves one response with the given content length and body.
+    async fn serve_once(content_length: usize, body: Vec<u8>) -> String {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/", listener.local_addr().unwrap());
+        tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut request = Vec::new();
+            while !request.ends_with(b"\r\n\r\n") {
+                request.push(socket.read_u8().await.unwrap());
+            }
+            let head = format!(
+                "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\n\
+                 Content-Length: {content_length}\r\nConnection: close\r\n\r\n"
+            );
+            // The client may hang up once it sees the headers; that is fine.
+            let _ = socket.write_all(head.as_bytes()).await;
+            let _ = socket.write_all(&body).await;
+        });
+        url
+    }
+
+    /// Headers arrived, so the request was received: the helper reports a
+    /// `Response` failure, not an ambiguous or retryable one.
+    #[tokio::test]
+    async fn oversized_helper_body_is_a_response_failure() {
+        let url = serve_once(
+            zcash_voting::MAX_HELPER_RESPONSE_BYTES + 1,
+            vec![b'x'; zcash_voting::MAX_HELPER_RESPONSE_BYTES + 1],
+        )
+        .await;
+        let error = ZkoolHelperTransport::new(0, "")
+            .get(&url, Duration::from_secs(5))
+            .await
+            .unwrap_err();
+        assert!(matches!(error, HelperTransportError::Response(_)), "{error}");
+    }
+
+    #[tokio::test]
+    async fn helper_transport_returns_the_content_type() {
+        let url = serve_once(2, b"{}".to_vec()).await;
+        let response = ZkoolHelperTransport::new(0, "")
+            .get(&url, Duration::from_secs(5))
+            .await
+            .expect("small helper response");
+        assert_eq!(response.status(), 200);
+        assert_eq!(response.body(), b"{}");
+        assert_eq!(response.content_type(), Some("application/json"));
+    }
+
     /// A real PIR response is multi-megabyte; the 256 KiB chain cap must not
     /// leak into the PIR route (regression: "response exceeds the body
     /// limit" against live PIR servers).
     #[tokio::test]
     async fn pir_transport_accepts_multi_megabyte_responses() {
-        use tokio::io::{AsyncReadExt, AsyncWriteExt};
-
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let url = format!("http://{}/pir", listener.local_addr().unwrap());
         let server = tokio::spawn(async move {
