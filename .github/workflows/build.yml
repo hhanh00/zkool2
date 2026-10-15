@@ -72,7 +72,9 @@ jobs:
           jks: ${{ secrets.JKS_PASSWORD }}
       - name: Build Linux
         id: build_linux
-        if: ${{ matrix.target == 'linux' }}
+        # The aarch64 build is the required PR check; x86_64 only needs to be
+        # built for releases.
+        if: ${{ matrix.target == 'linux' && (matrix.arch != 'x86_64' || github.event_name != 'pull_request') }}
         uses: ./.github/actions/linux
         with:
           version: ${{ steps.version.outputs.result }}
