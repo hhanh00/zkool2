@@ -1,0 +1,168 @@
+// The DKG and FROST signing pages render whatever the protocol driver
+// reports. These tests feed the pages a scripted status stream through the
+// mock bridge and check what they show, so a page that stops reacting to
+// the driver fails here without a chain or peers.
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:zkool/pages/dkg.dart';
+import 'package:zkool/pages/frost.dart';
+import 'package:zkool/router.dart' show navigatorKey;
+import 'package:zkool/src/rust/api/coin.dart';
+import 'package:zkool/src/rust/api/frost.dart';
+import 'package:zkool/src/rust/frb_generated.dart';
+import 'package:zkool/store.dart';
+
+class _FakeCoin implements Coin {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+/// The driver as the page sees it: `run` hands out the scripted stream and
+/// `cancel` is recorded.
+class _FakeDriver implements ProtocolDriver {
+  // Synchronous so a status reaches the page inside `add`, before the pump.
+  final statuses = StreamController<ProtocolStatus>.broadcast(sync: true);
+  int cancels = 0;
+
+  @override
+  Stream<ProtocolStatus> run({required Coin c}) => statuses.stream;
+
+  @override
+  void cancel() => cancels++;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _Api implements RustLibApi {
+  _FakeDriver driver = _FakeDriver();
+
+  @override
+  Coin crateApiCoinCoinNew({int? defaultCoin}) => _FakeCoin();
+
+  @override
+  ProtocolDriver crateApiFrostProtocolDriverNew() => driver;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _Unlocked extends Lifecycle {
+  @override
+  Future<bool> build() async => false;
+}
+
+void main() {
+  late _Api api;
+  setUpAll(() {
+    api = _Api();
+    RustLib.initMock(api: api);
+  });
+  setUp(() {
+    api.driver = _FakeDriver(); // one driver per page, like the app
+  });
+  tearDownAll(RustLib.dispose);
+
+  Future<GoRouter> open(WidgetTester tester, String path, Widget page) async {
+    final router = GoRouter(navigatorKey: navigatorKey, initialLocation: path, routes: [
+      GoRoute(path: '/', builder: (context, state) => const Scaffold(body: Text('Home'))),
+      GoRoute(path: path, builder: (context, state) => page),
+    ]);
+    addTearDown(router.dispose);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        lifecycleProvider.overrideWith(_Unlocked.new),
+        getAccountsProvider.overrideWith((ref) async => []),
+      ],
+      child: MaterialApp.router(routerConfig: router),
+    ));
+    await tester.pump();
+    return router;
+  }
+
+  Future<void> report(WidgetTester tester, ProtocolStatus status) async {
+    api.driver.statuses.add(status);
+    await tester.pump();
+  }
+
+  group('DKG page', () {
+    testWidgets('shows each round as the driver reports it, then the shared address', (tester) async {
+      await open(tester, '/dkg3', const DKGPage3());
+
+      await report(tester, const ProtocolStatus.dkg(DKGStatus.publishRound0Pkg()));
+      expect(find.text('Broadcasting participant keys'), findsOneWidget);
+
+      await report(tester, const ProtocolStatus.dkg(DKGStatus.waitRound1Pkg()));
+      expect(find.text('Waiting for other participants to send their round 1 packages'), findsOneWidget);
+      expect(find.byIcon(Icons.cancel), findsOneWidget, reason: 'not finished yet');
+
+      await report(tester, const ProtocolStatus.dkg(DKGStatus.sharedAddress('uregtest1abc')));
+      expect(find.text('The shared address is: uregtest1abc'), findsOneWidget);
+      expect(find.byIcon(Icons.close), findsOneWidget, reason: 'finished');
+      expect(find.byIcon(Icons.cancel), findsNothing);
+    });
+
+    testWidgets('ignores signing statuses and warns on a funding wait', (tester) async {
+      await open(tester, '/dkg3', const DKGPage3());
+
+      await report(tester, const ProtocolStatus.sign(SigningStatus.signingCompleted()));
+      expect(find.text('Signing completed'), findsNothing);
+
+      await report(tester, const ProtocolStatus.dkg(DKGStatus.waitingForFunds()));
+      expect(find.textContaining("Waiting for the previous round's change"), findsOneWidget);
+    });
+
+    testWidgets('a failed pass is a warning, and leaving cancels the driver', (tester) async {
+      final router = await open(tester, '/dkg3', const DKGPage3());
+
+      api.driver.statuses.addError(Exception('publish DKG package'));
+      await tester.pump();
+      expect(find.textContaining('publish DKG package'), findsOneWidget);
+
+      expect(api.driver.cancels, 0);
+      router.go('/');
+      await tester.pumpAndSettle();
+      expect(api.driver.cancels, 1, reason: 'disposing the page stops the driver');
+    });
+  });
+
+  group('FROST signing page', () {
+    testWidgets('shows each phase as the driver reports it, then the txid', (tester) async {
+      await open(tester, '/frost2', const FrostPage2(account: 1));
+
+      await report(tester, const ProtocolStatus.sign(SigningStatus.sendingCommitment()));
+      expect(find.text('Sending our commitments to the coordinator'), findsOneWidget);
+
+      await report(tester, const ProtocolStatus.sign(SigningStatus.waitingForSigningPackage()));
+      expect(find.text('Waiting for the signing package from the coordinator'), findsOneWidget);
+      expect(find.byIcon(Icons.cancel), findsOneWidget, reason: 'not finished yet');
+
+      await report(tester, const ProtocolStatus.sign(SigningStatus.transactionSent('ab12')));
+      expect(find.text('TX ID: ab12'), findsOneWidget);
+      expect(find.byIcon(Icons.close), findsOneWidget, reason: 'finished');
+    });
+
+    testWidgets('a participant is finished on SigningCompleted', (tester) async {
+      await open(tester, '/frost2', const FrostPage2(account: 1));
+
+      await report(tester, const ProtocolStatus.sign(SigningStatus.signingCompleted()));
+      expect(find.text('Signing completed'), findsOneWidget);
+      expect(find.byIcon(Icons.close), findsOneWidget);
+    });
+
+    testWidgets('ignores DKG statuses and cancels the driver on leave', (tester) async {
+      final router = await open(tester, '/frost2', const FrostPage2(account: 1));
+
+      await report(tester, const ProtocolStatus.dkg(DKGStatus.finalize()));
+      expect(find.text('Deriving the shared key'), findsNothing);
+
+      router.go('/');
+      await tester.pumpAndSettle();
+      expect(api.driver.cancels, 1);
+    });
+  });
+}
