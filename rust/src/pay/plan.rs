@@ -789,6 +789,20 @@ pub async fn plan_transaction(
         SpendMaterial::load(network, connection, account, &plan.spend_selection(), &edges)
             .await?;
 
+    assemble_pczt(network, height, plan, &material, issuance, category)
+}
+
+/// Build the unsigned PCZT for `plan` out of `material`, targeting
+/// `target_height`. Touches neither the database nor the network: everything
+/// a spend or an output needs was loaded ahead of time.
+pub(crate) fn assemble_pczt(
+    network: &Network,
+    target_height: u32,
+    plan: PlanOutputs,
+    material: &SpendMaterial,
+    issuance: Option<&IssuanceInfo>,
+    category: Option<u32>,
+) -> Result<PcztPackage> {
     let PlanOutputs {
         mut recipient_states,
         change,
@@ -809,7 +823,7 @@ pub async fn plan_transaction(
         anchors,
         asset_names,
         ..
-    } = &material;
+    } = material;
     let zec_key = [0u8; 32];
 
     // Fill in ZSA change output addresses
@@ -820,9 +834,6 @@ pub async fn plan_transaction(
     }
 
     // ── Build transaction ────────────────────────────────────────────────
-    let current_height = client.latest_height().await?;
-    let target_height = current_height;
-
     let build_config = BuildConfig::Standard {
         sapling_anchor: if has_pool[1] {
             sapling_crypto::Anchor::from_bytes(anchors.sapling).into_option()
@@ -1740,6 +1751,177 @@ mod tests {
     // These exercise `plan_outputs` — the note-selection and output-planning
     // logic lifted out of `plan_transaction` — with no DB, client, or prover.
     // ------------------------------------------------------------------
+    // ------------------------------------------------------------------
+    // `assemble_pczt` with fabricated material: no DB, client, or prover.
+    // Transparent-only, so no merkle paths or anchors are needed.
+    // ------------------------------------------------------------------
+    mod assembly {
+        use super::super::*;
+        use crate::pay::material::{Anchors, SpendMaterial, Utxo};
+        use crate::pay::pool::ALL_POOLS;
+        use secp256k1::PublicKey;
+        use zcash_transparent::bundle::OutPoint;
+
+        const COIN: u64 = 1_000_000;
+        const PAID: u64 = 100_000;
+
+        /// Regtest activates Ironwood (NU6.3) at height 250, where the
+        /// builder's suggested transaction version becomes v6.
+        fn regtest() -> Network {
+            crate::api::coin::Coin::new(Some(2)).network()
+        }
+
+        fn pubkey() -> PublicKey {
+            let sk = SecretKey::from_secret_bytes([1u8; 32]).unwrap();
+            PublicKey::from_secret_key(&sk)
+        }
+
+        fn utxo(network: &Network) -> Utxo {
+            let mut utxo = Utxo {
+                outpoint: OutPoint::new([7u8; 32], 1),
+                amount: COIN,
+                pubkey: pubkey(),
+                scope: 0,
+                dindex: 3,
+                address: String::new(),
+                uncompressed: false,
+            };
+            utxo.address = TransparentAddress::PublicKeyHash(utxo.pubkey_hash()).encode(network);
+            utxo
+        }
+
+        fn change_address(network: &Network) -> String {
+            TransparentAddress::PublicKeyHash([9u8; 20]).encode(network)
+        }
+
+        fn recipient_address(network: &Network) -> String {
+            TransparentAddress::PublicKeyHash([5u8; 20]).encode(network)
+        }
+
+        /// One transparent coin paying one transparent recipient, with
+        /// transparent change.
+        fn transparent_plan(network: &Network, height: u32) -> PlanOutputs {
+            let mut input_pools = vec![vec![]; NUM_POOLS];
+            input_pools[0].push(InputNote {
+                id: 1,
+                height: 100,
+                amount: COIN,
+                remaining: COIN,
+                pool: 0,
+                id_asset: None,
+                asset_base: vec![],
+                taddress: Some(1),
+            });
+            let plan = plan_outputs(PlanInputs {
+                network,
+                height,
+                input_pools,
+                request: PaymentRequest {
+                    recipients: vec![Recipient {
+                        address: recipient_address(network),
+                        amount: PAID,
+                        ..Recipient::default()
+                    }],
+                    src_pools: ALL_POOLS,
+                    ..Default::default()
+                },
+                mode: PlanMode::Standard,
+            })
+            .unwrap();
+            assert_eq!(plan.change_pool, 0, "transparent change expected");
+            assert!(plan.change > 0);
+            plan
+        }
+
+        fn material(network: &Network, can_sign: bool, hw: u8) -> SpendMaterial {
+            SpendMaterial {
+                transparent: vec![utxo(network)],
+                sapling: vec![],
+                orchard: vec![],
+                ironwood: vec![],
+                sapling_vk: None,
+                orchard_vk: None,
+                can_sign,
+                change_address: change_address(network),
+                transparent_change_address: Some(change_address(network)),
+                dindex: 3,
+                hw,
+                anchors: Anchors {
+                    sapling: [0u8; 32],
+                    orchard: [0u8; 32],
+                    ironwood: [0u8; 32],
+                },
+                asset_names: HashMap::new(),
+            }
+        }
+
+        #[test]
+        fn a_transparent_spend_is_recorded_for_its_signer() {
+            let n = regtest();
+            let plan = transparent_plan(&n, 300);
+            let change = plan.change;
+            let m = material(&n, true, HwKind::Software as u8);
+            let package = assemble_pczt(&n, 300, plan, &m, None, Some(4)).unwrap();
+
+            assert_eq!(package.n_spends, [1, 0, 0, 0]);
+            assert!(package.sapling_indices.is_empty());
+            assert!(package.orchard_indices.is_empty());
+            assert!(package.ironwood_indices.is_empty());
+            assert!(package.can_sign);
+            assert!(!package.can_broadcast);
+            assert!(!package.is_issuance);
+            assert_eq!(package.category, Some(4));
+
+            let pczt = Pczt::parse(&package.pczt).unwrap();
+            let inputs = pczt.transparent().inputs();
+            assert_eq!(inputs.len(), 1);
+            let input = &inputs[0];
+            assert_eq!(*input.prevout_txid(), [7u8; 32]);
+            assert_eq!(*input.prevout_index(), 1);
+            assert_eq!(*input.value(), COIN);
+            let proprietary = input.proprietary();
+            assert_eq!(proprietary["scope"], 0u32.to_le_bytes().to_vec());
+            assert_eq!(proprietary["dindex"], 3u32.to_le_bytes().to_vec());
+            assert_eq!(proprietary["address"], m.transparent[0].address.as_bytes());
+            assert_eq!(proprietary["uncompressed"], vec![0u8]);
+
+            // The recipient and the change, each to its own script.
+            let outputs = pczt.transparent().outputs();
+            assert_eq!(outputs.len(), 2);
+            let paid = outputs.iter().find(|o| *o.value() == PAID).expect("recipient output");
+            let changed = outputs.iter().find(|o| *o.value() == change).expect("change output");
+            let script = |pkh: [u8; 20]| -> Vec<u8> {
+                let script = TransparentAddress::PublicKeyHash(pkh).script();
+                zcash_script::script::Code::serialize(&script.0)
+            };
+            assert_eq!(*paid.script_pubkey(), script([5u8; 20]));
+            assert_eq!(*changed.script_pubkey(), script([9u8; 20]));
+        }
+
+        #[test]
+        fn a_watch_only_spend_yields_an_unsignable_package() {
+            let n = regtest();
+            let plan = transparent_plan(&n, 300);
+            let m = material(&n, false, HwKind::Software as u8);
+            let package = assemble_pczt(&n, 300, plan, &m, None, None).unwrap();
+            assert!(!package.can_sign);
+        }
+
+        #[test]
+        fn zondax_ledger_forces_a_v5_transaction_after_ironwood() {
+            let n = regtest();
+            let version = |hw: u8| {
+                let plan = transparent_plan(&n, 300);
+                let package = assemble_pczt(&n, 300, plan, &material(&n, true, hw), None, None)
+                    .unwrap();
+                *Pczt::parse(&package.pczt).unwrap().global().tx_version()
+            };
+            assert_eq!(version(HwKind::Software as u8), 6);
+            assert_eq!(version(HwKind::Official as u8), 6);
+            assert_eq!(version(HwKind::Zondax as u8), 5);
+        }
+    }
+
     mod planning {
         use super::super::*;
         use crate::api::coin::Network;
