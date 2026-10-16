@@ -37,8 +37,7 @@ pub(super) struct Note {
     pub asset_index: u8,
 }
 
-/// A required output.  Mirrors `select::Output` so callers in `plan.rs`
-/// don't need type-level changes.
+/// A required output.
 #[derive(Clone, Debug)]
 pub(super) struct Output {
     pub pool: u8,

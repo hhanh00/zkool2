@@ -24,16 +24,6 @@ Future<PcztPackage> prepare(
     RustLib.instance.api.crateApiPayPrepare(
         recipients: recipients, options: options, account: account, c: c);
 
-/// Prepare a migration transaction (splitting or migrating).
-/// Uses `migration=true` to allow Orchard outputs when Ironwood is active.
-Future<PcztPackage> prepareMigration(
-        {required List<Recipient> recipients,
-        required int srcPools,
-        required int account,
-        required Coin c}) =>
-    RustLib.instance.api.crateApiPayPrepareMigration(
-        recipients: recipients, srcPools: srcPools, account: account, c: c);
-
 Future<PcztPackage> signTransaction(
         {required PcztPackage pczt, required int account, required Coin c}) =>
     RustLib.instance.api

@@ -18,7 +18,7 @@ use crate::{
     account::get_account_seed,
     api::coin::Coin,
     pay::{
-        plan::{extract_transaction, plan_transaction, sign_transaction},
+        plan::{extract_transaction, plan_transaction, sign_transaction, PaymentRequest, PlanMode},
         pool::ALL_POOLS,
     },
 };
@@ -113,21 +113,18 @@ pub async fn issue_asset(
     };
 
     // ── 5. Plan the transaction (note selection, fees, builder, PCZT) ────
+    // No recipients: the issuance output goes to the issuer.
+    let request = PaymentRequest {
+        src_pools: ALL_POOLS,
+        ..Default::default()
+    };
     let pczt_package = plan_transaction(
         network,
         &mut *connection,
         &mut client,
         account,
-        ALL_POOLS,
-        &[],   // no recipients — issuance output goes to issuer
-        false, // recipient_pays_fee
-        None,  // confirmations
-        false, // smart_transparent
-        None,  // category
-        Some(&issuance_info),
-        false, // migration
-        None,  // preselected
-        None,  // anchor_height
+        &request,
+        &PlanMode::Issuance(&issuance_info),
     )
     .await?;
 

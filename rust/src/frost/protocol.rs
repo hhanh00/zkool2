@@ -24,7 +24,7 @@ use crate::{
     account::{get_account_seed, get_orchard_vk, new_account},
     api::{account::NewAccount, coin::Network},
     pay::{
-        plan::{plan_transaction, sign_transaction},
+        plan::{plan_transaction, sign_transaction, PaymentRequest, PlanMode},
         pool::ALL_SHIELDED_POOLS,
         Recipient,
     },
@@ -468,21 +468,18 @@ pub async fn publish(
             asset_name: None,
         })
         .collect::<Vec<_>>();
+    let request = PaymentRequest {
+        recipients,
+        src_pools: ALL_SHIELDED_POOLS,
+        ..Default::default()
+    };
     let pczt = plan_transaction(
         network,
         connection,
         client,
         account,
-        ALL_SHIELDED_POOLS,
-        &recipients,
-        false,
-        None,
-        false,
-        None,
-        None,
-        false, // migration
-        None,  // preselected
-        None,  // anchor_height
+        &request,
+        &PlanMode::Standard,
     )
     .await
     .context("plan_transaction in DKG publish")?;

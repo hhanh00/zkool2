@@ -22,7 +22,7 @@ use crate::{
     api::coin::Coin,
     db::get_account_hw,
     pay::{
-        plan::{plan_transaction, sign_transaction},
+        plan::{plan_transaction, sign_transaction, PaymentRequest, PlanMode},
         pool::PoolMask,
         Recipient,
     },
@@ -57,23 +57,17 @@ pub async fn split(c: &Coin, account: u32, inputs: &[u32], outputs: &[(u64, u8)]
         recipients.len(),
     );
 
-    let pczt = plan_transaction(
-        &network,
-        &mut connection,
-        &mut client,
-        account,
-        PoolMask::from_pool(2).0, // Orchard source
-        &recipients,
-        false,
-        None,
-        false,
-        None,
-        None,
-        true, // migration
-        Some(inputs),
-        None, // anchor_height
-    )
-    .await?;
+    let request = PaymentRequest {
+        recipients,
+        src_pools: PoolMask::from_pool(2).0, // Orchard source
+        ..Default::default()
+    };
+    let mode = PlanMode::Migration {
+        notes: inputs.to_vec(),
+        anchor: None,
+    };
+    let pczt = plan_transaction(&network, &mut connection, &mut client, account, &request, &mode)
+        .await?;
 
     broadcast(c, account, &mut connection, &mut client, pczt).await
 }
@@ -104,23 +98,17 @@ pub async fn migrate(c: &Coin, account: u32, note: u32, amount: u64, anchor: u32
         anchor,
     );
 
-    let pczt = plan_transaction(
-        &network,
-        &mut connection,
-        &mut client,
-        account,
-        PoolMask::from_pool(2).0, // Orchard source
-        &recipients,
-        false,
-        None,
-        false,
-        None,
-        None,
-        true, // migration — O→I
-        Some(&[note]),
-        Some(anchor),
-    )
-    .await?;
+    let request = PaymentRequest {
+        recipients,
+        src_pools: PoolMask::from_pool(2).0, // Orchard source
+        ..Default::default()
+    };
+    let mode = PlanMode::Migration {
+        notes: vec![note],
+        anchor: Some(anchor),
+    };
+    let pczt = plan_transaction(&network, &mut connection, &mut client, account, &request, &mode)
+        .await?;
 
     broadcast(c, account, &mut connection, &mut client, pczt).await
 }

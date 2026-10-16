@@ -204,6 +204,7 @@ mod tests {
     const TXID: &str = "0102030405060708091011121314151617181920212223242526272829303132";
 
     /// A v5 transaction spending one transparent outpoint and nothing else.
+    #[allow(deprecated)] // TxIn has no constructor for a spend
     fn spend_of(outpoint: OutPoint) -> Vec<u8> {
         let bundle = Bundle {
             vin: vec![TxIn {

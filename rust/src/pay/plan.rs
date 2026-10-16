@@ -249,25 +249,77 @@ pub fn is_no_feasible_selection(e: &anyhow::Error) -> bool {
     })
 }
 
+/// What to pay: the recipients and the constraints on funding them.
+#[derive(Clone, Debug, Default)]
+pub struct PaymentRequest {
+    pub recipients: Vec<Recipient>,
+    /// Pools the inputs may come from (a `PoolMask`).
+    pub src_pools: u8,
+    /// Deduct the fee from the first recipient instead of adding it on top.
+    pub recipient_pays_fee: bool,
+    /// Only spend notes at least this many blocks old.
+    pub confirmations: u32,
+    /// Budget category to record on the transaction.
+    pub category: Option<u32>,
+}
+
+/// How a transaction is planned. The modes are exclusive, so the
+/// combinations that cannot happen cannot be written.
+#[derive(Clone)]
+pub enum PlanMode<'a> {
+    /// Fund the recipients from the account's spendable notes.
+    Standard,
+    /// Shield the whole balance of one transparent address, picked at
+    /// random, to the first recipient; the recipient amount is ignored.
+    ShieldOneAddress,
+    /// Spend exactly `notes` (a split, or an Orchard-to-Ironwood hop),
+    /// against `anchor` when given; it must equal the account's checkpoint.
+    Migration { notes: Vec<u32>, anchor: Option<u32> },
+    /// Issue a ZSA asset to the issuer; recipients are not used.
+    Issuance(&'a IssuanceInfo),
+}
+
+impl<'a> PlanMode<'a> {
+    pub fn is_migration(&self) -> bool {
+        matches!(self, PlanMode::Migration { .. })
+    }
+
+    pub fn issuance(&self) -> Option<&'a IssuanceInfo> {
+        match self {
+            PlanMode::Issuance(info) => Some(info),
+            _ => None,
+        }
+    }
+
+    /// The notes a migration restricts selection to.
+    pub fn preselected(&self) -> Option<&[u32]> {
+        match self {
+            PlanMode::Migration { notes, .. } => Some(notes),
+            _ => None,
+        }
+    }
+
+    pub fn anchor(&self) -> Option<u32> {
+        match self {
+            PlanMode::Migration { anchor, .. } => *anchor,
+            _ => None,
+        }
+    }
+}
+
 /// Inputs to the pure planning core [`plan_outputs`].
 ///
 /// Carries everything the note-selection and output-planning logic needs
 /// without touching the DB, the network client, or the prover. `input_pools`
 /// and `height` are the only values [`plan_transaction`] must fetch first;
-/// everything else is passed straight through from its arguments. Isolating
-/// this state is what lets the selection logic be unit-tested deterministically.
+/// the request and mode are passed straight through. Isolating this state is
+/// what lets the selection logic be unit-tested deterministically.
 pub(crate) struct PlanInputs<'a> {
     pub network: &'a Network,
     pub height: u32,
     pub input_pools: Vec<Vec<InputNote>>,
-    pub recipients: Vec<Recipient>,
-    pub src_pools: u8,
-    pub recipient_pays_fee: bool,
-    pub confirmations: u32,
-    pub smart_transparent: bool,
-    pub migration: bool,
-    pub issuance: Option<&'a IssuanceInfo>,
-    pub preselected: Option<&'a [u32]>,
+    pub request: PaymentRequest,
+    pub mode: PlanMode<'a>,
 }
 
 /// Result of the pure planning core: the selected inputs (with `remaining`
@@ -302,15 +354,23 @@ pub(crate) fn plan_outputs(inp: PlanInputs) -> Result<PlanOutputs> {
         network,
         height,
         mut input_pools,
+        request,
+        mode,
+    } = inp;
+    let PaymentRequest {
         recipients,
         src_pools,
         recipient_pays_fee,
         confirmations,
-        smart_transparent,
-        migration,
-        issuance,
-        preselected,
-    } = inp;
+        ..
+    } = request;
+    let smart_transparent = matches!(mode, PlanMode::ShieldOneAddress);
+    let migration = mode.is_migration();
+    let issuance = mode.issuance();
+    if let PlanMode::Migration { notes, .. } = &mode {
+        anyhow::ensure!(!notes.is_empty(), "a migration must name the notes to spend");
+    }
+    let preselected = mode.preselected();
 
     let max_height = height.saturating_sub(confirmations);
     for pool in 0..NUM_POOLS {
@@ -690,26 +750,20 @@ pub(crate) fn plan_outputs(inp: PlanInputs) -> Result<PlanOutputs> {
     })
 }
 
-#[allow(clippy::too_many_arguments)]
+/// Plan a transaction for `request` in `mode` and build its unsigned PCZT.
 pub async fn plan_transaction(
     network: &Network,
     connection: &mut SqliteConnection,
     client: &mut Client,
     account: u32,
-    src_pools: u8,
-    recipients: &[Recipient],
-    recipient_pays_fee: bool,
-    confirmations: Option<u32>,
-    smart_transparent: bool,
-    category: Option<u32>,
-    issuance: Option<&IssuanceInfo>,
-    migration: bool,
-    preselected: Option<&[u32]>,
-    anchor_height: Option<u32>,
+    request: &PaymentRequest,
+    mode: &PlanMode<'_>,
 ) -> Result<PcztPackage> {
     let input_pools = fetch_unspent_notes_by_pool(connection, account).await?;
     let height = client.latest_height().await?;
-    let confirmations = confirmations.unwrap_or_default();
+    let migration = mode.is_migration();
+    let issuance = mode.issuance();
+    let category = request.category;
 
     // DB-sourced context needed only by the builder half below (change address
     // and keys); the pure planning core does not touch the database.
@@ -736,21 +790,15 @@ pub async fn plan_transaction(
         network,
         height,
         input_pools,
-        recipients: recipients.to_vec(),
-        src_pools,
-        recipient_pays_fee,
-        confirmations,
-        smart_transparent,
-        migration,
-        issuance,
-        preselected,
+        request: request.clone(),
+        mode: mode.clone(),
     })?;
 
     let zec_key = [0u8; 32];
 
     // ── Fetch tree states and anchors ────────────────────────────────────
     let h = crate::sync::get_db_height(connection, account).await?;
-    let anchor_height = anchor_height.unwrap_or(h.height);
+    let anchor_height = mode.anchor().unwrap_or(h.height);
     anyhow::ensure!(
         anchor_height <= h.height,
         "Anchor height {anchor_height} is ahead of checkpoint {}",
@@ -1921,14 +1969,12 @@ mod tests {
                 network,
                 height: 1_000_000,
                 input_pools,
-                recipients,
-                src_pools: ALL_POOLS,
-                recipient_pays_fee: false,
-                confirmations: 0,
-                smart_transparent: false,
-                migration: false,
-                issuance: None,
-                preselected: None,
+                request: PaymentRequest {
+                    recipients,
+                    src_pools: ALL_POOLS,
+                    ..Default::default()
+                },
+                mode: PlanMode::Standard,
             }
         }
 
@@ -2053,7 +2099,7 @@ mod tests {
                 ]),
                 vec![recipient(S_ADDR, 100_000)],
             );
-            input.src_pools = 0b0100; // Orchard only
+            input.request.src_pools = 0b0100; // Orchard only
             let out = plan_outputs(input).unwrap();
             // Every selected note must come from the Orchard pool.
             for id in selected_ids(&out) {
@@ -2074,8 +2120,39 @@ mod tests {
                 vec![recipient(S_ADDR, 100_000)],
             );
             input.height = 1_000_000;
-            input.confirmations = 10; // max_height = 999_990 < note height
+            input.request.confirmations = 10; // max_height = 999_990 < note height
             assert!(plan_outputs(input).is_err());
+        }
+
+        #[test]
+        fn a_migration_must_name_its_notes() {
+            let n = net();
+            let mut input = plan_inputs(
+                &n,
+                pools(vec![note(1, 2, 1_000_000, 100)]),
+                vec![recipient(S_ADDR, 100_000)],
+            );
+            input.mode = PlanMode::Migration {
+                notes: vec![],
+                anchor: None,
+            };
+            let err = plan_outputs(input).err().expect("the plan must be rejected");
+            assert!(err.to_string().contains("name the notes"), "{err}");
+        }
+
+        #[test]
+        fn zsa_is_rejected_once_ironwood_is_active() {
+            // Regtest activates Ironwood (NU6.3) at height 250.
+            let n = crate::api::coin::Coin::new(Some(2)).network();
+            let ua = UnifiedAddress::from_receivers(Some(orchard_addr()), None, None, None, None)
+                .unwrap()
+                .encode(&n);
+            let mut r = recipient(&ua, 100_000);
+            r.asset_base = vec![1u8; 32];
+            let mut input = plan_inputs(&n, pools(vec![note(1, 2, 1_000_000, 100)]), vec![r]);
+            input.height = 300;
+            let err = plan_outputs(input).err().expect("the plan must be rejected");
+            assert!(err.to_string().contains("Ironwood"), "{err}");
         }
 
         #[test]
@@ -2087,7 +2164,10 @@ mod tests {
                 pools(vec![note(1, 2, 1_000_000, 100), note(2, 2, 1_000_000, 100)]),
                 vec![recipient(S_ADDR, 100_000)],
             );
-            input.preselected = Some(&ids);
+            input.mode = PlanMode::Migration {
+                notes: ids.to_vec(),
+                anchor: None,
+            };
             let out = plan_outputs(input).unwrap();
             // Note 1 was filtered out entirely; only note 2 survives as a candidate.
             let remaining: Vec<u32> = out.input_pools.iter().flatten().map(|n| n.id).collect();
@@ -2105,7 +2185,7 @@ mod tests {
                 pools(vec![note(1, 0, 300_000, 100), note(2, 0, 200_000, 100)]),
                 vec![recipient(S_ADDR, 0)],
             );
-            input.smart_transparent = true;
+            input.mode = PlanMode::ShieldOneAddress;
             let out = plan_outputs(input).unwrap();
             // Everything is swept: the whole 500_000 becomes input, the recipient
             // absorbs the fee, and no change is left behind.
@@ -2125,7 +2205,7 @@ mod tests {
                 pools(vec![note(1, 2, 1_000_000, 100)]),
                 vec![recipient(&ua_orchard(), 1_000_000)],
             );
-            input.recipient_pays_fee = true;
+            input.request.recipient_pays_fee = true;
             let out = plan_outputs(input).unwrap();
             assert_eq!(total_selected(&out), 1_000_000);
             assert_eq!(
@@ -2208,7 +2288,7 @@ mod tests {
                         recipient(&ua_orchard(), 500_000),
                     ],
                 );
-                i.recipient_pays_fee = true;
+                i.request.recipient_pays_fee = true;
                 i
             };
             let out = plan_outputs(input).unwrap();

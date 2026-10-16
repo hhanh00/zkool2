@@ -3,7 +3,10 @@ use bincode::{config::standard, Decode, Encode};
 
 use crate::{
     api::coin::Coin,
-    pay::{plan::plan_transaction, Recipient, TxPlan},
+    pay::{
+        plan::{plan_transaction, PaymentRequest, PlanMode},
+        Recipient, TxPlan,
+    },
 };
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
@@ -31,55 +34,19 @@ pub async fn prepare(
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
 
-    plan_transaction(
-        network,
-        &mut *connection,
-        &mut client,
-        account,
-        options.src_pools,
-        recipients,
-        options.recipient_pays_fee,
-        None,
-        options.smart_transparent,
-        options.category,
-        None,  // issuance — normal sends have no issuance
-        false, // migration — only used by note migration
-        None,  // preselected
-        None,  // anchor_height
-    )
-    .await
-}
-
-/// Prepare a migration transaction (splitting or migrating).
-/// Uses `migration=true` to allow Orchard outputs when Ironwood is active.
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn prepare_migration(
-    recipients: &[Recipient],
-    src_pools: u8,
-    account: u32,
-    c: &Coin,
-) -> Result<PcztPackage> {
-    let network = &c.network();
-    let mut connection = c.get_connection().await?;
-    let mut client = c.client().await?;
-
-    plan_transaction(
-        network,
-        &mut *connection,
-        &mut client,
-        account,
-        src_pools,
-        recipients,
-        false, // recipient_pays_fee
-        None,  // confirmations
-        false, // smart_transparent
-        None,  // category
-        None,  // issuance
-        true,  // migration
-        None,  // preselected
-        None,  // anchor_height
-    )
-    .await
+    let request = PaymentRequest {
+        recipients: recipients.to_vec(),
+        src_pools: options.src_pools,
+        recipient_pays_fee: options.recipient_pays_fee,
+        confirmations: 0,
+        category: options.category,
+    };
+    let mode = if options.smart_transparent {
+        PlanMode::ShieldOneAddress
+    } else {
+        PlanMode::Standard
+    };
+    plan_transaction(network, &mut *connection, &mut client, account, &request, &mode).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]

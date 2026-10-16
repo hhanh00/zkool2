@@ -446,21 +446,20 @@ pub async fn prepare_tx(
     }
     let network = coin.network();
 
+    let request = crate::pay::plan::PaymentRequest {
+        recipients,
+        src_pools: payment.src_pools.unwrap_or(ALL_POOLS.into()) as u8,
+        recipient_pays_fee: payment.recipient_pays_fee.unwrap_or_default(),
+        confirmations: payment.confirmations.map(|v| v as u32).unwrap_or_default(),
+        category: None,
+    };
     let pczt = crate::pay::plan::plan_transaction(
         &network,
         &mut connection,
         &mut client,
         id_account as u32,
-        payment.src_pools.unwrap_or(ALL_POOLS.into()) as u8,
-        &recipients,
-        payment.recipient_pays_fee.unwrap_or_default(),
-        payment.confirmations.map(|v| v as u32),
-        false,
-        None,
-        None,
-        false, // migration
-        None,  // preselected
-        None,  // anchor_height
+        &request,
+        &crate::pay::plan::PlanMode::Standard,
     )
     .await?;
     Ok(pczt)

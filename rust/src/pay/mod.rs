@@ -21,7 +21,6 @@ pub mod fee;
 pub mod plan;
 pub mod pool;
 pub mod prepare;
-pub mod select;
 pub mod solve;
 
 #[derive(Clone, Default, Debug)]
