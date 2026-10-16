@@ -18,6 +18,7 @@ pub mod broadcast;
 pub use broadcast::{broadcast, broadcast_bytes, lock_spent_notes, Pending};
 pub mod error;
 pub mod fee;
+pub mod material;
 pub mod plan;
 pub mod pool;
 pub mod prepare;

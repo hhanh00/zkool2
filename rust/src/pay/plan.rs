@@ -22,10 +22,8 @@ use pczt::{
 use rand::rngs::SysRng;
 use rand_core::Rng;
 use rand_core::UnwrapErr;
-use ripemd::Ripemd160;
 use sapling_crypto::PaymentAddress;
-use secp256k1::{PublicKey, SecretKey};
-use sha2::{Digest as _, Sha256};
+use secp256k1::SecretKey;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::{debug, event, info, span, Level};
 use zcash_address::{unified::Receiver, ConversionError, TryFromAddress, ZcashAddress};
@@ -46,29 +44,25 @@ use zcash_protocol::{PoolType, ShieldedPool};
 use zcash_transparent::{
     address::TransparentAddress,
     builder::{SpendInfo, TransparentInputInfo},
-    bundle::{OutPoint, TxOut},
+    bundle::TxOut,
     pczt::Bip32Derivation,
 };
 use zip321::{Payment, TransactionRequest};
 
 use crate::{
-    account::{
-        derive_transparent_sk, get_account_full_address, get_orchard_note, get_orchard_sk,
-        get_orchard_vk, get_sapling_note, get_sapling_sk, get_sapling_vk,
-        transparent_change_address,
-    },
+    account::{derive_transparent_sk, get_orchard_sk, get_sapling_sk},
     api::{coin::Network, issuance::IssuanceInfo, pay::PcztPackage},
-    db::{get_account_dindex, get_account_hw, select_account_transparent},
+    db::{get_account_dindex, select_account_transparent},
     keys::{sapling_pgk_for_scope, sapling_ssk_for_scope, SaplingFullViewingKey},
     ledger::HwKind,
     pay::{
         error::Error,
         fee::COST_PER_ACTION,
+        material::{SpendMaterial, TreeEdges},
         pool::{PoolMask, NUM_POOLS},
         prepare::to_zec,
         solve, DecomposedRecipient, InputNote, ReceiverOption, Recipient, RecipientState,
     },
-    warp::hasher::{empty_roots, OrchardHasher, SaplingHasher},
     Client,
 };
 
@@ -765,36 +759,14 @@ pub async fn plan_transaction(
     let issuance = mode.issuance();
     let category = request.category;
 
-    // DB-sourced context needed only by the builder half below (change address
-    // and keys); the pure planning core does not touch the database.
-    let dindex = get_account_dindex(connection, account).await?;
-    let hw = get_account_hw(&mut *connection, account).await?;
-    let (use_internal,): (bool,) =
-        sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
-            .bind(account)
-            .fetch_one(&mut *connection)
-            .await?;
-
     // ── Note selection and output planning (pure; unit-tested) ────────────
-    let PlanOutputs {
-        input_pools,
-        mut recipient_states,
-        change,
-        change_pool,
-        has_pool,
-        ironwood_active,
-        orchard_note_version,
-        price,
-        ..
-    } = plan_outputs(PlanInputs {
+    let plan = plan_outputs(PlanInputs {
         network,
         height,
         input_pools,
         request: request.clone(),
         mode: mode.clone(),
     })?;
-
-    let zec_key = [0u8; 32];
 
     // ── Fetch tree states and anchors ────────────────────────────────────
     let h = crate::sync::get_db_height(connection, account).await?;
@@ -810,18 +782,35 @@ pub async fn plan_transaction(
         h.height,
     );
     let (ts, to, ti) = crate::sync::get_tree_state(network, client, anchor_height).await?;
-    let es = ts.to_edge(&SaplingHasher::default());
-    let eo = to.to_edge(&OrchardHasher::default());
-    let ei = ti.to_edge(&OrchardHasher::default());
-    let sapling_anchor = es.root(&SaplingHasher::default());
-    let orchard_anchor = eo.root(&OrchardHasher::default());
-    let ironwood_anchor = ei.root(&OrchardHasher::default());
+    let edges = TreeEdges::new(&ts, &to, &ti, h.height, anchor_height < h.height);
 
-    // ── Fetch change address ─────────────────────────────────────────────
-    let change_scope = if use_internal { 1 } else { 0 };
-    let change_address =
-        get_account_full_address(network, connection, account, change_scope, hw).await?;
-    let tkeys = select_account_transparent(connection, account, dindex).await?;
+    // ── Load what the spends need ────────────────────────────────────────
+    let material =
+        SpendMaterial::load(network, connection, account, &plan.spend_selection(), &edges)
+            .await?;
+
+    let PlanOutputs {
+        mut recipient_states,
+        change,
+        change_pool,
+        has_pool,
+        ironwood_active,
+        price,
+        ..
+    } = plan;
+    let SpendMaterial {
+        sapling_vk: svk,
+        orchard_vk: ovk,
+        can_sign,
+        change_address,
+        transparent_change_address,
+        dindex,
+        hw,
+        anchors,
+        asset_names,
+        ..
+    } = &material;
+    let zec_key = [0u8; 32];
 
     // Fill in ZSA change output addresses
     for rs in &mut recipient_states {
@@ -830,29 +819,23 @@ pub async fn plan_transaction(
         }
     }
 
-    // ── Fetch keys ───────────────────────────────────────────────────────
-    let svk = get_sapling_vk(connection, account).await?;
-    let ovk = get_orchard_vk(connection, account).await?;
-    let ssk = get_sapling_sk(&mut *connection, account).await?;
-    let osk = get_orchard_sk(&mut *connection, account).await?;
-
     // ── Build transaction ────────────────────────────────────────────────
     let current_height = client.latest_height().await?;
     let target_height = current_height;
 
     let build_config = BuildConfig::Standard {
         sapling_anchor: if has_pool[1] {
-            sapling_crypto::Anchor::from_bytes(sapling_anchor).into_option()
+            sapling_crypto::Anchor::from_bytes(anchors.sapling).into_option()
         } else {
             None
         },
         orchard_anchor: if has_pool[2] {
-            orchard::Anchor::from_bytes(orchard_anchor).into_option()
+            orchard::Anchor::from_bytes(anchors.orchard).into_option()
         } else {
             None
         },
         ironwood_anchor: if has_pool[3] {
-            orchard::Anchor::from_bytes(ironwood_anchor).into_option()
+            orchard::Anchor::from_bytes(anchors.ironwood).into_option()
         } else {
             None
         },
@@ -868,151 +851,63 @@ pub async fn plan_transaction(
     // current Nu6_3 branch id is valid on the network. The official Ledger app
     // supports v6/Ironwood signing and must not be forced to v5, otherwise any
     // tx carrying Ironwood spends fails to build.
-    if hw == HwKind::Zondax as u8 {
+    if *hw == HwKind::Zondax as u8 {
         builder
             .propose_version::<()>(TxVersion::V5)
             .map_err(|e| anyhow!("failed to force v5 for hardware signing: {e:?}"))?;
     }
 
-    let es = es.to_auth_path(&SaplingHasher::default());
-    let eo = eo.to_auth_path(&OrchardHasher::default());
-    let ei = ei.to_auth_path(&OrchardHasher::default());
-    let ers = empty_roots(&SaplingHasher::default());
-    let ero = empty_roots(&OrchardHasher::default());
-
-    let mut tsk_dindex = vec![];
-    let mut s_scope = vec![];
-
     event!(Level::INFO, "Adding Inputs");
 
-    let mut n_spends: [usize; NUM_POOLS as usize] = [0; NUM_POOLS as usize];
-    let mut can_sign = true;
+    let n_spends: [usize; NUM_POOLS as usize] = [
+        material.transparent.len(),
+        material.sapling.len(),
+        material.orchard.len(),
+        material.ironwood.len(),
+    ];
 
-    for pool in input_pools.iter() {
-        for inp in pool.iter() {
-            if inp.is_used() {
-                let InputNote {
-                    id, amount, pool, ..
-                } = inp;
-                n_spends[*pool as usize] += 1;
-                match pool {
-                    0 => {
-                        let row = sqlx::query(
-                            "SELECT nullifier, t.pk, t.sk, t.scope, t.dindex, t.address, t.uncompressed FROM notes
-                            JOIN transparent_address_accounts t ON notes.taddress = t.id_taddress
-                            WHERE id_note = ?",
-                        )
-                        .bind(*id)
-                        .fetch_one(&mut *connection)
-                        .await?;
-
-                        let _nf: Vec<u8> = row.get(0);
-                        let pk: Vec<u8> = row.get(1);
-                        let sk: Option<Vec<u8>> = row.get(2);
-                        let scope: u32 = row.get(3);
-                        let dindex_t: u32 = row.get(4);
-                        let taddress: String = row.get(5);
-                        let uncompressed: bool = row.get(6);
-
-                        if sk.is_none() {
-                            can_sign = false;
-                        }
-
-                        let pubkey = PublicKey::from_slice(&pk).unwrap();
-                        let mut hash = [0u8; 32];
-                        hash.copy_from_slice(&_nf[0..32]);
-                        let n = u32::from_le_bytes(_nf[32..36].try_into().unwrap());
-                        let utxo = OutPoint::new(hash, n);
-                        let pk_bytes = if uncompressed {
-                            pubkey.serialize_uncompressed().to_vec()
-                        } else {
-                            pubkey.serialize().to_vec()
-                        };
-                        let pkh: [u8; 20] = Ripemd160::digest(Sha256::digest(&pk_bytes)).into();
-                        let addr = TransparentAddress::PublicKeyHash(pkh);
-                        let coin =
-                            TxOut::new(Zatoshis::from_u64(*amount).unwrap(), addr.script().into());
-
-                        builder.add_transparent_input(
-                            TransparentInputInfo::from_parts(
-                                utxo,
-                                coin,
-                                SpendInfo::P2pkh { pubkey },
-                            )
-                            .map_err(|e: zcash_transparent::builder::Error| anyhow!(e))?,
-                        );
-                        tsk_dindex.push((pubkey, scope, dindex_t, taddress, uncompressed));
-                    }
-                    1 => {
-                        let (note, scope, merkle_path) = get_sapling_note(
-                            connection,
-                            *id,
-                            h.height,
-                            svk.as_ref().unwrap(),
-                            &es,
-                            &ers,
-                        )
-                        .await?;
-
-                        if ssk.is_none() {
-                            can_sign = false;
-                        }
-
-                        let dfvk = svk.as_ref().unwrap();
-                        let fvk = dfvk.to_fvk(scope);
-                        builder.add_sapling_spend::<Infallible>(fvk, note, merkle_path)?;
-                        s_scope.push(scope);
-                    }
-                    2 => {
-                        let (note, merkle_path) = get_orchard_note(
-                            connection,
-                            *id,
-                            h.height,
-                            ovk.as_ref().unwrap(),
-                            &eo,
-                            &ero,
-                            orchard_note_version,
-                            (!migration && anchor_height < h.height).then_some(eo.1),
-                        )
-                        .await?;
-
-                        if osk.is_none() {
-                            can_sign = false;
-                        }
-
-                        builder.add_orchard_spend::<Infallible>(
-                            ovk.clone().unwrap(),
-                            note,
-                            merkle_path,
-                        )?;
-                    }
-                    3 => {
-                        let (note, merkle_path) = get_orchard_note(
-                            connection,
-                            *id,
-                            h.height,
-                            ovk.as_ref().unwrap(),
-                            &ei,
-                            &ero,
-                            orchard::NoteVersion::V3,
-                            (!migration && anchor_height < h.height).then_some(ei.1),
-                        )
-                        .await?;
-
-                        if osk.is_none() {
-                            can_sign = false;
-                        }
-
-                        builder.add_ironwood_spend::<Infallible>(
-                            ovk.clone().unwrap(),
-                            note,
-                            merkle_path,
-                        )?;
-                    }
-                    _ => unreachable!(),
-                }
-            }
-        }
+    for utxo in &material.transparent {
+        let addr = TransparentAddress::PublicKeyHash(utxo.pubkey_hash());
+        let coin = TxOut::new(Zatoshis::from_u64(utxo.amount)?, addr.script().into());
+        builder.add_transparent_input(
+            TransparentInputInfo::from_parts(
+                utxo.outpoint.clone(),
+                coin,
+                SpendInfo::P2pkh {
+                    pubkey: utxo.pubkey,
+                },
+            )
+            .map_err(|e: zcash_transparent::builder::Error| anyhow!(e))?,
+        );
+    }
+    for spend in &material.sapling {
+        let fvk = svk
+            .as_ref()
+            .ok_or_else(|| anyhow!("No sapling key for spend"))?
+            .to_fvk(spend.scope);
+        builder.add_sapling_spend::<Infallible>(
+            fvk,
+            spend.note.clone(),
+            spend.merkle_path.clone(),
+        )?;
+    }
+    let orchard_fvk = || {
+        ovk.clone()
+            .ok_or_else(|| anyhow!("No orchard key for spend"))
+    };
+    for spend in &material.orchard {
+        builder.add_orchard_spend::<Infallible>(
+            orchard_fvk()?,
+            spend.note,
+            spend.merkle_path.clone(),
+        )?;
+    }
+    for spend in &material.ironwood {
+        builder.add_ironwood_spend::<Infallible>(
+            orchard_fvk()?,
+            spend.note,
+            spend.merkle_path.clone(),
+        )?;
     }
 
     // ── Add outputs ──────────────────────────────────────────────────────
@@ -1096,11 +991,9 @@ pub async fn plan_transaction(
 
     // ── Add change output ────────────────────────────────────────────────
     if change > 0 {
-        let change_addr = if change_pool == 0 && tkeys.xvk.is_some() {
-            transparent_change_address(connection, account, use_internal, dindex).await?
-        } else {
-            change_address.clone()
-        };
+        let change_addr = transparent_change_address
+            .clone()
+            .unwrap_or_else(|| change_address.clone());
         match change_pool {
             0 => {
                 let to = get_transparent_address(network, &change_addr)?;
@@ -1168,7 +1061,7 @@ pub async fn plan_transaction(
         let oaddress = ovk
             .as_ref()
             .ok_or_else(|| anyhow!("No orchard key for issuance"))?
-            .address_at(dindex, Scope::External);
+            .address_at(*dindex, Scope::External);
         let zsa = build_zsa_builder(info, oaddress)?;
         builder.set_zsa_builder(zsa);
     }
@@ -1184,25 +1077,7 @@ pub async fn plan_transaction(
     let pczt = Creator::build_from_parts(r.pczt_parts).unwrap();
     info!("Created");
 
-    let mut asset_names = sqlx::query(
-        "SELECT asset_base, asset_name FROM assets
-         WHERE asset_name IS NOT NULL AND asset_name != ''",
-    )
-    .map(|row: SqliteRow| {
-        let asset_base: Vec<u8> = row.get(0);
-        let asset_name: String = row.get(1);
-        (asset_base, asset_name)
-    })
-    .fetch_all(&mut *connection)
-    .await?
-    .into_iter()
-    .filter_map(|(asset_base, asset_name)| {
-        asset_base
-            .try_into()
-            .ok()
-            .map(|asset_base| (asset_base, asset_name))
-    })
-    .collect::<HashMap<[u8; 32], String>>();
+    let mut asset_names = asset_names.clone();
     for recipient in &recipient_states {
         if let (Ok(asset_base), Some(asset_name)) = (
             recipient.asset_base.as_slice().try_into(),
@@ -1217,23 +1092,16 @@ pub async fn plan_transaction(
     let updater = Updater::new(pczt);
     let updater = updater
         .update_transparent_with(|mut u| {
-            for (i, (pubkey, scope, dindex_t, taddress, uncompressed)) in
-                tsk_dindex.into_iter().enumerate()
-            {
+            for (i, utxo) in material.transparent.iter().enumerate() {
                 u.update_input_with(i, |mut u| {
-                    let derivation_path = vec![scope, dindex_t];
+                    let derivation_path = vec![utxo.scope, utxo.dindex];
                     let path = Bip32Derivation::parse([0u8; 32], derivation_path).unwrap();
-                    u.set_bip32_derivation(pubkey.serialize(), path);
-                    u.set_proprietary("scope".to_string(), scope.to_le_bytes().to_vec());
-                    u.set_proprietary("dindex".to_string(), dindex_t.to_le_bytes().to_vec());
-                    u.set_proprietary("address".to_string(), taddress.into_bytes());
-                    u.set_proprietary("uncompressed".to_string(), vec![uncompressed as u8]);
-                    let pk_bytes = if uncompressed {
-                        pubkey.serialize_uncompressed().to_vec()
-                    } else {
-                        pubkey.serialize().to_vec()
-                    };
-                    u.set_hash160_preimage(pk_bytes);
+                    u.set_bip32_derivation(utxo.pubkey.serialize(), path);
+                    u.set_proprietary("scope".to_string(), utxo.scope.to_le_bytes().to_vec());
+                    u.set_proprietary("dindex".to_string(), utxo.dindex.to_le_bytes().to_vec());
+                    u.set_proprietary("address".to_string(), utxo.address.clone().into_bytes());
+                    u.set_proprietary("uncompressed".to_string(), vec![utxo.uncompressed as u8]);
+                    u.set_hash160_preimage(utxo.pubkey_bytes());
                     Ok(())
                 })?;
             }
@@ -1243,10 +1111,10 @@ pub async fn plan_transaction(
 
     let updater = updater
         .update_sapling_with(|mut u| {
-            for (c_input, scope) in s_scope.iter().enumerate() {
+            for (c_input, spend) in material.sapling.iter().enumerate() {
                 let bundle_index = sapling_meta.spend_index(c_input).unwrap();
                 u.update_spend_with(bundle_index, |mut u| {
-                    u.set_proprietary("scope".to_string(), scope.to_le_bytes().to_vec());
+                    u.set_proprietary("scope".to_string(), spend.scope.to_le_bytes().to_vec());
                     Ok(())
                 })?;
             }
@@ -1269,7 +1137,7 @@ pub async fn plan_transaction(
         let oaddress = ovk
             .as_ref()
             .ok_or_else(|| anyhow!("No orchard key for issuance"))?
-            .address_at(dindex, Scope::External);
+            .address_at(*dindex, Scope::External);
         let zsa_builder = build_zsa_builder(info, oaddress)?;
         Issuer::new(pczt)
             .build_awaiting_sighash(zsa_builder, UnwrapErr(SysRng))
@@ -1309,7 +1177,7 @@ pub async fn plan_transaction(
         ironwood_indices: (0..n_spends[3])
             .map(|n| ironwood_meta.spend_action_index(n).unwrap())
             .collect(),
-        can_sign,
+        can_sign: *can_sign,
         can_broadcast: false,
         price,
         category,
