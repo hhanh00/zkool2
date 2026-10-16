@@ -9,10 +9,6 @@ name: UI Tests
 # name in the `tests` default below.
 
 on:
-  # TEMPORARY: validation runs while the workflow is not yet on main; remove
-  # before merge.
-  push:
-    branches: [ci/flutter-ui-tests]
   workflow_dispatch:
     inputs:
       tests:
