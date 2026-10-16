@@ -1,4 +1,5 @@
 pub mod dkg;
+pub mod driver;
 pub mod protocol;
 pub mod sign;
 

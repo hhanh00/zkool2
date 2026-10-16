@@ -569,9 +569,6 @@ pub async fn run_mempool(context: Context) -> anyhow::Result<()> {
                                     .await;
                             }
                         }
-                        if let Err(e) = crate::graphql::frost::new_block(coin.clone()).await {
-                            tracing::error!("new_block error: {e:#}");
-                        }
                     }
                 }
             }
