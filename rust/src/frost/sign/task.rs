@@ -52,7 +52,7 @@ impl SignTask {
             | SignTask::WaitSigpackages
             | SignTask::WaitSigshares
             | SignTask::Done => true,
-            SignTask::EnsureMailbox => s.mailbox.is_none(),
+            SignTask::EnsureMailbox => s.mailbox.is_none() || s.broadcast.is_none(),
             SignTask::SendCommitments => !s.own_commitments_stored,
             SignTask::MakeSigpackages => {
                 s.is_coordinator()

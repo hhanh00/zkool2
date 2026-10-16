@@ -18,10 +18,16 @@ use sqlx::SqliteConnection;
 use tracing::info;
 
 use crate::{
-    api::{coin::Network, frost::FrostSignParams, pay::PcztPackage},
+    api::{
+        coin::Network,
+        frost::{FrostSignParams, SigningStatus},
+        pay::PcztPackage,
+    },
     frost::dkg::delete_frost_state,
     Client, Sink,
 };
+
+use task::SignTask;
 
 #[cfg(feature = "flutter")]
 use crate::frb_generated::StreamSink;
@@ -80,11 +86,11 @@ pub async fn in_sign(connection: &mut SqliteConnection) -> Result<bool> {
     Ok(exists.is_some())
 }
 
-// ── do_sign / do_sign_impl: backward-compat wrappers ─────────────────────────
+// ── do_sign / do_sign_impl ───────────────────────────────────────────────────
 //
-// These drive sign_step in a loop, sleeping between iterations, which matches
-// the old sequential orchestrator behaviour. The Sink receives progress updates
-// on each step.
+// One signing pass, reported to the status sink the way the sequential
+// orchestrator used to report its phases: one event per task the pass
+// executed, then the wait or terminal it stopped at.
 
 #[cfg(feature = "flutter")]
 pub async fn do_sign(
@@ -92,7 +98,7 @@ pub async fn do_sign(
     connection: &mut SqliteConnection,
     client: &mut Client,
     height: u32,
-    status: StreamSink<crate::api::frost::SigningStatus>,
+    status: StreamSink<SigningStatus>,
 ) -> Result<()> {
     do_sign_impl(network, connection, client, height, status).await
 }
@@ -102,7 +108,7 @@ pub async fn do_sign_impl(
     connection: &mut SqliteConnection,
     client: &mut Client,
     height: u32,
-    _status: impl Sink<crate::api::frost::SigningStatus>,
+    status: impl Sink<SigningStatus>,
 ) -> Result<()> {
     info!("sign: starting at height {}", height);
 
@@ -110,9 +116,117 @@ pub async fn do_sign_impl(
         info!("sign: no signing session in progress");
         return Ok(());
     };
-
-    if let Some(txid) = outcome.txid {
-        info!("sign: transaction broadcast: {txid}");
-    }
+    report_outcome(&outcome, &status).await;
     Ok(())
+}
+
+/// Tell the status sink what a pass did, in order.
+async fn report_outcome(outcome: &SignStepOutcome, status: &impl Sink<SigningStatus>) {
+    for task in &outcome.executed {
+        for s in sign_statuses_for(task) {
+            status.send(s).await;
+        }
+    }
+    if outcome.waiting_for_funds {
+        status.send(SigningStatus::WaitingForFunds).await;
+    }
+    if let Some(txid) = &outcome.txid {
+        info!("sign: transaction broadcast: {txid}");
+        status.send(SigningStatus::TransactionSent(txid.clone())).await;
+    }
+}
+
+/// The status events a task stands for, in the order the orchestrator used
+/// to emit them while doing the same work.
+fn sign_statuses_for(task: &SignTask) -> Vec<SigningStatus> {
+    match task {
+        SignTask::EnsureMailbox => vec![],
+        SignTask::SendCommitments => vec![SigningStatus::SendingCommitment],
+        SignTask::WaitCommitments => vec![SigningStatus::WaitingForCommitments],
+        SignTask::MakeSigpackages => vec![SigningStatus::SendingSigningPackage],
+        SignTask::WaitSigpackages => vec![SigningStatus::WaitingForSigningPackage],
+        SignTask::SendSigshares => vec![
+            SigningStatus::SendingSignatureShare,
+            SigningStatus::SigningCompleted,
+        ],
+        SignTask::WaitSigshares => vec![SigningStatus::WaitingForSignatureShares],
+        SignTask::Aggregate => vec![
+            SigningStatus::PreparingTransaction,
+            SigningStatus::SendingTransaction,
+        ],
+        SignTask::Done => vec![SigningStatus::SigningCompleted],
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::{Arc, Mutex};
+
+    /// A sink that remembers what it was told.
+    #[derive(Clone, Default)]
+    struct Recorder(Arc<Mutex<Vec<String>>>);
+
+    impl Sink<SigningStatus> for Recorder {
+        async fn send(&self, value: SigningStatus) {
+            self.0.lock().unwrap().push(format!("{value:?}"));
+        }
+        async fn send_error(&self, error: anyhow::Error) {
+            self.0.lock().unwrap().push(format!("error: {error}"));
+        }
+    }
+
+    fn outcome(executed: Vec<SignTask>) -> SignStepOutcome {
+        SignStepOutcome {
+            executed,
+            waiting_for_funds: false,
+            txid: None,
+        }
+    }
+
+    async fn events(outcome: SignStepOutcome) -> Vec<String> {
+        let sink = Recorder::default();
+        report_outcome(&outcome, &sink).await;
+        let events = sink.0.lock().unwrap().clone();
+        events
+    }
+
+    #[tokio::test]
+    async fn a_participant_pass_reports_each_phase_in_order() {
+        let e = events(outcome(vec![
+            SignTask::EnsureMailbox,
+            SignTask::SendCommitments,
+            SignTask::WaitSigpackages,
+        ]))
+        .await;
+        assert_eq!(e, ["SendingCommitment", "WaitingForSigningPackage"]);
+
+        let e = events(outcome(vec![SignTask::SendSigshares, SignTask::Done])).await;
+        assert_eq!(
+            e,
+            ["SendingSignatureShare", "SigningCompleted", "SigningCompleted"]
+        );
+    }
+
+    #[tokio::test]
+    async fn the_coordinator_sees_the_transaction_id_last() {
+        let mut o = outcome(vec![SignTask::Aggregate]);
+        o.txid = Some("ab".into());
+        let e = events(o).await;
+        assert_eq!(
+            e,
+            [
+                "PreparingTransaction",
+                "SendingTransaction",
+                "TransactionSent(\"ab\")"
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn an_unfunded_publish_is_a_warning_not_a_phase() {
+        let mut o = outcome(vec![SignTask::EnsureMailbox]);
+        o.waiting_for_funds = true;
+        assert_eq!(events(o).await, ["WaitingForFunds"]);
+    }
 }

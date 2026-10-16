@@ -14,7 +14,9 @@ use super::task::SignTask;
 /// Returns `Err` when the protocol must abort (e.g. too many commitments
 /// received — participants failed to agree on the signing set out of band).
 pub fn next_sign_task(s: &SignState) -> Result<SignTask> {
-    if s.mailbox.is_none() {
+    // Both internal accounts are needed: the mailbox receives commitments
+    // and shares, the broadcast account carries the signing packages.
+    if s.mailbox.is_none() || s.broadcast.is_none() {
         return Ok(SignTask::EnsureMailbox);
     }
 
@@ -95,6 +97,22 @@ mod tests {
         let mut s = state(false);
         s.mailbox = None;
         assert_eq!(next_sign_task(&s).unwrap(), SignTask::EnsureMailbox);
+    }
+
+    #[test]
+    fn ensures_the_broadcast_account_too() {
+        // The mailbox exists but the broadcast account does not (a partial
+        // EnsureMailbox, or the account was deleted): repair it before
+        // anything else, for the coordinator and the others alike.
+        for is_coord in [true, false] {
+            let mut s = state(is_coord);
+            s.broadcast = None;
+            s.broadcast_address = None;
+            assert_eq!(next_sign_task(&s).unwrap(), SignTask::EnsureMailbox);
+            assert!(SignTask::EnsureMailbox.is_satisfied_by(&s));
+        }
+        let s = state(true);
+        assert!(!SignTask::EnsureMailbox.is_satisfied_by(&s));
     }
 
     #[test]

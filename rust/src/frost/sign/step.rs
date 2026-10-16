@@ -8,7 +8,7 @@ use anyhow::{bail, Result};
 use sqlx::SqliteConnection;
 use tracing::info;
 
-use crate::{api::coin::Network, Client};
+use crate::{api::coin::Network, frost::dkg::delete_frost_state, Client};
 
 use super::{
     exec::{self, SendResult},
@@ -43,8 +43,21 @@ pub async fn sign_step(
 
     // Effects per pass are bounded; the cap turns any loop into an error.
     for _ in 0..16 {
-        let state = observe_sign(network, connection).await?.expect("state vanished mid-pass");
-        let task = next_sign_task(&state)?;
+        // The session can be reset or cancelled between observes; that ends
+        // the pass quietly, like a pass that found no session at all.
+        let Some(state) = observe_sign(network, connection).await? else {
+            return Ok(None);
+        };
+        let task = match next_sign_task(&state) {
+            Ok(task) => task,
+            Err(e) => {
+                // The protocol must abort (participants disagreed on the
+                // signing set). Clear the session so the error is reported
+                // once rather than on every later pass.
+                delete_frost_state(connection).await?;
+                return Err(e);
+            }
+        };
 
         if !matches!(task.kind(), TaskKind::Effect) {
             executed.push(task);
@@ -56,7 +69,9 @@ pub async fn sign_step(
         }
 
         // Double-observe: re-validate before touching anything.
-        let fresh = observe_sign(network, connection).await?.expect("state vanished mid-pass");
+        let Some(fresh) = observe_sign(network, connection).await? else {
+            return Ok(None);
+        };
         if !task.is_satisfied_by(&fresh) {
             info!("sign task {task:?} no longer applies; replanning");
             continue;

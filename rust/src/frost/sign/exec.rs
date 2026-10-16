@@ -93,13 +93,11 @@ pub async fn send_commitments(
 
     let mut tx = connection.begin().await?;
     let signing_key = load_signing_key(&mut *tx, state.account).await?;
+    let key_package = load_key_package(&mut *tx, state.account).await?;
     let mut recipients = vec![];
 
     for idx in 0..state.nsigs {
-        let (nonces, commitments) = commit(
-            load_key_package(&mut *tx, state.account).await?.signing_share(),
-            &mut OsRng,
-        );
+        let (nonces, commitments) = commit(key_package.signing_share(), &mut OsRng);
         let nonces = nonces.serialize()?;
         sqlx::query(
             "INSERT INTO frost_signatures(account, sighash, idx, nonce) VALUES (?, ?, ?, ?)",
