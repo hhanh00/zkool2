@@ -16,6 +16,11 @@ on:
         required: false
         default: test_frost_ui.py
 
+# Read-only: the jobs check out, restore and save caches, and upload a log
+# artifact. The called workflows declare nothing beyond this.
+permissions:
+  contents: read
+
 env:
   SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
 
