@@ -24,7 +24,8 @@ use crate::{
     account::{get_account_seed, get_orchard_vk, new_account},
     api::{account::NewAccount, coin::Network},
     pay::{
-        plan::{plan_transaction, sign_transaction, PaymentRequest, PlanMode},
+        plan::{plan_transaction, PaymentRequest, PlanMode},
+        sign::sign_transaction,
         pool::ALL_SHIELDED_POOLS,
         Recipient,
     },
@@ -483,7 +484,7 @@ pub async fn publish(
     )
     .await
     .context("plan_transaction in DKG publish")?;
-    let pczt = sign_transaction(connection, account, network, &pczt)
+    let pczt = sign_transaction(connection, account, &pczt)
         .await
         .context("sign_transaction in DKG publish")?;
     // Broadcasting locks the funding notes this transaction spent so the

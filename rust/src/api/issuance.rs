@@ -18,7 +18,8 @@ use crate::{
     account::get_account_seed,
     api::coin::Coin,
     pay::{
-        plan::{extract_transaction, plan_transaction, sign_transaction, PaymentRequest, PlanMode},
+        plan::{extract_transaction, plan_transaction, PaymentRequest, PlanMode},
+        sign::sign_transaction,
         pool::ALL_POOLS,
     },
 };
@@ -129,7 +130,7 @@ pub async fn issue_asset(
     .await?;
 
     // ── 6. Sign ──────────────────────────────────────────────────────────
-    let pczt_package = sign_transaction(&mut *connection, account, network, &pczt_package).await?;
+    let pczt_package = sign_transaction(&mut *connection, account, &pczt_package).await?;
 
     // ── 7. Extract ───────────────────────────────────────────────────────
     let tx_bytes = extract_transaction(&pczt_package).await?;

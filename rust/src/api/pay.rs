@@ -52,11 +52,7 @@ pub async fn prepare(
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn sign_transaction(pczt: &PcztPackage, account: u32, c: &Coin) -> Result<PcztPackage> {
     let mut connection = c.get_connection().await?;
-    let network = c.network();
-
-    let tx = crate::pay::plan::sign_transaction(&mut *connection, account, &network, pczt).await?;
-
-    Ok(tx)
+    crate::pay::sign::sign_transaction(&mut *connection, account, pczt).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
