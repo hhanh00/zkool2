@@ -76,6 +76,10 @@ runs:
         TEST: ${{ inputs.test }}
         SEED: ${{ inputs.seed }}
         ZKOOL_BINARY: ${{ github.workspace }}/target/release/zkool_graphql
+        # The runner's locale is "C", which the app passes to intl's
+        # NumberFormat and which intl rejects; give the app a real one.
+        LANG: en_US.UTF-8
+        LC_ALL: en_US.UTF-8
 
     - name: Save the app build
       if: always() && steps.app-cache.outputs.cache-hit != 'true'
