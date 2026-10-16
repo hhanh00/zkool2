@@ -9,6 +9,10 @@ name: UI Tests
 # name in the `tests` default below.
 
 on:
+  # TEMPORARY: validation runs while the workflow is not yet on main; remove
+  # before merge.
+  push:
+    branches: [ci/flutter-ui-tests]
   workflow_dispatch:
     inputs:
       tests:
@@ -53,7 +57,8 @@ jobs:
         run: |
           echo "tests=$(jq -R -c 'split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))' <<< "$TESTS")" >> "$GITHUB_OUTPUT"
         env:
-          TESTS: ${{ inputs.tests }}
+          # A push run has no inputs; fall back to the dispatch default.
+          TESTS: ${{ inputs.tests || 'test_frost_ui.py' }}
 
   ui:
     needs: [select, zkool-graphql, regtest-tools]
