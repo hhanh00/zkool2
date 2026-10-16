@@ -18,15 +18,11 @@ use zcash_protocol::consensus::Parameters as ZkParams;
 use zcash_transparent::address::TransparentAddress;
 use zip32::AccountId;
 
-use crate::api::pay::PcztPackage;
-#[cfg(feature = "flutter")]
-use crate::frb_generated::StreamSink;
 use crate::{
     api::{coin::Coin, pay::SigningEvent},
     db::{get_account_dindex, get_account_hw},
     io::{decrypt, encrypt},
     ledger::{HwKind, LedgerHandle},
-    Sink,
 };
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -668,38 +664,6 @@ pub async fn show_ledger_transparent_address(account: u32, c: &Coin) -> Result<S
         .show_transparent_address(&c.network(), &mut connection, account)
         .await?;
     Ok(r)
-}
-
-#[cfg(feature = "flutter")]
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn sign_ledger_transaction(
-    sink: StreamSink<SigningEvent>,
-    package: PcztPackage,
-    account: u32,
-    c: &Coin,
-) -> Result<()> {
-    let c = c.clone();
-    tokio::spawn(async move {
-        match sign_ledger_pczt(&sink, package, account, &c).await {
-            Ok(pkg) => sink.send(SigningEvent::Result(pkg)).await,
-            Err(e) => sink.send_error(e).await,
-        }
-    });
-    Ok(())
-}
-
-pub(crate) async fn sign_ledger_pczt<S>(
-    sink: &S,
-    package: PcztPackage,
-    account: u32,
-    c: &Coin,
-) -> Result<PcztPackage>
-where
-    S: Sink<SigningEvent> + Sync,
-{
-    let mut connection = c.get_connection().await?;
-    let app = get_ledger(&mut connection, account).await?;
-    app.sign_pczt(c.network(), sink, &mut connection, account, package).await
 }
 
 #[derive(Default, Debug)]

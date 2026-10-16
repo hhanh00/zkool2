@@ -23,7 +23,7 @@ use crate::{
     db::get_account_hw,
     pay::{
         plan::{plan_transaction, PaymentRequest, PlanMode},
-        sign::sign_transaction,
+        sign::sign,
         pool::PoolMask,
         Recipient,
     },
@@ -132,7 +132,7 @@ async fn broadcast(
     let fee = crate::pay::TxPlan::from_package(&network, &pczt)
         .map(|p| p.fee)
         .unwrap_or(0);
-    let pczt = sign_transaction(&mut *connection, account, &pczt).await?;
+    let pczt = sign(&network, &mut *connection, account, pczt, &()).await?;
     let _txid = crate::pay::broadcast(&mut *connection, client, account, &pczt).await?;
     Ok(fee)
 }

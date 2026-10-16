@@ -10,7 +10,6 @@ use crate::{
         subs::SUBS,
         Context,
     },
-    pay::sign::sign_transaction,
     Sink,
 };
 use bigdecimal::BigDecimal;
@@ -323,12 +322,8 @@ impl Mutation {
         let mut connection = coin.get_connection().await?;
         let mut client = coin.client().await?;
         let network = coin.network();
-        let hw = crate::db::get_account_hw(&mut connection, id_account as u32).await?;
-        let signed_pczt = if crate::ledger::HwKind::from_hw(hw).is_ledger() {
-            crate::api::account::sign_ledger_pczt(&(), pczt, id_account as u32, coin).await?
-        } else {
-            sign_transaction(&mut connection, id_account as u32, &pczt).await?
-        };
+        let signed_pczt =
+            crate::pay::sign::sign(&network, &mut connection, id_account as u32, pczt, &()).await?;
         let txid =
             crate::pay::broadcast(&mut connection, &mut client, id_account as u32, &signed_pczt)
                 .await?;

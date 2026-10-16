@@ -100,7 +100,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => -1680185736;
+  int get rustContentHash => -2133782104;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -625,11 +625,11 @@ abstract class RustLibApi extends BaseApi {
   Future<String> crateApiAccountShowLedgerTransparentAddress(
       {required int account, required Coin c});
 
-  Stream<SigningEvent> crateApiAccountSignLedgerTransaction(
-      {required PcztPackage package, required int account, required Coin c});
-
   Future<PcztPackage> crateApiPaySignTransaction(
       {required PcztPackage pczt, required int account, required Coin c});
+
+  Stream<SigningEvent> crateApiPaySignTransactionWithProgress(
+      {required PcztPackage package, required int account, required Coin c});
 
   Future<MigrationEvent> crateApiMigrateStepMigration(
       {required int account, required Coin c});
@@ -5416,38 +5416,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Stream<SigningEvent> crateApiAccountSignLedgerTransaction(
-      {required PcztPackage package, required int account, required Coin c}) {
-    final sink = RustStreamSink<SigningEvent>();
-    unawaited(handler.executeNormal(NormalTask(
-      callFfi: (port_) {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_StreamSink_signing_event_Sse(sink, serializer);
-        sse_encode_box_autoadd_pczt_package(package, serializer);
-        sse_encode_u_32(account, serializer);
-        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
-            c, serializer);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 167, port: port_);
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_unit,
-        decodeErrorData: sse_decode_AnyhowException,
-      ),
-      constMeta: kCrateApiAccountSignLedgerTransactionConstMeta,
-      argValues: [sink, package, account, c],
-      apiImpl: this,
-    )));
-    return sink.stream;
-  }
-
-  TaskConstMeta get kCrateApiAccountSignLedgerTransactionConstMeta =>
-      const TaskConstMeta(
-        debugName: "sign_ledger_transaction",
-        argNames: ["sink", "package", "account", "c"],
-      );
-
-  @override
   Future<PcztPackage> crateApiPaySignTransaction(
       {required PcztPackage pczt, required int account, required Coin c}) {
     return handler.executeNormal(NormalTask(
@@ -5458,7 +5426,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
             c, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 168, port: port_);
+            funcId: 167, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_pczt_package,
@@ -5473,6 +5441,38 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiPaySignTransactionConstMeta => const TaskConstMeta(
         debugName: "sign_transaction",
         argNames: ["pczt", "account", "c"],
+      );
+
+  @override
+  Stream<SigningEvent> crateApiPaySignTransactionWithProgress(
+      {required PcztPackage package, required int account, required Coin c}) {
+    final sink = RustStreamSink<SigningEvent>();
+    unawaited(handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_StreamSink_signing_event_Sse(sink, serializer);
+        sse_encode_box_autoadd_pczt_package(package, serializer);
+        sse_encode_u_32(account, serializer);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
+            c, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 168, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_unit,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiPaySignTransactionWithProgressConstMeta,
+      argValues: [sink, package, account, c],
+      apiImpl: this,
+    )));
+    return sink.stream;
+  }
+
+  TaskConstMeta get kCrateApiPaySignTransactionWithProgressConstMeta =>
+      const TaskConstMeta(
+        debugName: "sign_transaction_with_progress",
+        argNames: ["sink", "package", "account", "c"],
       );
 
   @override

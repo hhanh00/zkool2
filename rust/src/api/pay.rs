@@ -9,6 +9,10 @@ use crate::{
     },
 };
 #[cfg(feature = "flutter")]
+use crate::frb_generated::StreamSink;
+#[cfg(feature = "flutter")]
+use crate::Sink;
+#[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 
 pub struct PaymentOptions {
@@ -49,10 +53,37 @@ pub async fn prepare(
     plan_transaction(network, &mut *connection, &mut client, account, &request, &mode).await
 }
 
+/// Sign with whichever signer the account uses (wallet keys or its Ledger
+/// app), without progress reports.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn sign_transaction(pczt: &PcztPackage, account: u32, c: &Coin) -> Result<PcztPackage> {
     let mut connection = c.get_connection().await?;
-    crate::pay::sign::sign_transaction(&mut *connection, account, pczt).await
+    crate::pay::sign::sign(&c.network(), &mut connection, account, pczt.clone(), &()).await
+}
+
+/// Sign with whichever signer the account uses, streaming `Progress` events
+/// (a Ledger app's prompts) and finally the signed package as `Result`.
+#[cfg(feature = "flutter")]
+#[frb]
+pub async fn sign_transaction_with_progress(
+    sink: StreamSink<SigningEvent>,
+    package: PcztPackage,
+    account: u32,
+    c: &Coin,
+) -> Result<()> {
+    let c = c.clone();
+    tokio::spawn(async move {
+        let signed = async {
+            let mut connection = c.get_connection().await?;
+            crate::pay::sign::sign(&c.network(), &mut connection, account, package, &sink).await
+        }
+        .await;
+        match signed {
+            Ok(package) => sink.send(SigningEvent::Result(package)).await,
+            Err(e) => sink.send_error(e).await,
+        }
+    });
+    Ok(())
 }
 
 #[cfg_attr(feature = "flutter", frb)]

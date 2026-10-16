@@ -184,31 +184,24 @@ class TxPageState extends ConsumerState<TxPage> {
       setState(() => _sendStep = "Signing transaction...");
       var pczt = widget.pczt;
       if (!txPlan.canBroadcast) {
-        if (account!.hw != 0) {
-          final comp = Completer();
-          signLedgerTransaction(package: widget.pczt, account: account!.id, c: c).listen(
-            (e) {
-              switch (e) {
-                case SigningEvent_Progress p:
-                  showSnackbar(p.field0);
-                case SigningEvent_Result r:
-                  pczt = r.field0;
-                  comp.complete();
-              }
-            },
-            onError: (e) {
-              final exc = e as AnyhowException;
-              comp.completeError(exc);
-            },
-          );
-          await comp.future;
-        } else {
-          pczt = await signTransaction(
-            pczt: widget.pczt,
-            account: account!.id,
-            c: c,
-          );
-        }
+        // The signer (wallet keys or the account's Ledger app) is chosen on
+        // the Rust side; a Ledger app reports its prompts as progress.
+        final comp = Completer<PcztPackage>();
+        signTransactionWithProgress(package: widget.pczt, account: account!.id, c: c).listen(
+          (e) {
+            switch (e) {
+              case SigningEvent_Progress p:
+                showSnackbar(p.field0);
+              case SigningEvent_Result r:
+                comp.complete(r.field0);
+            }
+          },
+          onError: (e) {
+            final exc = e as AnyhowException;
+            comp.completeError(exc);
+          },
+        );
+        pczt = await comp.future;
       }
 
       setState(() => _sendStep = "Broadcasting...");

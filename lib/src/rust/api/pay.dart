@@ -24,10 +24,21 @@ Future<PcztPackage> prepare(
     RustLib.instance.api.crateApiPayPrepare(
         recipients: recipients, options: options, account: account, c: c);
 
+/// Sign with whichever signer the account uses (wallet keys or its Ledger
+/// app), without progress reports.
 Future<PcztPackage> signTransaction(
         {required PcztPackage pczt, required int account, required Coin c}) =>
     RustLib.instance.api
         .crateApiPaySignTransaction(pczt: pczt, account: account, c: c);
+
+/// Sign with whichever signer the account uses, streaming `Progress` events
+/// (a Ledger app's prompts) and finally the signed package as `Result`.
+Stream<SigningEvent> signTransactionWithProgress(
+        {required PcztPackage package,
+        required int account,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiPaySignTransactionWithProgress(
+        package: package, account: account, c: c);
 
 Future<Uint8List> extractTransaction({required PcztPackage package}) =>
     RustLib.instance.api.crateApiPayExtractTransaction(package: package);

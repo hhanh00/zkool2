@@ -11,7 +11,7 @@ import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 import 'pay.dart';
 part 'account.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `get_ledger`, `sign_ledger_pczt`
+// These functions are ignored because they are not marked as `pub`: `get_ledger`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<int> getAccountPools({required int account, required Coin c}) =>
@@ -198,13 +198,6 @@ Future<String> showLedgerTransparentAddress(
         {required int account, required Coin c}) =>
     RustLib.instance.api
         .crateApiAccountShowLedgerTransparentAddress(account: account, c: c);
-
-Stream<SigningEvent> signLedgerTransaction(
-        {required PcztPackage package,
-        required int account,
-        required Coin c}) =>
-    RustLib.instance.api.crateApiAccountSignLedgerTransaction(
-        package: package, account: account, c: c);
 
 Future<void> dummyExport({required SigningEvent a}) =>
     RustLib.instance.api.crateApiAccountDummyExport(a: a);

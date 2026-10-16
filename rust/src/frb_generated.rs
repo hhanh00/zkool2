@@ -43,7 +43,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1680185736;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -2133782104;
 
 // Section: executor
 
@@ -8617,70 +8617,6 @@ fn wire__crate__api__account__show_ledger_transparent_address_impl(
         },
     )
 }
-fn wire__crate__api__account__sign_ledger_transaction_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "sign_ledger_transaction",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_sink = <StreamSink<
-                crate::api::pay::SigningEvent,
-                flutter_rust_bridge::for_generated::SseCodec,
-            >>::sse_decode(&mut deserializer);
-            let api_package = <crate::api::pay::PcztPackage>::sse_decode(&mut deserializer);
-            let api_account = <u32>::sse_decode(&mut deserializer);
-            let api_c = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
-            >>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| async move {
-                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || async move {
-                        let mut api_c_guard = None;
-                        let decode_indices_ =
-                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
-                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                    &api_c, 0, false,
-                                )],
-                            );
-                        for i in decode_indices_ {
-                            match i {
-                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
-                                _ => unreachable!(),
-                            }
-                        }
-                        let api_c_guard = api_c_guard.unwrap();
-                        let output_ok = crate::api::account::sign_ledger_transaction(
-                            api_sink,
-                            api_package,
-                            api_account,
-                            &*api_c_guard,
-                        )
-                        .await?;
-                        Ok(output_ok)
-                    })()
-                    .await,
-                )
-            }
-        },
-    )
-}
 fn wire__crate__api__pay__sign_transaction_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -8728,6 +8664,70 @@ fn wire__crate__api__pay__sign_transaction_impl(
                         let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::pay::sign_transaction(
                             &api_pczt,
+                            api_account,
+                            &*api_c_guard,
+                        )
+                        .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
+fn wire__crate__api__pay__sign_transaction_with_progress_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "sign_transaction_with_progress",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_sink = <StreamSink<
+                crate::api::pay::SigningEvent,
+                flutter_rust_bridge::for_generated::SseCodec,
+            >>::sse_decode(&mut deserializer);
+            let api_package = <crate::api::pay::PcztPackage>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::pay::sign_transaction_with_progress(
+                            api_sink,
+                            api_package,
                             api_account,
                             &*api_c_guard,
                         )
@@ -12997,13 +12997,13 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        167 => wire__crate__api__account__sign_ledger_transaction_impl(
+        167 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
+        168 => wire__crate__api__pay__sign_transaction_with_progress_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        168 => wire__crate__api__pay__sign_transaction_impl(port, ptr, rust_vec_len, data_len),
         169 => wire__crate__api__migrate__step_migration_impl(port, ptr, rust_vec_len, data_len),
         170 => wire__crate__api__sync__synchronize_impl(port, ptr, rust_vec_len, data_len),
         172 => wire__crate__api__account__toggle_all_notes_impl(port, ptr, rust_vec_len, data_len),
