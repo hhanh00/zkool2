@@ -90,7 +90,7 @@ pub async fn has_dkg_addresses(c: &Coin) -> Result<bool> {
 /// already synced. Syncing was moved out because it must not race the rounds and
 /// autosync already drives the chain forward — the caller retries this on each
 /// new block (`lib/pages/dkg.dart`), and the headless server steps from
-/// `graphql::frost::new_block`, which syncs first.
+/// `frost::driver`, the one task that syncs first and runs passes one at a time.
 ///
 /// Each pass executes every effect the planner names until it hits a wait —
 /// one precondition-checked effect at a time. Statuses arrive after the pass,
