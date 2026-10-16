@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use age::{scrypt::Identity, Decryptor, Encryptor};
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 use serde_with::{hex::Hex, serde_as};
 use sqlx::{
@@ -428,7 +428,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
     io_account.user_memos = user_memos;
 
     let dkg_params =
-        sqlx::query("SELECT id, n, t, seed, birth_height FROM dkg_params WHERE account = ?")
+        sqlx::query("SELECT id, n, t, seed, birth_height, name FROM dkg_params WHERE account = ?")
             .bind(account)
             .map(|row: SqliteRow| {
                 let id: u8 = row.get(0);
@@ -436,6 +436,7 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
                 let t: u8 = row.get(2);
                 let seed: String = row.get(3);
                 let birth: u32 = row.get(4);
+                let name: String = row.get(5);
 
                 DKGParams {
                     id,
@@ -443,34 +444,52 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
                     t,
                     seed,
                     birth,
+                    name,
                 }
             })
             .fetch_optional(&mut *connection)
             .await?;
     io_account.dkg_params = dkg_params;
 
-    let dkg_packages = sqlx::query(
-        "SELECT account, public, round, from_id, data FROM dkg_packages WHERE account = ?",
+    // The DKG tables as they exist since V9. `dkg_packages` is no longer
+    // written by any DKG, so it is not exported; import still maps it for
+    // files produced before this change.
+    let dkg_state = sqlx::query(
+        "SELECT signing_keypair, spkg1, spkg2, key_pkg, pending_publish
+        FROM dkg_state WHERE account = ?",
     )
     .bind(account)
-    .map(|row: SqliteRow| {
-        let account: u32 = row.get(0);
-        let public: bool = row.get(1);
-        let round: u32 = row.get(2);
-        let from_id: u16 = row.get(3);
-        let data: Vec<u8> = row.get(4);
-
-        DKGPackage {
-            account,
-            public,
-            round,
-            from_id,
-            data: data.into(),
-        }
+    .map(|row: SqliteRow| DKGState {
+        signing_keypair: row.get::<Option<Vec<u8>>, _>(0).map(HexBytes),
+        spkg1: row.get::<Option<Vec<u8>>, _>(1).map(HexBytes),
+        spkg2: row.get::<Option<Vec<u8>>, _>(2).map(HexBytes),
+        key_pkg: row.get::<Option<Vec<u8>>, _>(3).map(HexBytes),
+        pending_publish: row.get::<Option<Vec<u8>>, _>(4).map(HexBytes),
     })
-    .fetch_all(&mut *connection)
+    .fetch_optional(&mut *connection)
     .await?;
-    io_account.dkg_packages = dkg_packages;
+    io_account.dkg_state = dkg_state;
+
+    let dkg_peers = sqlx::query("SELECT round, from_id, data FROM dkg_peers WHERE account = ?")
+        .bind(account)
+        .map(|row: SqliteRow| DKGPeer {
+            round: row.get(0),
+            from_id: row.get(1),
+            data: HexBytes(row.get(2)),
+        })
+        .fetch_all(&mut *connection)
+        .await?;
+    io_account.dkg_peers = dkg_peers;
+
+    let dkg_addresses = sqlx::query("SELECT from_id, address FROM dkg_addresses WHERE account = ?")
+        .bind(account)
+        .map(|row: SqliteRow| DKGAddress {
+            from_id: row.get(0),
+            address: row.get(1),
+        })
+        .fetch_all(&mut *connection)
+        .await?;
+    io_account.dkg_addresses = dkg_addresses;
     io_account.categories = categories;
 
     let io_account = serde_json::to_string(&io_account)?;
@@ -847,7 +866,7 @@ pub async fn import_account(
     if let Some(dkg_params) = io_account.dkg_params {
         sqlx::query(
             "INSERT INTO dkg_params
-            (account, id, n, t, seed, birth_height) VALUES (?, ?, ?, ?, ?, ?)",
+            (account, id, n, t, seed, birth_height, name) VALUES (?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(new_id_account)
         .bind(dkg_params.id)
@@ -855,25 +874,125 @@ pub async fn import_account(
         .bind(dkg_params.t)
         .bind(&dkg_params.seed)
         .bind(dkg_params.birth)
+        .bind(&dkg_params.name)
         .execute(&mut *tx)
         .await?;
     }
 
-    for dkg_package in io_account.dkg_packages.iter() {
+    if let Some(dkg_state) = io_account.dkg_state {
         sqlx::query(
-            "INSERT INTO dkg_packages
-            (account, public, round, from_id, data) VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO dkg_state
+            (account, signing_keypair, spkg1, spkg2, key_pkg, pending_publish)
+            VALUES (?, ?, ?, ?, ?, ?)",
         )
         .bind(new_id_account)
-        .bind(dkg_package.public)
-        .bind(dkg_package.round)
-        .bind(dkg_package.from_id)
-        .bind(&dkg_package.data)
+        .bind(dkg_state.signing_keypair.as_ref().map(|b| &b.0))
+        .bind(dkg_state.spkg1.as_ref().map(|b| &b.0))
+        .bind(dkg_state.spkg2.as_ref().map(|b| &b.0))
+        .bind(dkg_state.key_pkg.as_ref().map(|b| &b.0))
+        .bind(dkg_state.pending_publish.as_ref().map(|b| &b.0))
         .execute(&mut *tx)
         .await?;
     }
+
+    for peer in io_account.dkg_peers.iter() {
+        sqlx::query(
+            "INSERT OR IGNORE INTO dkg_peers (account, round, from_id, data)
+            VALUES (?, ?, ?, ?)",
+        )
+        .bind(new_id_account)
+        .bind(peer.round)
+        .bind(peer.from_id)
+        .bind(&peer.data.0)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    for address in io_account.dkg_addresses.iter() {
+        sqlx::query(
+            "INSERT OR IGNORE INTO dkg_addresses (account, from_id, address)
+            VALUES (?, ?, ?)",
+        )
+        .bind(new_id_account)
+        .bind(address.from_id)
+        .bind(&address.address)
+        .execute(&mut *tx)
+        .await?;
+    }
+
+    // Files written before the V9 tables carry `dkg_packages`. Map them the
+    // way the V9 migration does: round 0 public rows are addresses, other
+    // public rows are peer packages, private rows 1/2/3 are the state
+    // columns. OR IGNORE keeps the sections above authoritative when a file
+    // has both.
+    import_legacy_dkg_packages(&mut tx, new_id_account, &io_account.dkg_packages).await?;
     tx.commit().await?;
 
+    Ok(())
+}
+
+async fn import_legacy_dkg_packages(
+    tx: &mut SqliteConnection,
+    account: u32,
+    packages: &[DKGPackage],
+) -> Result<()> {
+    if packages.is_empty() {
+        return Ok(());
+    }
+    let has_secrets = packages
+        .iter()
+        .any(|p| !p.public && (1..=3).contains(&p.round));
+    if has_secrets {
+        sqlx::query("INSERT OR IGNORE INTO dkg_state (account) VALUES (?)")
+            .bind(account)
+            .execute(&mut *tx)
+            .await?;
+    }
+    for p in packages {
+        match (p.public, p.round) {
+            (true, 0) => {
+                let address = String::from_utf8(p.data.0.clone())
+                    .context("legacy dkg address is not UTF-8")?;
+                sqlx::query(
+                    "INSERT OR IGNORE INTO dkg_addresses (account, from_id, address)
+                    VALUES (?, ?, ?)",
+                )
+                .bind(account)
+                .bind(p.from_id)
+                .bind(address)
+                .execute(&mut *tx)
+                .await?;
+            }
+            (true, 1..=3) => {
+                sqlx::query(
+                    "INSERT OR IGNORE INTO dkg_peers (account, round, from_id, data)
+                    VALUES (?, ?, ?, ?)",
+                )
+                .bind(account)
+                .bind(p.round)
+                .bind(p.from_id)
+                .bind(&p.data.0)
+                .execute(&mut *tx)
+                .await?;
+            }
+            (false, round @ 1..=3) => {
+                let column = match round {
+                    1 => "spkg1",
+                    2 => "spkg2",
+                    _ => "key_pkg",
+                };
+                // Audited: `column` is one of the three literals above.
+                sqlx::query(sqlx::AssertSqlSafe(format!(
+                    "UPDATE dkg_state SET {column} = ?1 WHERE account = ?2 AND {column} IS NULL"
+                )))
+                .bind(&p.data.0)
+                .bind(account)
+                .execute(&mut *tx)
+                .await?;
+            }
+            _ => {}
+        }
+    }
     Ok(())
 }
 
@@ -906,7 +1025,15 @@ pub struct IOAccount {
     pub blocks: Vec<IOBlock>,
     pub transactions: Vec<IOTransaction>,
     pub dkg_params: Option<DKGParams>,
+    /// Pre-V9 layout; read on import only.
+    #[serde(default)]
     pub dkg_packages: Vec<DKGPackage>,
+    #[serde(default)]
+    pub dkg_state: Option<DKGState>,
+    #[serde(default)]
+    pub dkg_peers: Vec<DKGPeer>,
+    #[serde(default)]
+    pub dkg_addresses: Vec<DKGAddress>,
     pub categories: Vec<IOCategory>,
     pub assets: Vec<IOAsset>,
     pub user_memos: Vec<IOUserMemo>,
@@ -1042,6 +1169,30 @@ pub struct DKGParams {
     pub t: u8,
     pub seed: String,
     pub birth: u32,
+    #[serde(default)]
+    pub name: String,
+}
+
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
+pub struct DKGState {
+    pub signing_keypair: Option<HexBytes>,
+    pub spkg1: Option<HexBytes>,
+    pub spkg2: Option<HexBytes>,
+    pub key_pkg: Option<HexBytes>,
+    pub pending_publish: Option<HexBytes>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
+pub struct DKGPeer {
+    pub round: u8,
+    pub from_id: u8,
+    pub data: HexBytes,
+}
+
+#[derive(Clone, Serialize, Deserialize, Default, Debug)]
+pub struct DKGAddress {
+    pub from_id: u8,
+    pub address: String,
 }
 
 #[derive(Clone, Serialize, Deserialize, Default, Debug)]
@@ -1108,5 +1259,217 @@ impl<'r> Decode<'r, Sqlite> for HexBytes {
 impl Type<Sqlite> for HexBytes {
     fn type_info() -> <sqlx::Sqlite as sqlx::Database>::TypeInfo {
         <Vec<u8> as Type<Sqlite>>::type_info()
+    }
+}
+
+#[cfg(test)]
+mod dkg_export_tests {
+    use super::*;
+    use crate::db::create_schema;
+    use sqlx::Connection;
+
+    async fn fresh_db() -> Result<SqliteConnection> {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        create_schema(&mut db).await?;
+        Ok(db)
+    }
+
+    async fn bare_account(db: &mut SqliteConnection, name: &str) -> Result<u32> {
+        let id: u32 = sqlx::query(
+            "INSERT INTO accounts(name, aindex, dindex, def_dindex, birth, position,
+            use_internal, hidden, saved) VALUES (?, 0, 0, 0, 0, 0, 0, 0, 0)
+            RETURNING id_account",
+        )
+        .bind(name)
+        .map(|r: SqliteRow| r.get(0))
+        .fetch_one(&mut *db)
+        .await?;
+        Ok(id)
+    }
+
+    async fn dkg_rows(db: &mut SqliteConnection, account: u32) -> Result<DkgSnapshot> {
+        let params: Option<(u8, u8, u8, String, u32, String)> = sqlx::query_as(
+            "SELECT id, n, t, seed, birth_height, name FROM dkg_params WHERE account = ?",
+        )
+        .bind(account)
+        .fetch_optional(&mut *db)
+        .await?;
+        let state: Option<(
+            Option<Vec<u8>>,
+            Option<Vec<u8>>,
+            Option<Vec<u8>>,
+            Option<Vec<u8>>,
+            Option<Vec<u8>>,
+        )> = sqlx::query_as(
+            "SELECT signing_keypair, spkg1, spkg2, key_pkg, pending_publish
+            FROM dkg_state WHERE account = ?",
+        )
+        .bind(account)
+        .fetch_optional(&mut *db)
+        .await?;
+        let peers: Vec<(u8, u8, Vec<u8>)> = sqlx::query_as(
+            "SELECT round, from_id, data FROM dkg_peers WHERE account = ? ORDER BY round, from_id",
+        )
+        .bind(account)
+        .fetch_all(&mut *db)
+        .await?;
+        let addresses: Vec<(u8, String)> = sqlx::query_as(
+            "SELECT from_id, address FROM dkg_addresses WHERE account = ? ORDER BY from_id",
+        )
+        .bind(account)
+        .fetch_all(&mut *db)
+        .await?;
+        Ok(DkgSnapshot {
+            params,
+            state,
+            peers,
+            addresses,
+        })
+    }
+
+    #[derive(Debug, PartialEq)]
+    struct DkgSnapshot {
+        params: Option<(u8, u8, u8, String, u32, String)>,
+        state: Option<(
+            Option<Vec<u8>>,
+            Option<Vec<u8>>,
+            Option<Vec<u8>>,
+            Option<Vec<u8>>,
+            Option<Vec<u8>>,
+        )>,
+        peers: Vec<(u8, u8, Vec<u8>)>,
+        addresses: Vec<(u8, String)>,
+    }
+
+    async fn newest_account(db: &mut SqliteConnection) -> Result<u32> {
+        let (id,): (u32,) = sqlx::query_as("SELECT MAX(id_account) FROM accounts")
+            .fetch_one(&mut *db)
+            .await?;
+        Ok(id)
+    }
+
+    /// A FROST account completed on the V9 tables exports and imports every
+    /// DKG row: parameters, state (secrets, key package), peer packages and
+    /// addresses.
+    #[tokio::test]
+    async fn v9_dkg_tables_round_trip() -> Result<()> {
+        let mut src = fresh_db().await?;
+        let account = bare_account(&mut src, "frost").await?;
+        sqlx::query(
+            "INSERT INTO dkg_params(account, id, n, t, seed, birth_height, name)
+            VALUES (?, 2, 3, 2, 'mailbox words', 100, 'group')",
+        )
+        .bind(account)
+        .execute(&mut src)
+        .await?;
+        sqlx::query(
+            "INSERT INTO dkg_state(account, signing_keypair, spkg1, spkg2, key_pkg, pending_publish)
+            VALUES (?, X'01', X'02', NULL, X'04', NULL)",
+        )
+        .bind(account)
+        .execute(&mut src)
+        .await?;
+        for (round, from_id, data) in [
+            (0u8, 1u8, vec![0x10u8]),
+            (1, 3, vec![0x11]),
+            (3, 2, vec![0x33]),
+        ] {
+            sqlx::query("INSERT INTO dkg_peers(account, round, from_id, data) VALUES (?, ?, ?, ?)")
+                .bind(account)
+                .bind(round)
+                .bind(from_id)
+                .bind(data)
+                .execute(&mut src)
+                .await?;
+        }
+        for (from_id, address) in [
+            (1u8, "uregtest1aaa"),
+            (2, "uregtest1bbb"),
+            (3, "uregtest1ccc"),
+        ] {
+            sqlx::query("INSERT INTO dkg_addresses(account, from_id, address) VALUES (?, ?, ?)")
+                .bind(account)
+                .bind(from_id)
+                .bind(address)
+                .execute(&mut src)
+                .await?;
+        }
+        let before = dkg_rows(&mut src, account).await?;
+        assert!(before.params.is_some() && before.state.is_some());
+
+        let data = export_account(&mut src, account).await?;
+        let mut dst = fresh_db().await?;
+        import_account(&Network::Main, &mut dst, &data).await?;
+        let imported = newest_account(&mut dst).await?;
+        let after = dkg_rows(&mut dst, imported).await?;
+        assert_eq!(after, before);
+        Ok(())
+    }
+
+    /// An export file from before the V9 tables carries `dkg_packages`;
+    /// import maps it onto the V9 tables the way the migration does.
+    #[tokio::test]
+    async fn legacy_dkg_packages_import_into_v9_tables() -> Result<()> {
+        let package = |public: bool, round: u32, from_id: u16, data: &[u8]| DKGPackage {
+            account: 7,
+            public,
+            round,
+            from_id,
+            data: HexBytes(data.to_vec()),
+        };
+        let io_account = IOAccount {
+            version: DB_VERSION,
+            name: "frost-legacy".to_string(),
+            dkg_params: Some(DKGParams {
+                id: 1,
+                n: 2,
+                t: 2,
+                seed: "mailbox words".to_string(),
+                birth: 100,
+                name: String::new(),
+            }),
+            dkg_packages: vec![
+                package(true, 0, 1, b"uregtest1aaa"),
+                package(true, 0, 2, b"uregtest1bbb"),
+                package(true, 1, 2, &[0x11]),
+                package(true, 3, 2, &[0x33]),
+                package(false, 1, 1, &[0x02]),
+                package(false, 2, 1, &[0x03]),
+                package(false, 3, 1, &[0x04]),
+            ],
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&io_account)?;
+        let mut encoder = zstd::Encoder::new(Vec::new(), DEFAULT_COMPRESSION_LEVEL)?;
+        encoder.write_all(json.as_bytes())?;
+        let data = encoder.finish()?;
+
+        let mut dst = fresh_db().await?;
+        import_account(&Network::Main, &mut dst, &data).await?;
+        let imported = newest_account(&mut dst).await?;
+        let rows = dkg_rows(&mut dst, imported).await?;
+        assert_eq!(
+            rows.params,
+            Some((1, 2, 2, "mailbox words".to_string(), 100, String::new()))
+        );
+        assert_eq!(
+            rows.state,
+            Some((
+                None,
+                Some(vec![0x02]),
+                Some(vec![0x03]),
+                Some(vec![0x04]),
+                None
+            ))
+        );
+        assert_eq!(rows.peers, vec![(1, 2, vec![0x11]), (3, 2, vec![0x33])]);
+        assert_eq!(
+            rows.addresses,
+            vec![
+                (1, "uregtest1aaa".to_string()),
+                (2, "uregtest1bbb".to_string())
+            ]
+        );
+        Ok(())
     }
 }
