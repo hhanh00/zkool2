@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{api::pay::PcztPackage, Client};
+use crate::api::pay::PcztPackage;
 
 use crate::api::coin::Network;
 use anyhow::Result;
@@ -9,13 +9,13 @@ use pczt::{roles::verifier::Verifier, Pczt};
 use pool::PoolMask;
 use serde::{Deserialize, Serialize};
 use sqlx::SqliteConnection;
-use tracing::{info, span, Level};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_note_encryption::Domain;
-use zcash_primitives::transaction::{OrchardBundle, Transaction};
 use zcash_protocol::consensus::BranchId;
 use zcash_transparent::address::TransparentAddress;
 
+pub mod broadcast;
+pub use broadcast::{broadcast, broadcast_bytes, lock_spent_notes, Pending};
 pub mod error;
 pub mod fee;
 pub mod plan;
@@ -371,81 +371,4 @@ pub async fn resolve_asset(
         1 => Ok(rows.into_iter().next().unwrap()),
         n => anyhow::bail!("Ambiguous query '{desc}', matches {n} assets"),
     }
-}
-
-pub async fn send(client: &mut Client, height: u32, data: &[u8]) -> Result<String> {
-    let span = span!(Level::INFO, "transaction");
-    let txid = client.post_transaction(height, data).await?;
-    span.in_scope(|| {
-        info!("TXID: {}", txid);
-    });
-    Ok(txid)
-}
-
-/// After a successful broadcast, mark the notes the transaction spends as
-/// `locked` so note selection will not pick them again until the spend is mined
-/// and synced (which clears the flag — see the spend handlers in `sync.rs`).
-///
-/// This closes the window where a second transaction is built from a note that
-/// an earlier, still-unmined broadcast already spent — the "duplicate nullifier"
-/// the node would otherwise reject (seen in rapid-fire DKG funding rounds).
-///
-/// Best-effort: a transaction we cannot parse simply locks nothing, and it never
-/// fails a broadcast that already succeeded. Nullifiers are matched against
-/// `notes.nullifier` exactly as [`crate::mempool::decode_raw_transaction`] does,
-/// which already covers every pool including ironwood.
-pub async fn lock_spent_notes(
-    conn: &mut SqliteConnection,
-    account: u32,
-    tx_bytes: &[u8],
-) -> Result<()> {
-    let Some(tx) = [
-        BranchId::Nu6_3,
-        BranchId::Nu6_2,
-        BranchId::Nu6,
-        BranchId::Nu5,
-    ]
-    .into_iter()
-    .find_map(|branch| Transaction::read(&mut &tx_bytes[..], branch).ok()) else {
-        info!("lock_spent_notes: could not parse transaction; locking nothing");
-        return Ok(());
-    };
-    let tx_data = tx.into_data();
-
-    // Every input's key (transparent outpoint or shielded nullifier) is stored
-    // in the `nullifier` column, so collect them all and lock the matches.
-    let mut nullifiers: Vec<Vec<u8>> = vec![];
-    if let Some(tbundle) = tx_data.transparent_bundle() {
-        for v in tbundle.vin.iter() {
-            let mut nf = vec![];
-            v.prevout().write(&mut nf)?;
-            nullifiers.push(nf);
-        }
-    }
-    if let Some(sbundle) = tx_data.sapling_bundle() {
-        for v in sbundle.shielded_spends().iter() {
-            nullifiers.push(v.nullifier().to_vec());
-        }
-    }
-    if let Some(obundle) = tx_data.orchard_bundle() {
-        match obundle {
-            OrchardBundle::OrchardVanilla(b) => {
-                for v in b.actions().iter() {
-                    nullifiers.push(v.nullifier().to_bytes().to_vec());
-                }
-            }
-            OrchardBundle::OrchardZSA(b) => {
-                for v in b.actions().iter() {
-                    nullifiers.push(v.nullifier().to_bytes().to_vec());
-                }
-            }
-        }
-    }
-    if let Some(iwbundle) = tx_data.ironwood_bundle() {
-        for v in iwbundle.actions().iter() {
-            nullifiers.push(v.nullifier().to_bytes().to_vec());
-        }
-    }
-
-    crate::sync::chain_log::lock_notes(conn, account, &nullifiers).await
 }

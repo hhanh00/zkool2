@@ -211,35 +211,14 @@ class TxPageState extends ConsumerState<TxPage> {
         }
       }
 
-      setState(() => _sendStep = "Extracting transaction...");
-      final txBytes = await extractTransaction(package: pczt);
-
       setState(() => _sendStep = "Broadcasting...");
-      final result = await broadcastTransaction(
-        height: txPlan.height,
-        txBytes: txBytes,
-        account: account!.id,
-        c: c,
-      );
+      // Extracts, posts, locks the spent notes and records the price and
+      // category; a rejection by the server throws.
+      final result = await broadcast(package: pczt, account: account!.id, c: c);
       logger.i("tx result $result");
 
-      Uint8List? txidHex;
-      try {
-        txidHex = Uint8List.fromList(hex.decode(result));
-      } on FormatException {
-        // result is not a valid hex txid — broadcast returned an error message
-      }
-
-      if (txidHex != null) {
+      {
         if (mounted) setState(() => txId = result);
-        await storePendingTx(
-          height: txPlan.height,
-          txid: txidHex,
-          price: pczt.price,
-          category: pczt.category,
-          account: account!.id,
-          c: c,
-        );
         switch (widget.continuation) {
           case SwapContext continuation:
             final summary = await continuation.complete(result, account!.id, c);
@@ -254,11 +233,6 @@ class TxPageState extends ConsumerState<TxPage> {
           showSnackbar("Transaction broadcasted successfully");
         } else {
           showSnackbar("Transaction sent successfully (background)");
-        }
-      } else {
-        if (mounted) {
-          setState(() => _sendStep = "");
-          await showException(context, result);
         }
       }
       if (mounted) setState(() => _sendStep = "");

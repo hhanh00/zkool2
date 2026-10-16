@@ -137,49 +137,27 @@ pub fn unpack_transaction(bytes: &[u8]) -> Result<PcztPackage> {
     Ok(pkg)
 }
 
+/// Broadcast a signed package: extract, post, lock the spent notes and
+/// record the package's price and category. Returns the txid; a rejection
+/// is an error.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn broadcast_transaction(
-    height: u32,
-    tx_bytes: &[u8],
-    account: u32,
-    c: &Coin,
-) -> Result<String> {
-    let mut client = c.client().await?;
-
-    let tx = crate::pay::send(&mut client, height, tx_bytes).await?;
+pub async fn broadcast(package: &PcztPackage, account: u32, c: &Coin) -> Result<String> {
     let mut connection = c.get_connection().await?;
-    crate::pay::lock_spent_notes(&mut connection, account, tx_bytes).await?;
-    Ok(tx)
+    let mut client = c.client().await?;
+    crate::pay::broadcast(&mut connection, &mut client, account, package).await
+}
+
+/// Broadcast an already extracted transaction (an issuance, for instance).
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn broadcast_bytes(tx_bytes: &[u8], account: u32, c: &Coin) -> Result<String> {
+    let mut connection = c.get_connection().await?;
+    let mut client = c.client().await?;
+    crate::pay::broadcast_bytes(&mut connection, &mut client, account, tx_bytes, None).await
 }
 
 #[cfg_attr(feature = "flutter", frb(sync))]
 pub fn to_plan(package: &PcztPackage, c: &Coin) -> Result<TxPlan> {
     TxPlan::from_package(&c.network(), package)
-}
-
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn send(height: u32, data: &[u8], account: u32, c: &Coin) -> Result<String> {
-    let mut client = c.client().await?;
-
-    let tx = crate::pay::send(&mut client, height, data).await?;
-    let mut connection = c.get_connection().await?;
-    crate::pay::lock_spent_notes(&mut connection, account, data).await?;
-    Ok(tx)
-}
-
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn store_pending_tx(
-    height: u32,
-    txid: &[u8],
-    price: Option<f64>,
-    category: Option<u32>,
-    account: u32,
-    c: &Coin,
-) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-    crate::db::store_pending_tx(&mut connection, account, height, txid, price, category).await?;
-
-    Ok(())
 }
 
 #[cfg_attr(feature = "flutter", frb(sync))]

@@ -54,39 +54,24 @@ Future<Uint8List> packTransaction({required PcztPackage pczt}) =>
 Future<PcztPackage> unpackTransaction({required List<int> bytes}) =>
     RustLib.instance.api.crateApiPayUnpackTransaction(bytes: bytes);
 
-Future<String> broadcastTransaction(
-        {required int height,
-        required List<int> txBytes,
-        required int account,
-        required Coin c}) =>
-    RustLib.instance.api.crateApiPayBroadcastTransaction(
-        height: height, txBytes: txBytes, account: account, c: c);
-
-TxPlan toPlan({required PcztPackage package, required Coin c}) =>
-    RustLib.instance.api.crateApiPayToPlan(package: package, c: c);
-
-Future<String> send(
-        {required int height,
-        required List<int> data,
+/// Broadcast a signed package: extract, post, lock the spent notes and
+/// record the package's price and category. Returns the txid; a rejection
+/// is an error.
+Future<String> broadcast(
+        {required PcztPackage package,
         required int account,
         required Coin c}) =>
     RustLib.instance.api
-        .crateApiPaySend(height: height, data: data, account: account, c: c);
+        .crateApiPayBroadcast(package: package, account: account, c: c);
 
-Future<void> storePendingTx(
-        {required int height,
-        required List<int> txid,
-        double? price,
-        int? category,
-        required int account,
-        required Coin c}) =>
-    RustLib.instance.api.crateApiPayStorePendingTx(
-        height: height,
-        txid: txid,
-        price: price,
-        category: category,
-        account: account,
-        c: c);
+/// Broadcast an already extracted transaction (an issuance, for instance).
+Future<String> broadcastBytes(
+        {required List<int> txBytes, required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiPayBroadcastBytes(txBytes: txBytes, account: account, c: c);
+
+TxPlan toPlan({required PcztPackage package, required Coin c}) =>
+    RustLib.instance.api.crateApiPayToPlan(package: package, c: c);
 
 List<Recipient>? parsePaymentUri({required String uri}) =>
     RustLib.instance.api.crateApiPayParsePaymentUri(uri: uri);

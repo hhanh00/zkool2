@@ -41,7 +41,7 @@ use crate::{
         dkg::{delete_frost_state, get_mailbox_account, get_coordinator_broadcast_account, publish},
         FrostSigMessage, P,
     },
-    pay::{plan::get_orchard_pk, plan::get_sapling_prover, send},
+    pay::{plan::get_orchard_pk, plan::get_sapling_prover},
     Client,
 };
 
@@ -84,7 +84,6 @@ pub async fn send_commitments(
     network: &Network,
     connection: &mut SqliteConnection,
     client: &mut Client,
-    height: u32,
     state: &SignState,
 ) -> Result<SendResult> {
     let coordinator_address = state
@@ -142,7 +141,7 @@ pub async fn send_commitments(
     if !state.is_coordinator() {
         let refs: Vec<(&str, Vec<u8>)> =
             recipients.iter().map(|(a, d)| (a.as_str(), d.clone())).collect();
-        match publish(network, &mut tx, state.funding_account, client, height, &refs).await {
+        match publish(network, &mut tx, state.funding_account, client, &refs).await {
             Ok(_) => {}
             Err(e) if crate::pay::plan::is_no_feasible_selection(&e) => {
                 return Ok(SendResult::WaitingForFunds);
@@ -160,7 +159,6 @@ pub async fn make_sigpackages(
     network: &Network,
     connection: &mut SqliteConnection,
     client: &mut Client,
-    height: u32,
     state: &SignState,
 ) -> Result<SendResult> {
     let broadcast_address = state
@@ -245,7 +243,7 @@ pub async fn make_sigpackages(
 
     let refs: Vec<(&str, Vec<u8>)> =
         recipients.iter().map(|(a, d)| (a.as_str(), d.clone())).collect();
-    match publish(network, &mut tx, state.funding_account, client, height, &refs).await {
+    match publish(network, &mut tx, state.funding_account, client, &refs).await {
         Ok(_) => {}
         Err(e) if crate::pay::plan::is_no_feasible_selection(&e) => {
             return Ok(SendResult::WaitingForFunds);
@@ -262,7 +260,6 @@ pub async fn send_sigshares(
     network: &Network,
     connection: &mut SqliteConnection,
     client: &mut Client,
-    height: u32,
     state: &SignState,
 ) -> Result<SendResult> {
     let coordinator_address = state
@@ -312,7 +309,7 @@ pub async fn send_sigshares(
     if !state.is_coordinator() {
         let refs: Vec<(&str, Vec<u8>)> =
             recipients.iter().map(|(a, d)| (a.as_str(), d.clone())).collect();
-        match publish(network, &mut tx, state.funding_account, client, height, &refs).await {
+        match publish(network, &mut tx, state.funding_account, client, &refs).await {
             Ok(_) => {}
             Err(e) if crate::pay::plan::is_no_feasible_selection(&e) => {
                 return Ok(SendResult::WaitingForFunds);
@@ -332,7 +329,6 @@ pub async fn aggregate_and_send(
     _network: &Network,
     connection: &mut SqliteConnection,
     client: &mut Client,
-    height: u32,
     state: &SignState,
 ) -> Result<String> {
     let ppkg = load_pubkey_package(&mut *connection, state.account).await?;
@@ -410,9 +406,9 @@ pub async fn aggregate_and_send(
     // Clean up sign state before broadcasting — we don't retry on send failure.
     delete_frost_state(&mut *connection).await?;
 
-    let txid = send(client, height, &tx_bytes).await?;
+    let txid =
+        crate::pay::broadcast_bytes(connection, client, state.account, &tx_bytes, None).await?;
     info!("Transaction sent: {txid}");
-    crate::pay::lock_spent_notes(connection, state.account, &tx_bytes).await?;
     Ok(txid)
 }
 

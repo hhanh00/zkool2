@@ -67,7 +67,6 @@ pub async fn publish_round(
     connection: &mut SqliteConnection,
     client: &mut Client,
     account: u32,
-    height: u32,
     round: u8,
     state: &DkgState,
 ) -> Result<()> {
@@ -79,7 +78,6 @@ pub async fn publish_round(
         connection,
         client,
         account,
-        height,
         state.params.id,
     )
     .await
@@ -169,7 +167,6 @@ async fn publish_staged(
     connection: &mut SqliteConnection,
     client: &mut Client,
     account: u32,
-    height: u32,
     self_id: u8,
 ) -> Result<()> {
     let pending = load_pending(connection, account).await?;
@@ -193,7 +190,7 @@ async fn publish_staged(
             Ok((addr.as_str(), msg.encode_with_prefix(&prefix)?))
         })
         .collect::<Result<_>>()?;
-    publish(network, connection, account, client, height, &refs)
+    publish(network, connection, account, client, &refs)
         .await
         .context("publish DKG package")?;
     sqlx::query("UPDATE dkg_state SET pending_publish = NULL WHERE account = ?")

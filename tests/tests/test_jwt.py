@@ -343,9 +343,14 @@ async def test_jwt_authentication(gql_client_factory, rpc_url, seed, zkool_binar
             await wait_for_blocks(client, height_before, 5)
             print("Mined 5 blocks")
 
-            # Synchronize account 1
+            # Synchronize account 1, and the admin so the note it just spent is
+            # recorded (a broadcast locks its inputs until the spend is synced)
+            # and its change becomes spendable for the next payment.
             await client.execute_async(
                 GraphQLRequest(sync_mutation, variable_values={"account": account1_id})
+            )
+            await client.execute_async(
+                GraphQLRequest(sync_mutation, variable_values={"account": admin_id})
             )
 
             print("\n=== Step 4: Check admin (sub=0) can see all balances ===")

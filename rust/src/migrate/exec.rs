@@ -22,9 +22,9 @@ use crate::{
     api::coin::Coin,
     db::get_account_hw,
     pay::{
-        plan::{extract_transaction, plan_transaction, sign_transaction},
+        plan::{plan_transaction, sign_transaction},
         pool::PoolMask,
-        send, Recipient,
+        Recipient,
     },
 };
 
@@ -37,7 +37,6 @@ pub async fn split(c: &Coin, account: u32, inputs: &[u32], outputs: &[(u64, u8)]
     let network = c.network();
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
-    let height = client.latest_height().await?;
     let own_address = own_address(c, account, &mut connection).await?;
 
     let mut recipients: Vec<Recipient> = Vec::new();
@@ -76,7 +75,7 @@ pub async fn split(c: &Coin, account: u32, inputs: &[u32], outputs: &[(u64, u8)]
     )
     .await?;
 
-    broadcast(c, account, &mut connection, &mut client, height, pczt).await
+    broadcast(c, account, &mut connection, &mut client, pczt).await
 }
 
 /// Broadcast the O→I hop: spend one Orchard SD note at `anchor`, mint
@@ -87,7 +86,6 @@ pub async fn migrate(c: &Coin, account: u32, note: u32, amount: u64, anchor: u32
     let network = c.network();
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
-    let height = client.latest_height().await?;
     let own_address = own_address(c, account, &mut connection).await?;
 
     // One Ironwood output; the dummy Orchard input and dummy output that pad
@@ -124,7 +122,7 @@ pub async fn migrate(c: &Coin, account: u32, note: u32, amount: u64, anchor: u32
     )
     .await?;
 
-    broadcast(c, account, &mut connection, &mut client, height, pczt).await
+    broadcast(c, account, &mut connection, &mut client, pczt).await
 }
 
 /// Sign, extract, send, and lock the inputs. Returns the fee.
@@ -139,7 +137,6 @@ async fn broadcast(
     account: u32,
     connection: &mut sqlx::SqliteConnection,
     client: &mut crate::Client,
-    height: u32,
     pczt: crate::api::pay::PcztPackage,
 ) -> Result<u64> {
     let network = c.network();
@@ -147,9 +144,7 @@ async fn broadcast(
         .map(|p| p.fee)
         .unwrap_or(0);
     let pczt = sign_transaction(&mut *connection, account, &network, &pczt).await?;
-    let tx_bytes = extract_transaction(&pczt).await?;
-    let _txid = send(client, height, &tx_bytes).await?;
-    crate::pay::lock_spent_notes(&mut *connection, account, &tx_bytes).await?;
+    let _txid = crate::pay::broadcast(&mut *connection, client, account, &pczt).await?;
     Ok(fee)
 }
 

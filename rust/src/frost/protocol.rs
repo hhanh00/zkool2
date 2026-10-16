@@ -24,7 +24,7 @@ use crate::{
     account::{get_account_seed, get_orchard_vk, new_account},
     api::{account::NewAccount, coin::Network},
     pay::{
-        plan::{extract_transaction, plan_transaction, sign_transaction},
+        plan::{plan_transaction, sign_transaction},
         pool::ALL_SHIELDED_POOLS,
         Recipient,
     },
@@ -453,7 +453,6 @@ pub async fn publish(
     connection: &mut SqliteConnection,
     account: u32,
     client: &mut Client,
-    height: u32,
     recipients: &[(&str, Vec<u8>)],
 ) -> Result<String, anyhow::Error> {
     let recipients = recipients
@@ -490,19 +489,11 @@ pub async fn publish(
     let pczt = sign_transaction(connection, account, network, &pczt)
         .await
         .context("sign_transaction in DKG publish")?;
-    let txb = extract_transaction(&pczt)
+    // Broadcasting locks the funding notes this transaction spent so the
+    // next round does not re-select them before the spend is mined.
+    crate::pay::broadcast(connection, client, account, &pczt)
         .await
-        .context("extract_transaction in DKG publish")?;
-    let result = crate::pay::send(client, height, &txb)
-        .await
-        .context("send in DKG publish")?;
-    if hex::decode(&result).is_err() {
-        anyhow::bail!(result);
-    }
-    // Lock the funding notes this broadcast spent so the next round does not
-    // re-select them before the spend is mined and synced (duplicate nullifier).
-    crate::pay::lock_spent_notes(connection, account, &txb).await?;
-    Ok(result)
+        .context("broadcast in DKG publish")
 }
 
 /// Get (and create if needed) the private mailbox address for

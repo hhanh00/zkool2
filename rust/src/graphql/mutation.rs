@@ -10,7 +10,7 @@ use crate::{
         subs::SUBS,
         Context,
     },
-    pay::plan::{extract_transaction, sign_transaction},
+    pay::plan::sign_transaction,
     Sink,
 };
 use bigdecimal::BigDecimal;
@@ -322,7 +322,6 @@ impl Mutation {
         let pczt = prepare_tx(id_account, payment, coin).await?;
         let mut connection = coin.get_connection().await?;
         let mut client = coin.client().await?;
-        let height = client.latest_height().await?;
         let network = coin.network();
         let hw = crate::db::get_account_hw(&mut connection, id_account as u32).await?;
         let signed_pczt = if crate::ledger::HwKind::from_hw(hw).is_ledger() {
@@ -330,8 +329,9 @@ impl Mutation {
         } else {
             sign_transaction(&mut connection, id_account as u32, &network, &pczt).await?
         };
-        let tx_bytes = extract_transaction(&signed_pczt).await?;
-        let txid = crate::pay::send(&mut client, height, &tx_bytes).await?;
+        let txid =
+            crate::pay::broadcast(&mut connection, &mut client, id_account as u32, &signed_pczt)
+                .await?;
         Ok(txid)
     }
 
@@ -361,9 +361,16 @@ impl Mutation {
             coin,
         )
         .await?;
+        let mut connection = coin.get_connection().await?;
         let mut client = coin.client().await?;
-        let height = client.latest_height().await?;
-        let txid = crate::pay::send(&mut client, height, &tx_bytes).await?;
+        let txid = crate::pay::broadcast_bytes(
+            &mut connection,
+            &mut client,
+            id_account as u32,
+            &tx_bytes,
+            None,
+        )
+        .await?;
         Ok(txid)
     }
 

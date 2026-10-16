@@ -68,7 +68,7 @@ pub async fn sign_step(
             }
 
             SignTask::SendCommitments => {
-                match exec::send_commitments(network, connection, client, height, &fresh).await? {
+                match exec::send_commitments(network, connection, client, &fresh).await? {
                     SendResult::Sent => {}
                     SendResult::WaitingForFunds => {
                         return Ok(Some(SignStepOutcome {
@@ -81,7 +81,7 @@ pub async fn sign_step(
             }
 
             SignTask::MakeSigpackages => {
-                match exec::make_sigpackages(network, connection, client, height, &fresh).await? {
+                match exec::make_sigpackages(network, connection, client, &fresh).await? {
                     SendResult::Sent => {}
                     SendResult::WaitingForFunds => {
                         return Ok(Some(SignStepOutcome {
@@ -94,7 +94,7 @@ pub async fn sign_step(
             }
 
             SignTask::SendSigshares => {
-                match exec::send_sigshares(network, connection, client, height, &fresh).await? {
+                match exec::send_sigshares(network, connection, client, &fresh).await? {
                     SendResult::Sent => {}
                     SendResult::WaitingForFunds => {
                         return Ok(Some(SignStepOutcome {
@@ -108,7 +108,7 @@ pub async fn sign_step(
 
             SignTask::Aggregate => {
                 let txid =
-                    exec::aggregate_and_send(network, connection, client, height, &fresh).await?;
+                    exec::aggregate_and_send(network, connection, client, &fresh).await?;
                 executed.push(task);
                 return Ok(Some(SignStepOutcome {
                     executed,

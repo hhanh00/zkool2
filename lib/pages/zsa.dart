@@ -304,9 +304,7 @@ class _IssueAssetPageState extends ConsumerState<IssueAssetPage> {
         idAccount: widget.account,
         c: coinContext.coin,
       );
-      final height = ref.read(currentHeightProvider).value ?? 1;
-      final txid = await broadcastTransaction(
-        height: height,
+      final txid = await broadcastBytes(
         txBytes: txBytes,
         account: widget.account,
         c: coinContext.coin,

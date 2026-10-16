@@ -79,9 +79,7 @@ pub async fn dkg_step(
                 exec::ensure_accounts(network, connection, account, &fresh.params).await?;
             }
             DkgTask::PublishRound { round } => {
-                match exec::publish_round(
-                    network, connection, client, account, height, round, &fresh,
-                )
+                match exec::publish_round(network, connection, client, account, round, &fresh)
                 .await
                 {
                     Ok(()) => {}

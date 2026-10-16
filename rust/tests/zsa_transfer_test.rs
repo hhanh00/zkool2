@@ -10,7 +10,7 @@
 use rlz::api::account::{get_addresses, new_account, NewAccount};
 use rlz::api::coin::Coin;
 use rlz::api::network::get_current_height;
-use rlz::api::pay::{broadcast_transaction, extract_transaction, sign_transaction, PaymentOptions};
+use rlz::api::pay::{broadcast, broadcast_bytes, extract_transaction, sign_transaction, PaymentOptions};
 use rlz::pay::pool::ALL_POOLS;
 use rlz::pay::Recipient;
 use rlz::sync::synchronize_impl;
@@ -119,7 +119,7 @@ async fn test_orchard_transfer() {
     // println!("Issuance tx: {} bytes", tx_bytes.len());
     //
     // // -- 6. Broadcast the issuance (must use real chain height for expiry) --
-    // let txid = broadcast_transaction(real_height, &tx_bytes, &coin)
+    // let txid = broadcast_bytes(&tx_bytes, account_id, &coin)
     //     .await
     //     .expect("broadcast issuance");
     // println!("Issuance broadcast: {txid}");
@@ -234,10 +234,7 @@ async fn test_orchard_transfer() {
     );
 
     // -- 11. Broadcast the transfer --
-    let height = get_current_height(&sender)
-        .await
-        .expect("get current height");
-    let txid = broadcast_transaction(height, &tx_bytes, sender_id, &sender)
+    let txid = broadcast(&signed, sender_id, &sender)
         .await
         .expect("broadcast transfer");
     println!("Transfer broadcast: {txid}");
@@ -397,10 +394,7 @@ async fn test_zsa_issuance() {
     println!("Issuance tx: {} bytes", tx_bytes.len());
 
     // -- 5. Broadcast the issuance --
-    let height = get_current_height(&account)
-        .await
-        .expect("get current height");
-    let txid = broadcast_transaction(height, &tx_bytes, account_id, &account)
+    let txid = broadcast_bytes(&tx_bytes, account_id, &account)
         .await
         .expect("broadcast issuance");
     println!("Issuance broadcast: {txid}");
@@ -565,10 +559,7 @@ async fn test_zsa_transfer() {
     println!("Issuance tx: {} bytes", tx_bytes.len());
 
     // -- 5. Broadcast issuance --
-    let height = get_current_height(&sender)
-        .await
-        .expect("get current height");
-    let txid = broadcast_transaction(height, &tx_bytes, sender_id, &sender)
+    let txid = broadcast_bytes(&tx_bytes, sender_id, &sender)
         .await
         .expect("broadcast issuance");
     println!("Issuance broadcast: {txid}");
@@ -724,10 +715,7 @@ async fn test_zsa_transfer() {
     println!("ZSA transfer tx: {} bytes", tx_bytes.len());
 
     // -- 10. Broadcast the ZSA transfer --
-    let height = get_current_height(&sender)
-        .await
-        .expect("get current height");
-    let txid = broadcast_transaction(height, &tx_bytes, sender_id, &sender)
+    let txid = broadcast(&signed, sender_id, &sender)
         .await
         .expect("broadcast ZSA transfer");
     println!("ZSA transfer broadcast: {txid}");
