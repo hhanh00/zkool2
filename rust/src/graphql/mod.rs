@@ -32,7 +32,7 @@ impl Context {
     /// Needs a tokio runtime.
     pub fn new(coin: Coin) -> Self {
         let pool = coin.get_pool().unwrap();
-        let driver = Driver::start(coin.clone(), Duration::from_secs(10));
+        let driver = Driver::start(coin.clone(), Duration::from_secs(10), ());
         Self {
             coin,
             tx_loader: new_tx_loader(pool),

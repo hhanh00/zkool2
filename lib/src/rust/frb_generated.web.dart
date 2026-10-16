@@ -63,6 +63,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
           .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNoteMigration;
 
   CrossPlatformFinalizerArg
+      get rust_arc_decrement_strong_count_ProtocolDriverPtr => wire
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProtocolDriver;
+
+  CrossPlatformFinalizerArg
       get rust_arc_decrement_strong_count_TransparentScannerPtr => wire
           .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTransparentScanner;
 
@@ -90,6 +94,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
           dynamic raw);
 
   @protected
+  ProtocolDriver
+      dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProtocolDriver(
+          dynamic raw);
+
+  @protected
   TransparentScanner
       dco_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTransparentScanner(
           dynamic raw);
@@ -97,6 +106,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   Mempool
       dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+          dynamic raw);
+
+  @protected
+  ProtocolDriver
+      dco_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProtocolDriver(
           dynamic raw);
 
   @protected
@@ -153,15 +167,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
           dynamic raw);
 
   @protected
+  ProtocolDriver
+      dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProtocolDriver(
+          dynamic raw);
+
+  @protected
   TransparentScanner
       dco_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTransparentScanner(
           dynamic raw);
 
   @protected
   RustStreamSink<String> dco_decode_StreamSink_String_Sse(dynamic raw);
-
-  @protected
-  RustStreamSink<DKGStatus> dco_decode_StreamSink_dkg_status_Sse(dynamic raw);
 
   @protected
   RustStreamSink<LogMessage> dco_decode_StreamSink_log_message_Sse(dynamic raw);
@@ -174,11 +190,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       dynamic raw);
 
   @protected
-  RustStreamSink<SigningEvent> dco_decode_StreamSink_signing_event_Sse(
+  RustStreamSink<ProtocolStatus> dco_decode_StreamSink_protocol_status_Sse(
       dynamic raw);
 
   @protected
-  RustStreamSink<SigningStatus> dco_decode_StreamSink_signing_status_Sse(
+  RustStreamSink<SigningEvent> dco_decode_StreamSink_signing_event_Sse(
       dynamic raw);
 
   @protected
@@ -212,6 +228,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Decision dco_decode_box_autoadd_decision(dynamic raw);
 
   @protected
+  DKGStatus dco_decode_box_autoadd_dkg_status(dynamic raw);
+
+  @protected
   double dco_decode_box_autoadd_f_64(dynamic raw);
 
   @protected
@@ -243,6 +262,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SigningEvent dco_decode_box_autoadd_signing_event(dynamic raw);
+
+  @protected
+  SigningStatus dco_decode_box_autoadd_signing_status(dynamic raw);
 
   @protected
   SwapDetails dco_decode_box_autoadd_swap_details(dynamic raw);
@@ -526,6 +548,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PoolBalance dco_decode_pool_balance(dynamic raw);
 
   @protected
+  ProtocolStatus dco_decode_protocol_status(dynamic raw);
+
+  @protected
   RaptorQParams dco_decode_raptor_q_params(dynamic raw);
 
   @protected
@@ -687,6 +712,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
           SseDeserializer deserializer);
 
   @protected
+  ProtocolDriver
+      sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProtocolDriver(
+          SseDeserializer deserializer);
+
+  @protected
   TransparentScanner
       sse_decode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTransparentScanner(
           SseDeserializer deserializer);
@@ -694,6 +724,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   Mempool
       sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
+          SseDeserializer deserializer);
+
+  @protected
+  ProtocolDriver
+      sse_decode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProtocolDriver(
           SseDeserializer deserializer);
 
   @protected
@@ -745,16 +780,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
           SseDeserializer deserializer);
 
   @protected
+  ProtocolDriver
+      sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProtocolDriver(
+          SseDeserializer deserializer);
+
+  @protected
   TransparentScanner
       sse_decode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTransparentScanner(
           SseDeserializer deserializer);
 
   @protected
   RustStreamSink<String> sse_decode_StreamSink_String_Sse(
-      SseDeserializer deserializer);
-
-  @protected
-  RustStreamSink<DKGStatus> sse_decode_StreamSink_dkg_status_Sse(
       SseDeserializer deserializer);
 
   @protected
@@ -770,11 +806,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       SseDeserializer deserializer);
 
   @protected
-  RustStreamSink<SigningEvent> sse_decode_StreamSink_signing_event_Sse(
+  RustStreamSink<ProtocolStatus> sse_decode_StreamSink_protocol_status_Sse(
       SseDeserializer deserializer);
 
   @protected
-  RustStreamSink<SigningStatus> sse_decode_StreamSink_signing_status_Sse(
+  RustStreamSink<SigningEvent> sse_decode_StreamSink_signing_event_Sse(
       SseDeserializer deserializer);
 
   @protected
@@ -810,6 +846,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   Decision sse_decode_box_autoadd_decision(SseDeserializer deserializer);
 
   @protected
+  DKGStatus sse_decode_box_autoadd_dkg_status(SseDeserializer deserializer);
+
+  @protected
   double sse_decode_box_autoadd_f_64(SseDeserializer deserializer);
 
   @protected
@@ -843,6 +882,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   SigningEvent sse_decode_box_autoadd_signing_event(
+      SseDeserializer deserializer);
+
+  @protected
+  SigningStatus sse_decode_box_autoadd_signing_status(
       SseDeserializer deserializer);
 
   @protected
@@ -1140,6 +1183,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PoolBalance sse_decode_pool_balance(SseDeserializer deserializer);
 
   @protected
+  ProtocolStatus sse_decode_protocol_status(SseDeserializer deserializer);
+
+  @protected
   RaptorQParams sse_decode_raptor_q_params(SseDeserializer deserializer);
 
   @protected
@@ -1311,6 +1357,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+      sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProtocolDriver(
+          ProtocolDriver self, SseSerializer serializer);
+
+  @protected
+  void
       sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTransparentScanner(
           TransparentScanner self, SseSerializer serializer);
 
@@ -1318,6 +1369,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void
       sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
           Mempool self, SseSerializer serializer);
+
+  @protected
+  void
+      sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProtocolDriver(
+          ProtocolDriver self, SseSerializer serializer);
 
   @protected
   void
@@ -1374,16 +1430,17 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void
+      sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProtocolDriver(
+          ProtocolDriver self, SseSerializer serializer);
+
+  @protected
+  void
       sse_encode_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTransparentScanner(
           TransparentScanner self, SseSerializer serializer);
 
   @protected
   void sse_encode_StreamSink_String_Sse(
       RustStreamSink<String> self, SseSerializer serializer);
-
-  @protected
-  void sse_encode_StreamSink_dkg_status_Sse(
-      RustStreamSink<DKGStatus> self, SseSerializer serializer);
 
   @protected
   void sse_encode_StreamSink_log_message_Sse(
@@ -1398,12 +1455,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       RustStreamSink<MigrationStatus> self, SseSerializer serializer);
 
   @protected
-  void sse_encode_StreamSink_signing_event_Sse(
-      RustStreamSink<SigningEvent> self, SseSerializer serializer);
+  void sse_encode_StreamSink_protocol_status_Sse(
+      RustStreamSink<ProtocolStatus> self, SseSerializer serializer);
 
   @protected
-  void sse_encode_StreamSink_signing_status_Sse(
-      RustStreamSink<SigningStatus> self, SseSerializer serializer);
+  void sse_encode_StreamSink_signing_event_Sse(
+      RustStreamSink<SigningEvent> self, SseSerializer serializer);
 
   @protected
   void sse_encode_StreamSink_sync_event_Sse(
@@ -1436,6 +1493,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_box_autoadd_decision(Decision self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_dkg_status(
+      DKGStatus self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_f_64(double self, SseSerializer serializer);
@@ -1477,6 +1538,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_box_autoadd_signing_event(
       SigningEvent self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_box_autoadd_signing_status(
+      SigningStatus self, SseSerializer serializer);
 
   @protected
   void sse_encode_box_autoadd_swap_details(
@@ -1798,6 +1863,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_pool_balance(PoolBalance self, SseSerializer serializer);
 
   @protected
+  void sse_encode_protocol_status(
+      ProtocolStatus self, SseSerializer serializer);
+
+  @protected
   void sse_encode_raptor_q_params(RaptorQParams self, SseSerializer serializer);
 
   @protected
@@ -2002,6 +2071,18 @@ class RustLibWire implements BaseWire {
           .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNoteMigration(
               ptr);
 
+  void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProtocolDriver(
+          int ptr) =>
+      wasmModule
+          .rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProtocolDriver(
+              ptr);
+
+  void rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProtocolDriver(
+          int ptr) =>
+      wasmModule
+          .rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProtocolDriver(
+              ptr);
+
   void rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerTransparentScanner(
           int ptr) =>
       wasmModule
@@ -2051,6 +2132,14 @@ extension type RustLibWasmModule._(JSObject _) implements JSObject {
 
   external void
       rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerNoteMigration(
+          int ptr);
+
+  external void
+      rust_arc_increment_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProtocolDriver(
+          int ptr);
+
+  external void
+      rust_arc_decrement_strong_count_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerProtocolDriver(
           int ptr);
 
   external void

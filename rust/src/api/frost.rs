@@ -12,11 +12,9 @@ use crate::{
     sync::{synchronize_impl, DEFAULT_ACTIONS_PER_SYNC},
 };
 use crate::api::sync::SyncOutcome;
-#[cfg(feature = "flutter")]
-use crate::frost::dkg::task::DkgTask;
-#[cfg(feature = "flutter")]
-use crate::Sink;
+use crate::frost::driver::Driver;
 use std::str::FromStr;
+use std::time::Duration;
 
 use super::pay::PcztPackage;
 
@@ -81,83 +79,23 @@ pub async fn has_dkg_addresses(c: &Coin) -> Result<bool> {
     Ok(addresses.iter().all(|a| !a.is_empty()))
 }
 
-#[cfg(feature = "flutter")]
-#[cfg_attr(feature = "flutter", frb)]
-/// Advance the DKG by one pass. Does **not** synchronize.
-///
-/// Like the note migration, the DKG depends on the wallet's autosync to advance
-/// the funding and internal frost accounts; the step runs against whatever is
-/// already synced. Syncing was moved out because it must not race the rounds and
-/// autosync already drives the chain forward — the caller retries this on each
-/// new block (`lib/pages/dkg.dart`), and the headless server steps from
-/// `frost::driver`, the one task that syncs first and runs passes one at a time.
-///
-/// Each pass executes every effect the planner names until it hits a wait —
-/// one precondition-checked effect at a time. Statuses arrive after the pass,
-/// one per executed task plus the wait it stopped on. A publish that cannot be
-/// funded yet (previous round's change not mined) ends the pass with a
-/// [`DKGStatus::WaitingForFunds`] warning rather than an error.
-pub async fn do_dkg(status: StreamSink<DKGStatus>, c: &Coin) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-    // A completed or cancelled DKG must stay silent: the retry keeps firing
-    // after SharedAddress until the page is closed.
-    if !crate::frost::dkg::in_dkg(&mut connection).await? {
-        return Ok(());
-    }
-    let mut client = c.client().await?;
-    let height = client.latest_height().await?;
-    let account = get_funding_account(&mut connection).await?;
-
-    let outcome =
-        crate::frost::dkg::step::dkg_step(&c.network(), &mut connection, &mut client, height, account)
-            .await?;
-    for task in &outcome.executed {
-        if let Some(s) = dkg_status_for(task) {
-            status.send(s).await;
-        }
-    }
-    if outcome.waiting_for_funds {
-        status.send(DKGStatus::WaitingForFunds).await;
-    }
-    if let Some(shared_address) = outcome.shared_address {
-        status.send(DKGStatus::SharedAddress(shared_address)).await;
-    }
-    Ok(())
-}
-
-/// Map a task to the UI status it corresponds to. Publishes and waits map to
-/// their round's variants; the three finalize stages all share `Finalize`.
-#[cfg(feature = "flutter")]
-fn dkg_status_for(task: &DkgTask) -> Option<DKGStatus> {
-    match task {
-        DkgTask::PublishRound { round: 0 } => Some(DKGStatus::PublishRound0Pkg),
-        DkgTask::PublishRound { round: 1 } => Some(DKGStatus::PublishRound1Pkg),
-        DkgTask::PublishRound { round: 2 } => Some(DKGStatus::PublishRound2Pkg),
-        DkgTask::WaitRound { round: 0 } => Some(DKGStatus::WaitRound0Pkg),
-        DkgTask::WaitRound { round: 1 } => Some(DKGStatus::WaitRound1Pkg),
-        DkgTask::WaitRound { round: 2 } => Some(DKGStatus::WaitRound2Pkg),
-        DkgTask::FinalizeKey | DkgTask::CreateFrostAccount | DkgTask::CompleteFinalize => {
-            Some(DKGStatus::Finalize)
-        }
-        _ => None,
-    }
-}
-
 /// Sync the funding account plus the internal frost-* accounts — the mailbox
 /// and broadcast addresses the protocol messages arrive on. The funding
 /// account pays for the memos. Returns the post-sync height.
 ///
 /// `pub(crate)`, not `pub`: it takes a `&mut SqliteConnection` that cannot cross
-/// the flutter_rust_bridge boundary, and only the headless GraphQL server
-/// (`graphql::frost`) drives it — the app relies on its autosync instead. Hence
-/// it is unused (dead) in a flutter-only build.
-#[cfg_attr(not(feature = "graphql"), allow(dead_code))]
+/// the flutter_rust_bridge boundary; the protocol driver (`frost::driver`)
+/// is its caller on both the app and the server.
+///
+/// Returns `None` when the sync did not run because the wallet's sync
+/// session was busy or was cancelled: a step planned from stale notes can
+/// double-spend, so the caller must not step on it and tries again later.
 pub(crate) async fn sync_frost_accounts(
     c: &Coin,
     connection: &mut SqliteConnection,
     account: u32,
     height: u32,
-) -> Result<u32> {
+) -> Result<Option<u32>> {
     let mut accounts =
         query("SELECT id_account FROM accounts WHERE name LIKE 'frost-%' AND internal = 1")
             .map(|r: SqliteRow| r.get::<u32, _>(0))
@@ -175,15 +113,10 @@ pub(crate) async fn sync_frost_accounts(
         c,
     )
     .await?;
-    // A step planned from stale notes can double-spend, so a sync that did
-    // not run is not something to step on; the next block tries again.
-    match outcome {
-        SyncOutcome::Synced { height } => Ok(height),
-        SyncOutcome::Skipped => {
-            anyhow::bail!("a synchronization is already running; FROST will step on the next block")
-        }
-        SyncOutcome::Cancelled => anyhow::bail!("synchronization was cancelled before the FROST step"),
-    }
+    Ok(match outcome {
+        SyncOutcome::Synced { height } => Some(height),
+        SyncOutcome::Skipped | SyncOutcome::Cancelled => None,
+    })
 }
 
 pub async fn get_dkg_addresses(c: &Coin) -> Result<Vec<String>> {
@@ -277,33 +210,6 @@ pub async fn is_signing_in_progress(c: &Coin) -> Result<bool> {
     crate::frost::sign::is_signing_in_progress(&mut *connection).await
 }
 
-#[cfg(feature = "flutter")]
-#[cfg_attr(feature = "flutter", frb)]
-/// Advance the signing rounds by one step. Does **not** synchronize.
-///
-/// Like [`do_dkg`], signing depends on the wallet's autosync to advance the
-/// funding and internal frost accounts; the step runs against what is already
-/// synced and the caller retries on each new block. A signing message that
-/// cannot be funded yet ends the step with a [`SigningStatus::WaitingForFunds`]
-/// warning rather than an error.
-pub async fn do_sign(status: StreamSink<SigningStatus>, c: &Coin) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-    let mut client = c.client().await?;
-    let height = client.latest_height().await?;
-
-    let r = crate::frost::sign::do_sign(
-        &c.network(),
-        &mut *connection,
-        &mut client,
-        height,
-        status.clone(),
-    )
-    .await;
-    if let Err(e) = r {
-        let _ = status.add_error(e);
-    }
-    Ok(())
-}
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -328,4 +234,46 @@ pub enum SigningStatus {
     PreparingTransaction,
     SendingTransaction,
     TransactionSent(String),
+}
+
+/// What the protocol driver reports: a DKG status or a signing status,
+/// depending on which protocol the pass advanced.
+#[cfg_attr(feature = "flutter", frb)]
+#[derive(Clone, Debug)]
+pub enum ProtocolStatus {
+    Dkg(DKGStatus),
+    Sign(SigningStatus),
+}
+
+/// The app's handle on the protocol driver: one task that syncs the funding
+/// and frost accounts, then advances the DKG or the signing session, on
+/// every new block and never twice at once. A protocol page runs it while
+/// open and cancels it when closed; the driver resumes where the session
+/// left off when started again.
+#[cfg_attr(feature = "flutter", frb(opaque))]
+pub struct ProtocolDriver {
+    driver: Option<Driver>,
+}
+
+impl ProtocolDriver {
+    #[cfg_attr(feature = "flutter", frb(sync))]
+    #[allow(clippy::new_without_default)] // Default would surface in Dart
+    pub fn new() -> Self {
+        Self { driver: None }
+    }
+
+    /// Start driving `c`'s protocol session, streaming statuses to `status`.
+    /// Polls the chain tip every 10 s, like the app's block watcher.
+    #[cfg(feature = "flutter")]
+    pub async fn run(&mut self, status: StreamSink<ProtocolStatus>, c: &Coin) -> Result<()> {
+        self.cancel();
+        self.driver = Some(Driver::start(c.clone(), Duration::from_secs(10), status));
+        Ok(())
+    }
+
+    /// Stop after the pass in flight, if any; no further pass runs.
+    #[cfg_attr(feature = "flutter", frb(sync))]
+    pub fn cancel(&mut self) {
+        self.driver.take();
+    }
 }

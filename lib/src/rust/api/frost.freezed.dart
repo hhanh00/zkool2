@@ -1018,6 +1018,358 @@ class __$FrostSignParamsCopyWithImpl<$Res>
 }
 
 /// @nodoc
+mixin _$ProtocolStatus {
+  Object get field0;
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is ProtocolStatus &&
+            const DeepCollectionEquality().equals(other.field0, field0));
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(runtimeType, const DeepCollectionEquality().hash(field0));
+
+  @override
+  String toString() {
+    return 'ProtocolStatus(field0: $field0)';
+  }
+}
+
+/// @nodoc
+class $ProtocolStatusCopyWith<$Res> {
+  $ProtocolStatusCopyWith(ProtocolStatus _, $Res Function(ProtocolStatus) __);
+}
+
+/// Adds pattern-matching-related methods to [ProtocolStatus].
+extension ProtocolStatusPatterns on ProtocolStatus {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>({
+    TResult Function(ProtocolStatus_Dkg value)? dkg,
+    TResult Function(ProtocolStatus_Sign value)? sign,
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case ProtocolStatus_Dkg() when dkg != null:
+        return dkg(_that);
+      case ProtocolStatus_Sign() when sign != null:
+        return sign(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>({
+    required TResult Function(ProtocolStatus_Dkg value) dkg,
+    required TResult Function(ProtocolStatus_Sign value) sign,
+  }) {
+    final _that = this;
+    switch (_that) {
+      case ProtocolStatus_Dkg():
+        return dkg(_that);
+      case ProtocolStatus_Sign():
+        return sign(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(ProtocolStatus_Dkg value)? dkg,
+    TResult? Function(ProtocolStatus_Sign value)? sign,
+  }) {
+    final _that = this;
+    switch (_that) {
+      case ProtocolStatus_Dkg() when dkg != null:
+        return dkg(_that);
+      case ProtocolStatus_Sign() when sign != null:
+        return sign(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>({
+    TResult Function(DKGStatus field0)? dkg,
+    TResult Function(SigningStatus field0)? sign,
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case ProtocolStatus_Dkg() when dkg != null:
+        return dkg(_that.field0);
+      case ProtocolStatus_Sign() when sign != null:
+        return sign(_that.field0);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>({
+    required TResult Function(DKGStatus field0) dkg,
+    required TResult Function(SigningStatus field0) sign,
+  }) {
+    final _that = this;
+    switch (_that) {
+      case ProtocolStatus_Dkg():
+        return dkg(_that.field0);
+      case ProtocolStatus_Sign():
+        return sign(_that.field0);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function(DKGStatus field0)? dkg,
+    TResult? Function(SigningStatus field0)? sign,
+  }) {
+    final _that = this;
+    switch (_that) {
+      case ProtocolStatus_Dkg() when dkg != null:
+        return dkg(_that.field0);
+      case ProtocolStatus_Sign() when sign != null:
+        return sign(_that.field0);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class ProtocolStatus_Dkg extends ProtocolStatus {
+  const ProtocolStatus_Dkg(this.field0) : super._();
+
+  @override
+  final DKGStatus field0;
+
+  /// Create a copy of ProtocolStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $ProtocolStatus_DkgCopyWith<ProtocolStatus_Dkg> get copyWith =>
+      _$ProtocolStatus_DkgCopyWithImpl<ProtocolStatus_Dkg>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is ProtocolStatus_Dkg &&
+            (identical(other.field0, field0) || other.field0 == field0));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, field0);
+
+  @override
+  String toString() {
+    return 'ProtocolStatus.dkg(field0: $field0)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $ProtocolStatus_DkgCopyWith<$Res>
+    implements $ProtocolStatusCopyWith<$Res> {
+  factory $ProtocolStatus_DkgCopyWith(
+          ProtocolStatus_Dkg value, $Res Function(ProtocolStatus_Dkg) _then) =
+      _$ProtocolStatus_DkgCopyWithImpl;
+  @useResult
+  $Res call({DKGStatus field0});
+
+  $DKGStatusCopyWith<$Res> get field0;
+}
+
+/// @nodoc
+class _$ProtocolStatus_DkgCopyWithImpl<$Res>
+    implements $ProtocolStatus_DkgCopyWith<$Res> {
+  _$ProtocolStatus_DkgCopyWithImpl(this._self, this._then);
+
+  final ProtocolStatus_Dkg _self;
+  final $Res Function(ProtocolStatus_Dkg) _then;
+
+  /// Create a copy of ProtocolStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? field0 = null,
+  }) {
+    return _then(ProtocolStatus_Dkg(
+      null == field0
+          ? _self.field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as DKGStatus,
+    ));
+  }
+
+  /// Create a copy of ProtocolStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $DKGStatusCopyWith<$Res> get field0 {
+    return $DKGStatusCopyWith<$Res>(_self.field0, (value) {
+      return _then(_self.copyWith(field0: value));
+    });
+  }
+}
+
+/// @nodoc
+
+class ProtocolStatus_Sign extends ProtocolStatus {
+  const ProtocolStatus_Sign(this.field0) : super._();
+
+  @override
+  final SigningStatus field0;
+
+  /// Create a copy of ProtocolStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $ProtocolStatus_SignCopyWith<ProtocolStatus_Sign> get copyWith =>
+      _$ProtocolStatus_SignCopyWithImpl<ProtocolStatus_Sign>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is ProtocolStatus_Sign &&
+            (identical(other.field0, field0) || other.field0 == field0));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, field0);
+
+  @override
+  String toString() {
+    return 'ProtocolStatus.sign(field0: $field0)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $ProtocolStatus_SignCopyWith<$Res>
+    implements $ProtocolStatusCopyWith<$Res> {
+  factory $ProtocolStatus_SignCopyWith(
+          ProtocolStatus_Sign value, $Res Function(ProtocolStatus_Sign) _then) =
+      _$ProtocolStatus_SignCopyWithImpl;
+  @useResult
+  $Res call({SigningStatus field0});
+
+  $SigningStatusCopyWith<$Res> get field0;
+}
+
+/// @nodoc
+class _$ProtocolStatus_SignCopyWithImpl<$Res>
+    implements $ProtocolStatus_SignCopyWith<$Res> {
+  _$ProtocolStatus_SignCopyWithImpl(this._self, this._then);
+
+  final ProtocolStatus_Sign _self;
+  final $Res Function(ProtocolStatus_Sign) _then;
+
+  /// Create a copy of ProtocolStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? field0 = null,
+  }) {
+    return _then(ProtocolStatus_Sign(
+      null == field0
+          ? _self.field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as SigningStatus,
+    ));
+  }
+
+  /// Create a copy of ProtocolStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $SigningStatusCopyWith<$Res> get field0 {
+    return $SigningStatusCopyWith<$Res>(_self.field0, (value) {
+      return _then(_self.copyWith(field0: value));
+    });
+  }
+}
+
+/// @nodoc
 mixin _$SigningStatus {
   @override
   bool operator ==(Object other) {
