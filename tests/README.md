@@ -74,6 +74,22 @@ temporarily overrides the `pin_lock`, `offline` and `vault` preferences,
 restoring them when it finishes. It never touches the developer's own wallet
 database.
 
+`tests/test_frost_ui.py` continues past the DKG into the signing pages
+(`/frost1`, `/frost2`) with participant #2 coordinating, and ends by checking
+that the receiver was paid. It covers everything the DKG test covers.
+
+### In CI
+
+`.github/workflows/ui-tests.yml` runs these on Linux, by manual dispatch only:
+the `tests` input is a comma-separated list of orchestrator files (default
+`test_frost_ui.py`). Dispatch it before a release and after changes under
+`lib/` or `rust/src/frost`. The run also executes the Flutter unit tests in
+`test/`, which need neither a display nor a chain.
+
+Both orchestrators start the app through `launch_flutter_test` in `dkg.py`, so
+a new UI test is one Dart file in `integration_test/`, one orchestrator here,
+and its name in the workflow's `tests` default.
+
 ## Mock Ledger payments on Zebra regtest
 
 `tests/test_ledger.py` imports an Official Ledger account (`hw: 2`), compares

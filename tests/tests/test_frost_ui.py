@@ -14,7 +14,7 @@ import os
 import shutil
 
 import pytest
-from dkg import DkgParticipant, Rendezvous, app_documents_dir, demand_miner, flutter_device
+from dkg import DkgParticipant, Rendezvous, app_documents_dir, demand_miner, launch_flutter_test
 from gql import GraphQLRequest, gql
 from test_dkg_ui import (
     ADDRESS_QUERY,
@@ -30,7 +30,6 @@ from test_dkg_ui import (
     SYNC_MUTATION,
     N,
     T,
-    repo_root,
 )
 from utils import (
     dump_server_log,
@@ -165,19 +164,7 @@ async def test_frost_sign_flutter_ui(graphql_url, rpc_url, seed, zkool_binary, g
             coordinator=COORDINATOR_ID,
             name=f"{DKG_NAME_PREFIX}-1",
         )
-        flutter_log = open(FLUTTER_LOG, "w")
-        flutter = await asyncio.create_subprocess_exec(
-            os.getenv("FLUTTER_BIN", "flutter"),
-            "test",
-            "integration_test/frost_ui_test.dart",
-            "-d",
-            flutter_device(),
-            f"--dart-define=ZKOOL_TEST_RENDEZVOUS={rendezvous.dir}",
-            cwd=repo_root(),
-            stdout=flutter_log,
-            stderr=asyncio.subprocess.STDOUT,
-        )
-        print(f"flutter test pid {flutter.pid}, log {FLUTTER_LOG}")
+        flutter = await launch_flutter_test("frost_ui_test.dart", rendezvous, FLUTTER_LOG)
 
         print("\n=== Step 5: Fund every participant ===")
         ui_funding_address = await rendezvous.poll_ui(

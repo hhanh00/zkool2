@@ -1,0 +1,94 @@
+name: UI Tests
+
+# Runs the Flutter unit tests and the real-app UI tests. Manual only: the UI
+# tests take tens of minutes and need the whole regtest stack, so dispatch
+# this before a release and after changes under lib/ or rust/src/frost.
+#
+# Adding a UI test: a Dart file in integration_test/, a pytest orchestrator in
+# tests/tests that launches it through dkg.launch_flutter_test, and its file
+# name in the `tests` default below.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tests:
+        description: Comma-separated orchestrator files under tests/tests
+        required: false
+        default: test_frost_ui.py
+
+# Read-only: the jobs check out, restore and save caches, and upload a log
+# artifact. The called workflows declare nothing beyond this.
+permissions:
+  contents: read
+
+env:
+  SEED: "invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
+
+jobs:
+  # The mock-bridge tests under test/: fast, no display, no chain.
+  flutter-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-flutter
+      - name: Run Flutter unit tests
+        run: |
+          flutter pub get
+          flutter test
+
+  regtest-tools:
+    uses: ./.github/workflows/regtest-tools-build.yml
+
+  zkool-graphql:
+    uses: ./.github/workflows/zkool-graphql-build.yml
+    with:
+      ledger-transport: zemu
+    concurrency:
+      group: zkool-graphql-zemu-${{ github.repository }}-${{ github.ref }}
+      cancel-in-progress: false
+      queue: max
+
+  # Turns the dispatch input into a matrix.
+  select:
+    runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps.list.outputs.tests }}
+    steps:
+      - id: list
+        run: |
+          echo "tests=$(jq -R -c 'split(",") | map(gsub("^\\s+|\\s+$"; "")) | map(select(length > 0))' <<< "$TESTS")" >> "$GITHUB_OUTPUT"
+        env:
+          # A push run has no inputs; fall back to the dispatch default.
+          TESTS: ${{ inputs.tests || 'test_frost_ui.py' }}
+
+  ui:
+    needs: [select, zkool-graphql, regtest-tools]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        test: ${{ fromJson(needs.select.outputs.tests) }}
+    steps:
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/checkout@v6
+      # Brings up zebra and lightwalletd, mines, and shields the miner's
+      # coinbase to the SEED wallet with the pinned bootstrap zkool_graphql.
+      - name: Setup regtest
+        uses: ./.github/actions/zebra
+        with:
+          MINER_SEED: "burger voice warrior danger satoshi you solid atom elite alcohol category layer able debate culture talk tissue language hip surge fiction paddle stove voyage"
+          MINER_ADDRESS: "tmQ1BiNRfsvT6eMkJ5n7nMZsbz1PGwCs1Zs"
+          SEED: ${{ env.SEED }}
+          DESTINATION_ADDRESS: uregtest1ur83jamvhc5pwe8xzlu9d8ur4mxmny385mhlurxh5z00e6vhcf9zk0dncar334n0ucskdya9ytdrvzucprqjrhy7hd6rkklp0q6eyxp5
+      # The peers run this build of the server, not the bootstrap one.
+      - name: Restore zkool_graphql
+        uses: actions/cache/restore@v5
+        with:
+          path: target/release/zkool_graphql
+          key: ${{ runner.os }}-zkool-graphql-zemu-${{ hashFiles('Cargo.lock', 'rust/Cargo.toml', 'rust/src/**', 'lib/**/*.dart', 'pubspec.yaml', 'pubspec.lock') }}
+          fail-on-cache-miss: true
+      - uses: ./.github/actions/flutter-ui-test
+        with:
+          test: ${{ matrix.test }}
+          seed: ${{ env.SEED }}

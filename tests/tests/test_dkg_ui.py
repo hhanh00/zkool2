@@ -16,7 +16,7 @@ import os
 import shutil
 
 import pytest
-from dkg import DkgParticipant, Rendezvous, app_documents_dir, demand_miner, flutter_device
+from dkg import DkgParticipant, Rendezvous, app_documents_dir, demand_miner, launch_flutter_test
 from gql import GraphQLRequest, gql
 from utils import (
     dump_server_log,
@@ -105,10 +105,6 @@ PAY = gql(
     }
     """
 )
-
-
-def repo_root() -> str:
-    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
 @pytest.mark.dkg_ui
@@ -213,19 +209,7 @@ async def test_dkg_3_of_3_flutter_ui(graphql_url, rpc_url, seed, zkool_binary, g
             my_id=1,
             name=f"{DKG_NAME_PREFIX}-1",
         )
-        flutter_log = open(FLUTTER_LOG, "w")
-        flutter = await asyncio.create_subprocess_exec(
-            os.getenv("FLUTTER_BIN", "flutter"),
-            "test",
-            "integration_test/dkg_ui_test.dart",
-            "-d",
-            flutter_device(),
-            f"--dart-define=ZKOOL_TEST_RENDEZVOUS={rendezvous.dir}",
-            cwd=repo_root(),
-            stdout=flutter_log,
-            stderr=asyncio.subprocess.STDOUT,
-        )
-        print(f"flutter test pid {flutter.pid}, log {FLUTTER_LOG}")
+        flutter = await launch_flutter_test("dkg_ui_test.dart", rendezvous, FLUTTER_LOG)
 
         print("\n=== Step 5: Wait for the UI participant's funding address ===")
         # Generous: the first run builds the macOS app and the Rust staticlib.

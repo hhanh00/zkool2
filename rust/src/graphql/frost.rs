@@ -1,11 +1,7 @@
 use bincode::config;
 use juniper::{FieldError, FieldResult};
 
-use crate::{
-    api::{coin::Coin, frost::get_funding_account},
-    frost::{dkg::in_dkg, sign::in_sign},
-    graphql::Context,
-};
+use crate::graphql::Context;
 
 fn invalid_integer(name: &str) -> FieldError {
     FieldError::new(format!("Invalid {name}"), juniper::Value::Null)
@@ -68,57 +64,10 @@ pub async fn dkg_set_address(
     Ok(true)
 }
 
-pub async fn new_block(coin: Coin) -> anyhow::Result<()> {
-    let mut connection = coin.get_connection().await?;
-    let mut client = coin.client().await?;
-    let height = client.latest_height().await?;
-    tracing::info!("new_block {height}");
-
-    let in_dkg = in_dkg(&mut connection).await?;
-    let in_sign = in_sign(&mut connection).await?;
-    if !in_dkg && !in_sign {
-        return Ok(());
-    }
-
-    let account = get_funding_account(&mut connection).await?;
-    tracing::info!("funding: {account}");
-    let height =
-        crate::api::frost::sync_frost_accounts(&coin, &mut connection, account, height).await?;
-
-    if in_dkg {
-        crate::frost::dkg::step::dkg_step(
-            &coin.network(),
-            &mut connection,
-            &mut client,
-            height,
-            account,
-        )
-        .await?;
-    }
-
-    if in_sign {
-        crate::frost::sign::do_sign_impl(&coin.network(), &mut connection, &mut client, height, ())
-            .await?;
-    }
-    Ok(())
-}
-
+/// Run one protocol pass now, through the driver, and report its result.
+/// Passes also run on every new block without being asked.
 pub async fn do_dkg(context: &Context) -> FieldResult<bool> {
-    let coin = &context.coin;
-    let mut connection = coin.get_connection().await?;
-    let mut client = coin.client().await?;
-    let height = client.latest_height().await?;
-    let account = get_funding_account(&mut connection).await?;
-    let height =
-        crate::api::frost::sync_frost_accounts(coin, &mut connection, account, height).await?;
-    crate::frost::dkg::step::dkg_step(
-        &coin.network(),
-        &mut connection,
-        &mut client,
-        height,
-        account,
-    )
-    .await?;
+    context.driver.step().await?;
     Ok(true)
 }
 
@@ -135,18 +84,8 @@ pub async fn frost_sign(
     // Check if signing is already in progress
     let in_progress = crate::frost::sign::in_sign(&mut *connection).await?;
     if in_progress {
-        tracing::info!("frost_sign: signing already in progress, calling do_sign_impl");
-        // Signing is already in progress, trigger next round
-        let mut client = coin.client().await?;
-        let height = client.latest_height().await?;
-        crate::frost::sign::do_sign_impl(
-            &coin.network(),
-            &mut *connection,
-            &mut client,
-            height,
-            (),
-        )
-        .await?;
+        tracing::info!("frost_sign: signing already in progress, running a pass");
+        context.driver.step().await?;
     } else {
         // Not in progress, initialize signing
         tracing::info!("frost_sign: initializing signing");
