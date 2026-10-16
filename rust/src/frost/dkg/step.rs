@@ -11,7 +11,10 @@
 use anyhow::{bail, Context, Result};
 use sqlx::SqliteConnection;
 
-use crate::{api::coin::Network, Client};
+use crate::{
+    api::{coin::Network, frost::DKGStatus},
+    Client,
+};
 
 use super::{
     exec,
@@ -32,6 +35,38 @@ pub struct DkgStepOutcome {
     /// spend. Transient — the staged `pending_publish` is kept and the caller
     /// retries on the next block. Surfaced as a warning, never an error.
     pub waiting_for_funds: bool,
+}
+
+impl DkgStepOutcome {
+    /// The statuses this pass stands for, in order: one per executed task
+    /// that has a user-facing phase (publishes and waits map to their round,
+    /// the three finalize stages share `Finalize`), then the funding warning
+    /// and the shared address when the pass produced them.
+    pub fn statuses(&self) -> Vec<DKGStatus> {
+        let mut out: Vec<DKGStatus> = self
+            .executed
+            .iter()
+            .filter_map(|task| match task {
+                DkgTask::PublishRound { round: 0 } => Some(DKGStatus::PublishRound0Pkg),
+                DkgTask::PublishRound { round: 1 } => Some(DKGStatus::PublishRound1Pkg),
+                DkgTask::PublishRound { round: 2 } => Some(DKGStatus::PublishRound2Pkg),
+                DkgTask::WaitRound { round: 0 } => Some(DKGStatus::WaitRound0Pkg),
+                DkgTask::WaitRound { round: 1 } => Some(DKGStatus::WaitRound1Pkg),
+                DkgTask::WaitRound { round: 2 } => Some(DKGStatus::WaitRound2Pkg),
+                DkgTask::FinalizeKey | DkgTask::CreateFrostAccount | DkgTask::CompleteFinalize => {
+                    Some(DKGStatus::Finalize)
+                }
+                _ => None,
+            })
+            .collect();
+        if self.waiting_for_funds {
+            out.push(DKGStatus::WaitingForFunds);
+        }
+        if let Some(address) = &self.shared_address {
+            out.push(DKGStatus::SharedAddress(address.clone()));
+        }
+        out
+    }
 }
 
 /// Run one pass for `account`.

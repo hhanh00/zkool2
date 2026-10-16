@@ -1,5 +1,5 @@
 //! The protocol driver: the one task that advances a DKG or a signing
-//! session in a server process.
+//! session for a wallet.
 //!
 //! A pass is an observe/plan/execute step over whichever protocol is in
 //! progress. Running two passes at once is unsafe: each observes the wallet
@@ -8,13 +8,19 @@
 //! mailbox and passes run one after another:
 //!
 //! - the driver polls the chain tip itself and runs a pass when the height
-//!   changes, so it does not depend on the mempool task, which is optional;
-//! - a client asking for a step (`doDkg`, `frostSign`) sends a request and
-//!   awaits the pass's result.
+//!   changes, so it depends on no other task;
+//! - a client asking for a step (the server's `doDkg`, `frostSign`) sends a
+//!   request and awaits the pass's result.
 //!
 //! Requests that arrive while a pass runs are coalesced: they all wait on
 //! the single pass that follows, which observes the state the running pass
-//! committed. The Flutter app has its own driver with the same guard.
+//! committed. A pass syncs the funding and frost accounts first; when the
+//! wallet's sync session is busy the pass is retried on the next tick rather
+//! than waiting for another block.
+//!
+//! What a pass did is reported through a [`Sink`] of [`ProtocolStatus`]: the
+//! app renders it, the headless server passes `()`. The same driver serves
+//! both; the app runs it for as long as a protocol page is open.
 
 use std::{future::Future, time::Duration};
 
@@ -23,8 +29,12 @@ use tokio::sync::{mpsc, oneshot};
 use tracing::{error, info};
 
 use crate::{
-    api::{coin::Coin, frost::get_funding_account},
+    api::{
+        coin::Coin,
+        frost::{get_funding_account, sync_frost_accounts, ProtocolStatus, SigningStatus},
+    },
     frost::{dkg::in_dkg, sign::in_sign},
+    Sink,
 };
 
 /// A reason to run a pass. `reply` is set when the sender wants the result.
@@ -32,16 +42,28 @@ struct StepRequest {
     reply: Option<oneshot::Sender<Result<()>>>,
 }
 
-/// Handle to the driver task; cloned into every request context.
+/// What a pass found: it ran, or it could not sync and wants another go.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Pass {
+    Done,
+    /// The wallet's sync session was busy; nothing was observed.
+    SyncBusy,
+}
+
+/// Handle to the driver task. Dropping every handle ends the task once the
+/// pass in flight, if any, has finished.
 #[derive(Clone)]
 pub struct Driver {
     requests: mpsc::Sender<StepRequest>,
 }
 
 impl Driver {
-    /// Spawn the driver for `coin`, polling the chain tip every `poll`.
-    /// Needs a tokio runtime.
-    pub fn start(coin: Coin, poll: Duration) -> Self {
+    /// Spawn the driver for `coin`, polling the chain tip every `poll` and
+    /// reporting passes to `status`. Needs a tokio runtime.
+    pub fn start<S>(coin: Coin, poll: Duration, status: S) -> Self
+    where
+        S: Sink<ProtocolStatus> + Send + Sync + 'static,
+    {
         let (requests, inbox) = mpsc::channel(16);
         let tip = {
             let coin = coin.clone();
@@ -52,7 +74,16 @@ impl Driver {
         };
         let pass = move || {
             let coin = coin.clone();
-            async move { pass(&coin).await }
+            let status = status.clone();
+            async move {
+                let result = pass(&coin, &status).await;
+                // A failed pass is transient (the next block retries); the
+                // app shows it as a warning, the server logs it.
+                if let Err(e) = &result {
+                    status.send_error(anyhow!("{e:#}")).await;
+                }
+                result
+            }
         };
         tokio::spawn(run(inbox, poll, tip, pass));
         Self { requests }
@@ -78,15 +109,18 @@ where
     T: Fn() -> TF,
     TF: Future<Output = Result<u32>>,
     P: Fn() -> PF,
-    PF: Future<Output = Result<()>>,
+    PF: Future<Output = Result<Pass>>,
 {
     let mut ticks = tokio::time::interval(poll);
     ticks.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
     let mut last_height = None;
+    // Set when the last pass could not sync: the next tick steps again even
+    // if no block arrived meanwhile.
+    let mut retry = false;
 
     loop {
-        // Wait for a reason to step: a request, or a tick that finds a new
-        // block. A tick that sees the same height is not a reason.
+        // Wait for a reason to step: a request, a tick that finds a new
+        // block, or a tick after a pass that asked to be retried.
         let mut waiters = vec![];
         tokio::select! {
             request = inbox.recv() => match request {
@@ -98,6 +132,7 @@ where
                     last_height = Some(height);
                     info!("protocol driver: new block {height}");
                 }
+                Ok(_) if retry => info!("protocol driver: retrying after a busy sync"),
                 Ok(_) => continue,
                 Err(e) => {
                     error!("protocol driver: cannot read the chain tip: {e:#}");
@@ -112,6 +147,7 @@ where
         }
 
         let result = pass().await;
+        retry = matches!(result, Ok(Pass::SyncBusy));
         if let Err(e) = &result {
             error!("protocol driver: pass failed: {e:#}");
         }
@@ -121,24 +157,42 @@ where
     }
 }
 
+/// Forward a signing pass's statuses into the protocol stream.
+#[derive(Clone)]
+struct SignStatus<S>(S);
+
+impl<S: Sink<ProtocolStatus> + Send + Sync> Sink<SigningStatus> for SignStatus<S> {
+    async fn send(&self, value: SigningStatus) {
+        self.0.send(ProtocolStatus::Sign(value)).await
+    }
+    async fn send_error(&self, error: anyhow::Error) {
+        self.0.send_error(error).await
+    }
+}
+
 /// One pass over whichever protocol is in progress; nothing when none is.
-async fn pass(coin: &Coin) -> Result<()> {
+async fn pass<S>(coin: &Coin, status: &S) -> Result<Pass>
+where
+    S: Sink<ProtocolStatus> + Send + Sync,
+{
     let mut connection = coin.get_connection().await?;
     let in_dkg = in_dkg(&mut connection).await?;
     let in_sign = in_sign(&mut connection).await?;
     if !in_dkg && !in_sign {
-        return Ok(());
+        return Ok(Pass::Done);
     }
 
     let mut client = coin.client().await?;
     let height = client.latest_height().await?;
     let account = get_funding_account(&mut connection).await?;
     info!("protocol driver: pass at {height}, funding account {account}");
-    let height =
-        crate::api::frost::sync_frost_accounts(coin, &mut connection, account, height).await?;
+    let Some(height) = sync_frost_accounts(coin, &mut connection, account, height).await? else {
+        info!("protocol driver: sync busy; will retry");
+        return Ok(Pass::SyncBusy);
+    };
 
     if in_dkg {
-        crate::frost::dkg::step::dkg_step(
+        let outcome = crate::frost::dkg::step::dkg_step(
             &coin.network(),
             &mut connection,
             &mut client,
@@ -146,12 +200,21 @@ async fn pass(coin: &Coin) -> Result<()> {
             account,
         )
         .await?;
+        for s in outcome.statuses() {
+            status.send(ProtocolStatus::Dkg(s)).await;
+        }
     }
     if in_sign {
-        crate::frost::sign::do_sign_impl(&coin.network(), &mut connection, &mut client, height, ())
-            .await?;
+        crate::frost::sign::do_sign_impl(
+            &coin.network(),
+            &mut connection,
+            &mut client,
+            height,
+            SignStatus(status.clone()),
+        )
+        .await?;
     }
-    Ok(())
+    Ok(Pass::Done)
 }
 
 #[cfg(test)]
@@ -159,15 +222,24 @@ mod tests {
     use super::*;
     use std::sync::{
         atomic::{AtomicU32, Ordering},
-        Arc,
+        Arc, Mutex,
     };
     use tokio::sync::Notify;
 
-    /// A pass that counts its runs and blocks until released, so requests
-    /// can pile up behind it.
+    /// A pass that counts its runs, blocks until released, and returns the
+    /// next scripted outcome.
     struct Gate {
         runs: AtomicU32,
         release: Notify,
+        outcomes: Mutex<Vec<Pass>>,
+    }
+
+    fn gate() -> Arc<Gate> {
+        Arc::new(Gate {
+            runs: AtomicU32::new(0),
+            release: Notify::new(),
+            outcomes: Mutex::new(vec![]),
+        })
     }
 
     fn driver(gate: Arc<Gate>, heights: Arc<AtomicU32>, poll: Duration) -> Driver {
@@ -181,7 +253,8 @@ mod tests {
             async move {
                 gate.runs.fetch_add(1, Ordering::SeqCst);
                 gate.release.notified().await;
-                Ok(())
+                let next = gate.outcomes.lock().unwrap().pop().unwrap_or(Pass::Done);
+                Ok(next)
             }
         };
         tokio::spawn(run(inbox, poll, tip, pass));
@@ -194,10 +267,7 @@ mod tests {
 
     #[tokio::test]
     async fn requests_during_a_pass_share_one_following_pass() {
-        let gate = Arc::new(Gate {
-            runs: AtomicU32::new(0),
-            release: Notify::new(),
-        });
+        let gate = gate();
         let driver = driver(
             gate.clone(),
             Arc::new(AtomicU32::new(0)),
@@ -259,10 +329,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_new_block_runs_a_pass_and_the_same_block_does_not() {
-        let gate = Arc::new(Gate {
-            runs: AtomicU32::new(0),
-            release: Notify::new(),
-        });
+        let gate = gate();
         let heights = Arc::new(AtomicU32::new(100));
         let _driver = driver(gate.clone(), heights.clone(), Duration::from_millis(10));
 
@@ -288,5 +355,57 @@ mod tests {
             "a new height runs a pass"
         );
         gate.release.notify_one();
+    }
+
+    #[tokio::test]
+    async fn a_busy_sync_is_retried_on_the_next_tick_without_a_new_block() {
+        let gate = gate();
+        gate.outcomes.lock().unwrap().push(Pass::SyncBusy);
+        let _driver = driver(
+            gate.clone(),
+            Arc::new(AtomicU32::new(100)),
+            Duration::from_millis(10),
+        );
+
+        settle().await;
+        assert_eq!(gate.runs.load(Ordering::SeqCst), 1, "startup pass");
+        gate.release.notify_one(); // ends with SyncBusy
+        settle().await;
+        assert_eq!(
+            gate.runs.load(Ordering::SeqCst),
+            2,
+            "retried at the same height"
+        );
+        gate.release.notify_one(); // ends with Done
+        settle().await;
+        assert_eq!(
+            gate.runs.load(Ordering::SeqCst),
+            2,
+            "a completed pass stops the retries"
+        );
+    }
+
+    #[tokio::test]
+    async fn dropping_the_last_handle_stops_the_driver() {
+        let gate = gate();
+        let driver = driver(
+            gate.clone(),
+            Arc::new(AtomicU32::new(100)),
+            Duration::from_millis(10),
+        );
+        settle().await;
+        gate.release.notify_one();
+        settle().await;
+        let runs = gate.runs.load(Ordering::SeqCst);
+
+        drop(driver);
+        settle().await;
+        gate.release.notify_one();
+        settle().await;
+        assert_eq!(
+            gate.runs.load(Ordering::SeqCst),
+            runs,
+            "no pass after the handle is gone"
+        );
     }
 }

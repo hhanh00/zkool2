@@ -11,9 +11,9 @@ import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 import 'pay.dart';
 part 'frost.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `dkg_status_for`, `get_funding_account`, `sync_frost_accounts`
+// These functions are ignored because they are not marked as `pub`: `get_funding_account`, `sync_frost_accounts`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DKGParams`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<void> setDkgParams(
         {required String name,
@@ -33,23 +33,6 @@ Future<void> initDkg({required Coin c}) =>
 
 Future<bool> hasDkgAddresses({required Coin c}) =>
     RustLib.instance.api.crateApiFrostHasDkgAddresses(c: c);
-
-/// Advance the DKG by one pass. Does **not** synchronize.
-///
-/// Like the note migration, the DKG depends on the wallet's autosync to advance
-/// the funding and internal frost accounts; the step runs against whatever is
-/// already synced. Syncing was moved out because it must not race the rounds and
-/// autosync already drives the chain forward — the caller retries this on each
-/// new block (`lib/pages/dkg.dart`), and the headless server steps from
-/// `graphql::frost::new_block`, which syncs first.
-///
-/// Each pass executes every effect the planner names until it hits a wait —
-/// one precondition-checked effect at a time. Statuses arrive after the pass,
-/// one per executed task plus the wait it stopped on. A publish that cannot be
-/// funded yet (previous round's change not mined) ends the pass with a
-/// [`DKGStatus::WaitingForFunds`] warning rather than an error.
-Stream<DKGStatus> doDkg({required Coin c}) =>
-    RustLib.instance.api.crateApiFrostDoDkg(c: c);
 
 Future<List<String>> getDkgAddresses({required Coin c}) =>
     RustLib.instance.api.crateApiFrostGetDkgAddresses(c: c);
@@ -81,15 +64,18 @@ Future<void> initSign(
 Future<bool> isSigningInProgress({required Coin c}) =>
     RustLib.instance.api.crateApiFrostIsSigningInProgress(c: c);
 
-/// Advance the signing rounds by one step. Does **not** synchronize.
-///
-/// Like [`do_dkg`], signing depends on the wallet's autosync to advance the
-/// funding and internal frost accounts; the step runs against what is already
-/// synced and the caller retries on each new block. A signing message that
-/// cannot be funded yet ends the step with a [`SigningStatus::WaitingForFunds`]
-/// warning rather than an error.
-Stream<SigningStatus> doSign({required Coin c}) =>
-    RustLib.instance.api.crateApiFrostDoSign(c: c);
+// Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<ProtocolDriver>>
+abstract class ProtocolDriver implements RustOpaqueInterface {
+  /// Stop after the pass in flight, if any; no further pass runs.
+  void cancel();
+
+  factory ProtocolDriver() =>
+      RustLib.instance.api.crateApiFrostProtocolDriverNew();
+
+  /// Start driving `c`'s protocol session, streaming statuses to `status`.
+  /// Polls the chain tip every 10 s, like the app's block watcher.
+  Stream<ProtocolStatus> run({required Coin c});
+}
 
 @freezed
 sealed class DKGStatus with _$DKGStatus {
@@ -129,6 +115,18 @@ sealed class FrostSignParams with _$FrostSignParams {
   }) = _FrostSignParams;
   static Future<FrostSignParams> default_() =>
       RustLib.instance.api.crateApiFrostFrostSignParamsDefault();
+}
+
+@freezed
+sealed class ProtocolStatus with _$ProtocolStatus {
+  const ProtocolStatus._();
+
+  const factory ProtocolStatus.dkg(
+    DKGStatus field0,
+  ) = ProtocolStatus_Dkg;
+  const factory ProtocolStatus.sign(
+    SigningStatus field0,
+  ) = ProtocolStatus_Sign;
 }
 
 @freezed

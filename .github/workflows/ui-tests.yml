@@ -44,7 +44,7 @@ jobs:
     with:
       ledger-transport: zemu
     concurrency:
-      group: zkool-graphql-zemu-${{ github.repository }}-${{ github.ref }}
+      group: zkool-graphql-zemu-${{ github.repository }}-${{ github.event.pull_request.head.sha || github.sha }}
       cancel-in-progress: false
       queue: max
 

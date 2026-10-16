@@ -73,9 +73,10 @@ void main() {
       );
       rendezvous.publish("shared_address", sharedAddress);
 
-      // Leave the DKG page so it is disposed. Its 30s timer keeps calling
-      // doDkg, which starts throwing `get_funding_account: no rows` once the
-      // DKG is finished and the selected account moves to the FROST one.
+      // Leave the DKG page so it is disposed, which cancels its protocol
+      // driver. A driver left running would keep passing once the DKG is
+      // finished and the selected account moves to the FROST one, and throw
+      // `get_funding_account: no rows`.
       appRouter.go("/accounts");
       await pumpFor(tester, const Duration(seconds: 2));
 

@@ -318,117 +318,97 @@ class DKGPage3 extends ConsumerStatefulWidget {
 
 class DKGPage3State extends ConsumerState<DKGPage3> {
   late final c = coinContext.coin;
-  // Held in a field because `ref` is unsafe to use once the widget is disposed.
-  late final SynchronizerNotifier _synchronizer =
-      ref.read(synchronizerProvider.notifier);
+  // The protocol driver: one Rust task that syncs the funding and frost
+  // accounts and advances the DKG on every new block, never twice at once.
+  // It runs while this page is open; cancelling it on dispose stops it, and
+  // a reopened page resumes where the session left off.
+  final ProtocolDriver _driver = ProtocolDriver();
+  StreamSubscription<ProtocolStatus>? _statuses;
   String message = "";
   int index = 0;
-  StreamSubscription<int>? _heightSub;
-  int? _lastStepHeight;
-  // Guards against overlapping passes: a slow sync+step must finish before the
-  // next block starts another, or two `doDkg` runs would each publish the same
-  // round and double-spend the funding note.
-  bool _stepping = false;
   bool finished = false;
 
   @override
   void initState() {
     super.initState();
-    // `doDkg` no longer syncs itself; it steps against what is already synced.
-    // Drive the wallet's synchronizer once per block and then step, rather than
-    // on a fixed timer: the block-height stream delivers the current tip on
-    // subscribe (kicking off round 0) and then only on changes. A round waiting
-    // for its own change to confirm defers to the next block, so
-    // `_lastStepHeight` guards against stepping the same height twice — keeping
-    // the "waiting for funds" warning to at most once per block.
-    _heightSub = blockHeightService.heights.listen((height) async {
-      if (_stepping || _lastStepHeight == height) return;
-      _stepping = true;
-      _lastStepHeight = height;
-      try {
-        // Force a sync of the funding and internal frost accounts (which stores
-        // the incoming package memos), then step against the fresh state.
-        await _synchronizer.syncIfNeeded(height, now: true);
-        if (!mounted) return;
-        await runDkg();
-      } finally {
-        _stepping = false;
-      }
-    });
+    _statuses = _driver.run(c: c).listen(_onStatus, onError: _onError);
   }
 
   @override
   void dispose() {
-    unawaited(_heightSub?.cancel());
+    unawaited(_statuses?.cancel());
+    _driver.cancel();
     super.dispose();
   }
 
-  Future<void> runDkg() async {
-    try {
-      await ref.read(currentHeightProvider.notifier).fetch();
+  void _onStatus(ProtocolStatus status) {
+    if (!mounted) return;
+    switch (status) {
+      case ProtocolStatus_Dkg(:final field0):
+        _onDkg(field0);
+      case ProtocolStatus_Sign():
+        break;
+    }
+  }
 
-      // No startSynchronize here: the block-height handler syncs first, and
-      // doDkg steps against what is already synced. Await the stream to
-      // completion so the handler serializes passes — overlapping doDkg runs
-      // would each publish the same round and double-spend the funding note.
-      await for (final s in doDkg(c: c)) {
-        if (!mounted) return;
-        if (s is DKGStatus_PublishRound0Pkg) {
-          setState(() {
-            message = "Broadcasting participant keys";
-            index = 0;
-          });
-        } else if (s is DKGStatus_WaitRound0Pkg) {
-          setState(() {
-            message = "Waiting for other participants to send their keys";
-            index = 0;
-          });
-        } else if (s is DKGStatus_PublishRound1Pkg) {
-          setState(() {
-            message = "Broadcasting round 1 packages";
-            index = 1;
-          });
-        } else if (s is DKGStatus_WaitRound1Pkg) {
-          setState(() {
-            message = "Waiting for other participants to send their round 1 packages";
-            index = 1;
-          });
-        } else if (s is DKGStatus_PublishRound2Pkg) {
-          setState(() {
-            message = "Broadcasting round 2 packages";
-            index = 2;
-          });
-        } else if (s is DKGStatus_WaitRound2Pkg) {
-          setState(() {
-            message = "Waiting for other participants to send their round 2 packages";
-            index = 2;
-          });
-        } else if (s is DKGStatus_WaitingForFunds) {
-          // The previous round's change is not mined yet, so this round's
-          // publish has nothing to spend. The next block retries; surface it
-          // as a warning rather than failing so the user knows why it paused.
-          showWarningSnackbar(
-            "Waiting for the previous round's change to be confirmed…",
-          );
-        } else if (s is DKGStatus_Finalize) {
-          setState(() {
-            message = "Deriving the shared key";
-            index = 3;
-          });
-        } else if (s is DKGStatus_SharedAddress) {
-          final sharedUA = s.field0;
-          ref.invalidate(getAccountsProvider);
-          setState(() {
-            message = "The shared address is: $sharedUA";
-            index = 3;
-            finished = true;
-          });
-        }
-      }
-    } on AnyhowException catch (e) {
-      if (!context.mounted) return;
-      // Transient: the next block retries, so warn instead of a modal error.
-      showWarningSnackbar(e.message);
+  // A failed pass is transient: the next block retries, so warn instead of
+  // a modal error.
+  void _onError(Object e) {
+    if (!mounted) return;
+    showWarningSnackbar(e is AnyhowException ? e.message : e.toString());
+  }
+
+  void _onDkg(DKGStatus s) {
+    if (s is DKGStatus_PublishRound0Pkg) {
+      setState(() {
+        message = "Broadcasting participant keys";
+        index = 0;
+      });
+    } else if (s is DKGStatus_WaitRound0Pkg) {
+      setState(() {
+        message = "Waiting for other participants to send their keys";
+        index = 0;
+      });
+    } else if (s is DKGStatus_PublishRound1Pkg) {
+      setState(() {
+        message = "Broadcasting round 1 packages";
+        index = 1;
+      });
+    } else if (s is DKGStatus_WaitRound1Pkg) {
+      setState(() {
+        message = "Waiting for other participants to send their round 1 packages";
+        index = 1;
+      });
+    } else if (s is DKGStatus_PublishRound2Pkg) {
+      setState(() {
+        message = "Broadcasting round 2 packages";
+        index = 2;
+      });
+    } else if (s is DKGStatus_WaitRound2Pkg) {
+      setState(() {
+        message = "Waiting for other participants to send their round 2 packages";
+        index = 2;
+      });
+    } else if (s is DKGStatus_WaitingForFunds) {
+      // The previous round's change is not mined yet, so this round's
+      // publish has nothing to spend. The next block retries; surface it
+      // as a warning rather than failing so the user knows why it paused.
+      showWarningSnackbar(
+        "Waiting for the previous round's change to be confirmed…",
+      );
+    } else if (s is DKGStatus_Finalize) {
+      setState(() {
+        message = "Deriving the shared key";
+        index = 3;
+      });
+    } else if (s is DKGStatus_SharedAddress) {
+      final sharedUA = s.field0;
+      ref.invalidate(getAccountsProvider);
+      setState(() {
+        message = "The shared address is: $sharedUA";
+        index = 3;
+        finished = true;
+      });
     }
   }
 

@@ -16,11 +16,12 @@ jobs:
     uses: ./.github/workflows/zkool-graphql-build.yml
     with:
       ledger-transport: zemu
-    # One build per transport and ref: the first caller compiles and caches
+    # One build per transport and commit (the branch head, on a pull request
+    # as on a dispatch): the first caller compiles and caches
     # the binary, the others restore it. The group is set here, at the call
     # site, where the transport is a literal.
     concurrency:
-      group: zkool-graphql-zemu-${{ github.repository }}-${{ github.ref }}
+      group: zkool-graphql-zemu-${{ github.repository }}-${{ github.event.pull_request.head.sha || github.sha }}
       cancel-in-progress: false
       queue: max
 

@@ -29,8 +29,6 @@ use crate::{
 
 use task::SignTask;
 
-#[cfg(feature = "flutter")]
-use crate::frb_generated::StreamSink;
 
 pub async fn init_sign(
     connection: &mut SqliteConnection,
@@ -91,17 +89,6 @@ pub async fn in_sign(connection: &mut SqliteConnection) -> Result<bool> {
 // One signing pass, reported to the status sink the way the sequential
 // orchestrator used to report its phases: one event per task the pass
 // executed, then the wait or terminal it stopped at.
-
-#[cfg(feature = "flutter")]
-pub async fn do_sign(
-    network: &Network,
-    connection: &mut SqliteConnection,
-    client: &mut Client,
-    height: u32,
-    status: StreamSink<SigningStatus>,
-) -> Result<()> {
-    do_sign_impl(network, connection, client, height, status).await
-}
 
 pub async fn do_sign_impl(
     network: &Network,

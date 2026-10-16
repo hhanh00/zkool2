@@ -158,16 +158,16 @@ is `/tmp/frost_ui_flutter.log`.
   polls `getrawmempool` and mines one block whenever a transaction is waiting, with
   a 60s idle fallback. Do not go back to a fixed-interval miner — it makes the run
   non-deterministic.
-- **The app polls every 30s** (`Timer.periodic` in `DKGPage3`, `lib/pages/dkg.dart`)
-  while the peers advance on every block, so the app is usually a round behind. The
+- **The app polls the chain tip every 10s** (the Rust `frost::driver` the protocol
+  pages run, `lib/pages/dkg.dart` / `lib/pages/frost.dart`), so it can be a round behind the peers, which step on every block. The
   test waits up to `PEER_COMPLETION_TIMEOUT` (600s) for the peers to finish *after*
   the app is done — without that wait the test fails with "No FROST account for
   participant 2".
 - **Never use `pumpAndSettle`** on the DKG or signing routes; DKGPage3 and
-  FrostPage2 both run a 30s timer and the synchronizer keeps frames scheduled, so
-  the tree never settles. Use the `pumpUntil` / `pumpFor` helpers.
-- **Leave the DKG page with `go`, not `push`.** DKGPage3 cancels its timer only in
-  `dispose`, so a page left mounted keeps calling `doDkg` and throws
+  FrostPage2 both consume a live status stream from the driver and the synchronizer
+  keeps frames scheduled, so the tree never settles. Use the `pumpUntil` / `pumpFor` helpers.
+- **Leave the DKG page with `go`, not `push`.** DKGPage3 cancels its protocol driver
+  only in `dispose`, so a page left mounted keeps passing and throws
   `get_funding_account: no rows` as soon as the selected account moves to the
   FROST account. This is why the signing test does `appRouter.go("/accounts")`
   after the DKG finishes.
