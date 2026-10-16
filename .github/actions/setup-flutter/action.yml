@@ -1,0 +1,33 @@
+name: Set up Flutter
+description: >
+  Install the pinned Flutter release from git, the same way the release build
+  does, so every job builds and tests with one toolchain. Bump the default
+  here and in build.yml together.
+
+inputs:
+  flutter-version:
+    description: Flutter git tag
+    required: false
+    default: 3.47.4
+  precache:
+    description: Platform to precache artifacts for (linux, or empty for none)
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Install Flutter ${{ inputs.flutter-version }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+        echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+        export PATH="$RUNNER_TEMP/flutter/bin:$PATH"
+        flutter --version
+        if [ -n "$PRECACHE" ]; then
+          flutter precache "--$PRECACHE"
+        fi
+      env:
+        FLUTTER_VERSION: ${{ inputs.flutter-version }}
+        PRECACHE: ${{ inputs.precache }}

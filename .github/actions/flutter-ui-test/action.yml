@@ -1,0 +1,96 @@
+name: Run a Flutter UI test
+description: >
+  Run one orchestrated Flutter UI test on Linux: the real app, built in debug
+  with bundled Sapling parameters, drives its pages under a virtual display
+  while pytest owns the regtest chain and any headless peers. Expects the
+  chain to be up and funded (the zebra action) and the release zkool_graphql
+  to be at target/release (the zkool-graphql workflow). One test per call;
+  the workflow runs the matrix.
+
+inputs:
+  test:
+    description: Orchestrator file under tests/tests, e.g. test_frost_ui.py
+    required: true
+  seed:
+    description: Mnemonic of the funded regtest wallet
+    required: true
+  flutter-version:
+    description: Flutter git tag
+    required: false
+    default: 3.47.4
+
+runs:
+  using: composite
+  steps:
+    - name: Install desktop build and display packages
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang cmake git ninja-build pkg-config libgtk-3-dev \
+          liblzma-dev libstdc++-12-dev libudev-dev xvfb
+
+    - uses: ./.github/actions/setup-flutter
+      with:
+        flutter-version: ${{ inputs.flutter-version }}
+        precache: linux
+
+    # The app signs protocol messages with the software signer, which loads
+    # the Sapling prover; bundling the parameters keeps a fresh runner from
+    # downloading them inside the app mid-protocol.
+    - name: Configure the test app's Rust build
+      shell: bash
+      run: |
+        cat > rust/cargokit.yaml <<'EOF'
+        cargo:
+          debug:
+            extra_flags:
+              - --features=bundled-sapling-params
+        EOF
+
+    # One cold debug build of the app and its Rust staticlib is long; keep it
+    # between runs, keyed on the same sources as the zkool_graphql cache.
+    - name: Restore the app build
+      id: app-cache
+      uses: actions/cache/restore@v5
+      with:
+        path: build/linux
+        key: ${{ runner.os }}-flutter-ui-app-${{ hashFiles('Cargo.lock', 'rust/Cargo.toml', 'rust/src/**', 'lib/**/*.dart', 'pubspec.yaml', 'pubspec.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-flutter-ui-app-
+
+    # path_provider resolves the documents directory to ~/Documents on
+    # Linux; the test database and the rendezvous files live there.
+    - name: Prepare the app's documents directory
+      shell: bash
+      run: mkdir -p "$HOME/Documents"
+
+    - name: Run ${{ inputs.test }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        cd tests
+        pip install uv
+        uv sync --all-groups
+        xvfb-run -a uv run pytest "tests/${TEST}" -v -s
+      env:
+        TEST: ${{ inputs.test }}
+        SEED: ${{ inputs.seed }}
+        ZKOOL_BINARY: ${{ github.workspace }}/target/release/zkool_graphql
+
+    - name: Save the app build
+      if: always() && steps.app-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v5
+      with:
+        path: build/linux
+        key: ${{ steps.app-cache.outputs.cache-primary-key }}
+
+    - name: Upload logs
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ui-test-logs-${{ inputs.test }}
+        path: |
+          /tmp/*_flutter.log
+          /tmp/graphql_*.log
+        if-no-files-found: ignore
+        retention-days: 5

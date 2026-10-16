@@ -166,6 +166,36 @@ def flutter_device() -> str:
     return {"darwin": "macos", "linux": "linux", "win32": "windows"}[sys.platform]
 
 
+def repo_root() -> str:
+    return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
+
+async def launch_flutter_test(dart_file: str, rendezvous, log_path: str):
+    """Spawn `flutter test integration_test/<dart_file>` as the UI participant.
+
+    The app runs on this platform's desktop device (a display is required:
+    `xvfb-run` under CI) and finds the orchestrator through the rendezvous
+    directory. `FLUTTER_BIN` overrides the `flutter` on PATH. Output goes to
+    `log_path`; the caller awaits the returned process and dumps the log on
+    failure. Every UI test launches the app through here so a new test is one
+    Dart file in `integration_test/` plus one orchestrator.
+    """
+    log = open(log_path, "w")
+    process = await asyncio.create_subprocess_exec(
+        os.getenv("FLUTTER_BIN", "flutter"),
+        "test",
+        f"integration_test/{dart_file}",
+        "-d",
+        flutter_device(),
+        f"--dart-define=ZKOOL_TEST_RENDEZVOUS={rendezvous.dir}",
+        cwd=repo_root(),
+        stdout=log,
+        stderr=asyncio.subprocess.STDOUT,
+    )
+    print(f"flutter test pid {process.pid}, log {log_path}")
+    return process
+
+
 class Rendezvous:
     """File-based handshake with the Flutter integration test.
 

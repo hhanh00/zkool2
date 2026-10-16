@@ -28,10 +28,13 @@ the plain-signer path.
 
 ## Prerequisites
 
-Binaries not in the repo (this machine has them under `~/projects/tools/bin`):
+Binaries not in the repo. On this machine `zebrad` and `lightwalletd` are
+already on PATH (`~/.cargo/bin`, `~/go/bin`) and also under the untracked
+`tools/bin/` at the repo root, which is where CI's `install-regtest-tools`
+action puts them:
 
 ```bash
-export PATH="$HOME/projects/tools/bin:$PATH"   # zebrad, lightwalletd
+export PATH="$PWD/tools/bin:$PATH"   # zebrad, lightwalletd
 ```
 
 Build the GraphQL server used for the peers (release; ~25 min from cold):
@@ -81,15 +84,17 @@ curl -s --data-binary '{"jsonrpc":"1.0","id":"g","method":"generate","params":[3
 
 ## 2. Fund the SEED wallet
 
-`example/sh/regtest_setup.sh` does chain bring-up *and* funding in one go. If the
-chain is already up, run only the funding half: start `zkool_graphql` on :8000
-against `regtest.db`, create the `miner` (MINER_SEED) and `wallet` (SEED)
-accounts at birth 1, sync both, take the miner's notes with
-`height < tip-100`, pay the total to `DESTINATION_ADDRESS` with
-`recipientPaysFee: true, confirmations: 100`, mine 10, sync, and check
-`balanceByAccount.ironwood > 0` (expect ~62.5).
-
-Seeds and the destination UA are inlined at the top of `example/sh/regtest_setup.sh`.
+`example/sh/mine.sh` does chain bring-up *and* funding in one go (it is what
+CI's `zebra` action runs; it needs `MINER_SEED`, `MINER_ADDRESS`, `SEED` and
+`DESTINATION_ADDRESS` in the environment, values in
+`.github/workflows/wallet.yml`). If the chain is already up, run only its
+funding half: start `zkool_graphql` on :8000 against `regtest.db`
+(`--allow-unauthenticated --allow-unencrypted-database`), create the `miner`
+(MINER_SEED) and `wallet` (SEED) accounts at birth 1, sync both, take the
+miner's notes with `height < tip-100`, pay the total to `DESTINATION_ADDRESS`
+with `recipientPaysFee: true, confirmations: 100`, mine 10, sync, and check
+`balanceByAccount.ironwood > 0` (expect ~62.5). Stop that server before the
+test: the orchestrator starts its own on :8000.
 
 ## 3. Run the test
 
@@ -214,9 +219,19 @@ git checkout misc/zebra.toml     # drops the local miner_address edit
 
 ## CI
 
-`.github/workflows/wallet.yml` runs on `ubuntu-latest` and includes neither
-test. Porting it needs a desktop Flutter build plus a display (`-d linux` under
-`xvfb-run`, GTK dev packages) on top of the existing regtest stack.
-`app_documents_dir()` and `flutter_device()` in `tests/tests/dkg.py` are already
-platform-switched for this, but the Linux path is **untested** — only macOS has
-been verified.
+`.github/workflows/ui-tests.yml` runs the signing test on `ubuntu-latest`,
+**manual dispatch only** (it is not part of the PR checks): the `tests` input
+lists the orchestrator files to run, default `test_frost_ui.py`. Dispatch it
+before a release and after changes under `lib/` or `rust/src/frost`. The job
+funds the chain with the `zebra` action, restores the cached release
+`zkool_graphql` for the peers, and runs the test through
+`.github/actions/flutter-ui-test`: GTK packages plus `xvfb`, the pinned Flutter
+(`.github/actions/setup-flutter`), a debug `rust/cargokit.yaml` bundling the
+Sapling parameters, the Linux app build cached under `build/linux`, and the
+Flutter and peer logs uploaded as an artifact on failure. The same workflow
+also runs the mock-bridge unit tests under `test/` with plain `flutter test`.
+
+Adding a UI test: one Dart file in `integration_test/`, one orchestrator in
+`tests/tests` that launches it with `dkg.launch_flutter_test(dart_file,
+rendezvous, log_path)`, and the orchestrator's name in the workflow's `tests`
+default. Nothing in the action changes.
