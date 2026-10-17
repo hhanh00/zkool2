@@ -1955,18 +1955,25 @@ pub async fn get_account_frost_params(
     connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<Option<FrostParams>> {
-    let frost = sqlx::query("SELECT id, n, t FROM dkg_params WHERE account = ?")
-        .bind(account)
-        .map(|row: SqliteRow| {
-            let id: u8 = row.get(0);
-            let n: u8 = row.get(1);
-            let t: u8 = row.get(2);
-            FrostParams { id, n, t }
-        })
-        .fetch_optional(connection)
-        .await?;
-
-    Ok(frost)
+    let params: Option<(u8, u8, u8, u8)> =
+        sqlx::query_as("SELECT id, n, t, dkg_version FROM dkg_params WHERE account = ?")
+            .bind(account)
+            .fetch_optional(&mut *connection)
+            .await?;
+    let Some((id, n, t, dkg_version)) = params else {
+        return Ok(None);
+    };
+    let sibling = crate::frost::upgrade::sibling_of(&mut *connection, account).await?;
+    let quantum_recoverable =
+        crate::frost::upgrade::quantum_recoverable(&mut *connection, account, dkg_version).await?;
+    Ok(Some(FrostParams {
+        id,
+        n,
+        t,
+        dkg_version,
+        sibling,
+        quantum_recoverable,
+    }))
 }
 
 pub async fn list_folders(connection: &mut SqliteConnection) -> Result<Vec<Folder>> {

@@ -534,6 +534,14 @@ pub struct FrostParams {
     pub id: u8,
     pub n: u8,
     pub t: u8,
+    /// DKG generation: 0 or 1 legacy derivation, 2 ZIP 2005.
+    pub dkg_version: u8,
+    /// The dkg-2 account sharing this legacy account's sk, once upgraded.
+    pub sibling: Option<u32>,
+    /// False while the account holds funds that would not survive a
+    /// discrete-log break: any funds on a legacy account, or Orchard-pool
+    /// notes on any account. Drives the upgrade and sweep prompts.
+    pub quantum_recoverable: bool,
 }
 
 #[cfg_attr(feature = "flutter", frb)]

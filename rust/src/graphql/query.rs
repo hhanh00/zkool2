@@ -9,7 +9,7 @@ use crate::api::coin::{Coin, Network};
 use crate::api::pay::PcztPackage;
 use crate::db::{calculate_balance, get_sync_height};
 use crate::graphql::data::{
-    Account, Addresses, AssetInfo, Balance, Note, Transaction, UnconfirmedTx,
+    Account, Addresses, AssetInfo, Balance, FrostParamsResult, Note, Transaction, UnconfirmedTx,
 };
 use crate::graphql::mutation::MEMPOOL;
 use crate::graphql::mutation::{Output, Payment, UnsignedTx};
@@ -201,6 +201,16 @@ impl Query {
             total: zats_to_zec(total as i64),
         };
         Ok(balance)
+    }
+
+    /// A frost account's parameters, DKG version, sibling and recoverability;
+    /// null for an account that is not a frost account.
+    async fn frost_params(
+        id_account: i32,
+        context: &Context,
+    ) -> FieldResult<Option<FrostParamsResult>> {
+        check_auth(context, id_account, false)?;
+        crate::graphql::frost::frost_params(id_account, context).await
     }
 
     /// Export viewing keys for the selected pools (defaults to all available pools).

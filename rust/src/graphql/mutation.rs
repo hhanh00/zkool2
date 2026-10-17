@@ -391,12 +391,15 @@ impl Mutation {
         Ok(addresses.into())
     }
 
+    /// `dkgVersion` defaults to the current generation (2, ZIP 2005); 0 or
+    /// 1 form a legacy group, for tests of the upgrade path.
     pub async fn dkg_start(
         name: String,
         threshold: i32,
         participants: i32,
         message_account: i32,
         id_participant: i32,
+        dkg_version: Option<i32>,
         context: &Context,
     ) -> FieldResult<String> {
         check_auth(context, message_account, true)?;
@@ -406,9 +409,29 @@ impl Mutation {
             participants,
             message_account,
             id_participant,
+            dkg_version,
             context,
         )
         .await
+    }
+
+    /// Create (or return) the ZIP 2005 sibling of a legacy frost account.
+    pub async fn frost_upgrade(id_account: i32, context: &Context) -> FieldResult<i32> {
+        check_admin_auth(context)?;
+        crate::graphql::frost::frost_upgrade(id_account, context).await
+    }
+
+    /// Plan the sweep of a legacy frost account into its sibling and start
+    /// its signing session; returns the PCZT for the other signers.
+    pub async fn frost_sweep(
+        id_account: i32,
+        id_coordinator: i32,
+        message_account: i32,
+        context: &Context,
+    ) -> FieldResult<String> {
+        check_auth(context, id_account, true)?;
+        crate::graphql::frost::frost_sweep(id_account, id_coordinator, message_account, context)
+            .await
     }
 
     pub async fn dkg_cancel(context: &Context) -> FieldResult<bool> {

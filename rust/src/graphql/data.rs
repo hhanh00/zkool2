@@ -153,6 +153,21 @@ pub struct AssetInfo {
     pub balance: BigDecimal,
 }
 
+/// A frost account's parameters and recoverability state.
+#[derive(GraphQLObject)]
+pub struct FrostParamsResult {
+    pub id: i32,
+    pub n: i32,
+    pub t: i32,
+    /// 0 or 1: legacy derivation; 2: ZIP 2005.
+    pub dkg_version: i32,
+    /// The dkg-2 account sharing this legacy account's sk, once upgraded.
+    pub sibling: Option<i32>,
+    /// False while the account holds funds that would not survive a
+    /// discrete-log break.
+    pub quantum_recoverable: bool,
+}
+
 /// A frost account restored from a `zkfrost` backup string.
 #[derive(GraphQLObject)]
 pub struct FrostRestoreResult {

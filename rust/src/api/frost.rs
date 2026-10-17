@@ -9,6 +9,7 @@ use sqlx::{query, sqlite::SqliteRow, Row, SqliteConnection};
 use crate::{
     api::coin::Coin,
     frost::dkg::{get_dkg_params, get_mailbox_account},
+    frost::keys::CURRENT_DKG_VERSION,
     sync::{synchronize_impl, DEFAULT_ACTIONS_PER_SYNC},
 };
 use crate::api::sync::SyncOutcome;
@@ -27,6 +28,21 @@ pub async fn set_dkg_params(
     funding_account: u32,
     c: &Coin,
 ) -> Result<()> {
+    set_dkg_params_versioned(name, id, n, t, funding_account, CURRENT_DKG_VERSION, c).await
+}
+
+/// Start a DKG under an explicit generation. The app always runs the
+/// current one; the GraphQL server exposes the choice so that tests can
+/// form a legacy group and exercise its upgrade.
+pub async fn set_dkg_params_versioned(
+    name: &str,
+    id: u8,
+    n: u8,
+    t: u8,
+    funding_account: u32,
+    dkg_version: u8,
+    c: &Coin,
+) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
     crate::frost::dkg::set_dkg_params(
@@ -38,8 +54,30 @@ pub async fn set_dkg_params(
         n,
         t,
         funding_account,
+        dkg_version,
     )
     .await
+}
+
+/// Create the ZIP 2005 sibling of a legacy frost account (or return the
+/// existing one). The legacy account is unchanged; the sibling has the
+/// same shares and a new, quantum-recoverable address.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn upgrade_frost_account(account: u32, c: &Coin) -> Result<u32> {
+    let mut connection = c.get_connection().await?;
+    let mut client = c.client().await?;
+    let height = client.latest_height().await?;
+    crate::frost::upgrade::upgrade_account(&c.network(), &mut connection, account, height).await
+}
+
+/// Plan the sweep of a legacy frost account's spendable balance to its
+/// sibling in the Ironwood pool. The package is signed through the usual
+/// FROST signing flow (`init_sign`).
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn plan_frost_sweep(account: u32, c: &Coin) -> Result<PcztPackage> {
+    let mut connection = c.get_connection().await?;
+    let mut client = c.client().await?;
+    crate::frost::upgrade::plan_sweep(&c.network(), &mut connection, &mut client, account).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]

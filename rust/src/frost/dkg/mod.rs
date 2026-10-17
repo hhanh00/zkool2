@@ -16,10 +16,7 @@ use crate::{
         frost::{get_funding_account, DKGParams},
     },
     db::delete_account,
-    frost::{
-        keys::{CURRENT_DKG_VERSION, DKG_VERSION_1},
-        Broadcast, FrostBytes, PerPeer, Round,
-    },
+    frost::{keys::DKG_VERSION_1, Broadcast, FrostBytes, PerPeer, Round},
     Client,
 };
 
@@ -613,6 +610,7 @@ pub async fn set_dkg_params(
     n: u8,
     t: u8,
     funding_account: u32,
+    dkg_version: u8,
 ) -> Result<()> {
     let height = client.latest_height().await?;
     let birth_height = height.saturating_sub(10000) + 1;
@@ -628,7 +626,7 @@ pub async fn set_dkg_params(
     .bind(t)
     .bind(birth_height)
     .bind(name)
-    .bind(CURRENT_DKG_VERSION)
+    .bind(dkg_version)
     .execute(&mut *connection)
     .await?;
     sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_account', ?1)")

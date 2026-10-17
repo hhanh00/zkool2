@@ -25,6 +25,39 @@ Future<void> setDkgParams(
     RustLib.instance.api.crateApiFrostSetDkgParams(
         name: name, id: id, n: n, t: t, fundingAccount: fundingAccount, c: c);
 
+/// Start a DKG under an explicit generation. The app always runs the
+/// current one; the GraphQL server exposes the choice so that tests can
+/// form a legacy group and exercise its upgrade.
+Future<void> setDkgParamsVersioned(
+        {required String name,
+        required int id,
+        required int n,
+        required int t,
+        required int fundingAccount,
+        required int dkgVersion,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiFrostSetDkgParamsVersioned(
+        name: name,
+        id: id,
+        n: n,
+        t: t,
+        fundingAccount: fundingAccount,
+        dkgVersion: dkgVersion,
+        c: c);
+
+/// Create the ZIP 2005 sibling of a legacy frost account (or return the
+/// existing one). The legacy account is unchanged; the sibling has the
+/// same shares and a new, quantum-recoverable address.
+Future<int> upgradeFrostAccount({required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiFrostUpgradeFrostAccount(account: account, c: c);
+
+/// Plan the sweep of a legacy frost account's spendable balance to its
+/// sibling in the Ironwood pool. The package is signed through the usual
+/// FROST signing flow (`init_sign`).
+Future<PcztPackage> planFrostSweep({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiFrostPlanFrostSweep(account: account, c: c);
+
 Future<bool> hasDkgParams({required Coin c}) =>
     RustLib.instance.api.crateApiFrostHasDkgParams(c: c);
 

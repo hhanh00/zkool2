@@ -301,6 +301,9 @@ sealed class FrostParams with _$FrostParams {
     required int id,
     required int n,
     required int t,
+    required int dkgVersion,
+    int? sibling,
+    required bool quantumRecoverable,
   }) = _FrostParams;
 }
 

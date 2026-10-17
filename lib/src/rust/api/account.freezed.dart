@@ -1951,6 +1951,9 @@ mixin _$FrostParams {
   int get id;
   int get n;
   int get t;
+  int get dkgVersion;
+  int? get sibling;
+  bool get quantumRecoverable;
 
   /// Create a copy of FrostParams
   /// with the given fields replaced by the non-null parameter values.
@@ -1966,15 +1969,21 @@ mixin _$FrostParams {
             other is FrostParams &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.n, n) || other.n == n) &&
-            (identical(other.t, t) || other.t == t));
+            (identical(other.t, t) || other.t == t) &&
+            (identical(other.dkgVersion, dkgVersion) ||
+                other.dkgVersion == dkgVersion) &&
+            (identical(other.sibling, sibling) || other.sibling == sibling) &&
+            (identical(other.quantumRecoverable, quantumRecoverable) ||
+                other.quantumRecoverable == quantumRecoverable));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, n, t);
+  int get hashCode => Object.hash(
+      runtimeType, id, n, t, dkgVersion, sibling, quantumRecoverable);
 
   @override
   String toString() {
-    return 'FrostParams(id: $id, n: $n, t: $t)';
+    return 'FrostParams(id: $id, n: $n, t: $t, dkgVersion: $dkgVersion, sibling: $sibling, quantumRecoverable: $quantumRecoverable)';
   }
 }
 
@@ -1984,7 +1993,13 @@ abstract mixin class $FrostParamsCopyWith<$Res> {
           FrostParams value, $Res Function(FrostParams) _then) =
       _$FrostParamsCopyWithImpl;
   @useResult
-  $Res call({int id, int n, int t});
+  $Res call(
+      {int id,
+      int n,
+      int t,
+      int dkgVersion,
+      int? sibling,
+      bool quantumRecoverable});
 }
 
 /// @nodoc
@@ -2002,6 +2017,9 @@ class _$FrostParamsCopyWithImpl<$Res> implements $FrostParamsCopyWith<$Res> {
     Object? id = null,
     Object? n = null,
     Object? t = null,
+    Object? dkgVersion = null,
+    Object? sibling = freezed,
+    Object? quantumRecoverable = null,
   }) {
     return _then(_self.copyWith(
       id: null == id
@@ -2016,6 +2034,18 @@ class _$FrostParamsCopyWithImpl<$Res> implements $FrostParamsCopyWith<$Res> {
           ? _self.t
           : t // ignore: cast_nullable_to_non_nullable
               as int,
+      dkgVersion: null == dkgVersion
+          ? _self.dkgVersion
+          : dkgVersion // ignore: cast_nullable_to_non_nullable
+              as int,
+      sibling: freezed == sibling
+          ? _self.sibling
+          : sibling // ignore: cast_nullable_to_non_nullable
+              as int?,
+      quantumRecoverable: null == quantumRecoverable
+          ? _self.quantumRecoverable
+          : quantumRecoverable // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
@@ -2111,13 +2141,16 @@ extension FrostParamsPatterns on FrostParams {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(int id, int n, int t)? $default, {
+    TResult Function(int id, int n, int t, int dkgVersion, int? sibling,
+            bool quantumRecoverable)?
+        $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _FrostParams() when $default != null:
-        return $default(_that.id, _that.n, _that.t);
+        return $default(_that.id, _that.n, _that.t, _that.dkgVersion,
+            _that.sibling, _that.quantumRecoverable);
       case _:
         return orElse();
     }
@@ -2138,12 +2171,15 @@ extension FrostParamsPatterns on FrostParams {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(int id, int n, int t) $default,
+    TResult Function(int id, int n, int t, int dkgVersion, int? sibling,
+            bool quantumRecoverable)
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _FrostParams():
-        return $default(_that.id, _that.n, _that.t);
+        return $default(_that.id, _that.n, _that.t, _that.dkgVersion,
+            _that.sibling, _that.quantumRecoverable);
     }
   }
 
@@ -2161,12 +2197,15 @@ extension FrostParamsPatterns on FrostParams {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(int id, int n, int t)? $default,
+    TResult? Function(int id, int n, int t, int dkgVersion, int? sibling,
+            bool quantumRecoverable)?
+        $default,
   ) {
     final _that = this;
     switch (_that) {
       case _FrostParams() when $default != null:
-        return $default(_that.id, _that.n, _that.t);
+        return $default(_that.id, _that.n, _that.t, _that.dkgVersion,
+            _that.sibling, _that.quantumRecoverable);
       case _:
         return null;
     }
@@ -2176,7 +2215,13 @@ extension FrostParamsPatterns on FrostParams {
 /// @nodoc
 
 class _FrostParams implements FrostParams {
-  const _FrostParams({required this.id, required this.n, required this.t});
+  const _FrostParams(
+      {required this.id,
+      required this.n,
+      required this.t,
+      required this.dkgVersion,
+      this.sibling,
+      required this.quantumRecoverable});
 
   @override
   final int id;
@@ -2184,6 +2229,12 @@ class _FrostParams implements FrostParams {
   final int n;
   @override
   final int t;
+  @override
+  final int dkgVersion;
+  @override
+  final int? sibling;
+  @override
+  final bool quantumRecoverable;
 
   /// Create a copy of FrostParams
   /// with the given fields replaced by the non-null parameter values.
@@ -2200,15 +2251,21 @@ class _FrostParams implements FrostParams {
             other is _FrostParams &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.n, n) || other.n == n) &&
-            (identical(other.t, t) || other.t == t));
+            (identical(other.t, t) || other.t == t) &&
+            (identical(other.dkgVersion, dkgVersion) ||
+                other.dkgVersion == dkgVersion) &&
+            (identical(other.sibling, sibling) || other.sibling == sibling) &&
+            (identical(other.quantumRecoverable, quantumRecoverable) ||
+                other.quantumRecoverable == quantumRecoverable));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, id, n, t);
+  int get hashCode => Object.hash(
+      runtimeType, id, n, t, dkgVersion, sibling, quantumRecoverable);
 
   @override
   String toString() {
-    return 'FrostParams(id: $id, n: $n, t: $t)';
+    return 'FrostParams(id: $id, n: $n, t: $t, dkgVersion: $dkgVersion, sibling: $sibling, quantumRecoverable: $quantumRecoverable)';
   }
 }
 
@@ -2220,7 +2277,13 @@ abstract mixin class _$FrostParamsCopyWith<$Res>
       __$FrostParamsCopyWithImpl;
   @override
   @useResult
-  $Res call({int id, int n, int t});
+  $Res call(
+      {int id,
+      int n,
+      int t,
+      int dkgVersion,
+      int? sibling,
+      bool quantumRecoverable});
 }
 
 /// @nodoc
@@ -2238,6 +2301,9 @@ class __$FrostParamsCopyWithImpl<$Res> implements _$FrostParamsCopyWith<$Res> {
     Object? id = null,
     Object? n = null,
     Object? t = null,
+    Object? dkgVersion = null,
+    Object? sibling = freezed,
+    Object? quantumRecoverable = null,
   }) {
     return _then(_FrostParams(
       id: null == id
@@ -2252,6 +2318,18 @@ class __$FrostParamsCopyWithImpl<$Res> implements _$FrostParamsCopyWith<$Res> {
           ? _self.t
           : t // ignore: cast_nullable_to_non_nullable
               as int,
+      dkgVersion: null == dkgVersion
+          ? _self.dkgVersion
+          : dkgVersion // ignore: cast_nullable_to_non_nullable
+              as int,
+      sibling: freezed == sibling
+          ? _self.sibling
+          : sibling // ignore: cast_nullable_to_non_nullable
+              as int?,
+      quantumRecoverable: null == quantumRecoverable
+          ? _self.quantumRecoverable
+          : quantumRecoverable // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 }
