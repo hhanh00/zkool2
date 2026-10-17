@@ -14,7 +14,7 @@
 //! most one wasted fee.
 
 use anyhow::{bail, Context, Result};
-use orchard::keys::{FullViewingKey, Scope};
+use orchard::keys::Scope;
 use reddsa_legacy::frost::redpallas::{
     frost::keys::PublicKeyPackage,
     keys::{dkg, EvenY},
@@ -26,8 +26,14 @@ use zcash_keys::address::UnifiedAddress;
 use crate::{
     account::{get_account_seed, get_orchard_vk},
     api::{coin::Network, frost::DKGParams},
-    db::{delete_account, init_account_orchard, store_account_metadata, store_account_orchard_vk},
-    frost::{Dispatch, FrostBytes, FrostMessage, RouteCtx, P},
+    db::{
+        delete_account, init_account_orchard, select_account_orchard, store_account_metadata,
+        store_account_orchard_vk,
+    },
+    frost::{
+        keys::{group_fvk, is_recoverable},
+        Dispatch, FrostBytes, FrostMessage, RouteCtx, P,
+    },
     Client,
 };
 
@@ -251,11 +257,13 @@ pub async fn finalize_key(
     Ok(())
 }
 
-/// CreateFrostAccount: build the shared Orchard address by replacing the
-/// spend-auth key in the broadcast account's FVK with the FROST group public
-/// key, then create the frost account holding it. The creation and the
-/// marker recording it commit together, so a crash cannot orphan the account
-/// and re-running cannot duplicate it. Returns the shared address.
+/// CreateFrostAccount: build the group Orchard viewing key from the broadcast
+/// account's spending key and the FROST group public key, under the
+/// account's DKG version (`frost::keys::group_fvk`), then create the frost
+/// account holding it. A dkg-2 account also records `sk`, which its `rivk`
+/// derives from. The creation and the marker recording it commit together,
+/// so a crash cannot orphan the account and re-running cannot duplicate it.
+/// Returns the shared address.
 pub async fn create_frost_account(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -272,25 +280,37 @@ pub async fn create_frost_account(
     let pub_key_pkg = PublicKeyPackage::<P>::from_bytes(&pp_data)?;
     let pub_key_pkg = pub_key_pkg.into_even_y(None);
     let vk = pub_key_pkg.verifying_key();
-    let pkb = vk.serialize().expect("pk serialize");
+    let ak: [u8; 32] = vk
+        .serialize()
+        .expect("pk serialize")
+        .try_into()
+        .map_err(|_| anyhow::anyhow!("group verifying key is not 32 bytes"))?;
 
-    let fvk = get_orchard_vk(&mut *connection, broadcast_account)
+    let sk = select_account_orchard(&mut *connection, broadcast_account)
         .await?
-        .context("broadcast account vk not found")?;
-    let mut fvkb = fvk.to_bytes();
-    fvkb[0..32].copy_from_slice(&pkb);
-    let shared_fvk = FullViewingKey::from_bytes(&fvkb).expect("Failed to create shared FVK");
+        .xsk
+        .context("broadcast account spending key not found")?;
 
-    let (name,) = sqlx::query_as::<_, (String,)>("SELECT name FROM dkg_params WHERE account = ?")
-        .bind(account)
-        .fetch_one(&mut *connection)
-        .await?;
+    let (name, dkg_version) = sqlx::query_as::<_, (String, u8)>(
+        "SELECT name, dkg_version FROM dkg_params WHERE account = ?",
+    )
+    .bind(account)
+    .fetch_one(&mut *connection)
+    .await?;
+    let shared_fvk = group_fvk(dkg_version, &sk, &ak)?;
 
     let mut tx = connection.begin().await?;
     let frost_account =
         store_account_metadata(&mut *tx, &name, &None, &None, height, false, false).await?;
     init_account_orchard(network, &mut *tx, frost_account, height).await?;
     store_account_orchard_vk(&mut *tx, frost_account, &shared_fvk).await?;
+    if is_recoverable(dkg_version) {
+        sqlx::query("UPDATE dkg_params SET sk = ?1 WHERE account = ?2")
+            .bind(sk.to_bytes().to_vec())
+            .bind(account)
+            .execute(&mut *tx)
+            .await?;
+    }
     sqlx::query("INSERT OR REPLACE INTO props(key, value) VALUES ('dkg_frost_account', ?1)")
         .bind(frost_account.to_string())
         .execute(&mut *tx)

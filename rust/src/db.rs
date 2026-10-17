@@ -578,6 +578,33 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
         .execute(&mut *connection)
         .await;
 
+    // DKG generation of a frost account (ZIP 2005, #1334): 0 before message
+    // signing, 1 with a random ed25519 key and the legacy rivk, 2 with the
+    // ZIP 2005 derivation. Added without a DB_VERSION bump: defaulted,
+    // only read by the FVK builder, older builds ignore it. The ALTER
+    // succeeds exactly once, which is when the one-time backfill runs:
+    // a completed DKG with no round-0 peer row predates message signing.
+    let added = sqlx::query("ALTER TABLE dkg_params ADD COLUMN dkg_version INTEGER NOT NULL DEFAULT 1")
+        .execute(&mut *connection)
+        .await
+        .is_ok();
+    if added {
+        sqlx::query(
+            "UPDATE dkg_params SET dkg_version = 0
+            WHERE account IN (SELECT account FROM dkg_state WHERE key_pkg IS NOT NULL)
+            AND NOT EXISTS (SELECT 1 FROM dkg_peers
+                WHERE dkg_peers.account = dkg_params.account AND round = 0)",
+        )
+        .execute(&mut *connection)
+        .await?;
+    }
+    // The broadcast account's Orchard spending key, kept for dkg-2 accounts
+    // whose rivk is derived from it; NULL for legacy accounts, whose sk is
+    // rederivable from the stored addresses.
+    let _ = sqlx::query("ALTER TABLE dkg_params ADD COLUMN sk BLOB")
+        .execute(&mut *connection)
+        .await;
+
     // Stale voting schema. These tables belong to the election implementation
     // that predates ZIP 262; nothing in the tree reads them any more, and the
     // redesign on zcash_voting 5.1.0 keeps its state in a sidecar database

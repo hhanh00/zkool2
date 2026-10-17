@@ -16,7 +16,7 @@ use crate::{
         frost::{get_funding_account, DKGParams},
     },
     db::delete_account,
-    frost::{Broadcast, FrostBytes, PerPeer, Round},
+    frost::{keys::CURRENT_DKG_VERSION, Broadcast, FrostBytes, PerPeer, Round},
     Client,
 };
 
@@ -482,7 +482,8 @@ pub async fn set_dkg_params(
     tracing::info!("birth_height {birth_height}");
 
     sqlx::query(
-        "INSERT INTO dkg_params(account, id, n, t, seed, birth_height, name) VALUES (?, ?, ?, ?, '', ?, ?)",
+        "INSERT INTO dkg_params(account, id, n, t, seed, birth_height, name, dkg_version)
+        VALUES (?, ?, ?, ?, '', ?, ?, ?)",
     )
     .bind(funding_account)
     .bind(id)
@@ -490,6 +491,7 @@ pub async fn set_dkg_params(
     .bind(t)
     .bind(birth_height)
     .bind(name)
+    .bind(CURRENT_DKG_VERSION)
     .execute(&mut *connection)
     .await?;
     sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_account', ?1)")
