@@ -215,6 +215,12 @@ sealed class ProtocolStatus with _$ProtocolStatus {
   const factory ProtocolStatus.sign(
     SigningStatus field0,
   ) = ProtocolStatus_Sign;
+
+  /// A pass failed; the next block retries. Shown as a warning, never
+  /// as a stream error, which would end the stream.
+  const factory ProtocolStatus.warning(
+    String field0,
+  ) = ProtocolStatus_Warning;
 }
 
 @freezed

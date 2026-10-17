@@ -7962,6 +7962,10 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         return ProtocolStatus_Sign(
           dco_decode_box_autoadd_signing_status(raw[1]),
         );
+      case 2:
+        return ProtocolStatus_Warning(
+          dco_decode_String(raw[1]),
+        );
       default:
         throw Exception("unreachable");
     }
@@ -10279,6 +10283,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 1:
         var var_field0 = sse_decode_box_autoadd_signing_status(deserializer);
         return ProtocolStatus_Sign(var_field0);
+      case 2:
+        var var_field0 = sse_decode_String(deserializer);
+        return ProtocolStatus_Warning(var_field0);
       default:
         throw UnimplementedError('');
     }
@@ -12473,6 +12480,9 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case ProtocolStatus_Sign(field0: final field0):
         sse_encode_i_32(1, serializer);
         sse_encode_box_autoadd_signing_status(field0, serializer);
+      case ProtocolStatus_Warning(field0: final field0):
+        sse_encode_i_32(2, serializer);
+        sse_encode_String(field0, serializer);
     }
   }
 

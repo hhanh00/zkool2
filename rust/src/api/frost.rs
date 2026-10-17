@@ -10,7 +10,7 @@ use crate::{
     api::coin::Coin,
     frost::dkg::{get_dkg_params, get_mailbox_account},
     frost::keys::CURRENT_DKG_VERSION,
-    sync::{synchronize_impl, DEFAULT_ACTIONS_PER_SYNC},
+    sync::{session::SyncRun, synchronize_within, DEFAULT_ACTIONS_PER_SYNC},
 };
 use crate::api::sync::SyncOutcome;
 use crate::frost::driver::Driver;
@@ -118,17 +118,20 @@ pub async fn has_dkg_addresses(c: &Coin) -> Result<bool> {
 }
 
 /// Sync the funding account plus the internal frost-* accounts — the mailbox
-/// and broadcast addresses the protocol messages arrive on. The funding
-/// account pays for the memos. Returns the post-sync height.
+/// and broadcast addresses the protocol messages arrive on — under the sync
+/// session `run` the caller holds. The funding account pays for the memos.
+/// Returns the post-sync height.
 ///
 /// `pub(crate)`, not `pub`: it takes a `&mut SqliteConnection` that cannot cross
 /// the flutter_rust_bridge boundary; the protocol driver (`frost::driver`)
-/// is its caller on both the app and the server.
+/// is its caller on both the app and the server, and it keeps `run` for the
+/// step that follows, so the step's writes never overlap a sync.
 ///
-/// Returns `None` when the sync did not run because the wallet's sync
-/// session was busy or was cancelled: a step planned from stale notes can
-/// double-spend, so the caller must not step on it and tries again later.
+/// Returns `None` when the sync was cancelled: a step planned from stale
+/// notes can double-spend, so the caller must not step on it and tries
+/// again later.
 pub(crate) async fn sync_frost_accounts(
+    run: &mut SyncRun<'_>,
     c: &Coin,
     connection: &mut SqliteConnection,
     account: u32,
@@ -140,7 +143,8 @@ pub(crate) async fn sync_frost_accounts(
             .fetch_all(&mut *connection)
             .await?;
     accounts.push(account);
-    let outcome = synchronize_impl(
+    let outcome = synchronize_within(
+        run,
         (),
         accounts,
         height,
@@ -358,6 +362,9 @@ pub enum SigningStatus {
 pub enum ProtocolStatus {
     Dkg(DKGStatus),
     Sign(SigningStatus),
+    /// A pass failed; the next block retries. Shown as a warning, never
+    /// as a stream error, which would end the stream.
+    Warning(String),
 }
 
 /// The app's handle on the protocol driver: one task that syncs the funding

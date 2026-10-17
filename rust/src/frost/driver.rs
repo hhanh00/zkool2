@@ -14,9 +14,12 @@
 //!
 //! Requests that arrive while a pass runs are coalesced: they all wait on
 //! the single pass that follows, which observes the state the running pass
-//! committed. A pass syncs the funding and frost accounts first; when the
-//! wallet's sync session is busy the pass is retried on the next tick rather
-//! than waiting for another block.
+//! committed. A pass takes the wallet's sync session for its whole duration:
+//! it syncs the funding and frost accounts, then steps the protocol, still
+//! under the session, so the step's writes never overlap a sync the app
+//! starts meanwhile (SQLite serves one writer; the loser sees "database is
+//! locked"). When the session is busy the pass is retried on the next tick
+//! rather than waiting for another block.
 //!
 //! What a pass did is reported through a [`Sink`] of [`ProtocolStatus`]: the
 //! app renders it, the headless server passes `()`. The same driver serves
@@ -78,9 +81,12 @@ impl Driver {
             async move {
                 let result = pass(&coin, &status).await;
                 // A failed pass is transient (the next block retries); the
-                // app shows it as a warning, the server logs it.
+                // app shows it as a warning, the server logs it. It goes as
+                // a status value, not a stream error: a flutter_rust_bridge
+                // stream ends at its first error, which would leave the
+                // page frozen while the driver carries on.
                 if let Err(e) = &result {
-                    status.send_error(anyhow!("{e:#}")).await;
+                    status.send(ProtocolStatus::Warning(format!("{e:#}"))).await;
                 }
                 result
             }
@@ -186,8 +192,15 @@ where
     let height = client.latest_height().await?;
     let account = get_funding_account(&mut connection).await?;
     info!("protocol driver: pass at {height}, funding account {account}");
-    let Some(height) = sync_frost_accounts(coin, &mut connection, account, height).await? else {
+    // Held until the end of the pass, through the step.
+    let Some(mut run) = coin.sync.try_begin() else {
         info!("protocol driver: sync busy; will retry");
+        return Ok(Pass::SyncBusy);
+    };
+    let Some(height) =
+        sync_frost_accounts(&mut run, coin, &mut connection, account, height).await?
+    else {
+        info!("protocol driver: sync cancelled; will retry");
         return Ok(Pass::SyncBusy);
     };
 
@@ -214,6 +227,7 @@ where
         )
         .await?;
     }
+    drop(run);
     Ok(Pass::Done)
 }
 

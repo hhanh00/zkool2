@@ -166,9 +166,15 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     if (oldWidget.account != widget.account) _rememberAccount();
   }
 
-  /// Record the account as the one to reopen at the next launch.
+  /// Record the account as the one to reopen at the next launch. Deferred
+  /// past the current frame: this runs from initState, and a provider must
+  /// not change while the tree is building (riverpod asserts in debug).
   void _rememberAccount() {
-    unawaited(ref.read(selectedAccountIdProvider.notifier).set(widget.account));
+    final account = widget.account;
+    Future(() {
+      if (!mounted) return;
+      unawaited(ref.read(selectedAccountIdProvider.notifier).set(account));
+    });
   }
 
   Future<void> _commitEditing() async {

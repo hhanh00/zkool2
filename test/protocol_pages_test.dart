@@ -119,9 +119,14 @@ void main() {
     testWidgets('a failed pass is a warning, and leaving cancels the driver', (tester) async {
       final router = await open(tester, '/dkg3', const DKGPage3());
 
-      api.driver.statuses.addError(Exception('publish DKG package'));
-      await tester.pump();
+      // A failed pass arrives as a Warning status, not a stream error: the
+      // bridge ends a stream at its first error, which would freeze the
+      // page while the driver retries on the next block.
+      await report(tester, const ProtocolStatus.warning('publish DKG package'));
       expect(find.textContaining('publish DKG package'), findsOneWidget);
+      await report(tester, const ProtocolStatus.dkg(DKGStatus.waitRound1Pkg()));
+      expect(find.textContaining('round 1 packages'), findsOneWidget,
+          reason: 'the page keeps reporting after a warning',);
 
       expect(api.driver.cancels, 0);
       router.go('/');
