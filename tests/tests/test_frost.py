@@ -4,6 +4,7 @@ import os
 
 import pytest
 from gql import GraphQLRequest, gql
+from gql.transport.exceptions import TransportQueryError
 
 from dkg import DkgParticipant, poll_with_block_mining
 from utils import mine_blocks
@@ -233,9 +234,18 @@ async def test_frost_sign_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_c
                 }
             """
             )
-            await coordinator.execute(
-                GraphQLRequest(sync_mutation, variable_values={"account": receiver_account})
-            )
+            try:
+                await coordinator.execute(
+                    GraphQLRequest(sync_mutation, variable_values={"account": receiver_account})
+                )
+            except TransportQueryError as e:
+                # The protocol driver syncs on its own on every new block, and
+                # this poll mines one each round: an explicit sync can collide
+                # with the driver's. Transient; the next poll syncs.
+                if "already running" not in str(e):
+                    raise
+                print("Sync busy (driver pass in progress), retrying on the next poll")
+                return False
 
             result = await coordinator.execute(
                 GraphQLRequest(balance_query, variable_values={"account": receiver_account})
