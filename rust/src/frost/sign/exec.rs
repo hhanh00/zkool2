@@ -83,11 +83,13 @@ pub async fn ensure_mailbox(
 
 // ── AnnounceCoordinator ───────────────────────────────────────────────────────
 
-/// Coordinator: broadcast our mailbox address for this session. It goes in
-/// a memo of its own (a signing package for t=3 already fills one) and
-/// before anything else, since the first thing members send is their
-/// commitments, to this address. Recorded as our own coordinator address
-/// in the same transaction, which is what makes the task done.
+/// Coordinator: broadcast our mailbox address for this session, as the
+/// session's first message. Members send their commitments to this
+/// address, so it has to be known before anything else; it is also its
+/// own memo because the later signing-package memo has no room for it
+/// (507 of 512 bytes used for three signers). Recorded as our own
+/// coordinator address in the same transaction, which is what makes the
+/// task done.
 pub async fn announce_coordinator(
     network: &Network,
     connection: &mut SqliteConnection,

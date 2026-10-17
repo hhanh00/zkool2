@@ -436,8 +436,10 @@ pub struct FrostSigMessage {
     pub signature: Option<[u8; 64]>,
     /// On commitments: the sender's FROST verifying share, so that the
     /// coordinator can rebuild the public key package without having
-    /// stored one. The coordinator's mailbox address travels in a message
-    /// of its own: a signing package for t=3 already fills a memo.
+    /// stored one. The coordinator's mailbox address is not a field here:
+    /// it is the session's first message (`data` under the CRD1 prefix),
+    /// since members need it before they can send commitments, and the
+    /// signing-package memo has no room for it anyway.
     pub verifying_share: Option<Vec<u8>>,
 }
 
