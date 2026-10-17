@@ -8,7 +8,11 @@ mod task;
 pub use step::{sign_step, SignStepOutcome};
 
 pub(super) const COMMITMENT_PREFIX: &[u8] = b"CMT6";
-pub(super) const SIGPACKAGE_PREFIX: &[u8] = b"SPK5";
+/// One signer's part of an input's signing package. The coordinator sends
+/// one memo per (input, signer) rather than the whole package, so that no
+/// memo grows with the threshold: SPK5 carried the whole package and ran
+/// out of room past three signers.
+pub(super) const SIGPACKAGE_PREFIX: &[u8] = b"SPK6";
 pub(super) const SIGSHARE_PREFIX: &[u8] = b"SSH3";
 /// The coordinator's mailbox address for the session, broadcast alongside
 /// the signing packages so that members need no stored address for it.

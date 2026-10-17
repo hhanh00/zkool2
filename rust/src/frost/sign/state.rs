@@ -7,8 +7,11 @@
 
 use anyhow::Result;
 use bincode::{config, Decode, Encode};
-use reddsa_legacy::frost::redpallas::frost::{
-    keys::VerifyingShare, round1::SigningCommitments, round2::SignatureShare, SigningPackage,
+use reddsa_legacy::frost::redpallas::{
+    frost::{
+        keys::VerifyingShare, round1::SigningCommitments, round2::SignatureShare, SigningPackage,
+    },
+    Randomizer,
 };
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::info;
@@ -24,6 +27,7 @@ use crate::{
     },
 };
 
+use super::exec::load_commitments;
 use super::{COMMITMENT_PREFIX, COORDINATOR_PREFIX, SIGPACKAGE_PREFIX, SIGSHARE_PREFIX};
 
 // ── SignState ─────────────────────────────────────────────────────────────────
@@ -154,9 +158,19 @@ pub async fn observe_sign(
             &sighash,
             nsigs,
             params.coordinator as u16,
+            dkg_params.n as u16,
         )
         .await?;
     }
+    // Members: the package of every input whose parts are all in.
+    assemble_sigpackages(
+        &mut *connection,
+        account,
+        &sighash,
+        nsigs,
+        dkg_params.t as usize,
+    )
+    .await?;
 
     // For the coordinator: copy own sigshare from frost_signatures into frost_commitments
     // so sigshare_counts is accurate. Idempotent UPDATE — no-op when sigshare not set yet.
@@ -447,9 +461,14 @@ async fn ingest_commitment_memos(
     .await
 }
 
-#[derive(Encode, Decode)]
-pub(super) struct RandomizedSigPackage {
-    pub sigpackage: Vec<u8>,
+/// One signer's part of an input's signing package, as the coordinator
+/// broadcasts it: one memo per (input, signer), so that no memo grows with
+/// the threshold. The randomizer is the input's and rides in every part,
+/// so each part stands on its own.
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
+pub(super) struct SigPackagePart {
+    pub signer_id: u16,
+    pub commitment: Vec<u8>,
     pub randomizer: Vec<u8>,
 }
 
@@ -481,6 +500,9 @@ async fn ingest_coordinator_memos(
     .await
 }
 
+/// The coordinator's signing-package parts: each adds one signer's
+/// commitments to the input's rows and sets the input's randomizer. The
+/// package itself is built by `assemble_sigpackages` once every part is in.
 async fn ingest_sigpackage_memos(
     connection: &mut SqliteConnection,
     account: u32,
@@ -488,6 +510,7 @@ async fn ingest_sigpackage_memos(
     sighash: &[u8],
     nsigs: u32,
     coordinator: u16,
+    participant_count: u16,
 ) -> Result<()> {
     let sighash = sighash.to_vec();
     decode_frost_memos(
@@ -502,25 +525,34 @@ async fn ingest_sigpackage_memos(
             {
                 return Ok(());
             }
-            let Ok((rsp, _)) = bincode::decode_from_slice::<RandomizedSigPackage, _>(
-                &pkg.data,
-                config::legacy(),
-            ) else {
+            let Ok((part, _)) =
+                bincode::decode_from_slice::<SigPackagePart, _>(&pkg.data, config::legacy())
+            else {
                 return Ok(());
             };
-            if SigningPackage::<P>::deserialize(&rsp.sigpackage).is_err()
-                || reddsa_legacy::frost::redpallas::Randomizer::deserialize(&rsp.randomizer)
-                    .is_err()
+            if !(1..=participant_count).contains(&part.signer_id)
+                || SigningCommitments::<P>::deserialize(&part.commitment).is_err()
+                || Randomizer::deserialize(&part.randomizer).is_err()
             {
                 return Ok(());
             }
             sqlx::query(
-                "UPDATE frost_signatures
-                 SET sigpackage = ?1, randomizer = ?2
-                 WHERE account = ?3 AND sighash = ?4 AND idx = ?5",
+                "INSERT INTO frost_commitments
+                 (account, sighash, idx, from_id, commitment)
+                 VALUES (?, ?, ?, ?, ?) ON CONFLICT DO NOTHING",
             )
-            .bind(rsp.sigpackage.as_slice())
-            .bind(rsp.randomizer.as_slice())
+            .bind(account)
+            .bind(sighash.as_slice())
+            .bind(pkg.idx)
+            .bind(part.signer_id)
+            .bind(part.commitment.as_slice())
+            .execute(&mut *conn)
+            .await?;
+            sqlx::query(
+                "UPDATE frost_signatures SET randomizer = ?1
+                 WHERE account = ?2 AND sighash = ?3 AND idx = ?4",
+            )
+            .bind(part.randomizer.as_slice())
             .bind(account)
             .bind(sighash.as_slice())
             .bind(pkg.idx)
@@ -530,6 +562,39 @@ async fn ingest_sigpackage_memos(
         },
     )
     .await
+}
+
+/// Build the signing package of every input whose signing set is complete:
+/// exactly `t` commitments, the count the coordinator requires before it
+/// sends the parts, plus the input's randomizer. The coordinator stores its
+/// packages as it makes them, so this is the members' half. Idempotent: an
+/// input that has a package is left alone.
+async fn assemble_sigpackages(
+    connection: &mut SqliteConnection,
+    account: u32,
+    sighash: &[u8],
+    nsigs: u32,
+    t: usize,
+) -> Result<()> {
+    let commitments = load_commitments(&mut *connection, account, sighash, nsigs).await?;
+    for (idx, map) in commitments.into_iter().enumerate() {
+        if map.len() != t {
+            continue;
+        }
+        let package = SigningPackage::<P>::new(map, sighash).serialize()?;
+        sqlx::query(
+            "UPDATE frost_signatures SET sigpackage = ?1
+             WHERE account = ?2 AND sighash = ?3 AND idx = ?4
+             AND sigpackage IS NULL AND randomizer IS NOT NULL",
+        )
+        .bind(&package)
+        .bind(account)
+        .bind(sighash)
+        .bind(idx as u32)
+        .execute(&mut *connection)
+        .await?;
+    }
+    Ok(())
 }
 
 async fn ingest_sigshare_memos(
@@ -569,4 +634,225 @@ async fn ingest_sigshare_memos(
         },
     )
     .await
+}
+
+#[cfg(test)]
+mod sigpackage_tests {
+    use std::collections::BTreeMap;
+
+    use rand_core_legacy::OsRng;
+    use reddsa_legacy::frost::redpallas::{
+        keys::{generate_with_dealer, IdentifierList, KeyPackage},
+        round1::commit,
+        Identifier,
+    };
+    use sqlx::Connection as _;
+
+    use super::super::exec::participant_id;
+    use super::*;
+    use crate::{
+        db::create_schema,
+        frost::{protocol::ARB_MEMO_CAPACITY, to_arb_memo},
+    };
+
+    const ACCOUNT: u32 = 1;
+    const BROADCAST: u32 = 7;
+    const COORDINATOR: u16 = 1;
+    const MEMBER: u16 = 2;
+
+    /// One input of a t-of-t session: every signer's commitments, and the
+    /// package and randomizer the coordinator makes of them.
+    struct Session {
+        t: u16,
+        sighash: Vec<u8>,
+        commitments: BTreeMap<Identifier, SigningCommitments<P>>,
+        package: Vec<u8>,
+        randomizer: Vec<u8>,
+    }
+
+    fn session(t: u16) -> Session {
+        let (shares, _) = generate_with_dealer(t, t, IdentifierList::Default, OsRng).unwrap();
+        let sighash = vec![9u8; 32];
+        let commitments: BTreeMap<_, _> = shares
+            .into_iter()
+            .map(|(id, share)| {
+                let key_package = KeyPackage::try_from(share).unwrap();
+                (id, commit(key_package.signing_share(), &mut OsRng).1)
+            })
+            .collect();
+        let package = SigningPackage::<P>::new(commitments.clone(), &sighash);
+        let randomizer = Randomizer::new(OsRng, &package).unwrap();
+        Session {
+            t,
+            sighash,
+            commitments,
+            package: package.serialize().unwrap(),
+            randomizer: randomizer.serialize(),
+        }
+    }
+
+    /// The memo the coordinator broadcasts for one signer of input 0.
+    fn part_memo(s: &Session, id: &Identifier, signed: bool) -> Vec<u8> {
+        let part = SigPackagePart {
+            signer_id: participant_id(id),
+            commitment: s.commitments[id].serialize().unwrap(),
+            randomizer: s.randomizer.clone(),
+        };
+        let msg = FrostSigMessage {
+            sighash: s.sighash.clone().try_into().unwrap(),
+            from_id: COORDINATOR,
+            idx: 0,
+            data: bincode::encode_to_vec(&part, config::legacy()).unwrap(),
+            signature: signed.then_some([0u8; 64]),
+            verifying_share: None,
+        };
+        msg.encode_with_prefix(SIGPACKAGE_PREFIX).unwrap()
+    }
+
+    /// A member's wallet mid-session: its nonce row for input 0 and its own
+    /// commitment row, as `send_commitments` leaves them.
+    async fn member_db(s: &Session) -> SqliteConnection {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        create_schema(&mut db).await.unwrap();
+        sqlx::query(
+            "INSERT INTO frost_signatures(account, sighash, idx, nonce) VALUES (?, ?, 0, x'00')",
+        )
+        .bind(ACCOUNT)
+        .bind(&s.sighash)
+        .execute(&mut db)
+        .await
+        .unwrap();
+        let own: Identifier = MEMBER.try_into().unwrap();
+        sqlx::query(
+            "INSERT INTO frost_commitments(account, sighash, idx, from_id, commitment)
+             VALUES (?, ?, 0, ?, ?)",
+        )
+        .bind(ACCOUNT)
+        .bind(&s.sighash)
+        .bind(MEMBER)
+        .bind(s.commitments[&own].serialize().unwrap())
+        .execute(&mut db)
+        .await
+        .unwrap();
+        db
+    }
+
+    async fn deliver(db: &mut SqliteConnection, vout: u32, memo: &[u8]) {
+        sqlx::query(
+            "INSERT INTO memos(account, height, tx, pool, vout, memo_bytes)
+             VALUES (?, 1, 1, 2, ?, ?)",
+        )
+        .bind(BROADCAST)
+        .bind(vout)
+        .bind(to_arb_memo(memo))
+        .execute(db)
+        .await
+        .unwrap();
+    }
+
+    /// What `observe_sign` does with the parts, in its order.
+    async fn observe_parts(db: &mut SqliteConnection, s: &Session) {
+        ingest_sigpackage_memos(db, ACCOUNT, BROADCAST, &s.sighash, 1, COORDINATOR, s.t)
+            .await
+            .unwrap();
+        assemble_sigpackages(db, ACCOUNT, &s.sighash, 1, s.t as usize)
+            .await
+            .unwrap();
+    }
+
+    async fn stored(db: &mut SqliteConnection) -> (Option<Vec<u8>>, Option<Vec<u8>>, i64) {
+        let (package, randomizer): (Option<Vec<u8>>, Option<Vec<u8>>) =
+            sqlx::query_as("SELECT sigpackage, randomizer FROM frost_signatures WHERE idx = 0")
+                .fetch_one(&mut *db)
+                .await
+                .unwrap();
+        let (rows,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM frost_commitments")
+            .fetch_one(&mut *db)
+            .await
+            .unwrap();
+        (package, randomizer, rows)
+    }
+
+    /// A part is one signer's commitments plus the randomizer: its size
+    /// does not depend on the threshold, so a signed one fitting a memo
+    /// settles it for every group.
+    #[test]
+    fn a_signed_part_fits_a_memo() {
+        let s = session(4);
+        for id in s.commitments.keys() {
+            let len = part_memo(&s, id, true).len();
+            assert!(len <= ARB_MEMO_CAPACITY, "{len} bytes");
+        }
+    }
+
+    /// Four signers, the first threshold whose whole package did not fit:
+    /// the member rebuilds the coordinator's package from the parts, its
+    /// own part landing on the row it already had.
+    #[tokio::test]
+    async fn a_member_assembles_the_package_from_the_parts() {
+        let s = session(4);
+        let mut db = member_db(&s).await;
+        for (vout, id) in s.commitments.keys().enumerate() {
+            deliver(&mut db, vout as u32, &part_memo(&s, id, false)).await;
+        }
+        observe_parts(&mut db, &s).await;
+        let (package, randomizer, rows) = stored(&mut db).await;
+        assert_eq!(package.as_deref(), Some(s.package.as_slice()));
+        assert_eq!(randomizer.as_deref(), Some(s.randomizer.as_slice()));
+        assert_eq!(rows, 4);
+
+        // Another pass over the same memos changes nothing.
+        observe_parts(&mut db, &s).await;
+        assert_eq!(stored(&mut db).await, (package, randomizer, rows));
+    }
+
+    /// With a part still in flight the member keeps waiting: the
+    /// randomizer is known, the package is not.
+    #[tokio::test]
+    async fn a_missing_part_leaves_the_package_unbuilt() {
+        let s = session(4);
+        let mut db = member_db(&s).await;
+        let own: Identifier = MEMBER.try_into().unwrap();
+        for (vout, id) in s.commitments.keys().filter(|id| **id != own).take(2).enumerate() {
+            deliver(&mut db, vout as u32, &part_memo(&s, id, false)).await;
+        }
+        observe_parts(&mut db, &s).await;
+        let (package, randomizer, rows) = stored(&mut db).await;
+        assert_eq!(package, None);
+        assert_eq!(randomizer.as_deref(), Some(s.randomizer.as_slice()));
+        assert_eq!(rows, 3);
+    }
+
+    /// Parts that are not the coordinator's, name a signer outside the
+    /// group, or belong to another session are dropped.
+    #[tokio::test]
+    async fn foreign_parts_are_ignored() {
+        let s = session(4);
+        let mut db = member_db(&s).await;
+        let own: Identifier = MEMBER.try_into().unwrap();
+        let other = *s.commitments.keys().find(|id| **id != own).unwrap();
+        let good = part_memo(&s, &other, false);
+        let decode = |memo: &[u8]| {
+            bincode::decode_from_slice::<FrostSigMessage, _>(&memo[4..], config::legacy())
+                .unwrap()
+                .0
+        };
+        let encode = |msg: &FrostSigMessage| msg.encode_with_prefix(SIGPACKAGE_PREFIX).unwrap();
+
+        let mut not_coordinator = decode(&good);
+        not_coordinator.from_id = 3;
+        let mut other_session = decode(&good);
+        other_session.sighash = [1u8; 32];
+        let mut outsider = decode(&good);
+        let mut part: SigPackagePart =
+            bincode::decode_from_slice(&outsider.data, config::legacy()).unwrap().0;
+        part.signer_id = 5;
+        outsider.data = bincode::encode_to_vec(&part, config::legacy()).unwrap();
+
+        deliver(&mut db, 0, &encode(&not_coordinator)).await;
+        deliver(&mut db, 1, &encode(&other_session)).await;
+        deliver(&mut db, 2, &encode(&outsider)).await;
+        observe_parts(&mut db, &s).await;
+        assert_eq!(stored(&mut db).await, (None, None, 1));
+    }
 }

@@ -116,7 +116,7 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
                     ),
                     initialValue: 2,
                     items: List.generate(
-                      4,
+                      6,
                       (i) => DropdownMenuItem(
                         value: i + 2,
                         child: Text("${i + 2}"),
@@ -133,7 +133,7 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
                     ),
                     initialValue: 1,
                     items: List.generate(
-                      5,
+                      7,
                       (i) => DropdownMenuItem(
                         value: i + 1,
                         child: Text("${i + 1}"),
@@ -150,7 +150,7 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
                     ),
                     initialValue: 2,
                     items: List.generate(
-                      4,
+                      6,
                       (i) => DropdownMenuItem(
                         value: i + 2,
                         child: Text("${i + 2}"),
@@ -158,7 +158,7 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
                     ),
                     validator: (v) {
                       final n = formKey.currentState?.fields["participants"]!.value as int;
-                      if (v! > n) return "Threshold must be less than participants";
+                      if (v! > n) return "Threshold cannot exceed participants";
                       return null;
                     },
                   ),

@@ -438,8 +438,7 @@ pub struct FrostSigMessage {
     /// coordinator can rebuild the public key package without having
     /// stored one. The coordinator's mailbox address is not a field here:
     /// it is the session's first message (`data` under the CRD1 prefix),
-    /// since members need it before they can send commitments, and the
-    /// signing-package memo has no room for it anyway.
+    /// since members need it before they can send commitments.
     pub verifying_share: Option<Vec<u8>>,
 }
 
@@ -504,7 +503,7 @@ mod sig_message_tests {
         msg.sign(&key).unwrap();
         assert!(msg.verify(&key.verifying_key()));
 
-        let bytes = msg.encode_with_prefix(b"SPK5").unwrap();
+        let bytes = msg.encode_with_prefix(b"CMT6").unwrap();
         let (decoded, _) =
             bincode::decode_from_slice::<FrostSigMessage, _>(&bytes[4..], config::legacy())
                 .unwrap();
@@ -713,6 +712,11 @@ pub async fn mailbox_address(
         .context("mailbox account has no Orchard key")?;
     Ok(orchard_only_address(network, &fvk))
 }
+
+/// How many bytes an arbitrary memo carries: the 512-byte memo field less
+/// the 0xFF marker `to_arb_memo` prepends. Every protocol message, prefix
+/// included, has to fit in this.
+pub const ARB_MEMO_CAPACITY: usize = 511;
 
 /// Wrap raw bytes as a Zcash arbitrary memo (0xFF prefix).
 pub fn to_arb_memo(data: &[u8]) -> Vec<u8> {

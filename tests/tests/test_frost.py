@@ -11,15 +11,19 @@ from utils import mine_blocks
 
 
 @pytest.mark.asyncio
-async def test_frost_sign_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_factory):
-    """Test 3-out-of-3 FROST signing using GraphQL API."""
+async def test_frost_sign_4_of_4(graphql_url, rpc_url, seed, zkool_binary, gql_client_factory):
+    """Test 4-out-of-4 FROST signing using GraphQL API.
+
+    Four signers: the first threshold whose signing package no longer fits
+    one memo (#1339), so this proves the per-signer parts.
+    """
     if not seed:
         pytest.skip("SEED not set")
 
     if not os.path.exists(zkool_binary):
         pytest.skip(f"zkool_graphql binary not found at {zkool_binary}")
 
-    N = 3
+    N = 4
     DEFAULT_PORT = 8000
     PORT_BASE = 8001
     LWD_URL = "http://localhost:8137"
@@ -45,7 +49,7 @@ async def test_frost_sign_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_c
 
         await kill_existing_zkool_processes()
 
-        print("=== Setting up 3-out-of-3 FROST SIGN Test ===")
+        print("=== Setting up 4-out-of-4 FROST SIGN Test ===")
 
         dkg_missing = False
         for i in range(1, N + 1):

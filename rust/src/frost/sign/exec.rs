@@ -50,8 +50,7 @@ use crate::{
 
 use super::pubkey::rebuild_public_key_package;
 use super::state::{
-    load_pczt_pkg, RandomizedSigPackage, SignState, COORDINATOR_ADDRESS_PROP,
-    VERIFYING_SHARE_ROUND,
+    load_pczt_pkg, SigPackagePart, SignState, COORDINATOR_ADDRESS_PROP, VERIFYING_SHARE_ROUND,
 };
 use super::{COMMITMENT_PREFIX, COORDINATOR_PREFIX, SIGPACKAGE_PREFIX, SIGSHARE_PREFIX};
 
@@ -85,11 +84,10 @@ pub async fn ensure_mailbox(
 
 /// Coordinator: broadcast our mailbox address for this session, as the
 /// session's first message. Members send their commitments to this
-/// address, so it has to be known before anything else; it is also its
-/// own memo because the later signing-package memo has no room for it
-/// (507 of 512 bytes used for three signers). Recorded as our own
-/// coordinator address in the same transaction, which is what makes the
-/// task done.
+/// address, so it has to be known before anything else, which is why it
+/// is its own memo rather than a field of a later message. Recorded as
+/// our own coordinator address in the same transaction, which is what
+/// makes the task done.
 pub async fn announce_coordinator(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -280,27 +278,31 @@ pub async fn make_sigpackages(
         .execute(&mut *tx)
         .await?;
 
-        let rsp = RandomizedSigPackage {
-            sigpackage: sigpackage_bytes,
-            randomizer: randomizer.serialize(),
-        };
-        let rsp_bytes = bincode::encode_to_vec(&rsp, config::legacy())?;
-
-        let mut msg = FrostSigMessage {
-            sighash: state.sighash.clone().try_into().unwrap(),
-            from_id: state.coordinator as u16,
-            idx: idx as u32,
-            data: rsp_bytes,
-            signature: None,
-            verifying_share: None,
-        };
-        if let Some(ref key) = signing_key {
-            msg.sign(key)?;
+        // One memo per signer: the whole package stops fitting a memo past
+        // three signers, a part never grows. Members rebuild the package
+        // from the parts (`assemble_sigpackages`).
+        for (id, commitments) in commitment_map {
+            let part = SigPackagePart {
+                signer_id: participant_id(id),
+                commitment: commitments.serialize()?,
+                randomizer: randomizer.serialize(),
+            };
+            let mut msg = FrostSigMessage {
+                sighash: state.sighash.clone().try_into().unwrap(),
+                from_id: state.coordinator as u16,
+                idx: idx as u32,
+                data: bincode::encode_to_vec(&part, config::legacy())?,
+                signature: None,
+                verifying_share: None,
+            };
+            if let Some(ref key) = signing_key {
+                msg.sign(key)?;
+            }
+            recipients.push((
+                broadcast_address.to_string(),
+                msg.encode_with_prefix(SIGPACKAGE_PREFIX)?,
+            ));
         }
-        recipients.push((
-            broadcast_address.to_string(),
-            msg.encode_with_prefix(SIGPACKAGE_PREFIX)?,
-        ));
     }
 
     let refs: Vec<(&str, Vec<u8>)> =
@@ -556,7 +558,7 @@ async fn rebuild_pubkey_package(
             shares.insert(*id, *key_package.verifying_share());
             continue;
         }
-        let from_id = u16::from_le_bytes(id.serialize()[..2].try_into().unwrap()) as u8;
+        let from_id = participant_id(id) as u8;
         let row: Option<(Vec<u8>,)> = sqlx::query_as(
             "SELECT data FROM dkg_peers WHERE account = ? AND round = ? AND from_id = ?",
         )
@@ -615,9 +617,17 @@ async fn load_sigpackages(
     .map_err(Into::into)
 }
 
+/// The participant id (`from_id`) an identifier was made from: the inverse
+/// of `Identifier::try_from(u16)`, which encodes the id as a little-endian
+/// scalar.
+pub(super) fn participant_id(id: &Identifier) -> u16 {
+    u16::from_le_bytes(id.serialize()[..2].try_into().unwrap())
+}
+
 type CommitmentMap = BTreeMap<Identifier, SigningCommitments<P>>;
 
-async fn load_commitments(
+/// Every commitment row of each input, as a map by signer identifier.
+pub(super) async fn load_commitments(
     connection: &mut SqliteConnection,
     account: u32,
     sighash: &[u8],

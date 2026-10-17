@@ -68,10 +68,10 @@ FROST_SIGN = gql(
 )
 FROST_CANCEL = gql("mutation { frostCancel }")
 
-N = 3
+N = 4
 DEFAULT_PORT = 8000
 PORT_BASE = 8001
-RESTORED_PORT = 8004
+RESTORED_PORT = 8005
 RESTORED_DB = "/tmp/regtest_frost_restored.db"
 LWD_URL = "http://localhost:8137"
 
@@ -304,10 +304,13 @@ async def test_frost_restore_and_sign(graphql_url, rpc_url, seed, zkool_binary, 
         assert float(restored_balance) > 0, "the group has no funds to sign with"
         print(f"Restored FROST balance: {restored_balance} ZEC, matches the group")
 
+        # Every member signs: the group is t-of-t, with the restored wallet
+        # standing in for participant 3.
         signers = [
-            (originals[1], 1, originals[1].frost_account, originals[1].funding_account),
-            (originals[2], 2, originals[2].frost_account, originals[2].funding_account),
-            (restored, 3, restored.frost_account, restored.funding_account),
+            (originals[i], i, originals[i].frost_account, originals[i].funding_account)
+            if i != 3
+            else (restored, 3, restored.frost_account, restored.funding_account)
+            for i in range(1, N + 1)
         ]
 
         print("\n=== Step 4: Sign with the restored wallet as a participant ===")

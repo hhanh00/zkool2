@@ -12,16 +12,16 @@ from utils import get_current_height, mine_blocks, wait_for_blocks
 
 
 @pytest.mark.asyncio
-async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_factory):
-    """Test 3-out-of-3 FROST DKG using GraphQL API."""
+async def test_dkg_4_of_4(graphql_url, rpc_url, seed, zkool_binary, gql_client_factory):
+    """Test 4-out-of-4 FROST DKG using GraphQL API."""
     if not seed:
         pytest.skip("SEED not set")
 
     if not os.path.exists(zkool_binary):
         pytest.skip(f"zkool_graphql binary not found at {zkool_binary}")
 
-    N = 3
-    T = 3
+    N = 4
+    T = 4
     DEFAULT_PORT = 8000
     PORT_BASE = 8001
     LWD_URL = "http://localhost:8137"
@@ -47,7 +47,7 @@ async def test_dkg_3_of_3(graphql_url, rpc_url, seed, zkool_binary, gql_client_f
 
         await kill_existing_zkool_processes()
 
-        print("=== Setting up 3-out-of-3 FROST DKG Test ===")
+        print("=== Setting up 4-out-of-4 FROST DKG Test ===")
         print(f"Starting default instance on port {DEFAULT_PORT}")
         default_db = "/tmp/regtest_dkg_default.db"
         default_participant = DkgParticipant(DEFAULT_PORT, default_db, LWD_URL)

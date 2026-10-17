@@ -43,8 +43,8 @@ pytest
 
 ## Flutter UI DKG test
 
-`tests/test_dkg_ui.py` runs the same 3-of-3 FROST DKG as `test_dkg.py`, but
-participant #1 is the **real Flutter app** instead of a headless
+`tests/test_dkg_ui.py` runs a 3-of-3 FROST DKG like the headless 4-of-4 one in
+`test_dkg.py`, but participant #1 is the **real Flutter app** instead of a headless
 `zkool_graphql` instance: pytest starts the funding instance and participants
 #2/#3, then spawns
 

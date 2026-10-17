@@ -30,6 +30,74 @@ pub use super::protocol::{
     get_addresses, get_coordinator_broadcast_account, get_mailbox_account, publish,
 };
 
+/// The highest threshold a group can be formed with. The round-1 DKG
+/// package carries one coefficient commitment per unit of threshold and is
+/// the one message left that grows with `t`, now that the signing package
+/// travels in per-signer parts (#1339); at 14 it no longer fits a memo.
+/// `threshold_tests` pins the number against the real encoding.
+pub const MAX_THRESHOLD: u8 = 13;
+
+/// The parameters a DKG can run with: a threshold of at least two and at
+/// most `n`, no higher than the round-1 memo can carry, and a participant
+/// id in `1..=n`. Checked at setup so that a group the protocol could not
+/// complete is refused before any memo is sent.
+pub fn check_dkg_params(id: u8, n: u8, t: u8) -> Result<()> {
+    if t < 2 || t > n {
+        anyhow::bail!(
+            "The threshold must be between 2 and the number of participants ({n}), got {t}"
+        );
+    }
+    if t > MAX_THRESHOLD {
+        anyhow::bail!(
+            "The threshold cannot exceed {MAX_THRESHOLD}: \
+             the round-1 package of a {t}-signer threshold does not fit a memo"
+        );
+    }
+    if id < 1 || id > n {
+        anyhow::bail!("The participant id must be between 1 and {n}, got {id}");
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod threshold_tests {
+    use super::*;
+    use crate::frost::{protocol::ARB_MEMO_CAPACITY, FrostMessage};
+
+    /// The round-1 memo for a threshold, as `DkgRound1` publishes it:
+    /// prefix, sender id and the frost-core package. `n` does not appear
+    /// in the package, so `n = t` is as large as it gets.
+    fn round1_memo_len(t: u8) -> usize {
+        let (_, pkg) = dkg::part1(1u16.try_into().unwrap(), t as u16, t as u16, OsRng).unwrap();
+        let msg = FrostMessage {
+            from_id: 1,
+            data: pkg.to_bytes().unwrap(),
+        };
+        msg.encode_with_prefix(&DkgRound1::PREFIX).unwrap().len()
+    }
+
+    #[test]
+    fn max_threshold_is_where_the_round1_package_stops_fitting_a_memo() {
+        let at_max = round1_memo_len(MAX_THRESHOLD);
+        let past_max = round1_memo_len(MAX_THRESHOLD + 1);
+        assert!(at_max <= ARB_MEMO_CAPACITY, "{at_max} bytes at t = {MAX_THRESHOLD}");
+        assert!(past_max > ARB_MEMO_CAPACITY, "{past_max} bytes at t = {}", MAX_THRESHOLD + 1);
+    }
+
+    #[test]
+    fn dkg_params_are_checked_at_setup() {
+        assert!(check_dkg_params(1, 3, 2).is_ok());
+        assert!(check_dkg_params(3, 3, 3).is_ok());
+        assert!(check_dkg_params(1, 13, 13).is_ok());
+        assert!(check_dkg_params(1, 20, 13).is_ok(), "n is not bounded by the memo");
+        assert!(check_dkg_params(1, 3, 1).is_err(), "threshold below two");
+        assert!(check_dkg_params(1, 3, 4).is_err(), "threshold above n");
+        assert!(check_dkg_params(1, 14, 14).is_err(), "threshold above the memo limit");
+        assert!(check_dkg_params(0, 3, 2).is_err(), "id zero");
+        assert!(check_dkg_params(4, 3, 2).is_err(), "id above n");
+    }
+}
+
 // ── FrostBytes for ed25519 types ─────────────────────────────────────────────
 
 impl FrostBytes for SigningKey {
@@ -612,6 +680,7 @@ pub async fn set_dkg_params(
     funding_account: u32,
     dkg_version: u8,
 ) -> Result<()> {
+    check_dkg_params(id, n, t)?;
     let height = client.latest_height().await?;
     let birth_height = height.saturating_sub(10000) + 1;
     tracing::info!("birth_height {birth_height}");
