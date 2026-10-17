@@ -1,5 +1,6 @@
 mod exec;
 mod plan;
+mod pubkey;
 mod state;
 mod step;
 mod task;
@@ -9,6 +10,9 @@ pub use step::{sign_step, SignStepOutcome};
 pub(super) const COMMITMENT_PREFIX: &[u8] = b"CMT6";
 pub(super) const SIGPACKAGE_PREFIX: &[u8] = b"SPK5";
 pub(super) const SIGSHARE_PREFIX: &[u8] = b"SSH3";
+/// The coordinator's mailbox address for the session, broadcast alongside
+/// the signing packages so that members need no stored address for it.
+pub(super) const COORDINATOR_PREFIX: &[u8] = b"CRD1";
 
 // ── Public API (unchanged surface for flutter / graphql callers) ──────────────
 

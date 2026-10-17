@@ -1,10 +1,11 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, str::FromStr};
 
 use anyhow::{Context, Result};
 use bincode::{config, Decode, Encode};
 use bip39::Mnemonic;
+use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use futures::TryStreamExt;
-use orchard::keys::{FullViewingKey, Scope};
+use orchard::keys::{FullViewingKey, Scope, SpendingKey};
 use reddsa_legacy::frost::redpallas::{
     frost::{
         keys::{KeyPackage, PublicKeyPackage},
@@ -15,14 +16,16 @@ use reddsa_legacy::frost::redpallas::{
     keys::dkg::{round1, round2},
     Identifier, PallasBlake2b512, Randomizer,
 };
-use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
+use sqlx::{sqlite::SqliteRow, Connection as _, Row, SqliteConnection};
 use tracing::info;
-use zcash_keys::address::UnifiedAddress;
+use zcash_keys::{address::UnifiedAddress, keys::UnifiedSpendingKey};
 use zcash_protocol::memo::Memo;
+use zip32::AccountId;
 
 use crate::{
     account::{get_account_seed, get_orchard_vk, new_account},
     api::{account::NewAccount, coin::Network},
+    db::{init_account_orchard, store_account_metadata, store_account_orchard_vk},
     pay::{
         plan::{plan_transaction, PaymentRequest, PlanMode},
         sign::sign,
@@ -420,15 +423,22 @@ impl FrostMessage {
 }
 
 /// Wire message used during the signing rounds.
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Clone, Debug, PartialEq, Eq)]
 pub struct FrostSigMessage {
     pub sighash: [u8; 32],
     pub from_id: u16,
     pub idx: u32,
     pub data: Vec<u8>,
-    /// Optional ed25519 signature of the message data.
-    /// If present, the signature covers the sighash, from_id, idx, and data fields.
+    /// Optional ed25519 signature by the sender's round-0 message key. If
+    /// present it covers every other field, the routing ones included. A
+    /// member that has no round-0 key (a dkg-0 group, a restored member)
+    /// sends unsigned messages, which are accepted.
     pub signature: Option<[u8; 64]>,
+    /// On commitments: the sender's FROST verifying share, so that the
+    /// coordinator can rebuild the public key package without having
+    /// stored one. The coordinator's mailbox address travels in a message
+    /// of its own: a signing package for t=3 already fills a memo.
+    pub verifying_share: Option<Vec<u8>>,
 }
 
 impl FrostSigMessage {
@@ -438,6 +448,268 @@ impl FrostSigMessage {
         bincode::encode_into_std_write(self, &mut data, config::legacy())?;
         Ok(data)
     }
+
+    /// What the signature covers: the message's own wire encoding with the
+    /// signature cleared. Every variable-length field is length-prefixed
+    /// and every optional one is tagged, so no two messages share a
+    /// payload; a bare concatenation would let bytes move between `data`
+    /// and the verifying share under the same signature.
+    fn signed_payload(&self) -> Result<Vec<u8>> {
+        let unsigned = Self {
+            signature: None,
+            ..self.clone()
+        };
+        Ok(bincode::encode_to_vec(&unsigned, config::legacy())?)
+    }
+
+    pub fn sign(&mut self, signing_key: &SigningKey) -> Result<()> {
+        let signature = Signer::sign(signing_key, &self.signed_payload()?);
+        self.signature = Some(signature.to_bytes());
+        Ok(())
+    }
+
+    /// True when the message is unsigned, or signed by `verifying_key`.
+    pub fn verify(&self, verifying_key: &VerifyingKey) -> bool {
+        let Some(signature) = self.signature else {
+            return true; // no round-0 key on the sender's side
+        };
+        let Ok(payload) = self.signed_payload() else {
+            return false;
+        };
+        verifying_key
+            .verify_strict(&payload, &Signature::from_bytes(&signature))
+            .is_ok()
+    }
+}
+
+#[cfg(test)]
+mod sig_message_tests {
+    use super::*;
+    use rand_core_legacy::OsRng;
+
+    #[test]
+    fn the_signature_covers_the_verifying_share() {
+        let key = SigningKey::generate(&mut OsRng);
+        let mut msg = FrostSigMessage {
+            sighash: [7u8; 32],
+            from_id: 2,
+            idx: 1,
+            data: vec![1, 2, 3],
+            signature: None,
+            verifying_share: Some(vec![4, 5, 6]),
+        };
+        assert!(msg.verify(&key.verifying_key()), "unsigned is accepted");
+        msg.sign(&key).unwrap();
+        assert!(msg.verify(&key.verifying_key()));
+
+        let bytes = msg.encode_with_prefix(b"SPK5").unwrap();
+        let (decoded, _) =
+            bincode::decode_from_slice::<FrostSigMessage, _>(&bytes[4..], config::legacy())
+                .unwrap();
+        assert_eq!(decoded, msg);
+
+        let mut forged = msg.clone();
+        forged.data = vec![3, 2, 1];
+        assert!(!forged.verify(&key.verifying_key()));
+        let mut forged = msg.clone();
+        forged.verifying_share = Some(vec![6, 5, 4]);
+        assert!(!forged.verify(&key.verifying_key()));
+        assert!(!msg.verify(&SigningKey::generate(&mut OsRng).verifying_key()));
+    }
+
+    /// Field boundaries are part of what is signed: the same bytes split
+    /// differently between fields, or an absent field made present and
+    /// empty, is a different message.
+    #[test]
+    fn moving_bytes_between_fields_breaks_the_signature() {
+        let key = SigningKey::generate(&mut OsRng);
+        let mut msg = FrostSigMessage {
+            sighash: [7u8; 32],
+            from_id: 2,
+            idx: 1,
+            data: vec![1, 2, 3, 4, 5, 6],
+            signature: None,
+            verifying_share: None,
+        };
+        msg.sign(&key).unwrap();
+
+        let mut shifted = msg.clone();
+        shifted.data = vec![1, 2, 3];
+        shifted.verifying_share = Some(vec![4, 5, 6]);
+        assert!(!shifted.verify(&key.verifying_key()));
+
+        let mut empty_share = msg.clone();
+        empty_share.verifying_share = Some(vec![]);
+        assert!(!empty_share.verify(&key.verifying_key()));
+    }
+}
+
+/// The broadcast account's Orchard spending key, from the mnemonic the
+/// participant addresses hash to: the `sk` of ZIP 2005, shared by every
+/// member since the first DKG. ZIP 32 makes it depend on the network.
+pub fn broadcast_sk(network: &Network, addresses: &[String]) -> Result<SpendingKey> {
+    let mnemonic = Mnemonic::from_str(&broadcast_seed(addresses))?;
+    let seed = mnemonic.to_seed("");
+    let usk = UnifiedSpendingKey::from_seed(network, &seed, AccountId::ZERO)?;
+    Ok(usk.orchard().clone())
+}
+
+/// The group's `sk`: stored in `dkg_params` (dkg-2 accounts, restored
+/// accounts), or rederived from the stored addresses and cached there.
+pub async fn group_sk(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<SpendingKey> {
+    let (stored, n): (Option<Vec<u8>>, u8) =
+        sqlx::query_as("SELECT sk, n FROM dkg_params WHERE account = ?")
+            .bind(account)
+            .fetch_one(&mut *connection)
+            .await
+            .context("Fetch dkg_params")?;
+    if let Some(sk) = stored {
+        let sk: [u8; 32] = sk
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("stored sk is not 32 bytes"))?;
+        return Option::from(SpendingKey::from_bytes(sk)).context("stored sk is invalid");
+    }
+    let addresses = get_addresses(&mut *connection, account, n).await?;
+    anyhow::ensure!(
+        addresses.iter().all(|a| !a.is_empty()),
+        "the group spending key is not stored and the participant addresses are incomplete"
+    );
+    let sk = broadcast_sk(network, &addresses)?;
+    sqlx::query("UPDATE dkg_params SET sk = ?1 WHERE account = ?2")
+        .bind(sk.to_bytes().to_vec())
+        .bind(account)
+        .execute(&mut *connection)
+        .await?;
+    Ok(sk)
+}
+
+/// A unified address carrying only the Orchard receiver at index 0: the
+/// form every frost helper address takes on chain.
+pub fn orchard_only_address(network: &Network, fvk: &FullViewingKey) -> String {
+    let address = fvk.address_at(0u64, Scope::External);
+    UnifiedAddress::from_receivers(Some(address), None, None, None, None)
+        .unwrap()
+        .encode(network)
+}
+
+/// The broadcast account built from `sk`, without creating it: a view-only
+/// internal account whose Orchard key is `sk`'s. It is the account the
+/// address hash produces at DKG time, so the on-chain address is unchanged.
+pub async fn lookup_broadcast_account_from_sk(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    sk: &SpendingKey,
+) -> Result<Option<(u32, String)>> {
+    let fvk = FullViewingKey::from(sk);
+    let r: Option<(u32,)> = sqlx::query_as(
+        "SELECT a.id_account FROM accounts a
+        JOIN orchard_accounts o ON a.id_account = o.account
+        WHERE o.xvk = ?1 AND a.internal = 1",
+    )
+    .bind(fvk.to_bytes().to_vec())
+    .fetch_optional(&mut *connection)
+    .await?;
+    Ok(r.map(|(id,)| (id, orchard_only_address(network, &fvk))))
+}
+
+/// The broadcast account built from `sk`, created if missing (see
+/// [`lookup_broadcast_account_from_sk`]).
+pub async fn ensure_broadcast_account_from_sk(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    sk: &SpendingKey,
+    birth_height: u32,
+) -> Result<(u32, String)> {
+    if let Some(found) = lookup_broadcast_account_from_sk(network, connection, sk).await? {
+        return Ok(found);
+    }
+    let fvk = FullViewingKey::from(sk);
+    let mut tx = connection.begin().await?;
+    let account =
+        store_account_metadata(&mut *tx, "frost-broadcast", &None, &None, birth_height, false, true)
+            .await?;
+    init_account_orchard(network, &mut *tx, account, birth_height).await?;
+    store_account_orchard_vk(&mut *tx, account, &fvk).await?;
+    tx.commit().await?;
+    let address = orchard_only_address(network, &fvk);
+    info!("Broadcast address: {address}");
+    Ok((account, address))
+}
+
+/// The private mailbox account for signing, from the seed recorded in
+/// `dkg_params`; created with a fresh seed when none is recorded (a
+/// restored member). Needs no participant addresses. Returns the account
+/// and its address.
+pub async fn ensure_mailbox_from_seed(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+    birth_height: u32,
+) -> Result<(u32, String)> {
+    let (seed,): (String,) = sqlx::query_as("SELECT seed FROM dkg_params WHERE account = ?1")
+        .bind(account)
+        .fetch_one(&mut *connection)
+        .await
+        .context("Fetch dkg_params")?;
+    let existing: Option<(u32,)> = if seed.is_empty() {
+        None
+    } else {
+        sqlx::query_as("SELECT id_account FROM accounts WHERE seed = ?1")
+            .bind(&seed)
+            .fetch_optional(&mut *connection)
+            .await?
+    };
+    let mailbox = match existing {
+        Some((mailbox,)) => mailbox,
+        None => {
+            info!("Creating mailbox account");
+            let na = NewAccount {
+                name: "frost-mailbox".to_string(),
+                icon: None,
+                restore: true,
+                key: seed.clone(),
+                passphrase: None,
+                fingerprint: None,
+                aindex: 0,
+                birth: Some(birth_height),
+                folder: "".to_string(),
+                pools: None,
+                use_internal: false,
+                internal: true,
+                hw: 0,
+            };
+            let mailbox = new_account(network, &mut *connection, &na).await?;
+            if seed.is_empty() {
+                let seed = get_account_seed(&mut *connection, mailbox)
+                    .await?
+                    .context("mailbox seed not found")?;
+                sqlx::query("UPDATE dkg_params SET seed = ?1 WHERE account = ?2")
+                    .bind(&seed.mnemonic)
+                    .bind(account)
+                    .execute(&mut *connection)
+                    .await?;
+            }
+            mailbox
+        }
+    };
+    let address = mailbox_address(network, connection, mailbox).await?;
+    Ok((mailbox, address))
+}
+
+/// The Orchard-only unified address of a helper account.
+pub async fn mailbox_address(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<String> {
+    let fvk = get_orchard_vk(&mut *connection, account)
+        .await?
+        .context("mailbox account has no Orchard key")?;
+    Ok(orchard_only_address(network, &fvk))
 }
 
 /// Wrap raw bytes as a Zcash arbitrary memo (0xFF prefix).

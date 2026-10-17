@@ -9,7 +9,7 @@ use std::collections::BTreeMap;
 
 use anyhow::{Context as _, Result};
 use bincode::config;
-use ed25519_dalek::{Signer as Ed25519Signer, SigningKey};
+use ed25519_dalek::SigningKey;
 use ff::PrimeField as _;
 use ff_legacy::PrimeField as _;
 use frost_rerandomized::{aggregate, sign, RandomizedParams};
@@ -24,7 +24,7 @@ use pczt::{
 use rand_core_legacy::OsRng;
 use reddsa_legacy::frost::redpallas::{
     frost::{
-        keys::{KeyPackage, PublicKeyPackage},
+        keys::{KeyPackage, PublicKeyPackage, VerifyingShare},
         round1::{SigningCommitments, SigningNonces},
         round2::SignatureShare,
         SigningPackage,
@@ -36,17 +36,20 @@ use sqlx::{sqlite::SqliteRow, Connection as _, Row, SqliteConnection};
 use tracing::info;
 
 use crate::{
+    account::get_orchard_vk,
     api::coin::Network,
     frost::{
-        dkg::{delete_frost_state, get_mailbox_account, get_coordinator_broadcast_account, publish},
+        dkg::{delete_frost_state, publish},
+        protocol::{ensure_broadcast_account_from_sk, ensure_mailbox_from_seed, group_sk},
         FrostSigMessage, P,
     },
     pay::{plan::get_orchard_pk, plan::get_sapling_prover},
     Client,
 };
 
-use super::state::{load_pczt_pkg, RandomizedSigPackage, SignState};
-use super::{COMMITMENT_PREFIX, SIGPACKAGE_PREFIX, SIGSHARE_PREFIX};
+use super::pubkey::rebuild_public_key_package;
+use super::state::{load_pczt_pkg, RandomizedSigPackage, SignState, VERIFYING_SHARE_ROUND};
+use super::{COMMITMENT_PREFIX, COORDINATOR_PREFIX, SIGPACKAGE_PREFIX, SIGSHARE_PREFIX};
 
 /// Result of an exec function that involves a Zcash publish.
 pub enum SendResult {
@@ -58,7 +61,9 @@ pub enum SendResult {
 
 /// Create the private mailbox account if it does not exist yet, and ensure
 /// the broadcast account exists (it is deleted at the end of DKG and must be
-/// recreated for signing).
+/// recreated for signing). Neither needs the participant addresses: the
+/// mailbox comes from its recorded seed, the broadcast account from the
+/// group's `sk`.
 pub async fn ensure_mailbox(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -66,15 +71,9 @@ pub async fn ensure_mailbox(
     height: u32,
 ) -> Result<()> {
     let birth_height = height.saturating_sub(10000) + 1;
-    get_mailbox_account(
-        network,
-        connection,
-        state.account,
-        state.coordinator,
-        birth_height,
-    )
-    .await?;
-    get_coordinator_broadcast_account(network, connection, state.account, birth_height).await?;
+    ensure_mailbox_from_seed(network, connection, state.account, birth_height).await?;
+    let sk = group_sk(network, connection, state.account).await?;
+    ensure_broadcast_account_from_sk(network, connection, &sk, birth_height).await?;
     Ok(())
 }
 
@@ -94,6 +93,9 @@ pub async fn send_commitments(
     let mut tx = connection.begin().await?;
     let signing_key = load_signing_key(&mut *tx, state.account).await?;
     let key_package = load_key_package(&mut *tx, state.account).await?;
+    // Our verifying share rides along, so a coordinator without a stored
+    // public key package can rebuild one from the signing set.
+    let verifying_share = key_package.verifying_share().serialize()?;
     let mut recipients = vec![];
 
     for idx in 0..state.nsigs {
@@ -128,11 +130,15 @@ pub async fn send_commitments(
             idx,
             data: commitments,
             signature: None,
+            verifying_share: Some(verifying_share.clone()),
         };
         if let Some(ref key) = signing_key {
-            sign_message(&mut msg, key);
+            msg.sign(key)?;
         }
-        recipients.push((coordinator_address.to_string(), msg.encode_with_prefix(COMMITMENT_PREFIX)?));
+        recipients.push((
+            coordinator_address.to_string(),
+            msg.encode_with_prefix(COMMITMENT_PREFIX)?,
+        ));
     }
 
     // Coordinator does not send to itself — its rows are already in the DB.
@@ -172,6 +178,27 @@ pub async fn make_sigpackages(
     let mut tx = connection.begin().await?;
     let signing_key = load_signing_key(&mut *tx, state.account).await?;
     let mut recipients = vec![];
+
+    // Our mailbox address goes out with the signing packages, in a memo
+    // of its own since a signing package for t=3 already fills one, so
+    // members send their shares to it without a stored address for us.
+    if let Some(address) = &state.self_mailbox_address {
+        let mut msg = FrostSigMessage {
+            sighash: state.sighash.clone().try_into().unwrap(),
+            from_id: state.coordinator as u16,
+            idx: 0,
+            data: address.as_bytes().to_vec(),
+            signature: None,
+            verifying_share: None,
+        };
+        if let Some(ref key) = signing_key {
+            msg.sign(key)?;
+        }
+        recipients.push((
+            broadcast_address.to_string(),
+            msg.encode_with_prefix(COORDINATOR_PREFIX)?,
+        ));
+    }
 
     for (idx, commitment_map) in commitments_vec.iter().enumerate() {
         let sigpackage = SigningPackage::new(commitment_map.clone(), &state.sighash);
@@ -232,11 +259,15 @@ pub async fn make_sigpackages(
             idx: idx as u32,
             data: rsp_bytes,
             signature: None,
+            verifying_share: None,
         };
         if let Some(ref key) = signing_key {
-            sign_message(&mut msg, key);
+            msg.sign(key)?;
         }
-        recipients.push((broadcast_address.to_string(), msg.encode_with_prefix(SIGPACKAGE_PREFIX)?));
+        recipients.push((
+            broadcast_address.to_string(),
+            msg.encode_with_prefix(SIGPACKAGE_PREFIX)?,
+        ));
     }
 
     let refs: Vec<(&str, Vec<u8>)> =
@@ -297,9 +328,10 @@ pub async fn send_sigshares(
             idx: idx as u32,
             data: share_bytes,
             signature: None,
+            verifying_share: None,
         };
         if let Some(ref key) = signing_key {
-            sign_message(&mut msg, key);
+            msg.sign(key)?;
         }
         recipients.push((coordinator_address.to_string(), msg.encode_with_prefix(SIGSHARE_PREFIX)?));
     }
@@ -329,10 +361,19 @@ pub async fn aggregate_and_send(
     client: &mut Client,
     state: &SignState,
 ) -> Result<String> {
-    let ppkg = load_pubkey_package(&mut *connection, state.account).await?;
     let sigpackages = load_sigpackages(&mut *connection, state.account, &state.sighash).await?;
     let sigsharess =
         load_all_sigshares(&mut *connection, state.account, &state.sighash, state.nsigs).await?;
+    let signing_set: Vec<Identifier> = sigsharess
+        .first()
+        .map(|m| m.keys().copied().collect())
+        .unwrap_or_default();
+    let ppkg = match rebuild_pubkey_package(&mut *connection, state.account, &signing_set).await? {
+        Some(ppkg) => ppkg,
+        None => load_pubkey_package(&mut *connection, state.account)
+            .await?
+            .context("no public key package: a participant's verifying share is missing")?,
+    };
 
     let pczt_pkg = load_pczt_pkg(&mut *connection).await?;
     let pczt = Pczt::parse(&pczt_pkg.pczt).expect("Failed to parse PCZT");
@@ -445,17 +486,58 @@ async fn load_key_package(
     Ok(KeyPackage::<P>::deserialize(&data)?)
 }
 
+/// The public key package the DKG stored, if this device ran the DKG.
 async fn load_pubkey_package(
     connection: &mut SqliteConnection,
     account: u32,
-) -> Result<PublicKeyPackage<P>> {
-    let (data,): (Vec<u8>,) = sqlx::query_as(
+) -> Result<Option<PublicKeyPackage<P>>> {
+    let row: Option<(Vec<u8>,)> = sqlx::query_as(
         "SELECT data FROM dkg_peers WHERE account = ? AND round = 3 LIMIT 1",
     )
     .bind(account)
-    .fetch_one(&mut *connection)
+    .fetch_optional(&mut *connection)
     .await?;
-    Ok(PublicKeyPackage::<P>::deserialize(&data)?)
+    row.map(|(data,)| Ok(PublicKeyPackage::<P>::deserialize(&data)?))
+        .transpose()
+}
+
+/// The public key package rebuilt from the signing set's verifying shares:
+/// ours from the key package, the others' from the rows their commitments
+/// messages filled. None when a share is missing (a participant on a build
+/// that does not send it); an error when the shares do not interpolate to
+/// the group key.
+async fn rebuild_pubkey_package(
+    connection: &mut SqliteConnection,
+    account: u32,
+    signing_set: &[Identifier],
+) -> Result<Option<PublicKeyPackage<P>>> {
+    let key_package = load_key_package(&mut *connection, account).await?;
+    let fvk = get_orchard_vk(&mut *connection, account)
+        .await?
+        .context("frost account has no Orchard key")?;
+    let ak: [u8; 32] = fvk.to_bytes()[..32].try_into().unwrap();
+
+    let mut shares = BTreeMap::new();
+    for id in signing_set {
+        if id == key_package.identifier() {
+            shares.insert(*id, *key_package.verifying_share());
+            continue;
+        }
+        let from_id = u16::from_le_bytes(id.serialize()[..2].try_into().unwrap()) as u8;
+        let row: Option<(Vec<u8>,)> = sqlx::query_as(
+            "SELECT data FROM dkg_peers WHERE account = ? AND round = ? AND from_id = ?",
+        )
+        .bind(account)
+        .bind(VERIFYING_SHARE_ROUND)
+        .bind(from_id)
+        .fetch_optional(&mut *connection)
+        .await?;
+        let Some((data,)) = row else {
+            return Ok(None);
+        };
+        shares.insert(*id, VerifyingShare::<P>::deserialize(&data)?);
+    }
+    rebuild_public_key_package(shares, &ak).map(Some)
 }
 
 async fn load_nonces(
@@ -570,16 +652,4 @@ async fn load_all_sigshares(
         maps.push(map);
     }
     Ok(maps)
-}
-
-// ── Message authentication ────────────────────────────────────────────────────
-
-fn sign_message(message: &mut FrostSigMessage, signing_key: &SigningKey) {
-    let mut payload = vec![];
-    payload.extend_from_slice(&message.sighash);
-    payload.extend_from_slice(&message.from_id.to_be_bytes());
-    payload.extend_from_slice(&message.idx.to_be_bytes());
-    payload.extend_from_slice(&message.data);
-    let signature = Ed25519Signer::sign(signing_key, &payload);
-    message.signature = Some(signature.to_bytes());
 }

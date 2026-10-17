@@ -81,6 +81,7 @@ mod tests {
             nsigs: 2,
             birth_height: 0,
             mailbox: Some(10),
+            self_mailbox_address: Some("addr0".into()),
             coordinator_address: Some("addr1".into()),
             broadcast: Some(11),
             broadcast_address: Some("addr2".into()),

@@ -7,9 +7,8 @@
 
 use anyhow::Result;
 use bincode::{config, Decode, Encode};
-use ed25519_dalek::{Signature, VerifyingKey};
 use reddsa_legacy::frost::redpallas::frost::{
-    round1::SigningCommitments, round2::SignatureShare, SigningPackage,
+    keys::VerifyingShare, round1::SigningCommitments, round2::SignatureShare, SigningPackage,
 };
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::info;
@@ -17,14 +16,15 @@ use zcash_protocol::memo::Memo;
 
 use crate::{
     api::{coin::Network, frost::FrostSignParams, pay::PcztPackage},
+    db::{get_prop, put_prop},
     frost::{
         dkg::{get_dkg_params, load_peer_verifying_key},
-        protocol::lookup_broadcast_account,
+        protocol::{group_sk, lookup_broadcast_account_from_sk, mailbox_address},
         FrostSigMessage, P,
     },
 };
 
-use super::{COMMITMENT_PREFIX, SIGPACKAGE_PREFIX, SIGSHARE_PREFIX};
+use super::{COMMITMENT_PREFIX, COORDINATOR_PREFIX, SIGPACKAGE_PREFIX, SIGSHARE_PREFIX};
 
 // ── SignState ─────────────────────────────────────────────────────────────────
 
@@ -43,7 +43,11 @@ pub struct SignState {
     pub birth_height: u32,
 
     pub mailbox: Option<u32>,
-    /// The coordinator's private mailbox address (for sending commitments/sigshares).
+    /// Our own mailbox address; the coordinator sends it with the signing
+    /// packages so that members need no stored address for it.
+    pub self_mailbox_address: Option<String>,
+    /// The coordinator's private mailbox address (for sending commitments/sigshares):
+    /// the one its signing package carried, else the stored DKG address.
     pub coordinator_address: Option<String>,
     pub broadcast: Option<u32>,
     pub broadcast_address: Option<String>,
@@ -103,11 +107,19 @@ pub async fn observe_sign(
     let birth_height = dkg_params.birth_height;
     let self_id_u8 = dkg_params.id;
 
-    // Read-only account lookups (creation is an exec effect).
+    // Read-only account lookups (creation is an exec effect). The broadcast
+    // account is the one `sk` builds: the same account the DKG's address
+    // hash produced, found without the participant addresses.
     let mailbox = mailbox_account_id(&mut *connection, account).await?;
+    let self_mailbox_address = match mailbox {
+        Some(mailbox) => Some(mailbox_address(network, &mut *connection, mailbox).await?),
+        None => None,
+    };
     let coordinator_address =
         coordinator_address_opt(&mut *connection, account, params.coordinator).await?;
-    let broadcast_lookup = lookup_broadcast_account(network, &mut *connection, account).await?;
+    let sk = group_sk(network, &mut *connection, account).await?;
+    let broadcast_lookup =
+        lookup_broadcast_account_from_sk(network, &mut *connection, &sk).await?;
     let (broadcast, broadcast_address) = match broadcast_lookup {
         Some((id, addr)) => (Some(id), Some(addr)),
         None => (None, None),
@@ -135,6 +147,8 @@ pub async fn observe_sign(
         .await?;
     }
     if let Some(bc) = broadcast {
+        ingest_coordinator_memos(&mut *connection, account, bc, &sighash, params.coordinator as u16)
+            .await?;
         ingest_sigpackage_memos(
             &mut *connection,
             account,
@@ -240,6 +254,7 @@ pub async fn observe_sign(
         nsigs,
         birth_height,
         mailbox,
+        self_mailbox_address,
         coordinator_address,
         broadcast,
         broadcast_address,
@@ -306,11 +321,18 @@ async fn mailbox_account_id(
     Ok(r.map(|(a,)| a))
 }
 
+/// Props key holding the coordinator address its signing package carried.
+/// Under the `frost_` prefix so that it lives and dies with the session.
+const COORDINATOR_ADDRESS_PROP: &str = "frost_coordinator_address";
+
 async fn coordinator_address_opt(
     connection: &mut SqliteConnection,
     account: u32,
     coordinator: u8,
 ) -> Result<Option<String>> {
+    if let Some(address) = get_prop(&mut *connection, COORDINATOR_ADDRESS_PROP).await? {
+        return Ok(Some(address));
+    }
     let r: Option<(String,)> = sqlx::query_as(
         "SELECT address FROM dkg_addresses WHERE account = ? AND from_id = ?",
     )
@@ -322,19 +344,6 @@ async fn coordinator_address_opt(
 }
 
 // ── Memo ingestion ────────────────────────────────────────────────────────────
-
-fn verify_message(message: &FrostSigMessage, verifying_key: &VerifyingKey) -> bool {
-    let Some(signature_bytes) = message.signature else {
-        return true; // backward compat: unsigned messages accepted
-    };
-    let signature = Signature::from_bytes(&signature_bytes);
-    let mut payload = vec![];
-    payload.extend_from_slice(&message.sighash);
-    payload.extend_from_slice(&message.from_id.to_be_bytes());
-    payload.extend_from_slice(&message.idx.to_be_bytes());
-    payload.extend_from_slice(&message.data);
-    verifying_key.verify_strict(&payload, &signature).is_ok()
-}
 
 /// Decode and verify FrostSigMessages from a mailbox, filter by prefix, then
 /// call `store` for each valid message.
@@ -373,7 +382,7 @@ async fn decode_frost_memos(
             continue;
         };
         if let Some(vk) = load_peer_verifying_key(connection, account, from_id).await? {
-            if !verify_message(&msg, &vk) {
+            if !msg.verify(&vk) {
                 info!(
                     "decode_frost_memos: rejecting message from {} — invalid signature",
                     msg.from_id
@@ -385,6 +394,12 @@ async fn decode_frost_memos(
     }
     Ok(())
 }
+
+/// Round number under which a participant's verifying share is kept in
+/// `dkg_peers`, after the DKG's own rounds 0..3. Learned from commitments
+/// messages; a restored coordinator rebuilds the public key package from
+/// these rows.
+pub(crate) const VERIFYING_SHARE_ROUND: u8 = 4;
 
 async fn ingest_commitment_memos(
     connection: &mut SqliteConnection,
@@ -420,6 +435,22 @@ async fn ingest_commitment_memos(
             .bind(pkg.data.as_slice())
             .execute(&mut *conn)
             .await?;
+            if let Some(share) = pkg
+                .verifying_share
+                .as_deref()
+                .filter(|s| VerifyingShare::<P>::deserialize(s).is_ok())
+            {
+                sqlx::query(
+                    "INSERT INTO dkg_peers(account, round, from_id, data)
+                     VALUES (?1, ?2, ?3, ?4) ON CONFLICT DO NOTHING",
+                )
+                .bind(account)
+                .bind(VERIFYING_SHARE_ROUND)
+                .bind(pkg.from_id as u8)
+                .bind(share)
+                .execute(&mut *conn)
+                .await?;
+            }
             Ok(())
         },
     )
@@ -430,6 +461,34 @@ async fn ingest_commitment_memos(
 pub(super) struct RandomizedSigPackage {
     pub sigpackage: Vec<u8>,
     pub randomizer: Vec<u8>,
+}
+
+/// The coordinator's mailbox address for this session, from the message it
+/// broadcasts with the signing packages.
+async fn ingest_coordinator_memos(
+    connection: &mut SqliteConnection,
+    account: u32,
+    broadcast_account: u32,
+    sighash: &[u8],
+    coordinator: u16,
+) -> Result<()> {
+    let sighash = sighash.to_vec();
+    decode_frost_memos(
+        connection,
+        account,
+        broadcast_account,
+        COORDINATOR_PREFIX,
+        async move |conn: &mut SqliteConnection, pkg: &FrostSigMessage| {
+            if pkg.sighash.as_slice() != sighash.as_slice() || pkg.from_id != coordinator {
+                return Ok(());
+            }
+            let Ok(address) = std::str::from_utf8(&pkg.data) else {
+                return Ok(());
+            };
+            put_prop(&mut *conn, COORDINATOR_ADDRESS_PROP, address).await
+        },
+    )
+    .await
 }
 
 async fn ingest_sigpackage_memos(
