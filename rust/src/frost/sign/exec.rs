@@ -41,7 +41,10 @@ use crate::{
     db::put_prop,
     frost::{
         dkg::{delete_frost_state, publish},
-        protocol::{ensure_broadcast_account_from_sk, ensure_mailbox_from_seed, group_sk},
+        protocol::{
+            ensure_broadcast_account_from_sk, ensure_mailbox_from_seed, group_sk,
+            session_broadcast_sk,
+        },
         FrostSigMessage, P,
     },
     pay::{plan::get_orchard_pk, plan::get_sapling_prover},
@@ -62,11 +65,12 @@ pub enum SendResult {
 
 // ── EnsureMailbox ─────────────────────────────────────────────────────────────
 
-/// Create the private mailbox account if it does not exist yet, and ensure
-/// the broadcast account exists (it is deleted at the end of DKG and must be
-/// recreated for signing). Neither needs the participant addresses: the
-/// mailbox comes from its recorded seed, the broadcast account from the
-/// group's `sk`.
+/// Create the private mailbox account if it does not exist yet, and the
+/// session's broadcast account. Neither needs the participant addresses:
+/// the mailbox comes from its recorded seed, the broadcast account from
+/// the group's `sk` and the transaction being signed. Both are deleted
+/// with the session, and the lookback covers a member that joins after
+/// the coordinator by far more than the transaction's expiry allows.
 pub async fn ensure_mailbox(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -76,7 +80,8 @@ pub async fn ensure_mailbox(
     let birth_height = height.saturating_sub(10000) + 1;
     ensure_mailbox_from_seed(network, connection, state.account, birth_height).await?;
     let sk = group_sk(network, connection, state.account).await?;
-    ensure_broadcast_account_from_sk(network, connection, &sk, birth_height).await?;
+    let session_sk = session_broadcast_sk(network, &sk, &state.sighash)?;
+    ensure_broadcast_account_from_sk(network, connection, &session_sk, birth_height).await?;
     Ok(())
 }
 
