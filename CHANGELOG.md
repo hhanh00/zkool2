@@ -1,5 +1,29 @@
 # Changelog
 
+## [6.35.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.34.0...zkool-v6.35.0) (2026-10-17)
+
+
+### Features
+
+* **frost:** account export carries dkg_version and sk ([7d241e0](https://github.com/hhanh00/zkool2/commit/7d241e0a44abbe5322b446a854153fdc3d37099f))
+* **frost:** coordinator announces its mailbox at session start; restore regtest test ([b1e6f7f](https://github.com/hhanh00/zkool2/commit/b1e6f7f20d5de009ac36d45ce244dd0e390b9437))
+* **frost:** dkg_version and sk columns; frost account built by the versioned FVK builder ([5b3a5c5](https://github.com/hhanh00/zkool2/commit/5b3a5c5e1e4ae928213eba4fadcfa96d712a1db0))
+* **frost:** legacy upgrade to ZIP 2005, sweep into the sibling, recoverability flag ([6dc7098](https://github.com/hhanh00/zkool2/commit/6dc70981c8575b95ea06b1f47057c27531e2c02f))
+* **frost:** pages for the flag, upgrade, backup string and restore; restore both generations ([e5957ca](https://github.com/hhanh00/zkool2/commit/e5957caee52f4611fad89eaf261c9a819eeae508))
+* **frost:** round-0 package carries the DKG version; mismatch ends the DKG ([ae0e8ed](https://github.com/hhanh00/zkool2/commit/ae0e8ed473a2f9cbd59336fee5105f27bf49cad8))
+* **frost:** signing transport that needs no peer addresses after the DKG ([55db12f](https://github.com/hhanh00/zkool2/commit/55db12fdf5287146282e3cc36d86e67de64428b7))
+* **frost:** ZIP 2005 use_qsk key derivation and versioned group FVK builder ([472991d](https://github.com/hhanh00/zkool2/commit/472991d39ffc96bf702359e3cc325b3382dcd4dc))
+* **frost:** zkfrost member backup string, export and restore ([c0e8451](https://github.com/hhanh00/zkool2/commit/c0e845157e9bef625af227d1f7730dbbf199618c))
+
+
+### Bug Fixes
+
+* **frost:** export and import the V9 DKG tables ([#1335](https://github.com/hhanh00/zkool2/issues/1335)) ([8822d2c](https://github.com/hhanh00/zkool2/commit/8822d2c09e1af74b15d0910d5513a32afd6ad69c)), closes [#1333](https://github.com/hhanh00/zkool2/issues/1333)
+* **frost:** report signing progress and recover from aborts and lost accounts ([f8472ae](https://github.com/hhanh00/zkool2/commit/f8472ae398e0ef13cb99cc27b8fffb8bcf7bfa39))
+* **frost:** signing package in per-signer memos; DKG refuses a threshold the memos cannot carry ([fdc267e](https://github.com/hhanh00/zkool2/commit/fdc267e9c98b59db809e57425831a6a644c6a5ec))
+* **sync:** queue a sync requested while one is running ([a5ea677](https://github.com/hhanh00/zkool2/commit/a5ea677c100c7f659c07c15feb335868a13a4250))
+* **ui:** shorter signing step title so it fits on one line ([dffbf98](https://github.com/hhanh00/zkool2/commit/dffbf9807ae3d7b3bf170338b994c8e3f9ecbb42))
+
 ## [6.34.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.33.0...zkool-v6.34.0) (2026-10-11)
 
 
