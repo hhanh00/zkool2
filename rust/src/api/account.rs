@@ -18,8 +18,10 @@ use zcash_protocol::consensus::Parameters as ZkParams;
 use zcash_transparent::address::TransparentAddress;
 use zip32::AccountId;
 
+#[cfg(feature = "flutter")]
+use crate::api::pay::SigningEvent;
 use crate::{
-    api::{coin::Coin, pay::SigningEvent},
+    api::coin::Coin,
     db::{get_account_dindex, get_account_hw},
     io::{decrypt, encrypt},
     ledger::{HwKind, LedgerHandle},

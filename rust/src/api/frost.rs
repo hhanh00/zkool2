@@ -15,6 +15,7 @@ use crate::{
 use crate::api::sync::SyncOutcome;
 use crate::frost::driver::Driver;
 use std::str::FromStr;
+#[cfg(feature = "flutter")]
 use std::time::Duration;
 
 use super::pay::PcztPackage;
