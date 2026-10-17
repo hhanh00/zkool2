@@ -339,7 +339,7 @@ class FrostSteps extends StatelessWidget {
           icon: Icon(Icons.people),
         ),
         EasyStep(
-          title: "Commitments",
+          title: "Nonces",
           icon: Icon(Icons.receipt_long),
         ),
         EasyStep(
