@@ -15,7 +15,10 @@ use sqlx::{Row, SqliteConnection};
 use crate::api::{coin::Network, frost::DKGParams};
 use crate::frost::protocol::{decode_dkg_memos, get_addresses, lookup_broadcast_account};
 
-use super::{DkgRound0, DkgRound1, DkgRound2, DkgInit, DkgState0, DkgState1, DkgState2, Round};
+use super::{
+    DkgInit, DkgRound0, DkgRound1, DkgRound2, DkgState0, DkgState1, DkgState2,
+    DkgVersionMismatch, Round,
+};
 
 /// Outgoing bytes staged before the broadcast, cleared after it. Routing is
 /// frozen at stage time so a retry sends exactly what was planned. The crash
@@ -66,6 +69,12 @@ pub struct DkgState {
     /// True when `dkg_params` was found under the frost account: the finalize
     /// rekey already happened and only cleanup remains.
     pub rekeyed: bool,
+    /// The generation this wallet derives the group key under
+    /// (`dkg_params.dkg_version`).
+    pub dkg_version: u8,
+    /// Set when a peer's round-0 package names another generation: the DKG
+    /// cannot complete with one address on every device.
+    pub version_mismatch: Option<DkgVersionMismatch>,
     // Reconstructed round inputs (pure `collect` chains), consumed by exec.
     pub state0: Option<DkgState0>,
     pub state1: Option<DkgState1>,
@@ -118,6 +127,11 @@ pub async fn observe(
     };
 
     let n = params.n;
+    let (dkg_version,): (u8,) =
+        sqlx::query_as("SELECT dkg_version FROM dkg_params WHERE account = ?")
+            .bind(params_account)
+            .fetch_one(&mut *connection)
+            .await?;
     let addresses = get_addresses(connection, params_account, n).await?;
     let addresses_complete = addresses.len() == n as usize && addresses.iter().all(|a| !a.is_empty());
 
@@ -194,14 +208,28 @@ pub async fn observe(
         self_id: params.id,
         n,
         t: params.t,
+        dkg_version,
     };
     let need_peers = |rs: &RoundState| rs.secret_present && rs.others >= n.saturating_sub(1);
+    let mut version_mismatch = None;
     let state0 = if need_peers(&rounds[0]) {
         let secret = <DkgRound0 as Round>::load_secret(connection, params_account)
             .await?
             .unwrap();
         let peers = <DkgRound0 as Round>::load_publics(connection, params_account).await?;
-        Some(DkgRound0::collect(init, secret, peers)?)
+        // A generation mismatch is a state the planner decides on, not a
+        // failed observation: it ends the DKG with a status the user can act
+        // on instead of an error retried on every block.
+        match DkgRound0::collect(init, secret, peers) {
+            Ok(s0) => Some(s0),
+            Err(e) => match e.downcast::<DkgVersionMismatch>() {
+                Ok(mismatch) => {
+                    version_mismatch = Some(mismatch);
+                    None
+                }
+                Err(e) => return Err(e),
+            },
+        }
     } else {
         None
     };
@@ -235,6 +263,8 @@ pub async fn observe(
         key_pkg_present,
         frost_account,
         rekeyed,
+        dkg_version,
+        version_mismatch,
         state0,
         state1,
         state2,

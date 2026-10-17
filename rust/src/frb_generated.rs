@@ -10742,6 +10742,16 @@ impl SseDecode for crate::api::frost::DKGStatus {
                 let mut var_field0 = <String>::sse_decode(deserializer);
                 return crate::api::frost::DKGStatus::SharedAddress(var_field0);
             }
+            11 => {
+                let mut var_peer = <u8>::sse_decode(deserializer);
+                let mut var_ours = <u8>::sse_decode(deserializer);
+                let mut var_theirs = <u8>::sse_decode(deserializer);
+                return crate::api::frost::DKGStatus::VersionMismatch {
+                    peer: var_peer,
+                    ours: var_ours,
+                    theirs: var_theirs,
+                };
+            }
             _ => {
                 unimplemented!("");
             }
@@ -13508,6 +13518,13 @@ impl flutter_rust_bridge::IntoDart for crate::api::frost::DKGStatus {
             crate::api::frost::DKGStatus::SharedAddress(field0) => {
                 [10.into_dart(), field0.into_into_dart().into_dart()].into_dart()
             }
+            crate::api::frost::DKGStatus::VersionMismatch { peer, ours, theirs } => [
+                11.into_dart(),
+                peer.into_into_dart().into_dart(),
+                ours.into_into_dart().into_dart(),
+                theirs.into_into_dart().into_dart(),
+            ]
+            .into_dart(),
             _ => {
                 unimplemented!("");
             }
@@ -15304,6 +15321,12 @@ impl SseEncode for crate::api::frost::DKGStatus {
             crate::api::frost::DKGStatus::SharedAddress(field0) => {
                 <i32>::sse_encode(10, serializer);
                 <String>::sse_encode(field0, serializer);
+            }
+            crate::api::frost::DKGStatus::VersionMismatch { peer, ours, theirs } => {
+                <i32>::sse_encode(11, serializer);
+                <u8>::sse_encode(peer, serializer);
+                <u8>::sse_encode(ours, serializer);
+                <u8>::sse_encode(theirs, serializer);
             }
             _ => {
                 unimplemented!("");

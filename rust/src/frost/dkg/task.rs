@@ -43,6 +43,10 @@ pub enum DkgTask {
     /// Rekey the dkg_* rows onto the frost account and tear down the helper
     /// accounts. The last effect of the protocol.
     CompleteFinalize,
+    /// Participant `peer` runs DKG version `theirs`, this wallet `ours`: the
+    /// group would not agree on one address, so the DKG stops here until
+    /// every device runs the same build and the DKG is started again.
+    VersionMismatch { peer: u8, ours: u8, theirs: u8 },
     /// No further progress is possible.
     Done,
 }
@@ -56,7 +60,7 @@ impl DkgTask {
             | DkgTask::FinalizeKey
             | DkgTask::CreateFrostAccount
             | DkgTask::CompleteFinalize => TaskKind::Effect,
-            DkgTask::Done => TaskKind::Terminal,
+            DkgTask::VersionMismatch { .. } | DkgTask::Done => TaskKind::Terminal,
         }
     }
 
@@ -69,7 +73,10 @@ impl DkgTask {
     /// repeated publish.
     pub fn is_satisfied_by(&self, s: &DkgState) -> bool {
         match self {
-            DkgTask::WaitAddresses | DkgTask::WaitRound { .. } | DkgTask::Done => true,
+            DkgTask::WaitAddresses
+            | DkgTask::WaitRound { .. }
+            | DkgTask::VersionMismatch { .. }
+            | DkgTask::Done => true,
             DkgTask::EnsureAccounts => s.mailbox.is_none() || s.broadcast.is_none(),
             DkgTask::PublishRound { round } => {
                 let rs = &s.rounds[*round as usize];

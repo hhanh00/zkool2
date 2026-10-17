@@ -103,6 +103,15 @@ sealed class DKGStatus with _$DKGStatus {
   const factory DKGStatus.sharedAddress(
     String field0,
   ) = DKGStatus_SharedAddress;
+
+  /// Terminal: participant `peer` runs DKG version `theirs` while this
+  /// wallet runs `ours`. The group would not derive one address, so the
+  /// DKG stops; every device must run the same build and start again.
+  const factory DKGStatus.versionMismatch({
+    required int peer,
+    required int ours,
+    required int theirs,
+  }) = DKGStatus_VersionMismatch;
 }
 
 @freezed

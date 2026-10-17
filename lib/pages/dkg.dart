@@ -409,6 +409,16 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
         index = 3;
         finished = true;
       });
+    } else if (s is DKGStatus_VersionMismatch) {
+      // Terminal: the group cannot agree on one address across builds.
+      // The cancel button stays so the user can abandon this DKG.
+      setState(() {
+        message =
+            "Participant ${s.peer} runs DKG version ${s.theirs}, this app "
+            "runs version ${s.ours}. The group cannot derive one address. "
+            "Update the app on every device, cancel, and start the DKG again.";
+        index = 0;
+      });
     }
   }
 

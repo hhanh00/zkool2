@@ -177,6 +177,10 @@ pub enum DKGStatus {
     WaitingForFunds,
     Finalize,
     SharedAddress(String),
+    /// Terminal: participant `peer` runs DKG version `theirs` while this
+    /// wallet runs `ours`. The group would not derive one address, so the
+    /// DKG stops; every device must run the same build and start again.
+    VersionMismatch { peer: u8, ours: u8, theirs: u8 },
 }
 
 #[cfg_attr(feature = "flutter", frb)]

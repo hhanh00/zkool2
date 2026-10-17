@@ -56,6 +56,13 @@ impl DkgStepOutcome {
                 DkgTask::FinalizeKey | DkgTask::CreateFrostAccount | DkgTask::CompleteFinalize => {
                     Some(DKGStatus::Finalize)
                 }
+                DkgTask::VersionMismatch { peer, ours, theirs } => {
+                    Some(DKGStatus::VersionMismatch {
+                        peer: *peer,
+                        ours: *ours,
+                        theirs: *theirs,
+                    })
+                }
                 _ => None,
             })
             .collect();
@@ -171,7 +178,10 @@ pub async fn dkg_step(
                     waiting_for_funds: false,
                 });
             }
-            DkgTask::WaitAddresses | DkgTask::WaitRound { .. } | DkgTask::Done => {
+            DkgTask::WaitAddresses
+            | DkgTask::WaitRound { .. }
+            | DkgTask::VersionMismatch { .. }
+            | DkgTask::Done => {
                 unreachable!("non-effect task handled above")
             }
         }

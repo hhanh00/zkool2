@@ -16,7 +16,10 @@ use crate::{
         frost::{get_funding_account, DKGParams},
     },
     db::delete_account,
-    frost::{keys::CURRENT_DKG_VERSION, Broadcast, FrostBytes, PerPeer, Round},
+    frost::{
+        keys::{CURRENT_DKG_VERSION, DKG_VERSION_1},
+        Broadcast, FrostBytes, PerPeer, Round,
+    },
     Client,
 };
 
@@ -71,6 +74,110 @@ impl FrostBytes for VerifyingKey {
     }
 }
 
+// ── Round-0 package ──────────────────────────────────────────────────────────
+
+/// What a participant broadcasts in round 0: its ed25519 message key and
+/// the DKG version it will derive the group key under.
+///
+/// Wire form is `verifying_key (32) || dkg_version (1)`. A dkg-1 build sent
+/// the bare 32-byte key, so a 32-byte payload decodes as version 1; a dkg-1
+/// build cannot decode the 33-byte payload and never leaves round 0, which
+/// is the intended failure when builds are mixed.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Round0Pkg {
+    pub verifying_key: VerifyingKey,
+    pub dkg_version: u8,
+}
+
+impl FrostBytes for Round0Pkg {
+    fn to_bytes(&self) -> Result<Vec<u8>> {
+        let mut bytes = self.verifying_key.as_bytes().to_vec();
+        bytes.push(self.dkg_version);
+        Ok(bytes)
+    }
+
+    fn from_bytes(data: &[u8]) -> Result<Self> {
+        let dkg_version = match data.len() {
+            32 => DKG_VERSION_1,
+            33 => data[32],
+            n => anyhow::bail!("Invalid round-0 package length: expected 32 or 33, got {n}"),
+        };
+        let verifying_key = VerifyingKey::from_bytes(data[..32].try_into()?)?;
+        Ok(Self {
+            verifying_key,
+            dkg_version,
+        })
+    }
+}
+
+#[cfg(test)]
+mod round0_tests {
+    use super::*;
+
+    fn pkg(dkg_version: u8) -> Round0Pkg {
+        Round0Pkg {
+            verifying_key: SigningKey::generate(&mut OsRng).verifying_key(),
+            dkg_version,
+        }
+    }
+
+    /// The versioned payload round-trips; a dkg-1 build's bare key decodes
+    /// as version 1; anything else is rejected.
+    #[test]
+    fn round0_package_wire_form() {
+        let p = pkg(2);
+        let bytes = p.to_bytes().unwrap();
+        assert_eq!(bytes.len(), 33);
+        assert_eq!(Round0Pkg::from_bytes(&bytes).unwrap(), p);
+
+        let legacy = Round0Pkg::from_bytes(p.verifying_key.as_bytes()).unwrap();
+        assert_eq!(legacy.dkg_version, DKG_VERSION_1);
+        assert_eq!(legacy.verifying_key, p.verifying_key);
+
+        assert!(Round0Pkg::from_bytes(&bytes[..31]).is_err());
+        assert!(Round0Pkg::from_bytes(&[bytes.clone(), vec![0]].concat()).is_err());
+    }
+
+    #[test]
+    fn collect_fails_on_a_peer_version_mismatch() {
+        let init = DkgInit {
+            self_id: 1,
+            n: 3,
+            t: 2,
+            dkg_version: 2,
+        };
+        let sk = SigningKey::generate(&mut OsRng);
+        let peers = vec![(2, pkg(2)), (3, pkg(1))];
+        let err = match DkgRound0::collect(init, sk.clone(), peers) {
+            Err(e) => e,
+            Ok(_) => panic!("a mismatched peer must fail collect"),
+        };
+        assert_eq!(
+            err.downcast::<DkgVersionMismatch>().unwrap(),
+            DkgVersionMismatch {
+                peer: 3,
+                ours: 2,
+                theirs: 1
+            }
+        );
+
+        // Our own package is skipped whatever it says; matching peers pass.
+        let peers = vec![(1, pkg(7)), (2, pkg(2)), (3, pkg(2))];
+        let s0 = DkgRound0::collect(init, sk, peers).unwrap();
+        assert_eq!(s0.peer_verifying_keys.len(), 2);
+    }
+}
+
+/// A peer runs a different DKG generation: every participant would derive
+/// a different group address, so the DKG stops instead of completing.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, thiserror::Error)]
+#[error("participant {peer} runs DKG version {theirs}; this wallet runs version {ours}")]
+pub struct DkgVersionMismatch {
+    pub peer: u8,
+    pub ours: u8,
+    pub theirs: u8,
+}
+
 // ── State types ──────────────────────────────────────────────────────────────
 
 /// Seed data for the first DKG round.
@@ -79,6 +186,8 @@ pub struct DkgInit {
     pub self_id: u8,
     pub n: u8,
     pub t: u8,
+    /// The generation this wallet derives the group key under.
+    pub dkg_version: u8,
 }
 
 /// State after round 0 completes: our signing keypair + all peers' public keys.
@@ -114,15 +223,15 @@ impl Round for DkgRound0 {
     type Input = DkgInit;
     type Output = DkgState0;
     type Secret = SigningKey;
-    type Outgoing = Broadcast<VerifyingKey>;
-    type Public = VerifyingKey;
+    type Outgoing = Broadcast<Round0Pkg>;
+    type Public = Round0Pkg;
 
     const PREFIX: [u8; 4] = *b"DK00";
 
-    fn produce(input: &DkgInit) -> Result<(SigningKey, Broadcast<VerifyingKey>)> {
+    fn produce(input: &DkgInit) -> Result<(SigningKey, Broadcast<Round0Pkg>)> {
         info!(
-            "DKG Round0: generating signing keypair (self_id={}, n={}, t={})",
-            input.self_id, input.n, input.t
+            "DKG Round0: generating signing keypair (self_id={}, n={}, t={}, version={})",
+            input.self_id, input.n, input.t, input.dkg_version
         );
         let signing_key = SigningKey::generate(&mut OsRng);
         let verifying_key = signing_key.verifying_key();
@@ -130,20 +239,37 @@ impl Round for DkgRound0 {
             "DKG Round0: signing keypair generated, public key: {}",
             hex::encode(verifying_key.as_bytes())
         );
-        Ok((signing_key, Broadcast(verifying_key.clone())))
+        Ok((
+            signing_key,
+            Broadcast(Round0Pkg {
+                verifying_key,
+                dkg_version: input.dkg_version,
+            }),
+        ))
     }
 
+    /// Fails with [`DkgVersionMismatch`] when a peer runs another generation.
     fn collect(
         input: DkgInit,
         signing_key: SigningKey,
-        peers: Vec<(u8, VerifyingKey)>,
+        peers: Vec<(u8, Round0Pkg)>,
     ) -> Result<DkgState0> {
         let verifying_key = signing_key.verifying_key().clone();
-        let peer_verifying_keys: BTreeMap<u8, VerifyingKey> = peers
-            .into_iter()
-            .filter(|(id, _)| *id != input.self_id) // Skip our own key
-            .map(|(id, pk)| (id, pk))
-            .collect();
+        let mut peer_verifying_keys = BTreeMap::new();
+        for (id, pkg) in peers {
+            if id == input.self_id {
+                continue; // Skip our own key
+            }
+            if pkg.dkg_version != input.dkg_version {
+                return Err(DkgVersionMismatch {
+                    peer: id,
+                    ours: input.dkg_version,
+                    theirs: pkg.dkg_version,
+                }
+                .into());
+            }
+            peer_verifying_keys.insert(id, pkg.verifying_key);
+        }
         info!(
             "DKG Round0: collected {} peer verifying keys",
             peer_verifying_keys.len()
@@ -195,7 +321,7 @@ impl Round for DkgRound0 {
         conn: &mut SqliteConnection,
         account: u32,
         from_id: u8,
-        p: &VerifyingKey,
+        p: &Round0Pkg,
     ) -> Result<()> {
         sqlx::query(
             "INSERT INTO dkg_peers(account, round, from_id, data) VALUES(?1, 0, ?2, ?3)
@@ -203,16 +329,18 @@ impl Round for DkgRound0 {
         )
         .bind(account)
         .bind(from_id)
-        .bind(p.as_bytes().to_vec())
+        .bind(p.to_bytes()?)
         .execute(&mut *conn)
         .await?;
         Ok(())
     }
 
+    /// Rows written by a dkg-1 build hold the bare 32-byte key and decode
+    /// as version 1.
     async fn load_publics(
         conn: &mut SqliteConnection,
         account: u32,
-    ) -> Result<Vec<(u8, VerifyingKey)>> {
+    ) -> Result<Vec<(u8, Round0Pkg)>> {
         let rows =
             sqlx::query("SELECT from_id, data FROM dkg_peers WHERE account = ? AND round = 0")
                 .bind(account)
@@ -220,28 +348,37 @@ impl Round for DkgRound0 {
                 .fetch_all(&mut *conn)
                 .await?;
 
-        let mut result = Vec::new();
-        for (id, data) in rows {
-            if data.len() != 32 {
-                anyhow::bail!(
-                    "Invalid VerifyingKey length for participant {}: expected 32, got {}",
-                    id,
-                    data.len()
-                );
-            }
-            let arr: [u8; 32] = data.try_into().map_err(|_| {
-                anyhow::anyhow!(
-                    "Failed to convert VerifyingKey bytes for participant {}",
-                    id
-                )
-            })?;
-            let vk = VerifyingKey::from_bytes(&arr).map_err(|e| {
-                anyhow::anyhow!("Invalid VerifyingKey for participant {}: {}", id, e)
-            })?;
-            result.push((id, vk));
-        }
-        Ok(result)
+        rows.into_iter()
+            .map(|(id, data)| {
+                Round0Pkg::from_bytes(&data)
+                    .map(|pkg| (id, pkg))
+                    .with_context(|| format!("round-0 package of participant {id}"))
+            })
+            .collect()
     }
+}
+
+/// The round-0 message key a peer published, from its stored package. None
+/// when the peer sent nothing in round 0 (a dkg-0 group, or a restored
+/// member), in which case its signing messages are unsigned and accepted.
+pub async fn load_peer_verifying_key(
+    connection: &mut SqliteConnection,
+    account: u32,
+    from_id: u8,
+) -> Result<Option<VerifyingKey>> {
+    let row = sqlx::query_as::<_, (Vec<u8>,)>(
+        "SELECT data FROM dkg_peers WHERE account = ? AND round = 0 AND from_id = ?",
+    )
+    .bind(account)
+    .bind(from_id)
+    .fetch_optional(&mut *connection)
+    .await?;
+    row.map(|(data,)| {
+        Round0Pkg::from_bytes(&data)
+            .map(|pkg| pkg.verifying_key)
+            .with_context(|| format!("round-0 package of participant {from_id}"))
+    })
+    .transpose()
 }
 
 // ── DkgRound1 ────────────────────────────────────────────────────────────────

@@ -113,6 +113,7 @@ async fn stage(
                 self_id: state.params.id,
                 n: state.params.n,
                 t: state.params.t,
+                dkg_version: state.dkg_version,
             };
             let (secret, outgoing) =
                 DkgRound0::produce(&input).context("round 0 produce failed")?;

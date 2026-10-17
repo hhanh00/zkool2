@@ -6990,6 +6990,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         return DKGStatus_SharedAddress(
           dco_decode_String(raw[1]),
         );
+      case 11:
+        return DKGStatus_VersionMismatch(
+          peer: dco_decode_u_8(raw[1]),
+          ours: dco_decode_u_8(raw[2]),
+          theirs: dco_decode_u_8(raw[3]),
+        );
       default:
         throw Exception("unreachable");
     }
@@ -8975,6 +8981,12 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 10:
         var var_field0 = sse_decode_String(deserializer);
         return DKGStatus_SharedAddress(var_field0);
+      case 11:
+        var var_peer = sse_decode_u_8(deserializer);
+        var var_ours = sse_decode_u_8(deserializer);
+        var var_theirs = sse_decode_u_8(deserializer);
+        return DKGStatus_VersionMismatch(
+            peer: var_peer, ours: var_ours, theirs: var_theirs);
       default:
         throw UnimplementedError('');
     }
@@ -11340,6 +11352,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case DKGStatus_SharedAddress(field0: final field0):
         sse_encode_i_32(10, serializer);
         sse_encode_String(field0, serializer);
+      case DKGStatus_VersionMismatch(
+          peer: final peer,
+          ours: final ours,
+          theirs: final theirs
+        ):
+        sse_encode_i_32(11, serializer);
+        sse_encode_u_8(peer, serializer);
+        sse_encode_u_8(ours, serializer);
+        sse_encode_u_8(theirs, serializer);
     }
   }
 

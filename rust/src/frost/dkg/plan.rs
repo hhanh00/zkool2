@@ -17,6 +17,15 @@ pub fn next_task(s: &DkgState) -> DkgTask {
     if !s.addresses_complete() {
         return DkgTask::WaitAddresses;
     }
+    // A peer on another generation would finish with a different address:
+    // stop before any further round, whatever else is pending.
+    if let Some(m) = s.version_mismatch {
+        return DkgTask::VersionMismatch {
+            peer: m.peer,
+            ours: m.ours,
+            theirs: m.theirs,
+        };
+    }
     if s.mailbox.is_none() || s.broadcast.is_none() {
         return DkgTask::EnsureAccounts;
     }
@@ -79,10 +88,35 @@ mod tests {
             key_pkg_present: false,
             frost_account: None,
             rekeyed: false,
+            dkg_version: 2,
+            version_mismatch: None,
             state0: None,
             state1: None,
             state2: None,
         }
+    }
+
+    /// A peer on another generation stops the DKG before round 1, even
+    /// with our own round-0 package still staged for a resend.
+    #[test]
+    fn a_version_mismatch_is_terminal() {
+        let mut s = state(3, through(3, 0));
+        s.rounds[0].pending = Some(0);
+        s.version_mismatch = Some(crate::frost::dkg::DkgVersionMismatch {
+            peer: 2,
+            ours: 2,
+            theirs: 1,
+        });
+        let task = next_task(&s);
+        assert_eq!(
+            task,
+            DkgTask::VersionMismatch {
+                peer: 2,
+                ours: 2,
+                theirs: 1
+            }
+        );
+        assert_eq!(task.kind(), crate::frost::dkg::task::TaskKind::Terminal);
     }
 
     /// Rounds 0..=`last` have secrets and all n-1 peer packages.

@@ -18,7 +18,7 @@ use zcash_protocol::memo::Memo;
 use crate::{
     api::{coin::Network, frost::FrostSignParams, pay::PcztPackage},
     frost::{
-        dkg::get_dkg_params,
+        dkg::{get_dkg_params, load_peer_verifying_key},
         protocol::lookup_broadcast_account,
         FrostSigMessage, P,
     },
@@ -323,29 +323,6 @@ async fn coordinator_address_opt(
 
 // ── Memo ingestion ────────────────────────────────────────────────────────────
 
-async fn load_peer_verifying_key(
-    connection: &mut SqliteConnection,
-    account: u32,
-    from_id: u16,
-) -> Result<Option<VerifyingKey>> {
-    let result = sqlx::query_as::<_, (Vec<u8>,)>(
-        "SELECT data FROM dkg_peers WHERE account = ? AND round = 0 AND from_id = ?",
-    )
-    .bind(account)
-    .bind(from_id as u8)
-    .fetch_optional(&mut *connection)
-    .await?;
-    match result {
-        Some((b,)) => {
-            let arr: [u8; 32] = b.try_into().expect("invalid VerifyingKey length");
-            Ok(Some(
-                VerifyingKey::from_bytes(&arr).expect("invalid VerifyingKey"),
-            ))
-        }
-        None => Ok(None),
-    }
-}
-
 fn verify_message(message: &FrostSigMessage, verifying_key: &VerifyingKey) -> bool {
     let Some(signature_bytes) = message.signature else {
         return true; // backward compat: unsigned messages accepted
@@ -392,7 +369,10 @@ async fn decode_frost_memos(
     }
 
     for msg in messages {
-        if let Some(vk) = load_peer_verifying_key(connection, account, msg.from_id).await? {
+        let Ok(from_id) = u8::try_from(msg.from_id) else {
+            continue;
+        };
+        if let Some(vk) = load_peer_verifying_key(connection, account, from_id).await? {
             if !verify_message(&msg, &vk) {
                 info!(
                     "decode_frost_memos: rejecting message from {} — invalid signature",

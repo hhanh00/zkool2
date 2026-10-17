@@ -61,6 +61,7 @@ extension DKGStatusPatterns on DKGStatus {
     TResult Function(DKGStatus_WaitingForFunds value)? waitingForFunds,
     TResult Function(DKGStatus_Finalize value)? finalize,
     TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
+    TResult Function(DKGStatus_VersionMismatch value)? versionMismatch,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -87,6 +88,8 @@ extension DKGStatusPatterns on DKGStatus {
         return finalize(_that);
       case DKGStatus_SharedAddress() when sharedAddress != null:
         return sharedAddress(_that);
+      case DKGStatus_VersionMismatch() when versionMismatch != null:
+        return versionMismatch(_that);
       case _:
         return orElse();
     }
@@ -121,6 +124,7 @@ extension DKGStatusPatterns on DKGStatus {
     required TResult Function(DKGStatus_WaitingForFunds value) waitingForFunds,
     required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
+    required TResult Function(DKGStatus_VersionMismatch value) versionMismatch,
   }) {
     final _that = this;
     switch (_that) {
@@ -146,6 +150,8 @@ extension DKGStatusPatterns on DKGStatus {
         return finalize(_that);
       case DKGStatus_SharedAddress():
         return sharedAddress(_that);
+      case DKGStatus_VersionMismatch():
+        return versionMismatch(_that);
     }
   }
 
@@ -174,6 +180,7 @@ extension DKGStatusPatterns on DKGStatus {
     TResult? Function(DKGStatus_WaitingForFunds value)? waitingForFunds,
     TResult? Function(DKGStatus_Finalize value)? finalize,
     TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
+    TResult? Function(DKGStatus_VersionMismatch value)? versionMismatch,
   }) {
     final _that = this;
     switch (_that) {
@@ -199,6 +206,8 @@ extension DKGStatusPatterns on DKGStatus {
         return finalize(_that);
       case DKGStatus_SharedAddress() when sharedAddress != null:
         return sharedAddress(_that);
+      case DKGStatus_VersionMismatch() when versionMismatch != null:
+        return versionMismatch(_that);
       case _:
         return null;
     }
@@ -229,6 +238,7 @@ extension DKGStatusPatterns on DKGStatus {
     TResult Function()? waitingForFunds,
     TResult Function()? finalize,
     TResult Function(String field0)? sharedAddress,
+    TResult Function(int peer, int ours, int theirs)? versionMismatch,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -255,6 +265,8 @@ extension DKGStatusPatterns on DKGStatus {
         return finalize();
       case DKGStatus_SharedAddress() when sharedAddress != null:
         return sharedAddress(_that.field0);
+      case DKGStatus_VersionMismatch() when versionMismatch != null:
+        return versionMismatch(_that.peer, _that.ours, _that.theirs);
       case _:
         return orElse();
     }
@@ -286,6 +298,7 @@ extension DKGStatusPatterns on DKGStatus {
     required TResult Function() waitingForFunds,
     required TResult Function() finalize,
     required TResult Function(String field0) sharedAddress,
+    required TResult Function(int peer, int ours, int theirs) versionMismatch,
   }) {
     final _that = this;
     switch (_that) {
@@ -311,6 +324,8 @@ extension DKGStatusPatterns on DKGStatus {
         return finalize();
       case DKGStatus_SharedAddress():
         return sharedAddress(_that.field0);
+      case DKGStatus_VersionMismatch():
+        return versionMismatch(_that.peer, _that.ours, _that.theirs);
     }
   }
 
@@ -339,6 +354,7 @@ extension DKGStatusPatterns on DKGStatus {
     TResult? Function()? waitingForFunds,
     TResult? Function()? finalize,
     TResult? Function(String field0)? sharedAddress,
+    TResult? Function(int peer, int ours, int theirs)? versionMismatch,
   }) {
     final _that = this;
     switch (_that) {
@@ -364,6 +380,8 @@ extension DKGStatusPatterns on DKGStatus {
         return finalize();
       case DKGStatus_SharedAddress() when sharedAddress != null:
         return sharedAddress(_that.field0);
+      case DKGStatus_VersionMismatch() when versionMismatch != null:
+        return versionMismatch(_that.peer, _that.ours, _that.theirs);
       case _:
         return null;
     }
@@ -688,6 +706,87 @@ class _$DKGStatus_SharedAddressCopyWithImpl<$Res>
           ? _self.field0
           : field0 // ignore: cast_nullable_to_non_nullable
               as String,
+    ));
+  }
+}
+
+/// @nodoc
+
+class DKGStatus_VersionMismatch extends DKGStatus {
+  const DKGStatus_VersionMismatch(
+      {required this.peer, required this.ours, required this.theirs})
+      : super._();
+
+  final int peer;
+  final int ours;
+  final int theirs;
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $DKGStatus_VersionMismatchCopyWith<DKGStatus_VersionMismatch> get copyWith =>
+      _$DKGStatus_VersionMismatchCopyWithImpl<DKGStatus_VersionMismatch>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is DKGStatus_VersionMismatch &&
+            (identical(other.peer, peer) || other.peer == peer) &&
+            (identical(other.ours, ours) || other.ours == ours) &&
+            (identical(other.theirs, theirs) || other.theirs == theirs));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, peer, ours, theirs);
+
+  @override
+  String toString() {
+    return 'DKGStatus.versionMismatch(peer: $peer, ours: $ours, theirs: $theirs)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $DKGStatus_VersionMismatchCopyWith<$Res>
+    implements $DKGStatusCopyWith<$Res> {
+  factory $DKGStatus_VersionMismatchCopyWith(DKGStatus_VersionMismatch value,
+          $Res Function(DKGStatus_VersionMismatch) _then) =
+      _$DKGStatus_VersionMismatchCopyWithImpl;
+  @useResult
+  $Res call({int peer, int ours, int theirs});
+}
+
+/// @nodoc
+class _$DKGStatus_VersionMismatchCopyWithImpl<$Res>
+    implements $DKGStatus_VersionMismatchCopyWith<$Res> {
+  _$DKGStatus_VersionMismatchCopyWithImpl(this._self, this._then);
+
+  final DKGStatus_VersionMismatch _self;
+  final $Res Function(DKGStatus_VersionMismatch) _then;
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? peer = null,
+    Object? ours = null,
+    Object? theirs = null,
+  }) {
+    return _then(DKGStatus_VersionMismatch(
+      peer: null == peer
+          ? _self.peer
+          : peer // ignore: cast_nullable_to_non_nullable
+              as int,
+      ours: null == ours
+          ? _self.ours
+          : ours // ignore: cast_nullable_to_non_nullable
+              as int,
+      theirs: null == theirs
+          ? _self.theirs
+          : theirs // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
