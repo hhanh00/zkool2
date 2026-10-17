@@ -270,10 +270,20 @@ mod tests {
         .encode()
         .unwrap();
         let fvk = group_fvk(DKG_VERSION_0, &sk, &ak).unwrap();
-        let (account, version) =
-            restore_backup(&Network::Main, db, "legacy", &backup, &ufvk_of(&fvk))
-                .await
-                .unwrap();
+        let restored = restore_backup(
+            &Network::Main,
+            db,
+            "legacy",
+            &backup,
+            &ufvk_of(&fvk),
+            &[DKG_VERSION_0],
+            None,
+        )
+        .await
+        .unwrap();
+        let [(account, version)] = restored[..] else {
+            panic!("one account expected");
+        };
         assert_eq!(version, DKG_VERSION_0);
         (account, sk, ak)
     }

@@ -12,12 +12,14 @@ import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/sweep.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/validators.dart';
+import 'package:zkool/widgets/frost_generation_select.dart';
 import 'package:zkool/widgets/pool_select.dart';
 import 'package:zkool/router.dart';
 
@@ -43,6 +45,12 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
           : Pool.transparent.bit | Pool.ironwood.bit) // T+I
       : getKeyPools(key: key, c: c);
   var isFvk = false;
+  // A zkfrost member backup string: restored with the group's viewing key
+  // into the legacy account, the ZIP 2005 one, or both (a bit mask, see
+  // FrostGeneration). The default follows the generation the key matches.
+  var isFrostBackup = false;
+  var frostGenerations = FrostGeneration.zip2005.bit;
+  var frostUfvk = "";
   var _showAdvanced = false;
   Uint8List? iconBytes;
   final formKey = GlobalKey<FormBuilderState>();
@@ -55,6 +63,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
     final ib = iconBytes;
     isSeed = isValidPhrase(phrase: key);
     isFvk = isValidFvk(fvk: key, c: c);
+    isFrostBackup = isFrostBackupKey(key);
     final keyPools = getPools(); // 3 is T+S, 9 is T+Ironwood
 
     return Scaffold(
@@ -191,6 +200,35 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                               ),
                             ],
                           ),
+                          if (isFrostBackup) ...[
+                            Gap(12),
+                            Tooltip(
+                              message: "The FROST group's unified full viewing key, from any member's Viewing Keys page",
+                              child: FormBuilderTextField(
+                                name: "ufvk",
+                                decoration: const InputDecoration(
+                                  labelText: "Group Viewing Key",
+                                  prefixIcon: Icon(Icons.group),
+                                ),
+                                validator: (s) => (s == null || s.isEmpty) ? "The group's viewing key is required" : null,
+                                onChanged: onFrostUfvkChanged,
+                              ),
+                            ),
+                            Gap(12),
+                            Tooltip(
+                              message: "Which account(s) to restore. A group upgraded from a legacy address has both; pick both to get the legacy funds back too",
+                              child: InputDecorator(
+                                decoration: InputDecoration(labelText: "Accounts to restore"),
+                                child: Align(
+                                  alignment: Alignment.centerRight,
+                                  child: FrostGenerationSelect(
+                                    initialValue: frostGenerations,
+                                    onChanged: (v) => setState(() => frostGenerations = v),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                           Gap(12),
                           Tooltip(
                             message: "Block height when the wallet was created. Save synchronization time by skipping blocks before the birth height",
@@ -402,6 +440,10 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       final String? passphrase = formData?["passphrase"];
       final String? aindex = formData?["aindex"];
       final String? birth = formData?["birth"];
+      if (isFrostBackup) {
+        await onRestoreFrostBackup(name ?? "", formData?["ufvk"] as String? ?? "", birth);
+        return;
+      }
       final bool useInternal = ledger ? ledgerApp == 1 : formData?["useInternal"] ?? true;
       final int? pools = formData!["pools"];
 
@@ -490,6 +532,62 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         if (mounted) await showException(context, e.message);
         dialog?.dismiss();
       }
+    }
+  }
+
+  /// The generation the pasted key matches is what to restore by default.
+  void onFrostUfvkChanged(String? v) async {
+    frostUfvk = v ?? "";
+    if (frostUfvk.isEmpty) return;
+    try {
+      final matched = await matchFrostBackup(backup: key.trim(), ufvk: frostUfvk.trim(), c: c);
+      if (!mounted) return;
+      setState(() => frostGenerations = matched >= 2 ? FrostGeneration.zip2005.bit : FrostGeneration.legacy.bit);
+    } on AnyhowException catch (_) {
+      // Not a key of this group, or not a key yet; the restore reports it.
+    }
+  }
+
+  Future<void> onRestoreFrostBackup(String name, String ufvk, String? birth) async {
+    if (frostGenerations == 0) {
+      await showException(context, "Select at least one account to restore");
+      return;
+    }
+    AwesomeDialog? dialog;
+    try {
+      dialog = showLoadingDialog(context, "Please wait while we restore the FROST account");
+      final restored = await restoreFrostBackup(
+        name: name,
+        backup: key.trim(),
+        ufvk: ufvk.trim(),
+        legacy: frostGenerations & FrostGeneration.legacy.bit != 0,
+        zip2005: frostGenerations & FrostGeneration.zip2005.bit != 0,
+        birth: birth != null ? int.parse(birth) : null,
+        c: c,
+      );
+      dialog.dismiss();
+      dialog = null;
+      ref.invalidate(getAccountsProvider);
+      await ref.read(getAccountsProvider.future);
+      // The ZIP 2005 account when both were restored: it is the one to use.
+      final account = restored.last.account;
+      await ref.read(selectedAccountIdProvider.notifier).set(account);
+      final currentHeight = ref.read(currentHeightProvider).value;
+      if (mounted && currentHeight != null) {
+        final shouldSync = await confirmDialog(
+          context,
+          title: "FROST Account Restored",
+          message: "${restored.length == 2 ? "Both accounts were" : "The account was"} restored. "
+              "Would you like to synchronize now?",
+        );
+        if (shouldSync && mounted) {
+          unawaited(ref.read(synchronizerProvider.notifier).syncIfNeeded(currentHeight, now: true));
+        }
+      }
+      if (mounted) GoRouter.of(context).go(accountRoute("/", account));
+    } on AnyhowException catch (e) {
+      dialog?.dismiss();
+      if (mounted) await showException(context, e.message);
     }
   }
 

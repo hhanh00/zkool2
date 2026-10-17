@@ -146,19 +146,39 @@ pub async fn frost_export_backup(id_account: i32, context: &Context) -> FieldRes
     Ok(crate::api::frost::export_frost_backup(id_account, &context.coin).await?)
 }
 
-/// Restore a frost account from a backup string and the group's UFVK.
+/// Restore frost accounts from a backup string and the group's UFVK: the
+/// generations asked for, or the one the key matches when none is.
 pub async fn frost_restore(
     name: String,
     backup: String,
     ufvk: String,
+    legacy: Option<bool>,
+    zip2005: Option<bool>,
+    birth: Option<i32>,
     context: &Context,
-) -> FieldResult<FrostRestoreResult> {
-    let restored =
-        crate::api::frost::restore_frost_backup(&name, &backup, &ufvk, &context.coin).await?;
-    Ok(FrostRestoreResult {
-        id_account: restored.account as i32,
-        dkg_version: restored.dkg_version as i32,
-    })
+) -> FieldResult<Vec<FrostRestoreResult>> {
+    let coin = &context.coin;
+    let (legacy, zip2005) = match (legacy, zip2005) {
+        (None, None) => {
+            let matched = crate::api::frost::match_frost_backup(&backup, &ufvk, coin)?;
+            (matched < 2, matched >= 2)
+        }
+        (l, z) => (l.unwrap_or(false), z.unwrap_or(false)),
+    };
+    let birth = birth
+        .map(|b| u32::try_from(b).map_err(|_| invalid_integer("birth")))
+        .transpose()?;
+    let restored = crate::api::frost::restore_frost_backup(
+        &name, &backup, &ufvk, legacy, zip2005, birth, coin,
+    )
+    .await?;
+    Ok(restored
+        .into_iter()
+        .map(|r| FrostRestoreResult {
+            id_account: r.account as i32,
+            dkg_version: r.dkg_version as i32,
+        })
+        .collect())
 }
 
 pub async fn frost_sign(

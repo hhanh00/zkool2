@@ -85,16 +85,35 @@ Future<void> cancelDkg({required Coin c}) =>
 Future<String> exportFrostBackup({required int account, required Coin c}) =>
     RustLib.instance.api.crateApiFrostExportFrostBackup(account: account, c: c);
 
-/// Restore a frost account from its backup string and the group's unified
-/// full viewing key. No peer addresses are needed; a fresh mailbox is
-/// created at the first signing session.
-Future<FrostRestore> restoreFrostBackup(
+/// The generation a backup string and a group viewing key match: 0 for a
+/// legacy key, 2 for a ZIP 2005 one. Fails when the string is not the
+/// group's. What a restore form should tick by default.
+Future<int> matchFrostBackup(
+        {required String backup, required String ufvk, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiFrostMatchFrostBackup(backup: backup, ufvk: ufvk, c: c);
+
+/// Restore frost accounts from a backup string and the group's unified
+/// full viewing key: the legacy account, the ZIP 2005 one, or both, since
+/// the string's sk derives both from the key's ak. No peer addresses are
+/// needed; a fresh mailbox is created at the first signing session. Born
+/// at `birth`, or at Orchard activation when not given.
+Future<List<FrostRestore>> restoreFrostBackup(
         {required String name,
         required String backup,
         required String ufvk,
+        required bool legacy,
+        required bool zip2005,
+        int? birth,
         required Coin c}) =>
     RustLib.instance.api.crateApiFrostRestoreFrostBackup(
-        name: name, backup: backup, ufvk: ufvk, c: c);
+        name: name,
+        backup: backup,
+        ufvk: ufvk,
+        legacy: legacy,
+        zip2005: zip2005,
+        birth: birth,
+        c: c);
 
 Future<void> resetSign({required Coin c}) =>
     RustLib.instance.api.crateApiFrostResetSign(c: c);

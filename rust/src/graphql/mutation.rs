@@ -459,15 +459,21 @@ impl Mutation {
         crate::graphql::frost::frost_export_backup(id_account, context).await
     }
 
-    /// Restore a frost account from its backup string and the group's UFVK.
+    /// Restore frost accounts from a backup string and the group's UFVK:
+    /// the legacy account, the ZIP 2005 one, or both; by default the one
+    /// the key matches. `birth` defaults to Orchard activation.
     pub async fn frost_restore(
         name: String,
         backup: String,
         ufvk: String,
+        legacy: Option<bool>,
+        zip2005: Option<bool>,
+        birth: Option<i32>,
         context: &Context,
-    ) -> FieldResult<FrostRestoreResult> {
+    ) -> FieldResult<Vec<FrostRestoreResult>> {
         check_admin_auth(context)?;
-        crate::graphql::frost::frost_restore(name, backup, ufvk, context).await
+        crate::graphql::frost::frost_restore(name, backup, ufvk, legacy, zip2005, birth, context)
+            .await
     }
 
     pub async fn frost_sign(

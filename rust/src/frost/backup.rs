@@ -37,7 +37,7 @@ use crate::{
     api::coin::Network,
     db::{init_account_orchard, store_account_metadata, store_account_orchard_vk},
     frost::{
-        keys::{group_fvk, DKG_VERSION_0, DKG_VERSION_2},
+        keys::{group_fvk, is_recoverable, DKG_VERSION_0, DKG_VERSION_2},
         protocol::group_sk,
         FrostBytes, P,
     },
@@ -141,8 +141,10 @@ pub async fn export_backup(
     .encode()
 }
 
-/// Which derivation a viewing key follows for a given `sk`.
-fn match_derivation(fvk: &FullViewingKey, sk: &SpendingKey) -> Result<u8> {
+/// Which derivation a viewing key follows for a given `sk`: the generation
+/// a restore defaults to. An error when neither matches, i.e. the string
+/// is not this group's.
+pub fn match_derivation(fvk: &FullViewingKey, sk: &SpendingKey) -> Result<u8> {
     let ak: [u8; 32] = fvk.to_bytes()[..32].try_into().unwrap();
     if group_fvk(DKG_VERSION_0, sk, &ak)? == *fvk {
         Ok(DKG_VERSION_0)
@@ -157,27 +159,57 @@ fn match_derivation(fvk: &FullViewingKey, sk: &SpendingKey) -> Result<u8> {
     }
 }
 
-/// Restore a frost account from a backup string and the group's unified
-/// full viewing key. Returns the new account and its DKG version (0 for a
-/// legacy group, 2 for a ZIP 2005 one).
+/// Which generation a backup string and a group viewing key match: 0 for a
+/// legacy key, 2 for a ZIP 2005 one. An error when the string is not the
+/// group's.
+pub fn match_backup(network: &Network, backup: &str, ufvk: &str) -> Result<u8> {
+    let backup = FrostBackup::decode(backup)?;
+    let fvk = parse_group_fvk(network, ufvk)?;
+    let sk = Option::from(SpendingKey::from_bytes(backup.sk))
+        .context("the backup string carries an invalid sk")?;
+    match_derivation(&fvk, &sk)
+}
+
+fn parse_group_fvk(network: &Network, ufvk: &str) -> Result<FullViewingKey> {
+    let ufvk = UnifiedFullViewingKey::decode(network, ufvk.trim())
+        .map_err(|e| anyhow!("invalid unified full viewing key: {e}"))?;
+    ufvk.orchard()
+        .cloned()
+        .context("the viewing key has no Orchard key; a frost group's key is Orchard-only")
+}
+
+/// Restore frost accounts from a backup string and the group's unified
+/// full viewing key: one account per requested generation (below 2 is the
+/// legacy derivation, 2 is ZIP 2005), since `sk` and the key's `ak` derive
+/// both. The key must match one of the derivations, which proves the
+/// string belongs to the group; the generation it matches is what a caller
+/// with no preference should ask for (see [`match_backup`]). Born at
+/// `birth`, or at Orchard activation so a rescan finds every note. Returns
+/// (account, version) per account, legacy first.
 pub async fn restore_backup(
     network: &Network,
     connection: &mut SqliteConnection,
     name: &str,
     backup: &str,
     ufvk: &str,
-) -> Result<(u32, u8)> {
+    versions: &[u8],
+    birth: Option<u32>,
+) -> Result<Vec<(u32, u8)>> {
     let backup = FrostBackup::decode(backup)?;
-    let ufvk = UnifiedFullViewingKey::decode(network, ufvk.trim())
-        .map_err(|e| anyhow!("invalid unified full viewing key: {e}"))?;
-    let fvk = ufvk
-        .orchard()
-        .context("the viewing key has no Orchard key; a frost group's key is Orchard-only")?;
+    let fvk = parse_group_fvk(network, ufvk)?;
     let sk = Option::from(SpendingKey::from_bytes(backup.sk))
         .context("the backup string carries an invalid sk")?;
-    let dkg_version = match_derivation(fvk, &sk)?;
+    match_derivation(&fvk, &sk)?;
+    let mut wanted: Vec<u8> = versions
+        .iter()
+        .map(|v| if is_recoverable(*v) { DKG_VERSION_2 } else { DKG_VERSION_0 })
+        .collect();
+    wanted.sort_unstable();
+    wanted.dedup();
+    if wanted.is_empty() {
+        bail!("no generation selected to restore");
+    }
 
-    // The key package, from what the string and the key hold.
     let ak: [u8; 32] = fvk.to_bytes()[..32].try_into().unwrap();
     let identifier = Identifier::try_from(backup.id as u16)?;
     let signing_share = SigningShare::<P>::deserialize(&backup.share)
@@ -192,40 +224,55 @@ pub async fn restore_backup(
         backup.t as u16,
     );
 
-    // Birth at Orchard activation: the notes are wherever the group has
-    // received since it was formed, and a rescan from there finds them.
-    let birth: u32 = network
+    // Birth at Orchard activation unless told otherwise: the notes are
+    // wherever the group has received since it was formed, and a rescan
+    // from there finds them.
+    let activation: u32 = network
         .activation_height(NetworkUpgrade::Nu5)
         .context("Orchard is not active on this network")?
         .into();
+    let birth = birth.unwrap_or(activation).max(activation);
 
     let mut tx = connection.begin().await?;
-    let account = store_account_metadata(&mut *tx, name, &None, &None, birth, false, false).await?;
-    init_account_orchard(network, &mut *tx, account, birth).await?;
-    store_account_orchard_vk(&mut *tx, account, fvk).await?;
-    // `sk` is kept for both versions: a restored member has no stored
-    // addresses to rederive it from, and the signing transport needs it.
-    sqlx::query(
-        "INSERT INTO dkg_params(account, id, n, t, seed, birth_height, name, dkg_version, sk)
-        VALUES (?, ?, ?, ?, '', ?, ?, ?, ?)",
-    )
-    .bind(account)
-    .bind(backup.id)
-    .bind(backup.n)
-    .bind(backup.t)
-    .bind(birth)
-    .bind(name)
-    .bind(dkg_version)
-    .bind(sk.to_bytes().to_vec())
-    .execute(&mut *tx)
-    .await?;
-    sqlx::query("INSERT INTO dkg_state(account, key_pkg) VALUES (?, ?)")
+    let mut restored = Vec::with_capacity(wanted.len());
+    for dkg_version in wanted {
+        let fvk = group_fvk(dkg_version, &sk, &ak)?;
+        // The names an upgrade would have given the pair.
+        let account_name = if is_recoverable(dkg_version) && restored.len() == 1 {
+            format!("{name} (ZIP 2005)")
+        } else {
+            name.to_string()
+        };
+        let account =
+            store_account_metadata(&mut *tx, &account_name, &None, &None, birth, false, false)
+                .await?;
+        init_account_orchard(network, &mut *tx, account, birth).await?;
+        store_account_orchard_vk(&mut *tx, account, &fvk).await?;
+        // `sk` is kept for both versions: a restored member has no stored
+        // addresses to rederive it from, and the signing transport needs it.
+        sqlx::query(
+            "INSERT INTO dkg_params(account, id, n, t, seed, birth_height, name, dkg_version, sk)
+            VALUES (?, ?, ?, ?, '', ?, ?, ?, ?)",
+        )
         .bind(account)
-        .bind(key_pkg.to_bytes()?)
+        .bind(backup.id)
+        .bind(backup.n)
+        .bind(backup.t)
+        .bind(birth)
+        .bind(name)
+        .bind(dkg_version)
+        .bind(sk.to_bytes().to_vec())
         .execute(&mut *tx)
         .await?;
+        sqlx::query("INSERT INTO dkg_state(account, key_pkg) VALUES (?, ?)")
+            .bind(account)
+            .bind(key_pkg.to_bytes()?)
+            .execute(&mut *tx)
+            .await?;
+        restored.push((account, dkg_version));
+    }
     tx.commit().await?;
-    Ok((account, dkg_version))
+    Ok(restored)
 }
 
 #[cfg(test)]
@@ -345,10 +392,13 @@ mod tests {
         ] {
             let mut db = SqliteConnection::connect("sqlite::memory:").await.unwrap();
             create_schema(&mut db).await.unwrap();
-            let (account, restored_version) =
-                restore_backup(&network, &mut db, "group", &b, &ufvk_of(&fvk))
-                    .await
-                    .unwrap();
+            assert_eq!(match_backup(&network, &b, &ufvk_of(&fvk)).unwrap(), version);
+            let restored = restore_backup(&network, &mut db, "group", &b, &ufvk_of(&fvk), &[version], None)
+                .await
+                .unwrap();
+            let [(account, restored_version)] = restored[..] else {
+                panic!("one account expected");
+            };
             assert_eq!(restored_version, version);
 
             let (xvk, params, key_pkg) = restored_rows(&mut db, account).await;
@@ -375,9 +425,67 @@ mod tests {
             "group",
             &backup(OTHER_SK).encode().unwrap(),
             &ufvk_of(&fvk),
+            &[DKG_VERSION_2],
+            None,
         )
         .await
         .unwrap_err();
         assert!(err.to_string().contains("does not belong"), "{err}");
+    }
+
+    /// Both generations from one string and one key, either key: the
+    /// legacy account first under the given name, the ZIP 2005 one named
+    /// as an upgrade would name it, both at the requested birth height.
+    #[tokio::test]
+    async fn restore_can_create_both_generations_from_either_key() {
+        let network = Network::Main;
+        let sk = SpendingKey::from_bytes(bytes32(SK)).unwrap();
+        let ak = bytes32(AK);
+        let b = backup(SK).encode().unwrap();
+        let legacy_fvk = group_fvk(DKG_VERSION_0, &sk, &ak).unwrap();
+        let zip_fvk = group_fvk(DKG_VERSION_2, &sk, &ak).unwrap();
+
+        for key in [&legacy_fvk, &zip_fvk] {
+            let mut db = SqliteConnection::connect("sqlite::memory:").await.unwrap();
+            create_schema(&mut db).await.unwrap();
+            let restored = restore_backup(
+                &network,
+                &mut db,
+                "group",
+                &b,
+                &ufvk_of(key),
+                &[DKG_VERSION_2, DKG_VERSION_0, 1],
+                Some(2_500_000),
+            )
+            .await
+            .unwrap();
+            assert_eq!(restored.len(), 2);
+            assert_eq!(restored[0].1, DKG_VERSION_0);
+            assert_eq!(restored[1].1, DKG_VERSION_2);
+            let (xvk, params, _) = restored_rows(&mut db, restored[0].0).await;
+            assert_eq!(xvk, legacy_fvk.to_bytes().to_vec());
+            assert_eq!(params.3, DKG_VERSION_0);
+            let (xvk, params, _) = restored_rows(&mut db, restored[1].0).await;
+            assert_eq!(xvk, zip_fvk.to_bytes().to_vec());
+            assert_eq!(params.3, DKG_VERSION_2);
+            let names: Vec<(String, u32)> = sqlx::query_as(
+                "SELECT name, birth FROM accounts ORDER BY id_account",
+            )
+            .fetch_all(&mut db)
+            .await
+            .unwrap();
+            assert_eq!(
+                names,
+                vec![
+                    ("group".to_string(), 2_500_000),
+                    ("group (ZIP 2005)".to_string(), 2_500_000)
+                ]
+            );
+            // The pair is a sibling pair, as after an upgrade.
+            assert_eq!(
+                crate::frost::upgrade::sibling_of(&mut db, restored[0].0).await.unwrap(),
+                Some(restored[1].0)
+            );
+        }
     }
 }

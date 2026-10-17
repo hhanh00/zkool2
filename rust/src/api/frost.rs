@@ -240,24 +240,54 @@ pub struct FrostRestore {
     pub dkg_version: u8,
 }
 
-/// Restore a frost account from its backup string and the group's unified
-/// full viewing key. No peer addresses are needed; a fresh mailbox is
-/// created at the first signing session.
+/// The generation a backup string and a group viewing key match: 0 for a
+/// legacy key, 2 for a ZIP 2005 one. Fails when the string is not the
+/// group's. What a restore form should tick by default.
+#[cfg_attr(feature = "flutter", frb)]
+pub fn match_frost_backup(backup: &str, ufvk: &str, c: &Coin) -> Result<u8> {
+    crate::frost::backup::match_backup(&c.network(), backup, ufvk)
+}
+
+/// Restore frost accounts from a backup string and the group's unified
+/// full viewing key: the legacy account, the ZIP 2005 one, or both, since
+/// the string's sk derives both from the key's ak. No peer addresses are
+/// needed; a fresh mailbox is created at the first signing session. Born
+/// at `birth`, or at Orchard activation when not given.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn restore_frost_backup(
     name: &str,
     backup: &str,
     ufvk: &str,
+    legacy: bool,
+    zip2005: bool,
+    birth: Option<u32>,
     c: &Coin,
-) -> Result<FrostRestore> {
+) -> Result<Vec<FrostRestore>> {
     let mut connection = c.get_connection().await?;
-    let (account, dkg_version) =
-        crate::frost::backup::restore_backup(&c.network(), &mut connection, name, backup, ufvk)
-            .await?;
-    Ok(FrostRestore {
-        account,
-        dkg_version,
-    })
+    let mut versions = vec![];
+    if legacy {
+        versions.push(crate::frost::keys::DKG_VERSION_0);
+    }
+    if zip2005 {
+        versions.push(crate::frost::keys::DKG_VERSION_2);
+    }
+    let restored = crate::frost::backup::restore_backup(
+        &c.network(),
+        &mut connection,
+        name,
+        backup,
+        ufvk,
+        &versions,
+        birth,
+    )
+    .await?;
+    Ok(restored
+        .into_iter()
+        .map(|(account, dkg_version)| FrostRestore {
+            account,
+            dkg_version,
+        })
+        .collect())
 }
 
 #[cfg_attr(feature = "flutter", frb)]

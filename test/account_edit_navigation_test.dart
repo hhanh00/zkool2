@@ -33,6 +33,11 @@ class _Api implements RustLibApi {
     resets.add(id);
   }
 
+  // The page looks up the FROST parameters to offer the ZIP 2005 upgrade;
+  // these accounts are not FROST accounts.
+  @override
+  Future<FrostParams?> crateApiAccountGetAccountFrostParams({required int account, required Coin c}) async => null;
+
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

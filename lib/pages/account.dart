@@ -20,6 +20,8 @@ import 'package:zkool/main.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/frost.dart';
+import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/api/transaction.dart';
 import 'package:zkool/src/rust/api/zsa.dart';
@@ -31,6 +33,44 @@ import 'package:zkool/widgets/plugin_memo_view.dart';
 import 'package:zkool/widgets/pool_select.dart';
 import 'package:zkool/widgets/theme.dart';
 import 'package:zkool/widgets/transaction_table.dart';
+
+/// Upgrade a legacy FROST group to ZIP 2005: create the sibling account
+/// (or find the existing one), then, when the legacy account still holds
+/// funds, plan the sweep into it and open the transaction page, where the
+/// PCZT is shared with the other members and the signing session starts.
+/// Every member must upgrade on their own device; all arrive at the same
+/// address.
+Future<void> upgradeFrostGroup(BuildContext context, WidgetRef ref, int account) async {
+  final c = coinContext.coin;
+  final confirmed = await confirmDialog(
+    context,
+    title: "Upgrade to ZIP 2005",
+    message: "This creates the group's ZIP 2005 account: same shares, a new quantum-recoverable address. "
+        "Every member must upgrade and will get the same address. "
+        "The funds then have to be swept into it as a multisignature transaction.",
+  );
+  if (!confirmed) return;
+  try {
+    await upgradeFrostAccount(account: account, c: c);
+    ref.invalidate(getAccountsProvider);
+    await ref.read(getAccountsProvider.future);
+    ref.invalidate(accountProvider(account));
+    PcztPackage pczt;
+    try {
+      pczt = await planFrostSweep(account: account, c: c);
+    } on AnyhowException catch (e) {
+      if (e.message.contains("nothing to sweep")) {
+        showSnackbar("ZIP 2005 account created; no funds to sweep");
+        return;
+      }
+      rethrow;
+    }
+    if (!context.mounted) return;
+    await GoRouter.of(context).push(accountRoute("/tx", account), extra: pczt);
+  } on AnyhowException catch (e) {
+    if (context.mounted) await showException(context, e.message);
+  }
+}
 
 class AccountViewPage extends ConsumerStatefulWidget {
   final int account;
@@ -196,6 +236,47 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
     );
   }
 
+  /// What needs the user's attention before the funds are safe: a legacy
+  /// FROST group holding funds (upgrade, then sweep), else Orchard-pool
+  /// notes once Ironwood is active (migrate). The legacy case comes first
+  /// because its sweep lands everything in Ironwood anyway.
+  List<Widget> _attentionBanners(BuildContext context, AccountData account, List<BigInt> b, bool ironwoodActive) {
+    final fp = account.frostParams;
+    final t = Theme.of(context);
+    Widget banner(String text, String action, VoidCallback onPressed) => Card(
+          color: t.colorScheme.errorContainer,
+          margin: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber, color: t.colorScheme.onErrorContainer),
+                Gap(12),
+                Expanded(child: Text(text, style: t.textTheme.bodyMedium?.copyWith(color: t.colorScheme.onErrorContainer))),
+                Gap(12),
+                FilledButton(onPressed: onPressed, child: Text(action)),
+              ],
+            ),
+          ),
+        );
+    if (fp != null && fp.dkgVersion < 2 && !fp.quantumRecoverable) {
+      final text = fp.sibling == null
+          ? "This group's funds are not quantum recoverable. Upgrade creates the group's ZIP 2005 account with a new address, then sweeps the funds into it."
+          : "The funds are still at the legacy address and are not quantum recoverable. Sweep them into the group's ZIP 2005 account.";
+      return [banner(text, "Upgrade", () => upgradeFrostGroup(context, ref, widget.account))];
+    }
+    if (b[2] > BigInt.zero && ironwoodActive) {
+      return [
+        banner(
+          "Some notes are in the Orchard pool and are not quantum recoverable. Migrate them to Ironwood.",
+          "Migrate to Ironwood",
+          () => GoRouter.of(context).push(accountRoute("/migrate", widget.account)),
+        )
+      ];
+    }
+    return [];
+  }
+
   Widget _buildAccountScaffold(BuildContext context, FullAccountPageData fullData) {
     final account = fullData.currentAccount!;
     final b = account.balance.field0;
@@ -214,7 +295,19 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(account.account.name),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(child: Text(account.account.name, overflow: TextOverflow.ellipsis)),
+            if (account.frostParams != null) ...[
+              Gap(8),
+              Tooltip(
+                message: "FROST group, DKG version ${account.frostParams!.dkgVersion}",
+                child: Icon(Icons.ac_unit, size: 20),
+              ),
+            ],
+          ],
+        ),
         actions: [
           Tooltip(
             message: "Synchronize only this account",
@@ -344,6 +437,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                         child: Container(
                             color: Theme.of(context).colorScheme.surface,
                             child: Column(children: [
+                              ..._attentionBanners(context, account, b, ironwoodActive),
                               if (syncing) ...[
                                 if (cancelling) const Text("Cancelling Synchronization"),
                                 HeroProgressWidget(account.account),
@@ -611,6 +705,7 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
   late final c = coinContext.coin;
   late final List<Account> _savedAccounts = List.of(widget.accounts);
   late final List<Account> accounts = _savedAccounts;
+  FrostParams? frostParams;
   late final Map<String, dynamic> _initialValues = {
     "name": accounts.length == 1 ? accounts.first.name : "(Multiple)",
     "birth": accounts.length == 1 ? accounts.first.birth : null,
@@ -645,6 +740,10 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
     Future(() async {
       final folders = await ref.read(getFoldersProvider.future);
       if (mounted) setState(() => this.folders = folders);
+      if (accounts.length == 1) {
+        final fp = await getAccountFrostParams(account: accounts.first.id, c: c);
+        if (mounted) setState(() => frostParams = fp);
+      }
     });
   }
 
@@ -684,6 +783,12 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
         title: Text('Account Edit'),
         actions: [
           if (account != null) ...[
+            if (frostParams != null && frostParams!.dkgVersion < 2)
+              IconButton(
+                tooltip: "Upgrade the FROST group to ZIP 2005",
+                onPressed: () => upgradeFrostGroup(context, ref, account.id),
+                icon: Icon(Icons.upgrade),
+              ),
             IconButton(
               tooltip: "Export an encrypted file of this account",
               onPressed: onExport,
@@ -1350,6 +1455,8 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
   Seed? seed;
   int accountPools = 7; // default to all pools
   bool showSeed = false;
+  FrostParams? frostParams;
+  String? frostBackup;
 
   @override
   void initState() {
@@ -1357,6 +1464,7 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
     Future(() async {
       seed = await getAccountSeed(account: widget.account, c: c);
       accountPools = await getAccountPools(account: widget.account, c: c);
+      frostParams = await getAccountFrostParams(account: widget.account, c: c);
       setState(() {});
     });
     Future(() => onPoolChanged(pools));
@@ -1370,7 +1478,11 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Viewing Keys'),
-        actions: [if (seed != null) IconButton(tooltip: "Show Seed Phrase", onPressed: onShowSeed, icon: Icon(Icons.key))],
+        actions: [
+          if (seed != null) IconButton(tooltip: "Show Seed Phrase", onPressed: onShowSeed, icon: Icon(Icons.key)),
+          if (seed == null && frostParams != null)
+            IconButton(tooltip: "Show Backup String", onPressed: onShowFrostBackup, icon: Icon(Icons.key)),
+        ],
       ),
       body: CustomScrollView(
         slivers: [
@@ -1382,6 +1494,33 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
                   ListTile(title: Text("Mnemonic"), subtitle: CopyableText(seed!.mnemonic)),
                   ListTile(title: Text("Passphrase"), subtitle: CopyableText(seed!.phrase)),
                   ListTile(title: Text("Index"), subtitle: CopyableText(seed!.aindex.toString())),
+                  Divider(),
+                  Gap(8),
+                ]),
+              ),
+            ),
+          ],
+          if (frostBackup != null) ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Column(children: [
+                  ListTile(
+                    leading: Icon(Icons.warning_amber),
+                    title: Text("Backup String"),
+                    subtitle: Text("Treat this string like a seed phrase: anyone holding it has your share of the group. "
+                        "Restore it with the group's viewing key below."),
+                  ),
+                  CopyableText(frostBackup!),
+                  Gap(16),
+                  QrImageView(data: frostBackup!, size: 200, backgroundColor: Colors.white),
+                  if (frostParams!.dkgVersion < 2) ...[
+                    Gap(16),
+                    Text(
+                      "This backs up your membership against device loss. It does not make the group's existing funds quantum recoverable; upgrade and sweep for that.",
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
                   Divider(),
                   Gap(8),
                 ]),
@@ -1447,6 +1586,17 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
     setState(() {
       showSeed = true;
     });
+  }
+
+  void onShowFrostBackup() async {
+    final authenticated = await authenticate(reason: "Show Backup String");
+    if (!authenticated) return;
+    try {
+      final backup = await exportFrostBackup(account: widget.account, c: c);
+      setState(() => frostBackup = backup);
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
+    }
   }
 }
 

@@ -38,7 +38,9 @@ EXPORT_BACKUP = gql("mutation ($account: Int!) { frostExportBackup(idAccount: $a
 RESTORE = gql(
     """
     mutation ($name: String!, $backup: String!, $ufvk: String!) {
-        frostRestore(name: $name, backup: $backup, ufvk: $ufvk) { idAccount dkgVersion }
+        frostRestore(name: $name, backup: $backup, ufvk: $ufvk, zip2005: true) {
+            idAccount dkgVersion
+        }
     }
     """
 )
@@ -286,8 +288,9 @@ async def test_frost_restore_and_sign(graphql_url, rpc_url, seed, zkool_binary, 
                 variable_values={"name": "Dkg-Test-3", "backup": backup, "ufvk": group_ufvk},
             )
         )
-        restored.frost_account = int(result["frostRestore"]["idAccount"])
-        assert result["frostRestore"]["dkgVersion"] == 2, result
+        (restored_account,) = result["frostRestore"]
+        restored.frost_account = int(restored_account["idAccount"])
+        assert restored_account["dkgVersion"] == 2, result
         print(f"Restored FROST account {restored.frost_account}, DKG version 2")
 
         # The restored account sees the group's balance after a rescan from

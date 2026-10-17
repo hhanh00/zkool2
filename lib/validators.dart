@@ -5,10 +5,14 @@ import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/utils.dart';
 
+/// A `zkfrost` member backup string (bech32m, case-insensitive).
+bool isFrostBackupKey(String? key) => key != null && key.trim().toLowerCase().startsWith("zkfrost1");
+
 String? validKey(String? key, {required Coin c, bool restore = false}) {
   if ((key == null || key.isEmpty)) {
     return restore ? "Key is required" : null;
   }
+  if (isFrostBackupKey(key)) return null; // checked against the group key on restore
   if (!isValidKey(key: key, c: c)) {
     return "Invalid Key";
   }
