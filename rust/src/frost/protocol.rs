@@ -555,6 +555,57 @@ pub fn broadcast_sk(network: &Network, addresses: &[String]) -> Result<SpendingK
     Ok(usk.orchard().clone())
 }
 
+/// The broadcast account of one signing session: a child of the group's
+/// `sk` keyed by the transaction being signed, so that every session has
+/// its own address and an account that received nothing before the
+/// transaction existed. Every member derives it from the shared PCZT and
+/// `sk`, so a restored member needs nothing else. The DKG keeps the
+/// account `sk` itself builds, having no transaction to key on.
+///
+/// The session knows the transaction by its sighash: FROST spends only
+/// shielded notes, and ZIP 244 makes the shielded signature digest of a
+/// transaction without transparent inputs equal to its txid. Signing the
+/// same PCZT again therefore lands on the same account, memos of the
+/// earlier attempt included, as it did with the group's account.
+pub fn session_broadcast_sk(
+    network: &Network,
+    sk: &SpendingKey,
+    txid: &[u8],
+) -> Result<SpendingKey> {
+    let seed = blake2b_simd::Params::new()
+        .hash_length(32)
+        .personal(b"Zcash_FROST_Sess")
+        .to_state()
+        .update(sk.to_bytes())
+        .update(txid)
+        .finalize();
+    let usk = UnifiedSpendingKey::from_seed(network, seed.as_bytes(), AccountId::ZERO)?;
+    Ok(usk.orchard().clone())
+}
+
+#[cfg(test)]
+mod session_account_tests {
+    use super::*;
+
+    #[test]
+    fn session_keys_follow_the_transaction() {
+        let network = Network::Main;
+        let sk = SpendingKey::from_bytes([7u8; 32]).unwrap();
+        let a = session_broadcast_sk(&network, &sk, &[1u8; 32]).unwrap();
+        let b = session_broadcast_sk(&network, &sk, &[2u8; 32]).unwrap();
+        let other = SpendingKey::from_bytes([8u8; 32]).unwrap();
+        let c = session_broadcast_sk(&network, &other, &[1u8; 32]).unwrap();
+        assert_eq!(
+            a.to_bytes(),
+            session_broadcast_sk(&network, &sk, &[1u8; 32]).unwrap().to_bytes(),
+            "deterministic"
+        );
+        assert_ne!(a.to_bytes(), b.to_bytes(), "one account per transaction");
+        assert_ne!(a.to_bytes(), c.to_bytes(), "one account per group");
+        assert_ne!(a.to_bytes(), sk.to_bytes(), "never the group's own account");
+    }
+}
+
 /// The group's `sk`: stored in `dkg_params` (dkg-2 accounts, restored
 /// accounts), or rederived from the stored addresses and cached there.
 pub async fn group_sk(
@@ -597,9 +648,10 @@ pub fn orchard_only_address(network: &Network, fvk: &FullViewingKey) -> String {
         .encode(network)
 }
 
-/// The broadcast account built from `sk`, without creating it: a view-only
-/// internal account whose Orchard key is `sk`'s. It is the account the
-/// address hash produces at DKG time, so the on-chain address is unchanged.
+/// The broadcast account built from an `sk`, without creating it: a
+/// view-only internal account whose Orchard key is `sk`'s. For the group's
+/// own `sk` it is the account the address hash produced at DKG time; for a
+/// session key (see [`session_broadcast_sk`]) it is that session's.
 pub async fn lookup_broadcast_account_from_sk(
     network: &Network,
     connection: &mut SqliteConnection,

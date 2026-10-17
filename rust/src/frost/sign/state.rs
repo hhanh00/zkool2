@@ -22,7 +22,9 @@ use crate::{
     db::{get_prop, put_prop},
     frost::{
         dkg::{get_dkg_params, load_peer_verifying_key},
-        protocol::{group_sk, lookup_broadcast_account_from_sk, mailbox_address},
+        protocol::{
+            group_sk, lookup_broadcast_account_from_sk, mailbox_address, session_broadcast_sk,
+        },
         FrostSigMessage, P,
     },
 };
@@ -53,6 +55,9 @@ pub struct SignState {
     /// The coordinator's private mailbox address for this session, from its
     /// announcement (our own when we coordinate). None until it arrives.
     pub coordinator_address: Option<String>,
+    /// The session's broadcast account, a child of the group's `sk` keyed
+    /// by the transaction; the coordinator's announcement and the signing
+    /// package parts go there. None until `EnsureMailbox` creates it.
     pub broadcast: Option<u32>,
     pub broadcast_address: Option<String>,
 
@@ -112,16 +117,17 @@ pub async fn observe_sign(
     let self_id_u8 = dkg_params.id;
 
     // Read-only account lookups (creation is an exec effect). The broadcast
-    // account is the one `sk` builds: the same account the DKG's address
-    // hash produced, found without the participant addresses.
+    // account is the session's: built from the group's `sk` and the
+    // transaction, found without the participant addresses.
     let mailbox = mailbox_account_id(&mut *connection, account).await?;
     let self_mailbox_address = match mailbox {
         Some(mailbox) => Some(mailbox_address(network, &mut *connection, mailbox).await?),
         None => None,
     };
     let sk = group_sk(network, &mut *connection, account).await?;
+    let session_sk = session_broadcast_sk(network, &sk, &sighash)?;
     let broadcast_lookup =
-        lookup_broadcast_account_from_sk(network, &mut *connection, &sk).await?;
+        lookup_broadcast_account_from_sk(network, &mut *connection, &session_sk).await?;
     let (broadcast, broadcast_address) = match broadcast_lookup {
         Some((id, addr)) => (Some(id), Some(addr)),
         None => (None, None),
