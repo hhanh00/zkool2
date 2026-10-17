@@ -315,6 +315,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   FrostParams dco_decode_frost_params(dynamic raw);
 
   @protected
+  FrostRestore dco_decode_frost_restore(dynamic raw);
+
+  @protected
   FrostSignParams dco_decode_frost_sign_params(dynamic raw);
 
   @protected
@@ -935,6 +938,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FrostParams sse_decode_frost_params(SseDeserializer deserializer);
+
+  @protected
+  FrostRestore sse_decode_frost_restore(SseDeserializer deserializer);
 
   @protected
   FrostSignParams sse_decode_frost_sign_params(SseDeserializer deserializer);
@@ -1594,6 +1600,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   void sse_encode_frost_params(FrostParams self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_frost_restore(FrostRestore self, SseSerializer serializer);
 
   @protected
   void sse_encode_frost_sign_params(

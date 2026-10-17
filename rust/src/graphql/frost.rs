@@ -1,7 +1,7 @@
 use bincode::config;
 use juniper::{FieldError, FieldResult};
 
-use crate::graphql::Context;
+use crate::graphql::{data::FrostRestoreResult, Context};
 
 fn invalid_integer(name: &str) -> FieldError {
     FieldError::new(format!("Invalid {name}"), juniper::Value::Null)
@@ -69,6 +69,29 @@ pub async fn dkg_set_address(
 pub async fn do_dkg(context: &Context) -> FieldResult<bool> {
     context.driver.step().await?;
     Ok(true)
+}
+
+/// The member's `zkfrost` backup string for a frost account.
+pub async fn frost_export_backup(id_account: i32, context: &Context) -> FieldResult<String> {
+    let id_account = id_account
+        .try_into()
+        .map_err(|_| invalid_integer("id_account"))?;
+    Ok(crate::api::frost::export_frost_backup(id_account, &context.coin).await?)
+}
+
+/// Restore a frost account from a backup string and the group's UFVK.
+pub async fn frost_restore(
+    name: String,
+    backup: String,
+    ufvk: String,
+    context: &Context,
+) -> FieldResult<FrostRestoreResult> {
+    let restored =
+        crate::api::frost::restore_frost_backup(&name, &backup, &ufvk, &context.coin).await?;
+    Ok(FrostRestoreResult {
+        id_account: restored.account as i32,
+        dkg_version: restored.dkg_version as i32,
+    })
 }
 
 pub async fn frost_sign(

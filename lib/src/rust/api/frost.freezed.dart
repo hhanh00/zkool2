@@ -792,6 +792,305 @@ class _$DKGStatus_VersionMismatchCopyWithImpl<$Res>
 }
 
 /// @nodoc
+mixin _$FrostRestore {
+  int get account;
+  int get dkgVersion;
+
+  /// Create a copy of FrostRestore
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $FrostRestoreCopyWith<FrostRestore> get copyWith =>
+      _$FrostRestoreCopyWithImpl<FrostRestore>(
+          this as FrostRestore, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is FrostRestore &&
+            (identical(other.account, account) || other.account == account) &&
+            (identical(other.dkgVersion, dkgVersion) ||
+                other.dkgVersion == dkgVersion));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, account, dkgVersion);
+
+  @override
+  String toString() {
+    return 'FrostRestore(account: $account, dkgVersion: $dkgVersion)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $FrostRestoreCopyWith<$Res> {
+  factory $FrostRestoreCopyWith(
+          FrostRestore value, $Res Function(FrostRestore) _then) =
+      _$FrostRestoreCopyWithImpl;
+  @useResult
+  $Res call({int account, int dkgVersion});
+}
+
+/// @nodoc
+class _$FrostRestoreCopyWithImpl<$Res> implements $FrostRestoreCopyWith<$Res> {
+  _$FrostRestoreCopyWithImpl(this._self, this._then);
+
+  final FrostRestore _self;
+  final $Res Function(FrostRestore) _then;
+
+  /// Create a copy of FrostRestore
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? account = null,
+    Object? dkgVersion = null,
+  }) {
+    return _then(_self.copyWith(
+      account: null == account
+          ? _self.account
+          : account // ignore: cast_nullable_to_non_nullable
+              as int,
+      dkgVersion: null == dkgVersion
+          ? _self.dkgVersion
+          : dkgVersion // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [FrostRestore].
+extension FrostRestorePatterns on FrostRestore {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_FrostRestore value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _FrostRestore() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_FrostRestore value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _FrostRestore():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_FrostRestore value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _FrostRestore() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(int account, int dkgVersion)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _FrostRestore() when $default != null:
+        return $default(_that.account, _that.dkgVersion);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(int account, int dkgVersion) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _FrostRestore():
+        return $default(_that.account, _that.dkgVersion);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(int account, int dkgVersion)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _FrostRestore() when $default != null:
+        return $default(_that.account, _that.dkgVersion);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _FrostRestore implements FrostRestore {
+  const _FrostRestore({required this.account, required this.dkgVersion});
+
+  @override
+  final int account;
+  @override
+  final int dkgVersion;
+
+  /// Create a copy of FrostRestore
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$FrostRestoreCopyWith<_FrostRestore> get copyWith =>
+      __$FrostRestoreCopyWithImpl<_FrostRestore>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _FrostRestore &&
+            (identical(other.account, account) || other.account == account) &&
+            (identical(other.dkgVersion, dkgVersion) ||
+                other.dkgVersion == dkgVersion));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, account, dkgVersion);
+
+  @override
+  String toString() {
+    return 'FrostRestore(account: $account, dkgVersion: $dkgVersion)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$FrostRestoreCopyWith<$Res>
+    implements $FrostRestoreCopyWith<$Res> {
+  factory _$FrostRestoreCopyWith(
+          _FrostRestore value, $Res Function(_FrostRestore) _then) =
+      __$FrostRestoreCopyWithImpl;
+  @override
+  @useResult
+  $Res call({int account, int dkgVersion});
+}
+
+/// @nodoc
+class __$FrostRestoreCopyWithImpl<$Res>
+    implements _$FrostRestoreCopyWith<$Res> {
+  __$FrostRestoreCopyWithImpl(this._self, this._then);
+
+  final _FrostRestore _self;
+  final $Res Function(_FrostRestore) _then;
+
+  /// Create a copy of FrostRestore
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? account = null,
+    Object? dkgVersion = null,
+  }) {
+    return _then(_FrostRestore(
+      account: null == account
+          ? _self.account
+          : account // ignore: cast_nullable_to_non_nullable
+              as int,
+      dkgVersion: null == dkgVersion
+          ? _self.dkgVersion
+          : dkgVersion // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// @nodoc
 mixin _$FrostSignParams {
   int get account;
   int get coordinator;

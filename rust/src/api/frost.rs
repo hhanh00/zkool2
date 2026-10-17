@@ -183,6 +183,45 @@ pub enum DKGStatus {
     VersionMismatch { peer: u8, ours: u8, theirs: u8 },
 }
 
+/// The member's backup string for a frost account: one `zkfrost` bech32m
+/// string holding the participant id, t, n, the signing share and the
+/// group's sk. As sensitive as a seed phrase. For a legacy (dkg-0, dkg-1)
+/// account it is a device-loss backup only.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn export_frost_backup(account: u32, c: &Coin) -> Result<String> {
+    let mut connection = c.get_connection().await?;
+    crate::frost::backup::export_backup(&c.network(), &mut connection, account).await
+}
+
+/// A frost account restored from a backup string.
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FrostRestore {
+    pub account: u32,
+    /// 0 for a legacy group, 2 for a ZIP 2005 one.
+    pub dkg_version: u8,
+}
+
+/// Restore a frost account from its backup string and the group's unified
+/// full viewing key. No peer addresses are needed; a fresh mailbox is
+/// created at the first signing session.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn restore_frost_backup(
+    name: &str,
+    backup: &str,
+    ufvk: &str,
+    c: &Coin,
+) -> Result<FrostRestore> {
+    let mut connection = c.get_connection().await?;
+    let (account, dkg_version) =
+        crate::frost::backup::restore_backup(&c.network(), &mut connection, name, backup, ufvk)
+            .await?;
+    Ok(FrostRestore {
+        account,
+        dkg_version,
+    })
+}
+
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn reset_sign(c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;

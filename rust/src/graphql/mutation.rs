@@ -5,7 +5,7 @@ use crate::{
     account::generate_next_dindex,
     api::mempool::MempoolMsg,
     graphql::{
-        data::{Addresses, Event, EventType, MigrationEvent, UnconfirmedNote},
+        data::{Addresses, Event, EventType, FrostRestoreResult, MigrationEvent, UnconfirmedNote},
         query::{prepare_tx, zats_to_zec},
         subs::SUBS,
         Context,
@@ -428,6 +428,23 @@ impl Mutation {
     pub async fn do_dkg(context: &Context) -> FieldResult<bool> {
         check_admin_auth(context)?;
         crate::graphql::frost::do_dkg(context).await
+    }
+
+    /// The member's `zkfrost` backup string: as sensitive as a seed phrase.
+    pub async fn frost_export_backup(id_account: i32, context: &Context) -> FieldResult<String> {
+        check_auth(context, id_account, true)?;
+        crate::graphql::frost::frost_export_backup(id_account, context).await
+    }
+
+    /// Restore a frost account from its backup string and the group's UFVK.
+    pub async fn frost_restore(
+        name: String,
+        backup: String,
+        ufvk: String,
+        context: &Context,
+    ) -> FieldResult<FrostRestoreResult> {
+        check_admin_auth(context)?;
+        crate::graphql::frost::frost_restore(name, backup, ufvk, context).await
     }
 
     pub async fn frost_sign(

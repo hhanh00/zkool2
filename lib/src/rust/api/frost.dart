@@ -13,7 +13,7 @@ part 'frost.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `get_funding_account`, `sync_frost_accounts`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DKGParams`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<void> setDkgParams(
         {required String name,
@@ -44,6 +44,24 @@ Future<void> setDkgAddress(
 
 Future<void> cancelDkg({required Coin c}) =>
     RustLib.instance.api.crateApiFrostCancelDkg(c: c);
+
+/// The member's backup string for a frost account: one `zkfrost` bech32m
+/// string holding the participant id, t, n, the signing share and the
+/// group's sk. As sensitive as a seed phrase. For a legacy (dkg-0, dkg-1)
+/// account it is a device-loss backup only.
+Future<String> exportFrostBackup({required int account, required Coin c}) =>
+    RustLib.instance.api.crateApiFrostExportFrostBackup(account: account, c: c);
+
+/// Restore a frost account from its backup string and the group's unified
+/// full viewing key. No peer addresses are needed; a fresh mailbox is
+/// created at the first signing session.
+Future<FrostRestore> restoreFrostBackup(
+        {required String name,
+        required String backup,
+        required String ufvk,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiFrostRestoreFrostBackup(
+        name: name, backup: backup, ufvk: ufvk, c: c);
 
 Future<void> resetSign({required Coin c}) =>
     RustLib.instance.api.crateApiFrostResetSign(c: c);
@@ -112,6 +130,15 @@ sealed class DKGStatus with _$DKGStatus {
     required int ours,
     required int theirs,
   }) = DKGStatus_VersionMismatch;
+}
+
+/// A frost account restored from a backup string.
+@freezed
+sealed class FrostRestore with _$FrostRestore {
+  const factory FrostRestore({
+    required int account,
+    required int dkgVersion,
+  }) = _FrostRestore;
 }
 
 @freezed

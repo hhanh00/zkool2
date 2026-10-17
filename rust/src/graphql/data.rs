@@ -153,6 +153,14 @@ pub struct AssetInfo {
     pub balance: BigDecimal,
 }
 
+/// A frost account restored from a `zkfrost` backup string.
+#[derive(GraphQLObject)]
+pub struct FrostRestoreResult {
+    pub id_account: i32,
+    /// 0 for a legacy group, 2 for a ZIP 2005 one.
+    pub dkg_version: i32,
+}
+
 #[derive(GraphQLObject)]
 pub struct MigrationEvent {
     /// "SplitComplete" | "MigrateComplete" | "Complete" | "NothingToDo" | "Error"

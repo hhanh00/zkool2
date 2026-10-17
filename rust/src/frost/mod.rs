@@ -1,3 +1,4 @@
+pub mod backup;
 pub mod dkg;
 pub mod keys;
 pub mod driver;
