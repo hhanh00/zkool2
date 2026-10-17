@@ -9680,6 +9680,7 @@ dependencies = [
  "bip32 0.6.0",
  "bip39",
  "blake2b_simd",
+ "blake3",
  "bs58",
  "byteorder",
  "cfg-if 1.0.4",
