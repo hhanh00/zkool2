@@ -12,6 +12,7 @@ are headless `zkool_graphql` instances:
 |---|---|---|
 | `tests/tests/test_dkg_ui.py` | 3-of-3 DKG through `/dkg1 → /dkg2 → /dkg3` | ~3.5 min |
 | `tests/tests/test_frost_ui.py` | DKG, then signing through `/frost1 → /frost2`, asserting the receiver is actually paid | ~5.5 min |
+| `tests/tests/test_frost_restore_ui.py` | two tests: the app restores a member of a *legacy* group from its `zkfrost` string on `/account/new`, sees the not-recoverable banner, taps Upgrade, signs the sweep peer #2 coordinates, and checks both accounts afterwards; and the same restore for a *ZIP 2005* group, no banner, signing an ordinary payment | ~5 min each |
 
 The Dart halves live in `integration_test/`, sharing `support.dart` (rendezvous,
 pumping helpers, wallet setup, and `driveDkg` — signing needs a shared key
@@ -20,7 +21,10 @@ before it can start).
 `test_dkg.py` / `test_frost.py` are the all-headless equivalents; run those
 first to prove the stack before blaming the UI tests.
 
-In both, the app is participant #1 and pytest owns everything else: the chain,
+In the first two, the app is participant #1; in the restore test it is
+participant #3, restored from a backup string after the headless peers ran
+the DKG (under `dkgVersion: 1`, a legacy group). In all of them pytest owns
+everything else: the chain,
 the funding wallet, and the peers. It spawns `flutter test` as a subprocess and
 the two sides exchange values through JSON files in the app's documents
 directory. In the signing test participant #2 coordinates, so the app exercises
@@ -103,7 +107,12 @@ cd tests
 export SEED="invite couch cloud pave stuff cabbage usual rigid dragon warm cable price fame warfare next swallow worth opera suggest flame patch undo position arctic"
 .venv/bin/python -m pytest tests/test_dkg_ui.py -v -s     # DKG only
 .venv/bin/python -m pytest tests/test_frost_ui.py -v -s   # DKG + signing
+.venv/bin/python -m pytest tests/test_frost_restore_ui.py -v -s   # restore + upgrade + sweep
 ```
+
+The restore test skips its Viewing Keys page step on macOS: the backup string
+sits behind `authenticate()`, which prompts Touch ID there; on Linux (CI) the
+device has no biometrics and the gate opens by itself.
 
 Expect ~3.5 min warm; the first run adds a macOS debug build of the app plus the
 Rust staticlib. Logs: `/tmp/dkg_ui_flutter.log` (Flutter side, dumped by pytest on
