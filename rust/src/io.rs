@@ -17,6 +17,7 @@ use zstd::DEFAULT_COMPRESSION_LEVEL;
 
 use crate::api::coin::Network;
 use crate::db::DB_VERSION;
+use crate::frost::keys::{DKG_VERSION_0, DKG_VERSION_1};
 use crate::sync::chain_log::{
     self, AssetRow, MemoRow, NoteKey, NoteRow, OutputRow, SpendRow, TransactionRow,
 };
@@ -427,28 +428,34 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
         .await?;
     io_account.user_memos = user_memos;
 
-    let dkg_params =
-        sqlx::query("SELECT id, n, t, seed, birth_height, name FROM dkg_params WHERE account = ?")
-            .bind(account)
-            .map(|row: SqliteRow| {
-                let id: u8 = row.get(0);
-                let n: u8 = row.get(1);
-                let t: u8 = row.get(2);
-                let seed: String = row.get(3);
-                let birth: u32 = row.get(4);
-                let name: String = row.get(5);
+    let dkg_params = sqlx::query(
+        "SELECT id, n, t, seed, birth_height, name, dkg_version, sk
+        FROM dkg_params WHERE account = ?",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| {
+        let id: u8 = row.get(0);
+        let n: u8 = row.get(1);
+        let t: u8 = row.get(2);
+        let seed: String = row.get(3);
+        let birth: u32 = row.get(4);
+        let name: String = row.get(5);
+        let dkg_version: u8 = row.get(6);
+        let sk: Option<Vec<u8>> = row.get(7);
 
-                DKGParams {
-                    id,
-                    n,
-                    t,
-                    seed,
-                    birth,
-                    name,
-                }
-            })
-            .fetch_optional(&mut *connection)
-            .await?;
+        DKGParams {
+            id,
+            n,
+            t,
+            seed,
+            birth,
+            name,
+            dkg_version: Some(dkg_version),
+            sk: sk.map(HexBytes),
+        }
+    })
+    .fetch_optional(&mut *connection)
+    .await?;
     io_account.dkg_params = dkg_params;
 
     // The DKG tables as they exist since V9. `dkg_packages` is no longer
@@ -863,10 +870,29 @@ pub async fn import_account(
         }
     }
 
-    if let Some(dkg_params) = io_account.dkg_params {
+    if let Some(dkg_params) = &io_account.dkg_params {
+        // A file from before the version column: the same rule as the
+        // column backfill, a completed DKG with no round-0 package is dkg-0.
+        let dkg_version = dkg_params.dkg_version.unwrap_or_else(|| {
+            let completed = io_account
+                .dkg_state
+                .as_ref()
+                .is_some_and(|s| s.key_pkg.is_some())
+                || io_account
+                    .dkg_packages
+                    .iter()
+                    .any(|p| !p.public && p.round == 3);
+            let has_round0 = io_account.dkg_peers.iter().any(|p| p.round == 0);
+            if completed && !has_round0 {
+                DKG_VERSION_0
+            } else {
+                DKG_VERSION_1
+            }
+        });
         sqlx::query(
             "INSERT INTO dkg_params
-            (account, id, n, t, seed, birth_height, name) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (account, id, n, t, seed, birth_height, name, dkg_version, sk)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(new_id_account)
         .bind(dkg_params.id)
@@ -875,6 +901,8 @@ pub async fn import_account(
         .bind(&dkg_params.seed)
         .bind(dkg_params.birth)
         .bind(&dkg_params.name)
+        .bind(dkg_version)
+        .bind(dkg_params.sk.as_ref().map(|b| &b.0))
         .execute(&mut *tx)
         .await?;
     }
@@ -1171,6 +1199,12 @@ pub struct DKGParams {
     pub birth: u32,
     #[serde(default)]
     pub name: String,
+    /// Absent in files written before the version column; import infers it.
+    #[serde(default)]
+    pub dkg_version: Option<u8>,
+    /// The broadcast account's spending key, dkg-2 accounts only.
+    #[serde(default)]
+    pub sk: Option<HexBytes>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Default, Debug)]
@@ -1288,8 +1322,9 @@ mod dkg_export_tests {
     }
 
     async fn dkg_rows(db: &mut SqliteConnection, account: u32) -> Result<DkgSnapshot> {
-        let params: Option<(u8, u8, u8, String, u32, String)> = sqlx::query_as(
-            "SELECT id, n, t, seed, birth_height, name FROM dkg_params WHERE account = ?",
+        let params: DkgParamsRow = sqlx::query_as(
+            "SELECT id, n, t, seed, birth_height, name, dkg_version, sk
+            FROM dkg_params WHERE account = ?",
         )
         .bind(account)
         .fetch_optional(&mut *db)
@@ -1327,9 +1362,12 @@ mod dkg_export_tests {
         })
     }
 
+    /// (id, n, t, seed, birth_height, name, dkg_version, sk)
+    type DkgParamsRow = Option<(u8, u8, u8, String, u32, String, u8, Option<Vec<u8>>)>;
+
     #[derive(Debug, PartialEq)]
     struct DkgSnapshot {
-        params: Option<(u8, u8, u8, String, u32, String)>,
+        params: DkgParamsRow,
         state: Option<(
             Option<Vec<u8>>,
             Option<Vec<u8>>,
@@ -1356,8 +1394,8 @@ mod dkg_export_tests {
         let mut src = fresh_db().await?;
         let account = bare_account(&mut src, "frost").await?;
         sqlx::query(
-            "INSERT INTO dkg_params(account, id, n, t, seed, birth_height, name)
-            VALUES (?, 2, 3, 2, 'mailbox words', 100, 'group')",
+            "INSERT INTO dkg_params(account, id, n, t, seed, birth_height, name, dkg_version, sk)
+            VALUES (?, 2, 3, 2, 'mailbox words', 100, 'group', 2, X'AA')",
         )
         .bind(account)
         .execute(&mut src)
@@ -1427,6 +1465,8 @@ mod dkg_export_tests {
                 seed: "mailbox words".to_string(),
                 birth: 100,
                 name: String::new(),
+                dkg_version: None,
+                sk: None,
             }),
             dkg_packages: vec![
                 package(true, 0, 1, b"uregtest1aaa"),
@@ -1448,9 +1488,11 @@ mod dkg_export_tests {
         import_account(&Network::Main, &mut dst, &data).await?;
         let imported = newest_account(&mut dst).await?;
         let rows = dkg_rows(&mut dst, imported).await?;
+        // No version in the file, a key package and no round-0 package:
+        // a DKG from before message signing, so dkg-0.
         assert_eq!(
             rows.params,
-            Some((1, 2, 2, "mailbox words".to_string(), 100, String::new()))
+            Some((1, 2, 2, "mailbox words".to_string(), 100, String::new(), 0, None))
         );
         assert_eq!(
             rows.state,
@@ -1470,6 +1512,47 @@ mod dkg_export_tests {
                 (2, "uregtest1bbb".to_string())
             ]
         );
+        Ok(())
+    }
+
+    /// A V9 file written before the version column, for a group that did
+    /// exchange round-0 keys: dkg-1, the column's default.
+    #[tokio::test]
+    async fn unversioned_export_with_round0_keys_imports_as_dkg1() -> Result<()> {
+        let io_account = IOAccount {
+            version: DB_VERSION,
+            name: "frost-v9".to_string(),
+            dkg_params: Some(DKGParams {
+                id: 1,
+                n: 2,
+                t: 2,
+                seed: String::new(),
+                birth: 100,
+                name: String::new(),
+                dkg_version: None,
+                sk: None,
+            }),
+            dkg_state: Some(DKGState {
+                key_pkg: Some(HexBytes(vec![0x04])),
+                ..Default::default()
+            }),
+            dkg_peers: vec![DKGPeer {
+                round: 0,
+                from_id: 2,
+                data: HexBytes(vec![0u8; 32]),
+            }],
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&io_account)?;
+        let mut encoder = zstd::Encoder::new(Vec::new(), DEFAULT_COMPRESSION_LEVEL)?;
+        encoder.write_all(json.as_bytes())?;
+        let data = encoder.finish()?;
+
+        let mut dst = fresh_db().await?;
+        import_account(&Network::Main, &mut dst, &data).await?;
+        let imported = newest_account(&mut dst).await?;
+        let rows = dkg_rows(&mut dst, imported).await?;
+        assert_eq!(rows.params.map(|p| (p.6, p.7)), Some((1, None)));
         Ok(())
     }
 }
