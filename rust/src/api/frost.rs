@@ -264,6 +264,10 @@ pub struct FrostSignParams {
 
 #[derive(Clone, Debug)]
 pub enum SigningStatus {
+    /// Coordinator: broadcasting our mailbox address for this session.
+    AnnouncingCoordinator,
+    /// Non-coordinator: the coordinator has not announced its address yet.
+    WaitingForCoordinator,
     SendingCommitment,
     WaitingForCommitments,
     SendingSigningPackage,

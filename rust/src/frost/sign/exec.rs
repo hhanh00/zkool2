@@ -38,6 +38,7 @@ use tracing::info;
 use crate::{
     account::get_orchard_vk,
     api::coin::Network,
+    db::put_prop,
     frost::{
         dkg::{delete_frost_state, publish},
         protocol::{ensure_broadcast_account_from_sk, ensure_mailbox_from_seed, group_sk},
@@ -48,7 +49,10 @@ use crate::{
 };
 
 use super::pubkey::rebuild_public_key_package;
-use super::state::{load_pczt_pkg, RandomizedSigPackage, SignState, VERIFYING_SHARE_ROUND};
+use super::state::{
+    load_pczt_pkg, RandomizedSigPackage, SignState, COORDINATOR_ADDRESS_PROP,
+    VERIFYING_SHARE_ROUND,
+};
 use super::{COMMITMENT_PREFIX, COORDINATOR_PREFIX, SIGPACKAGE_PREFIX, SIGSHARE_PREFIX};
 
 /// Result of an exec function that involves a Zcash publish.
@@ -75,6 +79,54 @@ pub async fn ensure_mailbox(
     let sk = group_sk(network, connection, state.account).await?;
     ensure_broadcast_account_from_sk(network, connection, &sk, birth_height).await?;
     Ok(())
+}
+
+// ── AnnounceCoordinator ───────────────────────────────────────────────────────
+
+/// Coordinator: broadcast our mailbox address for this session. It goes in
+/// a memo of its own (a signing package for t=3 already fills one) and
+/// before anything else, since the first thing members send is their
+/// commitments, to this address. Recorded as our own coordinator address
+/// in the same transaction, which is what makes the task done.
+pub async fn announce_coordinator(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    client: &mut Client,
+    state: &SignState,
+) -> Result<SendResult> {
+    let broadcast_address = state
+        .broadcast_address
+        .as_deref()
+        .context("broadcast address not set")?;
+    let address = state
+        .self_mailbox_address
+        .as_deref()
+        .context("our mailbox address not set")?;
+
+    let mut tx = connection.begin().await?;
+    let signing_key = load_signing_key(&mut *tx, state.account).await?;
+    let mut msg = FrostSigMessage {
+        sighash: state.sighash.clone().try_into().unwrap(),
+        from_id: state.coordinator as u16,
+        idx: 0,
+        data: address.as_bytes().to_vec(),
+        signature: None,
+        verifying_share: None,
+    };
+    if let Some(ref key) = signing_key {
+        msg.sign(key)?;
+    }
+    put_prop(&mut *tx, COORDINATOR_ADDRESS_PROP, address).await?;
+    let recipients = [(broadcast_address, msg.encode_with_prefix(COORDINATOR_PREFIX)?)];
+    match publish(network, &mut tx, state.funding_account, client, &recipients).await {
+        Ok(_) => {}
+        Err(e) if crate::pay::plan::is_no_feasible_selection(&e) => {
+            return Ok(SendResult::WaitingForFunds);
+        }
+        Err(e) => return Err(e),
+    }
+    tx.commit().await?;
+    Ok(SendResult::Sent)
 }
 
 // ── SendCommitments (Phase 1) ─────────────────────────────────────────────────
@@ -178,27 +230,6 @@ pub async fn make_sigpackages(
     let mut tx = connection.begin().await?;
     let signing_key = load_signing_key(&mut *tx, state.account).await?;
     let mut recipients = vec![];
-
-    // Our mailbox address goes out with the signing packages, in a memo
-    // of its own since a signing package for t=3 already fills one, so
-    // members send their shares to it without a stored address for us.
-    if let Some(address) = &state.self_mailbox_address {
-        let mut msg = FrostSigMessage {
-            sighash: state.sighash.clone().try_into().unwrap(),
-            from_id: state.coordinator as u16,
-            idx: 0,
-            data: address.as_bytes().to_vec(),
-            signature: None,
-            verifying_share: None,
-        };
-        if let Some(ref key) = signing_key {
-            msg.sign(key)?;
-        }
-        recipients.push((
-            broadcast_address.to_string(),
-            msg.encode_with_prefix(COORDINATOR_PREFIX)?,
-        ));
-    }
 
     for (idx, commitment_map) in commitments_vec.iter().enumerate() {
         let sigpackage = SigningPackage::new(commitment_map.clone(), &state.sighash);

@@ -20,6 +20,17 @@ pub fn next_sign_task(s: &SignState) -> Result<SignTask> {
         return Ok(SignTask::EnsureMailbox);
     }
 
+    // The coordinator's mailbox address for this session comes from its
+    // announcement, never from a stored address: a restored coordinator
+    // has a fresh mailbox nobody has on file.
+    if s.coordinator_address.is_none() {
+        return Ok(if s.is_coordinator() {
+            SignTask::AnnounceCoordinator
+        } else {
+            SignTask::WaitCoordinator
+        });
+    }
+
     // ── Phase 1: commitments ──────────────────────────────────────────────────
     if !s.own_commitments_stored {
         return Ok(SignTask::SendCommitments);
@@ -114,6 +125,24 @@ mod tests {
         }
         let s = state(true);
         assert!(!SignTask::EnsureMailbox.is_satisfied_by(&s));
+    }
+
+    /// Without the coordinator's announced address the coordinator
+    /// announces and the others wait; stored DKG addresses play no part.
+    #[test]
+    fn coordinator_announces_its_address_and_members_wait_for_it() {
+        let mut s = state(true);
+        s.coordinator_address = None;
+        assert_eq!(next_sign_task(&s).unwrap(), SignTask::AnnounceCoordinator);
+        assert!(SignTask::AnnounceCoordinator.is_satisfied_by(&s));
+        s.coordinator_address = Some("addr0".into());
+        assert!(!SignTask::AnnounceCoordinator.is_satisfied_by(&s));
+        assert_eq!(next_sign_task(&s).unwrap(), SignTask::SendCommitments);
+
+        let mut s = state(false);
+        s.coordinator_address = None;
+        assert_eq!(next_sign_task(&s).unwrap(), SignTask::WaitCoordinator);
+        assert!(!SignTask::AnnounceCoordinator.is_satisfied_by(&s));
     }
 
     #[test]

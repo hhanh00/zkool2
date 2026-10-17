@@ -46,8 +46,8 @@ pub struct SignState {
     /// Our own mailbox address; the coordinator sends it with the signing
     /// packages so that members need no stored address for it.
     pub self_mailbox_address: Option<String>,
-    /// The coordinator's private mailbox address (for sending commitments/sigshares):
-    /// the one its signing package carried, else the stored DKG address.
+    /// The coordinator's private mailbox address for this session, from its
+    /// announcement (our own when we coordinate). None until it arrives.
     pub coordinator_address: Option<String>,
     pub broadcast: Option<u32>,
     pub broadcast_address: Option<String>,
@@ -115,8 +115,6 @@ pub async fn observe_sign(
         Some(mailbox) => Some(mailbox_address(network, &mut *connection, mailbox).await?),
         None => None,
     };
-    let coordinator_address =
-        coordinator_address_opt(&mut *connection, account, params.coordinator).await?;
     let sk = group_sk(network, &mut *connection, account).await?;
     let broadcast_lookup =
         lookup_broadcast_account_from_sk(network, &mut *connection, &sk).await?;
@@ -178,6 +176,9 @@ pub async fn observe_sign(
             .await?;
         }
     }
+
+    // The coordinator's address, after the ingest that may have just stored it.
+    let coordinator_address = coordinator_address_opt(&mut *connection).await?;
 
     // Phase 1: own commitment.
     let own_commitments_stored = sqlx::query(
@@ -321,26 +322,15 @@ async fn mailbox_account_id(
     Ok(r.map(|(a,)| a))
 }
 
-/// Props key holding the coordinator address its signing package carried.
+/// Props key holding the coordinator's mailbox address for this session:
+/// what its announcement carried, or our own address when we coordinate.
 /// Under the `frost_` prefix so that it lives and dies with the session.
-const COORDINATOR_ADDRESS_PROP: &str = "frost_coordinator_address";
+/// Stored DKG addresses are never consulted: a restored coordinator has a
+/// fresh mailbox that nobody has on file.
+pub(super) const COORDINATOR_ADDRESS_PROP: &str = "frost_coordinator_address";
 
-async fn coordinator_address_opt(
-    connection: &mut SqliteConnection,
-    account: u32,
-    coordinator: u8,
-) -> Result<Option<String>> {
-    if let Some(address) = get_prop(&mut *connection, COORDINATOR_ADDRESS_PROP).await? {
-        return Ok(Some(address));
-    }
-    let r: Option<(String,)> = sqlx::query_as(
-        "SELECT address FROM dkg_addresses WHERE account = ? AND from_id = ?",
-    )
-    .bind(account)
-    .bind(coordinator)
-    .fetch_optional(&mut *connection)
-    .await?;
-    Ok(r.map(|(a,)| a))
+async fn coordinator_address_opt(connection: &mut SqliteConnection) -> Result<Option<String>> {
+    get_prop(&mut *connection, COORDINATOR_ADDRESS_PROP).await
 }
 
 // ── Memo ingestion ────────────────────────────────────────────────────────────
@@ -463,8 +453,8 @@ pub(super) struct RandomizedSigPackage {
     pub randomizer: Vec<u8>,
 }
 
-/// The coordinator's mailbox address for this session, from the message it
-/// broadcasts with the signing packages.
+/// The coordinator's mailbox address for this session, from the
+/// announcement it broadcasts at the start.
 async fn ingest_coordinator_memos(
     connection: &mut SqliteConnection,
     account: u32,

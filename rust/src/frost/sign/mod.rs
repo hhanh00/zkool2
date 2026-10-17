@@ -132,6 +132,8 @@ async fn report_outcome(outcome: &SignStepOutcome, status: &impl Sink<SigningSta
 fn sign_statuses_for(task: &SignTask) -> Vec<SigningStatus> {
     match task {
         SignTask::EnsureMailbox => vec![],
+        SignTask::AnnounceCoordinator => vec![SigningStatus::AnnouncingCoordinator],
+        SignTask::WaitCoordinator => vec![SigningStatus::WaitingForCoordinator],
         SignTask::SendCommitments => vec![SigningStatus::SendingCommitment],
         SignTask::WaitCommitments => vec![SigningStatus::WaitingForCommitments],
         SignTask::MakeSigpackages => vec![SigningStatus::SendingSigningPackage],

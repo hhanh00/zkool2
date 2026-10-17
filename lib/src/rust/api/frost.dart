@@ -169,6 +169,13 @@ sealed class ProtocolStatus with _$ProtocolStatus {
 sealed class SigningStatus with _$SigningStatus {
   const SigningStatus._();
 
+  /// Coordinator: broadcasting our mailbox address for this session.
+  const factory SigningStatus.announcingCoordinator() =
+      SigningStatus_AnnouncingCoordinator;
+
+  /// Non-coordinator: the coordinator has not announced its address yet.
+  const factory SigningStatus.waitingForCoordinator() =
+      SigningStatus_WaitingForCoordinator;
   const factory SigningStatus.sendingCommitment() =
       SigningStatus_SendingCommitment;
   const factory SigningStatus.waitingForCommitments() =

@@ -7987,26 +7987,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     switch (raw[0]) {
       case 0:
-        return SigningStatus_SendingCommitment();
+        return SigningStatus_AnnouncingCoordinator();
       case 1:
-        return SigningStatus_WaitingForCommitments();
+        return SigningStatus_WaitingForCoordinator();
       case 2:
-        return SigningStatus_SendingSigningPackage();
+        return SigningStatus_SendingCommitment();
       case 3:
-        return SigningStatus_WaitingForSigningPackage();
+        return SigningStatus_WaitingForCommitments();
       case 4:
-        return SigningStatus_SendingSignatureShare();
+        return SigningStatus_SendingSigningPackage();
       case 5:
-        return SigningStatus_SigningCompleted();
+        return SigningStatus_WaitingForSigningPackage();
       case 6:
-        return SigningStatus_WaitingForSignatureShares();
+        return SigningStatus_SendingSignatureShare();
       case 7:
-        return SigningStatus_WaitingForFunds();
+        return SigningStatus_SigningCompleted();
       case 8:
-        return SigningStatus_PreparingTransaction();
+        return SigningStatus_WaitingForSignatureShares();
       case 9:
-        return SigningStatus_SendingTransaction();
+        return SigningStatus_WaitingForFunds();
       case 10:
+        return SigningStatus_PreparingTransaction();
+      case 11:
+        return SigningStatus_SendingTransaction();
+      case 12:
         return SigningStatus_TransactionSent(
           dco_decode_String(raw[1]),
         );
@@ -10282,26 +10286,30 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var tag_ = sse_decode_i_32(deserializer);
     switch (tag_) {
       case 0:
-        return SigningStatus_SendingCommitment();
+        return SigningStatus_AnnouncingCoordinator();
       case 1:
-        return SigningStatus_WaitingForCommitments();
+        return SigningStatus_WaitingForCoordinator();
       case 2:
-        return SigningStatus_SendingSigningPackage();
+        return SigningStatus_SendingCommitment();
       case 3:
-        return SigningStatus_WaitingForSigningPackage();
+        return SigningStatus_WaitingForCommitments();
       case 4:
-        return SigningStatus_SendingSignatureShare();
+        return SigningStatus_SendingSigningPackage();
       case 5:
-        return SigningStatus_SigningCompleted();
+        return SigningStatus_WaitingForSigningPackage();
       case 6:
-        return SigningStatus_WaitingForSignatureShares();
+        return SigningStatus_SendingSignatureShare();
       case 7:
-        return SigningStatus_WaitingForFunds();
+        return SigningStatus_SigningCompleted();
       case 8:
-        return SigningStatus_PreparingTransaction();
+        return SigningStatus_WaitingForSignatureShares();
       case 9:
-        return SigningStatus_SendingTransaction();
+        return SigningStatus_WaitingForFunds();
       case 10:
+        return SigningStatus_PreparingTransaction();
+      case 11:
+        return SigningStatus_SendingTransaction();
+      case 12:
         var var_field0 = sse_decode_String(deserializer);
         return SigningStatus_TransactionSent(var_field0);
       default:
@@ -12402,28 +12410,32 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   void sse_encode_signing_status(SigningStatus self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     switch (self) {
-      case SigningStatus_SendingCommitment():
+      case SigningStatus_AnnouncingCoordinator():
         sse_encode_i_32(0, serializer);
-      case SigningStatus_WaitingForCommitments():
+      case SigningStatus_WaitingForCoordinator():
         sse_encode_i_32(1, serializer);
-      case SigningStatus_SendingSigningPackage():
+      case SigningStatus_SendingCommitment():
         sse_encode_i_32(2, serializer);
-      case SigningStatus_WaitingForSigningPackage():
+      case SigningStatus_WaitingForCommitments():
         sse_encode_i_32(3, serializer);
-      case SigningStatus_SendingSignatureShare():
+      case SigningStatus_SendingSigningPackage():
         sse_encode_i_32(4, serializer);
-      case SigningStatus_SigningCompleted():
+      case SigningStatus_WaitingForSigningPackage():
         sse_encode_i_32(5, serializer);
-      case SigningStatus_WaitingForSignatureShares():
+      case SigningStatus_SendingSignatureShare():
         sse_encode_i_32(6, serializer);
-      case SigningStatus_WaitingForFunds():
+      case SigningStatus_SigningCompleted():
         sse_encode_i_32(7, serializer);
-      case SigningStatus_PreparingTransaction():
+      case SigningStatus_WaitingForSignatureShares():
         sse_encode_i_32(8, serializer);
-      case SigningStatus_SendingTransaction():
+      case SigningStatus_WaitingForFunds():
         sse_encode_i_32(9, serializer);
-      case SigningStatus_TransactionSent(field0: final field0):
+      case SigningStatus_PreparingTransaction():
         sse_encode_i_32(10, serializer);
+      case SigningStatus_SendingTransaction():
+        sse_encode_i_32(11, serializer);
+      case SigningStatus_TransactionSent(field0: final field0):
+        sse_encode_i_32(12, serializer);
         sse_encode_String(field0, serializer);
     }
   }

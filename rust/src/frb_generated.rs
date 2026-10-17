@@ -12196,36 +12196,42 @@ impl SseDecode for crate::api::frost::SigningStatus {
         let mut tag_ = <i32>::sse_decode(deserializer);
         match tag_ {
             0 => {
-                return crate::api::frost::SigningStatus::SendingCommitment;
+                return crate::api::frost::SigningStatus::AnnouncingCoordinator;
             }
             1 => {
-                return crate::api::frost::SigningStatus::WaitingForCommitments;
+                return crate::api::frost::SigningStatus::WaitingForCoordinator;
             }
             2 => {
-                return crate::api::frost::SigningStatus::SendingSigningPackage;
+                return crate::api::frost::SigningStatus::SendingCommitment;
             }
             3 => {
-                return crate::api::frost::SigningStatus::WaitingForSigningPackage;
+                return crate::api::frost::SigningStatus::WaitingForCommitments;
             }
             4 => {
-                return crate::api::frost::SigningStatus::SendingSignatureShare;
+                return crate::api::frost::SigningStatus::SendingSigningPackage;
             }
             5 => {
-                return crate::api::frost::SigningStatus::SigningCompleted;
+                return crate::api::frost::SigningStatus::WaitingForSigningPackage;
             }
             6 => {
-                return crate::api::frost::SigningStatus::WaitingForSignatureShares;
+                return crate::api::frost::SigningStatus::SendingSignatureShare;
             }
             7 => {
-                return crate::api::frost::SigningStatus::WaitingForFunds;
+                return crate::api::frost::SigningStatus::SigningCompleted;
             }
             8 => {
-                return crate::api::frost::SigningStatus::PreparingTransaction;
+                return crate::api::frost::SigningStatus::WaitingForSignatureShares;
             }
             9 => {
-                return crate::api::frost::SigningStatus::SendingTransaction;
+                return crate::api::frost::SigningStatus::WaitingForFunds;
             }
             10 => {
+                return crate::api::frost::SigningStatus::PreparingTransaction;
+            }
+            11 => {
+                return crate::api::frost::SigningStatus::SendingTransaction;
+            }
+            12 => {
                 let mut var_field0 = <String>::sse_decode(deserializer);
                 return crate::api::frost::SigningStatus::TransactionSent(var_field0);
             }
@@ -14448,22 +14454,24 @@ impl flutter_rust_bridge::IntoIntoDart<crate::api::pay::SigningEvent>
 impl flutter_rust_bridge::IntoDart for crate::api::frost::SigningStatus {
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         match self {
-            crate::api::frost::SigningStatus::SendingCommitment => [0.into_dart()].into_dart(),
-            crate::api::frost::SigningStatus::WaitingForCommitments => [1.into_dart()].into_dart(),
-            crate::api::frost::SigningStatus::SendingSigningPackage => [2.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::AnnouncingCoordinator => [0.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::WaitingForCoordinator => [1.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::SendingCommitment => [2.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::WaitingForCommitments => [3.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::SendingSigningPackage => [4.into_dart()].into_dart(),
             crate::api::frost::SigningStatus::WaitingForSigningPackage => {
-                [3.into_dart()].into_dart()
+                [5.into_dart()].into_dart()
             }
-            crate::api::frost::SigningStatus::SendingSignatureShare => [4.into_dart()].into_dart(),
-            crate::api::frost::SigningStatus::SigningCompleted => [5.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::SendingSignatureShare => [6.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::SigningCompleted => [7.into_dart()].into_dart(),
             crate::api::frost::SigningStatus::WaitingForSignatureShares => {
-                [6.into_dart()].into_dart()
+                [8.into_dart()].into_dart()
             }
-            crate::api::frost::SigningStatus::WaitingForFunds => [7.into_dart()].into_dart(),
-            crate::api::frost::SigningStatus::PreparingTransaction => [8.into_dart()].into_dart(),
-            crate::api::frost::SigningStatus::SendingTransaction => [9.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::WaitingForFunds => [9.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::PreparingTransaction => [10.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::SendingTransaction => [11.into_dart()].into_dart(),
             crate::api::frost::SigningStatus::TransactionSent(field0) => {
-                [10.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+                [12.into_dart(), field0.into_into_dart().into_dart()].into_dart()
             }
             _ => {
                 unimplemented!("");
@@ -16487,38 +16495,44 @@ impl SseEncode for crate::api::frost::SigningStatus {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         match self {
-            crate::api::frost::SigningStatus::SendingCommitment => {
+            crate::api::frost::SigningStatus::AnnouncingCoordinator => {
                 <i32>::sse_encode(0, serializer);
             }
-            crate::api::frost::SigningStatus::WaitingForCommitments => {
+            crate::api::frost::SigningStatus::WaitingForCoordinator => {
                 <i32>::sse_encode(1, serializer);
             }
-            crate::api::frost::SigningStatus::SendingSigningPackage => {
+            crate::api::frost::SigningStatus::SendingCommitment => {
                 <i32>::sse_encode(2, serializer);
             }
-            crate::api::frost::SigningStatus::WaitingForSigningPackage => {
+            crate::api::frost::SigningStatus::WaitingForCommitments => {
                 <i32>::sse_encode(3, serializer);
             }
-            crate::api::frost::SigningStatus::SendingSignatureShare => {
+            crate::api::frost::SigningStatus::SendingSigningPackage => {
                 <i32>::sse_encode(4, serializer);
             }
-            crate::api::frost::SigningStatus::SigningCompleted => {
+            crate::api::frost::SigningStatus::WaitingForSigningPackage => {
                 <i32>::sse_encode(5, serializer);
             }
-            crate::api::frost::SigningStatus::WaitingForSignatureShares => {
+            crate::api::frost::SigningStatus::SendingSignatureShare => {
                 <i32>::sse_encode(6, serializer);
             }
-            crate::api::frost::SigningStatus::WaitingForFunds => {
+            crate::api::frost::SigningStatus::SigningCompleted => {
                 <i32>::sse_encode(7, serializer);
             }
-            crate::api::frost::SigningStatus::PreparingTransaction => {
+            crate::api::frost::SigningStatus::WaitingForSignatureShares => {
                 <i32>::sse_encode(8, serializer);
             }
-            crate::api::frost::SigningStatus::SendingTransaction => {
+            crate::api::frost::SigningStatus::WaitingForFunds => {
                 <i32>::sse_encode(9, serializer);
             }
-            crate::api::frost::SigningStatus::TransactionSent(field0) => {
+            crate::api::frost::SigningStatus::PreparingTransaction => {
                 <i32>::sse_encode(10, serializer);
+            }
+            crate::api::frost::SigningStatus::SendingTransaction => {
+                <i32>::sse_encode(11, serializer);
+            }
+            crate::api::frost::SigningStatus::TransactionSent(field0) => {
+                <i32>::sse_encode(12, serializer);
                 <String>::sse_encode(field0, serializer);
             }
             _ => {

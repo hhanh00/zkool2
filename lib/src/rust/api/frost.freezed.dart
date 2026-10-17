@@ -1805,6 +1805,10 @@ extension SigningStatusPatterns on SigningStatus {
 
   @optionalTypeArgs
   TResult maybeMap<TResult extends Object?>({
+    TResult Function(SigningStatus_AnnouncingCoordinator value)?
+        announcingCoordinator,
+    TResult Function(SigningStatus_WaitingForCoordinator value)?
+        waitingForCoordinator,
     TResult Function(SigningStatus_SendingCommitment value)? sendingCommitment,
     TResult Function(SigningStatus_WaitingForCommitments value)?
         waitingForCommitments,
@@ -1827,6 +1831,12 @@ extension SigningStatusPatterns on SigningStatus {
   }) {
     final _that = this;
     switch (_that) {
+      case SigningStatus_AnnouncingCoordinator()
+          when announcingCoordinator != null:
+        return announcingCoordinator(_that);
+      case SigningStatus_WaitingForCoordinator()
+          when waitingForCoordinator != null:
+        return waitingForCoordinator(_that);
       case SigningStatus_SendingCommitment() when sendingCommitment != null:
         return sendingCommitment(_that);
       case SigningStatus_WaitingForCommitments()
@@ -1875,6 +1885,10 @@ extension SigningStatusPatterns on SigningStatus {
 
   @optionalTypeArgs
   TResult map<TResult extends Object?>({
+    required TResult Function(SigningStatus_AnnouncingCoordinator value)
+        announcingCoordinator,
+    required TResult Function(SigningStatus_WaitingForCoordinator value)
+        waitingForCoordinator,
     required TResult Function(SigningStatus_SendingCommitment value)
         sendingCommitment,
     required TResult Function(SigningStatus_WaitingForCommitments value)
@@ -1900,6 +1914,10 @@ extension SigningStatusPatterns on SigningStatus {
   }) {
     final _that = this;
     switch (_that) {
+      case SigningStatus_AnnouncingCoordinator():
+        return announcingCoordinator(_that);
+      case SigningStatus_WaitingForCoordinator():
+        return waitingForCoordinator(_that);
       case SigningStatus_SendingCommitment():
         return sendingCommitment(_that);
       case SigningStatus_WaitingForCommitments():
@@ -1939,6 +1957,10 @@ extension SigningStatusPatterns on SigningStatus {
 
   @optionalTypeArgs
   TResult? mapOrNull<TResult extends Object?>({
+    TResult? Function(SigningStatus_AnnouncingCoordinator value)?
+        announcingCoordinator,
+    TResult? Function(SigningStatus_WaitingForCoordinator value)?
+        waitingForCoordinator,
     TResult? Function(SigningStatus_SendingCommitment value)? sendingCommitment,
     TResult? Function(SigningStatus_WaitingForCommitments value)?
         waitingForCommitments,
@@ -1960,6 +1982,12 @@ extension SigningStatusPatterns on SigningStatus {
   }) {
     final _that = this;
     switch (_that) {
+      case SigningStatus_AnnouncingCoordinator()
+          when announcingCoordinator != null:
+        return announcingCoordinator(_that);
+      case SigningStatus_WaitingForCoordinator()
+          when waitingForCoordinator != null:
+        return waitingForCoordinator(_that);
       case SigningStatus_SendingCommitment() when sendingCommitment != null:
         return sendingCommitment(_that);
       case SigningStatus_WaitingForCommitments()
@@ -2007,6 +2035,8 @@ extension SigningStatusPatterns on SigningStatus {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>({
+    TResult Function()? announcingCoordinator,
+    TResult Function()? waitingForCoordinator,
     TResult Function()? sendingCommitment,
     TResult Function()? waitingForCommitments,
     TResult Function()? sendingSigningPackage,
@@ -2022,6 +2052,12 @@ extension SigningStatusPatterns on SigningStatus {
   }) {
     final _that = this;
     switch (_that) {
+      case SigningStatus_AnnouncingCoordinator()
+          when announcingCoordinator != null:
+        return announcingCoordinator();
+      case SigningStatus_WaitingForCoordinator()
+          when waitingForCoordinator != null:
+        return waitingForCoordinator();
       case SigningStatus_SendingCommitment() when sendingCommitment != null:
         return sendingCommitment();
       case SigningStatus_WaitingForCommitments()
@@ -2070,6 +2106,8 @@ extension SigningStatusPatterns on SigningStatus {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>({
+    required TResult Function() announcingCoordinator,
+    required TResult Function() waitingForCoordinator,
     required TResult Function() sendingCommitment,
     required TResult Function() waitingForCommitments,
     required TResult Function() sendingSigningPackage,
@@ -2084,6 +2122,10 @@ extension SigningStatusPatterns on SigningStatus {
   }) {
     final _that = this;
     switch (_that) {
+      case SigningStatus_AnnouncingCoordinator():
+        return announcingCoordinator();
+      case SigningStatus_WaitingForCoordinator():
+        return waitingForCoordinator();
       case SigningStatus_SendingCommitment():
         return sendingCommitment();
       case SigningStatus_WaitingForCommitments():
@@ -2123,6 +2165,8 @@ extension SigningStatusPatterns on SigningStatus {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>({
+    TResult? Function()? announcingCoordinator,
+    TResult? Function()? waitingForCoordinator,
     TResult? Function()? sendingCommitment,
     TResult? Function()? waitingForCommitments,
     TResult? Function()? sendingSigningPackage,
@@ -2137,6 +2181,12 @@ extension SigningStatusPatterns on SigningStatus {
   }) {
     final _that = this;
     switch (_that) {
+      case SigningStatus_AnnouncingCoordinator()
+          when announcingCoordinator != null:
+        return announcingCoordinator();
+      case SigningStatus_WaitingForCoordinator()
+          when waitingForCoordinator != null:
+        return waitingForCoordinator();
       case SigningStatus_SendingCommitment() when sendingCommitment != null:
         return sendingCommitment();
       case SigningStatus_WaitingForCommitments()
@@ -2168,6 +2218,48 @@ extension SigningStatusPatterns on SigningStatus {
       case _:
         return null;
     }
+  }
+}
+
+/// @nodoc
+
+class SigningStatus_AnnouncingCoordinator extends SigningStatus {
+  const SigningStatus_AnnouncingCoordinator() : super._();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is SigningStatus_AnnouncingCoordinator);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'SigningStatus.announcingCoordinator()';
+  }
+}
+
+/// @nodoc
+
+class SigningStatus_WaitingForCoordinator extends SigningStatus {
+  const SigningStatus_WaitingForCoordinator() : super._();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is SigningStatus_WaitingForCoordinator);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'SigningStatus.waitingForCoordinator()';
   }
 }
 

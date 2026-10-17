@@ -232,7 +232,17 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
   }
 
   void _onSign(SigningStatus s) {
-    if (s is SigningStatus_WaitingForCommitments) {
+    if (s is SigningStatus_AnnouncingCoordinator) {
+      setState(() {
+        message = "Announcing our mailbox address to the participants";
+        currentIndex = 1; // coordinator
+      });
+    } else if (s is SigningStatus_WaitingForCoordinator) {
+      setState(() {
+        message = "Waiting for the coordinator to announce its mailbox address";
+        currentIndex = 1; // other
+      });
+    } else if (s is SigningStatus_WaitingForCommitments) {
       setState(() {
         message = "Waiting for other participants to send their commitments";
         currentIndex = 1; // coordinator

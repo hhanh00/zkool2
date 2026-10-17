@@ -12,6 +12,12 @@ pub enum TaskKind {
 pub enum SignTask {
     /// Private mailbox account does not exist yet.
     EnsureMailbox,
+    /// Coordinator: broadcast our mailbox address for this session, so that
+    /// members send to it without a stored address for us.
+    AnnounceCoordinator,
+    /// Non-coordinator: the coordinator's address for this session has not
+    /// arrived yet.
+    WaitCoordinator,
     /// Generate and send commitments to the coordinator (Phase 1).
     SendCommitments,
     /// Coordinator: not enough commitments have arrived yet.
@@ -33,11 +39,13 @@ pub enum SignTask {
 impl SignTask {
     pub fn kind(&self) -> TaskKind {
         match self {
-            SignTask::WaitCommitments
+            SignTask::WaitCoordinator
+            | SignTask::WaitCommitments
             | SignTask::WaitSigpackages
             | SignTask::WaitSigshares
             | SignTask::Done => TaskKind::Time,
             SignTask::EnsureMailbox
+            | SignTask::AnnounceCoordinator
             | SignTask::SendCommitments
             | SignTask::MakeSigpackages
             | SignTask::SendSigshares
@@ -48,11 +56,13 @@ impl SignTask {
     /// Whether this task is still applicable against freshly observed state.
     pub fn is_satisfied_by(&self, s: &SignState) -> bool {
         match self {
-            SignTask::WaitCommitments
+            SignTask::WaitCoordinator
+            | SignTask::WaitCommitments
             | SignTask::WaitSigpackages
             | SignTask::WaitSigshares
             | SignTask::Done => true,
             SignTask::EnsureMailbox => s.mailbox.is_none() || s.broadcast.is_none(),
+            SignTask::AnnounceCoordinator => s.is_coordinator() && s.coordinator_address.is_none(),
             SignTask::SendCommitments => !s.own_commitments_stored,
             SignTask::MakeSigpackages => {
                 s.is_coordinator()

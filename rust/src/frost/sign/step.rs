@@ -82,6 +82,19 @@ pub async fn sign_step(
                 exec::ensure_mailbox(network, connection, &fresh, height).await?;
             }
 
+            SignTask::AnnounceCoordinator => {
+                match exec::announce_coordinator(network, connection, client, &fresh).await? {
+                    SendResult::Sent => {}
+                    SendResult::WaitingForFunds => {
+                        return Ok(Some(SignStepOutcome {
+                            executed,
+                            waiting_for_funds: true,
+                            txid: None,
+                        }));
+                    }
+                }
+            }
+
             SignTask::SendCommitments => {
                 match exec::send_commitments(network, connection, client, &fresh).await? {
                     SendResult::Sent => {}
@@ -132,7 +145,8 @@ pub async fn sign_step(
                 }));
             }
 
-            SignTask::WaitCommitments
+            SignTask::WaitCoordinator
+            | SignTask::WaitCommitments
             | SignTask::WaitSigpackages
             | SignTask::WaitSigshares
             | SignTask::Done => {
