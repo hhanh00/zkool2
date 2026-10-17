@@ -1460,6 +1460,7 @@ extension ProtocolStatusPatterns on ProtocolStatus {
   TResult maybeMap<TResult extends Object?>({
     TResult Function(ProtocolStatus_Dkg value)? dkg,
     TResult Function(ProtocolStatus_Sign value)? sign,
+    TResult Function(ProtocolStatus_Warning value)? warning,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -1468,6 +1469,8 @@ extension ProtocolStatusPatterns on ProtocolStatus {
         return dkg(_that);
       case ProtocolStatus_Sign() when sign != null:
         return sign(_that);
+      case ProtocolStatus_Warning() when warning != null:
+        return warning(_that);
       case _:
         return orElse();
     }
@@ -1490,6 +1493,7 @@ extension ProtocolStatusPatterns on ProtocolStatus {
   TResult map<TResult extends Object?>({
     required TResult Function(ProtocolStatus_Dkg value) dkg,
     required TResult Function(ProtocolStatus_Sign value) sign,
+    required TResult Function(ProtocolStatus_Warning value) warning,
   }) {
     final _that = this;
     switch (_that) {
@@ -1497,6 +1501,8 @@ extension ProtocolStatusPatterns on ProtocolStatus {
         return dkg(_that);
       case ProtocolStatus_Sign():
         return sign(_that);
+      case ProtocolStatus_Warning():
+        return warning(_that);
     }
   }
 
@@ -1516,6 +1522,7 @@ extension ProtocolStatusPatterns on ProtocolStatus {
   TResult? mapOrNull<TResult extends Object?>({
     TResult? Function(ProtocolStatus_Dkg value)? dkg,
     TResult? Function(ProtocolStatus_Sign value)? sign,
+    TResult? Function(ProtocolStatus_Warning value)? warning,
   }) {
     final _that = this;
     switch (_that) {
@@ -1523,6 +1530,8 @@ extension ProtocolStatusPatterns on ProtocolStatus {
         return dkg(_that);
       case ProtocolStatus_Sign() when sign != null:
         return sign(_that);
+      case ProtocolStatus_Warning() when warning != null:
+        return warning(_that);
       case _:
         return null;
     }
@@ -1544,6 +1553,7 @@ extension ProtocolStatusPatterns on ProtocolStatus {
   TResult maybeWhen<TResult extends Object?>({
     TResult Function(DKGStatus field0)? dkg,
     TResult Function(SigningStatus field0)? sign,
+    TResult Function(String field0)? warning,
     required TResult orElse(),
   }) {
     final _that = this;
@@ -1552,6 +1562,8 @@ extension ProtocolStatusPatterns on ProtocolStatus {
         return dkg(_that.field0);
       case ProtocolStatus_Sign() when sign != null:
         return sign(_that.field0);
+      case ProtocolStatus_Warning() when warning != null:
+        return warning(_that.field0);
       case _:
         return orElse();
     }
@@ -1574,6 +1586,7 @@ extension ProtocolStatusPatterns on ProtocolStatus {
   TResult when<TResult extends Object?>({
     required TResult Function(DKGStatus field0) dkg,
     required TResult Function(SigningStatus field0) sign,
+    required TResult Function(String field0) warning,
   }) {
     final _that = this;
     switch (_that) {
@@ -1581,6 +1594,8 @@ extension ProtocolStatusPatterns on ProtocolStatus {
         return dkg(_that.field0);
       case ProtocolStatus_Sign():
         return sign(_that.field0);
+      case ProtocolStatus_Warning():
+        return warning(_that.field0);
     }
   }
 
@@ -1600,6 +1615,7 @@ extension ProtocolStatusPatterns on ProtocolStatus {
   TResult? whenOrNull<TResult extends Object?>({
     TResult? Function(DKGStatus field0)? dkg,
     TResult? Function(SigningStatus field0)? sign,
+    TResult? Function(String field0)? warning,
   }) {
     final _that = this;
     switch (_that) {
@@ -1607,6 +1623,8 @@ extension ProtocolStatusPatterns on ProtocolStatus {
         return dkg(_that.field0);
       case ProtocolStatus_Sign() when sign != null:
         return sign(_that.field0);
+      case ProtocolStatus_Warning() when warning != null:
+        return warning(_that.field0);
       case _:
         return null;
     }
@@ -1764,6 +1782,72 @@ class _$ProtocolStatus_SignCopyWithImpl<$Res>
     return $SigningStatusCopyWith<$Res>(_self.field0, (value) {
       return _then(_self.copyWith(field0: value));
     });
+  }
+}
+
+/// @nodoc
+
+class ProtocolStatus_Warning extends ProtocolStatus {
+  const ProtocolStatus_Warning(this.field0) : super._();
+
+  @override
+  final String field0;
+
+  /// Create a copy of ProtocolStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $ProtocolStatus_WarningCopyWith<ProtocolStatus_Warning> get copyWith =>
+      _$ProtocolStatus_WarningCopyWithImpl<ProtocolStatus_Warning>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is ProtocolStatus_Warning &&
+            (identical(other.field0, field0) || other.field0 == field0));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, field0);
+
+  @override
+  String toString() {
+    return 'ProtocolStatus.warning(field0: $field0)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $ProtocolStatus_WarningCopyWith<$Res>
+    implements $ProtocolStatusCopyWith<$Res> {
+  factory $ProtocolStatus_WarningCopyWith(ProtocolStatus_Warning value,
+          $Res Function(ProtocolStatus_Warning) _then) =
+      _$ProtocolStatus_WarningCopyWithImpl;
+  @useResult
+  $Res call({String field0});
+}
+
+/// @nodoc
+class _$ProtocolStatus_WarningCopyWithImpl<$Res>
+    implements $ProtocolStatus_WarningCopyWith<$Res> {
+  _$ProtocolStatus_WarningCopyWithImpl(this._self, this._then);
+
+  final ProtocolStatus_Warning _self;
+  final $Res Function(ProtocolStatus_Warning) _then;
+
+  /// Create a copy of ProtocolStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? field0 = null,
+  }) {
+    return _then(ProtocolStatus_Warning(
+      null == field0
+          ? _self.field0
+          : field0 // ignore: cast_nullable_to_non_nullable
+              as String,
+    ));
   }
 }
 

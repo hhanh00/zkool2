@@ -72,7 +72,41 @@ pub async fn synchronize_impl<S: Sink<SyncEvent> + Send + 'static>(
     let Some(mut run) = c.sync.try_begin() else {
         return Ok(SyncOutcome::Skipped);
     };
+    synchronize_within(
+        &mut run,
+        progress,
+        accounts,
+        current_height,
+        actions_per_sync,
+        transparent_limit,
+        checkpoint_age,
+        skip_details,
+        c,
+    )
+    .await
+}
 
+/// [`synchronize_impl`] for a caller that already holds the session, and
+/// keeps holding it afterwards: the protocol driver syncs and then steps a
+/// DKG or signing session under one run, so its writes never overlap a
+/// sync the app starts in between. Never returns [`SyncOutcome::Skipped`].
+#[allow(clippy::too_many_arguments)]
+pub async fn synchronize_within<S: Sink<SyncEvent> + Send + 'static>(
+    run: &mut SyncRun<'_>,
+    progress: S,
+    accounts: Vec<u32>,
+    current_height: u32,
+    actions_per_sync: u32,
+    transparent_limit: u32,
+    checkpoint_age: u32,
+    skip_details: bool,
+    c: &Coin,
+) -> Result<SyncOutcome> {
+    if accounts.is_empty() {
+        return Ok(SyncOutcome::Synced {
+            height: current_height,
+        });
+    }
     let params = SyncParams {
         current_height,
         actions_per_sync,
@@ -80,13 +114,11 @@ pub async fn synchronize_impl<S: Sink<SyncEvent> + Send + 'static>(
         checkpoint_age,
         skip_details,
     };
-    let result = run_sync(progress, &accounts, &params, &run, c).await;
+    let result = run_sync(progress, &accounts, &params, run, c).await;
 
     // Inner operations may unwind with an error after receiving cancellation.
     // A user-requested stop is normal termination at the API boundary.
     let cancelled = run.was_cancelled();
-    drop(run);
-
     finish(result, cancelled, current_height)
 }
 

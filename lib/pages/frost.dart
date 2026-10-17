@@ -221,11 +221,14 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
         _onSign(field0);
       case ProtocolStatus_Dkg():
         break;
+      // A failed pass is transient: the next block retries, so warn instead
+      // of a modal error.
+      case ProtocolStatus_Warning(:final field0):
+        showWarningSnackbar(field0);
     }
   }
 
-  // A failed pass is transient: the next block retries, so warn instead of
-  // a modal error.
+  // The stream itself failed (it ends on an error): nothing more will come.
   void _onError(Object e) {
     if (!mounted) return;
     showWarningSnackbar(e is AnyhowException ? e.message : e.toString());

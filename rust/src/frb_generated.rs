@@ -12235,6 +12235,10 @@ impl SseDecode for crate::api::frost::ProtocolStatus {
                 let mut var_field0 = <crate::api::frost::SigningStatus>::sse_decode(deserializer);
                 return crate::api::frost::ProtocolStatus::Sign(var_field0);
             }
+            2 => {
+                let mut var_field0 = <String>::sse_decode(deserializer);
+                return crate::api::frost::ProtocolStatus::Warning(var_field0);
+            }
             _ => {
                 unimplemented!("");
             }
@@ -14490,6 +14494,9 @@ impl flutter_rust_bridge::IntoDart for crate::api::frost::ProtocolStatus {
             crate::api::frost::ProtocolStatus::Sign(field0) => {
                 [1.into_dart(), field0.into_into_dart().into_dart()].into_dart()
             }
+            crate::api::frost::ProtocolStatus::Warning(field0) => {
+                [2.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+            }
             _ => {
                 unimplemented!("");
             }
@@ -16632,6 +16639,10 @@ impl SseEncode for crate::api::frost::ProtocolStatus {
             crate::api::frost::ProtocolStatus::Sign(field0) => {
                 <i32>::sse_encode(1, serializer);
                 <crate::api::frost::SigningStatus>::sse_encode(field0, serializer);
+            }
+            crate::api::frost::ProtocolStatus::Warning(field0) => {
+                <i32>::sse_encode(2, serializer);
+                <String>::sse_encode(field0, serializer);
             }
             _ => {
                 unimplemented!("");
