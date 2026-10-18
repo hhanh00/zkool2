@@ -34,7 +34,13 @@ import 'package:zkool/store.dart';
 
 String initials(String name) => name.substring(0, min(2, name.length)).toUpperCase();
 
-final locale = PlatformDispatcher.instance.locale.toString();
+/// The locale the amount formatters use: the platform's when intl has data
+/// for it, else en_US. A bare Linux session reports "C" (or "POSIX"), which
+/// intl rejects, and every amount on screen would throw.
+String formatLocale(String platformLocale) =>
+    Intl.verifiedLocale(platformLocale, NumberFormat.localeExists, onFailure: (_) => 'en_US')!;
+
+final locale = formatLocale(PlatformDispatcher.instance.locale.toString());
 final formatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: 8);
 final zatFormatter = DecimalFormatter(formatter);
 final shortFormatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: 3);
