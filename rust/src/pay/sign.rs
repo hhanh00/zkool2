@@ -106,6 +106,15 @@ async fn sign_transaction(
     let osk = get_orchard_sk(connection, account).await?;
     let osak = osk.map(|osk| SpendAuthorizingKey::from(&osk));
 
+    // A viewing-key account can plan a transaction for an offline signer but
+    // cannot sign it here: refuse before the proof keys are unwrapped below.
+    if !sapling_indices.is_empty() && ssk.is_none() {
+        return Err(Error::NoSigningKey.into());
+    }
+    if (!orchard_indices.is_empty() || !ironwood_indices.is_empty()) && osak.is_none() {
+        return Err(Error::NoSigningKey.into());
+    }
+
     let updater = Updater::new(pczt);
     let pgk = ssk.as_ref().map(|ssk| ssk.expsk().proof_generation_key());
     let internal_pgk = ssk
@@ -181,11 +190,15 @@ async fn sign_transaction(
                 .bind(account)
                 .bind(&address)
                 .map(|r| {
-                    let sk: Vec<u8> = r.get(0);
-                    SecretKey::from_bytes(&sk.try_into().unwrap()).unwrap()
+                    // A watch-only key (xpub, bare public key) stores no secret:
+                    // the column is NULL or empty, and the account cannot sign.
+                    let sk: Option<Vec<u8>> = r.get(0);
+                    sk.and_then(|sk| <[u8; 32]>::try_from(sk).ok())
+                        .and_then(|sk| SecretKey::from_bytes(&sk).ok())
                 })
                 .fetch_optional(&mut *connection)
                 .await?
+                .flatten()
             }
         };
         let sk = sk.ok_or(Error::NoSigningKey)?;
