@@ -465,7 +465,22 @@ Future<void> _createAccount(WidgetTester tester, GoRouter appRouter, {required S
     await tester.pump(const Duration(milliseconds: 500));
   }
   await _waitForAccountView(tester, name);
-  appRouter.go("/accounts");
+  // The page may still be finishing (a late "synchronize now?" prompt, then
+  // its own navigation to the account): keep answering and going back to
+  // the list until the list stays up.
+  final listDeadline = DateTime.now().add(_shortTimeout);
+  while (DateTime.now().isBefore(listDeadline)) {
+    for (final entry in dialogs.entries) {
+      if (find.text(entry.key).evaluate().isNotEmpty && find.text(entry.value).evaluate().isNotEmpty) {
+        debugPrint("[wallet-ui] late dialog '${entry.key}' -> ${entry.value}");
+        await tester.tap(find.text(entry.value).last);
+        await pumpFor(tester, const Duration(seconds: 1));
+      }
+    }
+    appRouter.go("/accounts");
+    await pumpFor(tester, const Duration(seconds: 2));
+    if (find.text("Account List").evaluate().isNotEmpty) break;
+  }
   await _waitForAccountList(tester);
 }
 

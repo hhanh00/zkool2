@@ -30,7 +30,10 @@ DEFAULT_PORT = 8000
 LWD_URL = "http://localhost:8137"
 FLUTTER_LOG = "/tmp/wallet_ui_flutter.log"
 LCOV_COPY = "/tmp/wallet_ui_lcov.info"
+# The budget runs from the app's first phase: building the app (tens of
+# minutes on a cold CI runner) has its own, longer wait.
 BUDGET_SECONDS = 600
+BUILD_TIMEOUT = 2400
 TARGET_SECONDS = 360
 FUND_UA = "0.5"
 FUND_TADDR = "0.3"
@@ -105,9 +108,10 @@ async def test_wallet_flutter_ui(rpc_url, seed, zkool_binary):
     flutter = None
     miner = None
     started = time.monotonic()
+    main = None
 
-    async def body():
-        nonlocal flutter, miner
+    async def launch():
+        nonlocal flutter, miner, started, main
         print("=== Step 1: Chain, funding wallet and price mock ===")
         mock.start()
         wallet.start(zkool_binary)
@@ -134,7 +138,11 @@ async def test_wallet_flutter_ui(rpc_url, seed, zkool_binary):
         # Mine only what the mempool holds: a stray idle block between the
         # app's sync and its send would raise the Sync Warning dialog.
         miner = asyncio.create_task(demand_miner(rpc_url, idle_fallback=3600))
+        phase = await rendezvous.poll_ui("phase", timeout=BUILD_TIMEOUT, process=flutter)
+        started = time.monotonic()
+        print(f"App up (phase {phase}); the {BUDGET_SECONDS}s budget starts now")
 
+    async def body():
         print("\n=== Step 3: Fund account A at its unified and transparent addresses ===")
         a_ua = await rendezvous.poll_ui("a_ua", timeout=BUDGET_SECONDS, process=flutter)
         a_taddr = await rendezvous.poll_ui("a_taddr", timeout=BUDGET_SECONDS, process=flutter)
@@ -178,6 +186,7 @@ async def test_wallet_flutter_ui(rpc_url, seed, zkool_binary):
         for stale in (ui_db_path, FLUTTER_LOG, LCOV_COPY):
             if os.path.exists(stale):
                 os.remove(stale)
+        await launch()
         try:
             await asyncio.wait_for(body(), timeout=BUDGET_SECONDS)
         except asyncio.TimeoutError:
