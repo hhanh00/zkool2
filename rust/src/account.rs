@@ -1297,6 +1297,127 @@ mod new_account_tests {
                 .is_err()
         );
     }
+
+    /// The regtest parameters `Coin::network` uses for coin 2.
+    fn regtest() -> Network {
+        use zcash_protocol::consensus::{BlockHeight, OrchardMode};
+        use zcash_protocol::local_consensus::LocalNetwork;
+        Network::Regtest(LocalNetwork {
+            overwinter: Some(BlockHeight::from_u32(1)),
+            sapling: Some(BlockHeight::from_u32(1)),
+            blossom: Some(BlockHeight::from_u32(1)),
+            heartwood: Some(BlockHeight::from_u32(1)),
+            canopy: Some(BlockHeight::from_u32(1)),
+            nu5: Some(BlockHeight::from_u32(1)),
+            nu6: Some(BlockHeight::from_u32(1)),
+            nu6_1: Some(BlockHeight::from_u32(1)),
+            nu6_2: Some(BlockHeight::from_u32(1)),
+            nu6_3: Some(BlockHeight::from_u32(250)),
+            nu7: None,
+            zsa: None,
+            orchard_mode: OrchardMode::Normal,
+        })
+    }
+
+    /// Prints the key vectors committed in `tests/tests/test_key_import.py`:
+    /// the key types the classifier accepts but the GraphQL API cannot
+    /// export, derived from [`MNEMONIC`] on regtest, with the addresses their
+    /// imports must show. The unified keys are exported live by that test.
+    /// Regenerate with
+    /// `cargo test print_key_import_vectors -- --ignored --nocapture`.
+    #[tokio::test]
+    #[ignore]
+    async fn print_key_import_vectors() {
+        use crate::bip38::{export_tsk, TSecretKey};
+
+        let network = regtest();
+        let seed = bip39::Mnemonic::from_str(MNEMONIC).unwrap().to_seed("");
+        let coin = network.coin_type();
+        let xpub_at = |path: &str| {
+            ExtendedPrivateKey::<SecretKey>::derive_from_path(&seed, &path.parse().unwrap())
+                .unwrap()
+                .public_key()
+                .to_extended_key(Prefix::XPUB)
+                .to_string()
+        };
+        let xprv = ExtendedPrivateKey::<SecretKey>::derive_from_path(
+            &seed,
+            &format!("m/44'/{coin}'/0'").parse().unwrap(),
+        )
+        .unwrap();
+        println!("MNEMONIC = {MNEMONIC:?}");
+        println!("XPRV = {:?}", xprv.to_extended_key(Prefix::XPRV).to_string());
+        println!(
+            "XPUB_ACCOUNT = {:?}",
+            xprv.public_key().to_extended_key(Prefix::XPUB).to_string()
+        );
+        println!("XPUB_EXTERNAL = {:?}", xpub_at(&format!("m/44'/{coin}'/0'/0")));
+        println!("XPUB_CHANGE = {:?}", xpub_at(&format!("m/44'/{coin}'/0'/1")));
+
+        let usk = UnifiedSpendingKey::from_seed(&network, &seed, AccountId::ZERO).unwrap();
+        let tsk = usk.transparent();
+        let tvk = tsk.to_account_pubkey();
+        let sk0: [u8; 32] = derive_transparent_sk(tsk, 0, 0).unwrap().try_into().unwrap();
+        let sk0 = SecretKey::from_secret_bytes(sk0).unwrap();
+        println!("WIF_COMPRESSED = {:?}", export_tsk(&TSecretKey(sk0, false)));
+        println!("WIF_UNCOMPRESSED = {:?}", export_tsk(&TSecretKey(sk0, true)));
+        let (pk0, t0) = derive_transparent_address(&tvk, 0, 0, false).unwrap();
+        let (_, t0_uncompressed) = derive_transparent_address(&tvk, 0, 0, true).unwrap();
+        println!(
+            "ZPK = {:?}",
+            bech32::encode::<bech32::Bech32>(bech32::Hrp::parse("zpk").unwrap(), &pk0).unwrap()
+        );
+        println!("T0_ADDRESS = {:?}", t0.encode(&network));
+        println!("T0_UNCOMPRESSED_ADDRESS = {:?}", t0_uncompressed.encode(&network));
+
+        let sxsk = usk.sapling();
+        println!(
+            "SAPLING_SK = {:?}",
+            zcash_keys::encoding::encode_extended_spending_key(
+                network.hrp_sapling_extended_spending_key(),
+                sxsk,
+            )
+        );
+        println!(
+            "SAPLING_VK = {:?}",
+            zcash_keys::encoding::encode_extended_full_viewing_key(
+                network.hrp_sapling_extended_full_viewing_key(),
+                &sxsk.to_extended_full_viewing_key(),
+            )
+        );
+        let (_, sapling_default) = sxsk.to_diversifiable_full_viewing_key().default_address();
+        println!("SAPLING_ADDRESS = {:?}", sapling_default.encode(&network));
+        // Mainnet encoding of the same key: refused on regtest.
+        println!(
+            "SAPLING_SK_MAINNET = {:?}",
+            zcash_keys::encoding::encode_extended_spending_key(
+                Network::Main.hrp_sapling_extended_spending_key(),
+                sxsk,
+            )
+        );
+
+        let keys = derive_account_keys(&network, KeySource::Seed(MNEMONIC.to_string()), "", 0, ALL_POOLS)
+            .await
+            .unwrap();
+        println!("SEED_DINDEX = {}", keys.dindex);
+        for a in &keys.transparent.as_ref().unwrap().addresses {
+            println!("SEED_T{} = {:?}", a.dindex, a.address);
+        }
+        println!("SEED_SAPLING_ADDRESS = {:?}", keys.sapling.as_ref().unwrap().address);
+        let (ua, _) = usk
+            .to_unified_full_viewing_key()
+            .default_address(UnifiedAddressRequest::AllAvailableKeys)
+            .unwrap();
+        println!("SEED_UA = {:?}", ua.encode(&network));
+
+        let zondax = derive_zondax_seed_keys(&network, MNEMONIC, 0, POOL_SAPLING)
+            .await
+            .unwrap();
+        println!(
+            "ZONDAX_SAPLING_ADDRESS = {:?}",
+            zondax.sapling.as_ref().unwrap().address
+        );
+    }
 }
 
 pub fn derive_transparent_sk(tsk: &AccountPrivKey, scope: u32, dindex: u32) -> Result<Vec<u8>> {
