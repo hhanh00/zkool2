@@ -1,10 +1,11 @@
 /// Shared scaffolding for the Flutter-side FROST integration tests.
 ///
-/// Both `dkg_ui_test.dart` and `frost_ui_test.dart` run the real app as one
+/// `dkg_ui_test.dart` and `frost_ui_test.dart` run the real app as one
 /// participant while `zkool_graphql` instances play the others, orchestrated by
-/// pytest. This file holds the parts they have in common: the JSON-file
-/// rendezvous with the orchestrator, pumping helpers that work on a route with
-/// live timers, and the DKG flow itself (signing needs a completed DKG first).
+/// pytest; `wallet_ui_test.dart` runs it alone. This file holds the parts they
+/// have in common: the JSON-file rendezvous with the orchestrator, pumping
+/// helpers that work on a route with live timers, wallet setup, and the DKG
+/// flow itself (signing needs a completed DKG first).
 library;
 
 import 'dart:convert';
@@ -86,18 +87,26 @@ class SavedPrefs {
   final bool? pinLock;
   final bool? offline;
   final bool? vault;
+  final bool? getFx;
 
-  SavedPrefs(this.pinLock, this.offline, this.vault);
+  SavedPrefs(this.pinLock, this.offline, this.vault, this.getFx);
 
-  static Future<SavedPrefs> forceTestValues(SharedPreferencesAsync prefs) async {
+  /// [getFx] turns on the market price fetch at startup; the wallet test
+  /// points it at a mock through the `coingecko_url` prop.
+  static Future<SavedPrefs> forceTestValues(
+    SharedPreferencesAsync prefs, {
+    bool getFx = false,
+  }) async {
     final saved = SavedPrefs(
       await prefs.getBool("pin_lock"),
       await prefs.getBool("offline"),
       await prefs.getBool("vault"),
+      await prefs.getBool("get_fx"),
     );
     await prefs.setBool("pin_lock", false);
     await prefs.setBool("offline", false);
     await prefs.setBool("vault", false);
+    await prefs.setBool("get_fx", getFx);
     return saved;
   }
 
@@ -105,6 +114,7 @@ class SavedPrefs {
     await _restore(prefs, "pin_lock", pinLock);
     await _restore(prefs, "offline", offline);
     await _restore(prefs, "vault", vault);
+    await _restore(prefs, "get_fx", getFx);
   }
 
   static Future<void> _restore(
@@ -120,14 +130,14 @@ class SavedPrefs {
   }
 }
 
-/// Opens the test database and creates the account that pays for the protocol
-/// memos. Must run inside `tester.runAsync` — it is all real async I/O.
-///
-/// Returns the id of the funding account.
-Future<int> setUpTestWallet({
+/// Opens a fresh test database with no accounts, pointed at [lwd]. Extra
+/// [props] are written to the wallet's props table (e.g. `coingecko_url`).
+/// Must run inside `tester.runAsync` — it is all real async I/O.
+Future<void> openTestWallet({
   required String dbPath,
   required String lwd,
   required String docsDir,
+  Map<String, String> props = const {},
 }) async {
   await RustLib.init();
   await initDatadir(directory: docsDir);
@@ -138,8 +148,23 @@ Future<int> setUpTestWallet({
   var c = await Coin().openDatabase(dbFilepath: dbPath, password: null);
   await putProp(key: "lwd", value: lwd, c: c);
   await putProp(key: "is_light_node", value: "true", c: c);
+  for (final e in props.entries) {
+    await putProp(key: e.key, value: e.value, c: c);
+  }
   c = c.setLwd(serverType: 0, url: lwd);
   coinContext.set(coin: c);
+}
+
+/// Opens the test database and creates the account that pays for the protocol
+/// memos. Must run inside `tester.runAsync` — it is all real async I/O.
+///
+/// Returns the id of the funding account.
+Future<int> setUpTestWallet({
+  required String dbPath,
+  required String lwd,
+  required String docsDir,
+}) async {
+  await openTestWallet(dbPath: dbPath, lwd: lwd, docsDir: docsDir);
 
   final account = await newAccount(
     na: NewAccount(
@@ -176,6 +201,35 @@ Future<void> primeProviders(WidgetTester tester, ProviderContainer container) as
 Finder fieldNamed(String name) =>
     find.byWidgetPredicate((w) => w is FormBuilderTextField && w.name == name);
 
+Finder switchNamed(String name) =>
+    find.byWidgetPredicate((w) => w is FormBuilderSwitch && w.name == name);
+
+Finder checkboxNamed(String name) =>
+    find.byWidgetPredicate((w) => w is FormBuilderCheckbox && w.name == name);
+
+Finder dropdownNamed(String name) =>
+    find.byWidgetPredicate((w) => w is FormBuilderDropdown<int> && w.name == name);
+
+/// Taps an [IconButton] by its tooltip, scrolling it into view first.
+Future<void> tapTooltip(WidgetTester tester, String tooltip) async {
+  final button = find.byTooltip(tooltip);
+  await tester.ensureVisible(button.first);
+  await tester.pump();
+  await tester.tap(button.first, warnIfMissed: false);
+  await pumpFor(tester, const Duration(seconds: 1));
+}
+
+/// Picks [value] on a dropdown found by [dropdown] (see [selectDropdown] for
+/// the label-based variant).
+Future<void> pickDropdown(WidgetTester tester, Finder dropdown, String value) async {
+  await tester.ensureVisible(dropdown.first);
+  await tester.pump();
+  await tester.tap(dropdown.first, warnIfMissed: false);
+  await pumpFor(tester, const Duration(seconds: 1));
+  await tester.tap(find.text(value).last);
+  await pumpFor(tester, const Duration(seconds: 1));
+}
+
 /// Pumps real frames until [done] holds. `pumpAndSettle` is unusable on the
 /// FROST routes: both DKGPage3 and FrostPage2 install a 30s periodic timer and
 /// the synchronizer keeps scheduling frames, so the tree never settles.
@@ -190,7 +244,20 @@ Future<void> pumpUntil(
     if (done()) return;
     await tester.pump(const Duration(milliseconds: 500));
   }
+  debugPrint("[ui-test] visible texts: ${visibleTexts().join(" | ")}");
   fail("timed out after $timeout waiting for $what");
+}
+
+/// The distinct strings of every [Text] on screen, for the log when a wait
+/// times out: it says which page or dialog the app is actually showing.
+List<String> visibleTexts({int limit = 60}) {
+  final texts = <String>{};
+  for (final e in find.byType(Text).evaluate()) {
+    final data = (e.widget as Text).data;
+    if (data != null && data.trim().isNotEmpty) texts.add(data.trim());
+    if (texts.length >= limit) break;
+  }
+  return texts.toList();
 }
 
 /// Pumps real frames for [duration]; see [pumpUntil] for why not pumpAndSettle.

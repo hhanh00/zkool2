@@ -170,7 +170,7 @@ def repo_root() -> str:
     return os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 
-async def launch_flutter_test(dart_file: str, rendezvous, log_path: str):
+async def launch_flutter_test(dart_file: str, rendezvous, log_path: str, extra_args=()):
     """Spawn `flutter test integration_test/<dart_file>` as the UI participant.
 
     The app runs on this platform's desktop device (a display is required:
@@ -178,7 +178,8 @@ async def launch_flutter_test(dart_file: str, rendezvous, log_path: str):
     directory. `FLUTTER_BIN` overrides the `flutter` on PATH. Output goes to
     `log_path`; the caller awaits the returned process and dumps the log on
     failure. Every UI test launches the app through here so a new test is one
-    Dart file in `integration_test/` plus one orchestrator.
+    Dart file in `integration_test/` plus one orchestrator. `extra_args` are
+    appended to the `flutter test` command line, e.g. `--coverage`.
     """
     log = open(log_path, "w")
     process = await asyncio.create_subprocess_exec(
@@ -188,6 +189,7 @@ async def launch_flutter_test(dart_file: str, rendezvous, log_path: str):
         "-d",
         flutter_device(),
         f"--dart-define=ZKOOL_TEST_RENDEZVOUS={rendezvous.dir}",
+        *extra_args,
         cwd=repo_root(),
         stdout=log,
         stderr=asyncio.subprocess.STDOUT,
