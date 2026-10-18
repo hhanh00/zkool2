@@ -96,6 +96,7 @@ Account _account(int id) => Account(
       saved: true,
       enabled: true,
       internal: false,
+      incomingOnly: false,
       hw: 0,
       height: 100,
       time: 0,
