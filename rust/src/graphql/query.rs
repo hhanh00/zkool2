@@ -15,7 +15,7 @@ use crate::graphql::mutation::MEMPOOL;
 use crate::graphql::mutation::{Output, Payment, UnsignedTx};
 use crate::graphql::{check_admin_auth, check_auth, Context};
 use crate::pay::{
-    pool::{ALL_POOLS, POOL_IRONWOOD, POOL_ORCHARD},
+    pool::ALL_POOLS,
     TxPlan,
 };
 
@@ -237,13 +237,7 @@ impl Query {
                 juniper::Value::Null,
             ));
         }
-        // Ironwood and Orchard use the same viewing key and UFVK receiver.
-        let key_pools = if pools & POOL_IRONWOOD != 0 {
-            (pools & !POOL_IRONWOOD) | POOL_ORCHARD
-        } else {
-            pools
-        };
-        Ok(crate::api::account::get_account_ufvk(account, key_pools, &context.coin).await?)
+        Ok(crate::api::account::get_account_ufvk(account, pools, &context.coin).await?)
     }
 
     async fn address_by_account(

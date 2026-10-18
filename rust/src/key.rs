@@ -18,7 +18,19 @@ use zcash_transparent::address::TransparentAddress;
 use crate::{
     bip38,
     db::{select_account_orchard, select_account_sapling, select_account_transparent},
+    pay::pool::{POOL_IRONWOOD, POOL_ORCHARD},
 };
+
+/// The key items a pool selection asks for. Ironwood and Orchard share one
+/// viewing key and one unified receiver, so selecting Ironwood selects the
+/// Orchard item.
+fn key_pools(pools: u8) -> u8 {
+    if pools & POOL_IRONWOOD != 0 {
+        (pools & !POOL_IRONWOOD) | POOL_ORCHARD
+    } else {
+        pools
+    }
+}
 
 pub async fn get_account_ufvk(
     network: &Network,
@@ -26,6 +38,7 @@ pub async fn get_account_ufvk(
     account: u32,
     pools: u8,
 ) -> Result<String> {
+    let pools = key_pools(pools);
     let dindex = get_account_dindex(connection, account).await?;
     let tkeys = select_account_transparent(connection, account, dindex).await?;
     let skeys = select_account_sapling(network, connection, account).await?;
@@ -138,4 +151,63 @@ pub fn is_valid_ufvk(network: &Network, key: &str) -> bool {
 
 pub fn is_valid_transparent_address(network: &Network, address: &str) -> bool {
     TransparentAddress::decode(network, address).is_ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use sqlx::{Connection as _, SqliteConnection};
+
+    use super::*;
+    use crate::{
+        account::new_account,
+        api::account::NewAccount,
+        db::create_schema,
+        pay::pool::{ALL_POOLS, POOL_SAPLING, POOL_TRANSPARENT},
+    };
+
+    const MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    const NETWORK: Network = Network::Main;
+
+    /// A seed account with every pool, in a fresh in-memory wallet.
+    async fn seed_account() -> (SqliteConnection, u32) {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        create_schema(&mut db).await.unwrap();
+        let na = NewAccount {
+            icon: None,
+            name: "seed".into(),
+            restore: true,
+            key: MNEMONIC.into(),
+            passphrase: None,
+            fingerprint: None,
+            aindex: 0,
+            birth: Some(1),
+            folder: String::new(),
+            pools: Some(ALL_POOLS),
+            use_internal: true,
+            internal: false,
+            hw: 0,
+        };
+        let account = new_account(&NETWORK, &mut db, &na).await.unwrap();
+        (db, account)
+    }
+
+    /// Ironwood shares Orchard's key: selecting it, alone or with others,
+    /// exports the Orchard item, the way the GraphQL layer used to map it.
+    #[tokio::test]
+    async fn ironwood_selects_the_orchard_item() {
+        let (mut db, account) = seed_account().await;
+        let mut ufvk = async |pools| {
+            get_account_ufvk(&NETWORK, &mut db, account, pools)
+                .await
+                .unwrap()
+        };
+        let orchard = ufvk(POOL_ORCHARD).await;
+        assert_eq!(ufvk(POOL_IRONWOOD).await, orchard);
+        assert_eq!(ufvk(POOL_ORCHARD | POOL_IRONWOOD).await, orchard);
+        assert_eq!(
+            ufvk(POOL_SAPLING | POOL_IRONWOOD).await,
+            ufvk(POOL_SAPLING | POOL_ORCHARD).await
+        );
+        assert!(ufvk(POOL_TRANSPARENT).await.starts_with("xpub"));
+    }
 }
