@@ -16,6 +16,7 @@ import shutil
 import pytest
 from dkg import DkgParticipant, Rendezvous, app_documents_dir, demand_miner, launch_flutter_test
 from gql import GraphQLRequest, gql
+from gql.transport.exceptions import TransportQueryError
 from test_dkg_ui import (
     ADDRESS_QUERY,
     BALANCE_QUERY,
@@ -313,9 +314,20 @@ async def test_frost_sign_flutter_ui(graphql_url, rpc_url, seed, zkool_binary, g
         elapsed = 0
         receiver_balance = "0"
         while elapsed < 600:
-            await coordinator.execute(
-                GraphQLRequest(SYNC_MUTATION, variable_values={"account": receiver_account})
-            )
+            try:
+                await coordinator.execute(
+                    GraphQLRequest(SYNC_MUTATION, variable_values={"account": receiver_account})
+                )
+            except TransportQueryError as e:
+                # The coordinator's protocol driver syncs on its own on every
+                # new block, and this loop's explicit sync can collide with it.
+                # Transient: the next round syncs.
+                if "already running" not in str(e):
+                    raise
+                print("Sync busy (driver pass in progress), retrying")
+                await asyncio.sleep(10)
+                elapsed += 10
+                continue
             result = await coordinator.execute(
                 GraphQLRequest(BALANCE_QUERY, variable_values={"account": receiver_account})
             )
