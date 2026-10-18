@@ -96,28 +96,19 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
             .execute(&mut *connection)
             .await;
 
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS sapling_accounts(
-        account INTEGER PRIMARY KEY,
-        xsk BLOB,
-        xvk BLOB NOT NULL)",
-    )
-    .execute(&mut *connection)
-    .await?;
+    // Incoming-only accounts (imported from an incoming viewing key) hold a
+    // pool's incoming key and no full viewing key. For transparent that is
+    // the external chain's key: chain code and public key.
+    let _ = sqlx::query("ALTER TABLE transparent_accounts ADD COLUMN ivk BLOB")
+        .execute(&mut *connection)
+        .await;
 
     let _ =
         sqlx::query("ALTER TABLE sapling_accounts ADD COLUMN address BLOB NOT NULL DEFAULT('')")
             .execute(&mut *connection)
             .await;
-
-    sqlx::query(
-        "CREATE TABLE IF NOT EXISTS orchard_accounts(
-        account INTEGER PRIMARY KEY,
-        xsk BLOB,
-        xvk BLOB NOT NULL)",
-    )
-    .execute(&mut *connection)
-    .await?;
+    migrate_sapling_accounts(connection).await?;
+    migrate_orchard_accounts(connection).await?;
 
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS sync_heights(
@@ -898,6 +889,90 @@ async fn migrate_headers(connection: &mut SqliteConnection) -> Result<()> {
         .execute(&mut *tx)
         .await?;
         sqlx::query("DROP TABLE legacy_headers")
+            .execute(&mut *tx)
+            .await?;
+    }
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Whether `table` still has its full viewing key column NOT NULL: the
+/// shape from before incoming-only accounts, which hold the pool's
+/// incoming key and no full key. SQLite cannot drop NOT NULL in place.
+/// A table that does not exist yet (a new wallet) has nothing to migrate.
+async fn full_key_not_null(tx: &mut SqliteConnection, table: &str) -> Result<bool> {
+    let notnull: Option<(bool,)> =
+        sqlx::query_as("SELECT \"notnull\" FROM pragma_table_info(?1) WHERE name = 'xvk'")
+            .bind(table)
+            .fetch_optional(&mut *tx)
+            .await?;
+    Ok(notnull.is_some_and(|(notnull,)| notnull))
+}
+
+/// Sapling keys of an account: `xvk` for a full account, `ivk` (the ZIP 316
+/// item, `dk || ivk`) for an incoming-only one. A wallet from before
+/// incoming-only accounts is rebuilt once, the way `migrate_headers` does
+/// it; a later run finds the column nullable and only creates if missing.
+async fn migrate_sapling_accounts(connection: &mut SqliteConnection) -> Result<()> {
+    let mut tx = connection.begin().await?;
+    let legacy = full_key_not_null(&mut tx, "sapling_accounts").await?;
+    if legacy {
+        sqlx::query("ALTER TABLE sapling_accounts RENAME TO legacy_sapling_accounts")
+            .execute(&mut *tx)
+            .await?;
+    }
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS sapling_accounts(
+        account INTEGER PRIMARY KEY,
+        xsk BLOB,
+        xvk BLOB,
+        address BLOB NOT NULL DEFAULT(''),
+        ivk BLOB)",
+    )
+    .execute(&mut *tx)
+    .await?;
+    if legacy {
+        sqlx::query(
+            "INSERT INTO sapling_accounts (account, xsk, xvk, address)
+            SELECT account, xsk, xvk, address FROM legacy_sapling_accounts",
+        )
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query("DROP TABLE legacy_sapling_accounts")
+            .execute(&mut *tx)
+            .await?;
+    }
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Orchard keys of an account, as [`migrate_sapling_accounts`] for Sapling;
+/// the Orchard row also serves Ironwood.
+async fn migrate_orchard_accounts(connection: &mut SqliteConnection) -> Result<()> {
+    let mut tx = connection.begin().await?;
+    let legacy = full_key_not_null(&mut tx, "orchard_accounts").await?;
+    if legacy {
+        sqlx::query("ALTER TABLE orchard_accounts RENAME TO legacy_orchard_accounts")
+            .execute(&mut *tx)
+            .await?;
+    }
+    sqlx::query(
+        "CREATE TABLE IF NOT EXISTS orchard_accounts(
+        account INTEGER PRIMARY KEY,
+        xsk BLOB,
+        xvk BLOB,
+        ivk BLOB)",
+    )
+    .execute(&mut *tx)
+    .await?;
+    if legacy {
+        sqlx::query(
+            "INSERT INTO orchard_accounts (account, xsk, xvk)
+            SELECT account, xsk, xvk FROM legacy_orchard_accounts",
+        )
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query("DROP TABLE legacy_orchard_accounts")
             .execute(&mut *tx)
             .await?;
     }
@@ -2203,6 +2278,71 @@ pub async fn max_spendable(connection: &mut SqliteConnection, account: u32) -> R
     .fetch_one(connection)
     .await?;
     Ok(amount.unwrap_or_default())
+}
+
+#[cfg(test)]
+mod incoming_key_schema_tests {
+    use super::*;
+
+    type SaplingRow = (u32, Option<Vec<u8>>, Option<Vec<u8>>, Vec<u8>, Option<Vec<u8>>);
+    type OrchardRow = (u32, Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>);
+
+    async fn rows(db: &mut SqliteConnection) -> (Vec<SaplingRow>, Vec<OrchardRow>) {
+        let s = sqlx::query_as("SELECT account, xsk, xvk, address, ivk FROM sapling_accounts")
+            .fetch_all(&mut *db)
+            .await
+            .unwrap();
+        let o = sqlx::query_as("SELECT account, xsk, xvk, ivk FROM orchard_accounts")
+            .fetch_all(&mut *db)
+            .await
+            .unwrap();
+        (s, o)
+    }
+
+    /// A wallet from before incoming-only accounts: full viewing keys NOT
+    /// NULL and no incoming-key column. Upgrading keeps every row and lets
+    /// an incoming-only row in; upgrading again changes nothing.
+    #[tokio::test]
+    async fn upgrade_allows_incoming_only_rows_and_keeps_existing_ones() -> Result<()> {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        sqlx::raw_sql(
+            "CREATE TABLE transparent_accounts(account INTEGER PRIMARY KEY, xsk BLOB, xvk BLOB);
+            CREATE TABLE sapling_accounts(account INTEGER PRIMARY KEY, xsk BLOB, xvk BLOB NOT NULL,
+                address BLOB NOT NULL DEFAULT(''));
+            CREATE TABLE orchard_accounts(account INTEGER PRIMARY KEY, xsk BLOB, xvk BLOB NOT NULL);
+            INSERT INTO transparent_accounts VALUES (1, x'01', x'02');
+            INSERT INTO sapling_accounts VALUES (1, x'03', x'04', x'05');
+            INSERT INTO orchard_accounts VALUES (1, x'06', x'07');",
+        )
+        .execute(&mut db)
+        .await?;
+
+        create_schema(&mut db).await?;
+        let upgraded = rows(&mut db).await;
+        assert_eq!(
+            upgraded,
+            (
+                vec![(1, Some(vec![3]), Some(vec![4]), vec![5], None)],
+                vec![(1, Some(vec![6]), Some(vec![7]), None)]
+            )
+        );
+
+        sqlx::raw_sql(
+            "INSERT INTO transparent_accounts(account, ivk) VALUES (2, x'08');
+            INSERT INTO sapling_accounts(account, ivk) VALUES (2, x'09');
+            INSERT INTO orchard_accounts(account, ivk) VALUES (2, x'0a');",
+        )
+        .execute(&mut db)
+        .await?;
+
+        create_schema(&mut db).await?;
+        let (s, o) = rows(&mut db).await;
+        assert_eq!(s.len(), 2);
+        assert_eq!(o.len(), 2);
+        assert_eq!(s[0], upgraded.0[0]);
+        assert_eq!(o[1], (2, None, None, Some(vec![10])));
+        Ok(())
+    }
 }
 
 #[cfg(test)]
