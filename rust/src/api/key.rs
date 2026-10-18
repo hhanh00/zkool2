@@ -4,7 +4,7 @@ use flutter_rust_bridge::frb;
 use rand::rngs::SysRng;
 use rand_core::Rng as _;
 use rand_core::UnwrapErr;
-use zcash_keys::keys::UnifiedFullViewingKey;
+use zcash_keys::keys::{UnifiedFullViewingKey, UnifiedIncomingViewingKey};
 
 use crate::{
     api::coin::Coin,
@@ -45,7 +45,7 @@ pub fn is_valid_key(key: &str, c: &Coin) -> bool {
         return true;
     }
 
-    if crate::key::is_valid_ufvk(network, key) {
+    if crate::key::is_valid_ufvk(network, key) || crate::key::is_valid_uivk(network, key) {
         return true;
     }
 
@@ -106,6 +106,22 @@ pub fn get_key_pools(key: &str, c: &Coin) -> Result<u8> {
             pools |= 2;
         }
         if ufvk.orchard().is_some() {
+            pools |= 4;
+        }
+        return Ok(pools);
+    }
+
+    if crate::key::is_valid_uivk(network, key) {
+        let uivk = UnifiedIncomingViewingKey::decode(network, key)
+            .map_err(|_| anyhow::anyhow!("Invalid UIVK"))?;
+        let mut pools = 0;
+        if uivk.has_transparent() {
+            pools |= 1;
+        }
+        if uivk.has_sapling() {
+            pools |= 2;
+        }
+        if uivk.has_orchard() {
             pools |= 4;
         }
         return Ok(pools);

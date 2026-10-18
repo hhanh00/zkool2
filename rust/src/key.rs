@@ -10,7 +10,7 @@ use sqlx::SqliteConnection;
 use zcash_address::unified::{Encoding as _, Fvk, Ufvk};
 use zcash_keys::{
     encoding::{decode_extended_full_viewing_key, decode_extended_spending_key, AddressCodec as _},
-    keys::UnifiedFullViewingKey,
+    keys::{UnifiedFullViewingKey, UnifiedIncomingViewingKey},
 };
 use zcash_protocol::consensus::NetworkConstants as _;
 use zcash_transparent::{
@@ -92,6 +92,16 @@ async fn account_viewing_key(
 /// public key, at `depth` and `child_number`. The parent fingerprint is
 /// a dummy: the key's own derivation path is not recorded.
 fn xpub(data: &[u8], depth: u8, child_number: ChildNumber) -> Result<String> {
+    xpub_impl(data, depth, child_number)
+}
+
+/// [`xpub`] for tests elsewhere in the crate.
+#[cfg(test)]
+pub(crate) fn xpub_for_test(data: &[u8], depth: u8, child_number: ChildNumber) -> String {
+    xpub_impl(data, depth, child_number).unwrap()
+}
+
+fn xpub_impl(data: &[u8], depth: u8, child_number: ChildNumber) -> Result<String> {
     let chain_code = data[..32].try_into().unwrap();
     let public_key = PublicKey::from_slice(&data[32..])?;
     let xpub = ExtendedPublicKey::new(
@@ -191,6 +201,10 @@ pub fn is_valid_ufvk(network: &Network, key: &str) -> bool {
     UnifiedFullViewingKey::decode(network, key).is_ok()
 }
 
+pub fn is_valid_uivk(network: &Network, key: &str) -> bool {
+    UnifiedIncomingViewingKey::decode(network, key).is_ok()
+}
+
 pub fn is_valid_transparent_address(network: &Network, address: &str) -> bool {
     TransparentAddress::decode(network, address).is_ok()
 }
@@ -198,8 +212,6 @@ pub fn is_valid_transparent_address(network: &Network, address: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use sqlx::{Connection as _, SqliteConnection};
-
-    use zcash_keys::keys::UnifiedIncomingViewingKey;
 
     use super::*;
     use crate::{

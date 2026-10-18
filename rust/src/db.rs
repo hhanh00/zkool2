@@ -4,8 +4,8 @@ use crate::keys::{SaplingDiversifiedAddress, ScopeExt};
 use anyhow::{anyhow, Result};
 use csv_async::AsyncWriter;
 use futures::TryStreamExt;
-use orchard::keys::{FullViewingKey, SpendingKey};
-use sapling_crypto::PaymentAddress;
+use orchard::keys::{FullViewingKey, IncomingViewingKey as OrchardIvk, SpendingKey};
+use sapling_crypto::{zip32::IncomingViewingKey as SaplingIvk, PaymentAddress};
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteRow},
     Column, Connection, Row, SqliteConnection, TypeInfo,
@@ -17,7 +17,9 @@ use zcash_keys::{
 };
 use zcash_protocol::consensus::NetworkUpgrade;
 use zcash_protocol::consensus::Parameters;
-use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
+use zcash_transparent::keys::{
+    AccountPrivKey, AccountPubKey, ExternalIvk, IncomingViewingKey as _,
+};
 
 use crate::api::account::Folder;
 use crate::api::account::TAddressTxCount;
@@ -1072,6 +1074,21 @@ pub async fn store_account_transparent_vk(
     Ok(())
 }
 
+/// The external chain's incoming key of an incoming-only account: it
+/// derives the receiving addresses and nothing else.
+pub async fn store_account_transparent_ivk(
+    connection: &mut SqliteConnection,
+    account: u32,
+    ivk: &ExternalIvk,
+) -> Result<()> {
+    sqlx::query("UPDATE transparent_accounts SET ivk = ? WHERE account = ?")
+        .bind(ivk.serialize())
+        .bind(account)
+        .execute(&mut *connection)
+        .await?;
+    Ok(())
+}
+
 pub async fn store_account_transparent_addr(
     connection: &mut SqliteConnection,
     account: u32,
@@ -1105,7 +1122,7 @@ pub async fn init_account_sapling(
     account: u32,
     birth: u32,
 ) -> Result<()> {
-    sqlx::query("INSERT INTO sapling_accounts(account, xvk) VALUES (?, '')")
+    sqlx::query("INSERT INTO sapling_accounts(account) VALUES (?)")
         .bind(account)
         .execute(&mut *connection)
         .await?;
@@ -1154,13 +1171,30 @@ pub async fn store_account_sapling_vk(
     Ok(())
 }
 
+/// The incoming key of an incoming-only Sapling account, with its default
+/// address; the full viewing key stays NULL.
+pub async fn store_account_sapling_ivk(
+    connection: &mut SqliteConnection,
+    account: u32,
+    ivk: &SaplingIvk,
+    address: &str,
+) -> Result<()> {
+    sqlx::query("UPDATE sapling_accounts SET ivk = ?2, address = ?3 WHERE account = ?1")
+        .bind(account)
+        .bind(ivk.to_bytes().as_slice())
+        .bind(address)
+        .execute(&mut *connection)
+        .await?;
+    Ok(())
+}
+
 pub async fn init_account_orchard(
     network: &Network,
     connection: &mut SqliteConnection,
     account: u32,
     birth: u32,
 ) -> Result<()> {
-    sqlx::query("INSERT INTO orchard_accounts(account, xvk) VALUES (?, '')")
+    sqlx::query("INSERT INTO orchard_accounts(account) VALUES (?)")
         .bind(account)
         .execute(&mut *connection)
         .await?;
@@ -1187,6 +1221,21 @@ pub async fn store_account_orchard_sk(
     .execute(&mut *connection)
     .await?;
 
+    Ok(())
+}
+
+/// The incoming key of an incoming-only Orchard account (serving Ironwood
+/// too); the full viewing key stays NULL.
+pub async fn store_account_orchard_ivk(
+    connection: &mut SqliteConnection,
+    account: u32,
+    ivk: &OrchardIvk,
+) -> Result<()> {
+    sqlx::query("UPDATE orchard_accounts SET ivk = ? WHERE account = ?")
+        .bind(ivk.to_bytes().as_slice())
+        .bind(account)
+        .execute(&mut *connection)
+        .await?;
     Ok(())
 }
 
@@ -1235,14 +1284,15 @@ pub async fn select_account_transparent(
     dindex: u32,
 ) -> Result<TransparentKeys> {
     #[allow(clippy::type_complexity)]
-    let r: Option<(Option<Vec<u8>>, Option<Vec<u8>>)> =
-        sqlx::query_as("SELECT xsk, xvk FROM transparent_accounts WHERE account = ?")
+    let r: Option<(Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>)> =
+        sqlx::query_as("SELECT xsk, xvk, ivk FROM transparent_accounts WHERE account = ?")
             .bind(account)
             .fetch_optional(&mut *connection)
             .await?;
 
+    let ivk = r.as_ref().and_then(|(_, _, ivk)| ivk.clone());
     let (xsk, xvk, taddress) = match r {
-        Some((None, None)) => {
+        Some((None, None, None)) => {
             // no xprv, no xpub => get the address imported as bip38
             let taddress =
                 sqlx::query("SELECT address FROM transparent_address_accounts WHERE account = ?1 AND dindex = ?2 AND scope = 0")
@@ -1253,13 +1303,14 @@ pub async fn select_account_transparent(
                     .await?;
             (None, None, taddress)
         }
-        Some((xsk, xvk)) => (xsk, xvk, None),
+        Some((xsk, xvk, _)) => (xsk, xvk, None),
         None => (None, None, None),
     };
 
     let keys = TransparentKeys {
         xsk: xsk.map(|xsk| AccountPrivKey::from_bytes(&xsk).unwrap()),
         xvk: xvk.map(|xvk| AccountPubKey::deserialize(&xvk.try_into().unwrap()).unwrap()),
+        ivk: ivk.map(|ivk| ExternalIvk::deserialize(&ivk.try_into().unwrap()).unwrap()),
         address: taddress,
     };
 
@@ -1271,15 +1322,16 @@ pub async fn select_account_sapling(
     connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<SaplingKeys> {
-    let r: Option<(Option<Vec<u8>>, Vec<u8>, String)> =
-        sqlx::query_as("SELECT xsk, xvk, address FROM sapling_accounts WHERE account = ?")
+    #[allow(clippy::type_complexity)]
+    let r: Option<(Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>, String)> =
+        sqlx::query_as("SELECT xsk, xvk, ivk, address FROM sapling_accounts WHERE account = ?")
             .bind(account)
             .fetch_optional(&mut *connection)
             .await?;
 
-    let (xsk, xvk, address) = match r {
-        Some((xsk, xvk, address)) => (xsk, Some(xvk), Some(address)),
-        None => (None, None, None),
+    let (xsk, xvk, ivk, address) = match r {
+        Some((xsk, xvk, ivk, address)) => (xsk, xvk, ivk, Some(address)),
+        None => (None, None, None, None),
     };
 
     let keys = SaplingKeys {
@@ -1290,6 +1342,7 @@ pub async fn select_account_sapling(
         }),
         xvk: xvk
             .map(|xvk| DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()),
+        ivk: ivk.map(|ivk| SaplingIvk::from_bytes(&ivk.try_into().unwrap()).unwrap()),
         // A corrupt or empty stored address (e.g. rows imported before the
         // address was backfilled) must not panic the runtime: surface a
         // clear error instead.
@@ -1308,40 +1361,46 @@ pub async fn select_account_orchard(
     connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<OrchardKeys> {
-    let r: Option<(Option<Vec<u8>>, Vec<u8>)> =
-        sqlx::query_as("SELECT xsk, xvk FROM orchard_accounts WHERE account = ?")
+    let r: Option<(Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>)> =
+        sqlx::query_as("SELECT xsk, xvk, ivk FROM orchard_accounts WHERE account = ?")
             .bind(account)
             .fetch_optional(&mut *connection)
             .await?;
 
-    let (xsk, xvk) = match r {
-        Some((xsk, xvk)) => (xsk, Some(xvk)),
-        None => (None, None),
+    let (xsk, xvk, ivk) = match r {
+        Some((xsk, xvk, ivk)) => (xsk, xvk, ivk),
+        None => (None, None, None),
     };
 
     let keys = OrchardKeys {
         xsk: xsk.map(|xsk| SpendingKey::from_bytes(xsk.try_into().unwrap()).unwrap()),
         xvk: xvk.map(|xvk| FullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()),
+        ivk: ivk.map(|ivk| OrchardIvk::from_bytes(&ivk.try_into().unwrap()).unwrap()),
     };
 
     Ok(keys)
 }
 
+/// An account's stored keys for one pool. A full account has `xvk` (and
+/// `xsk` when it can spend); an incoming-only account has `ivk` alone.
 pub struct TransparentKeys {
     pub xsk: Option<AccountPrivKey>,
     pub xvk: Option<AccountPubKey>,
+    pub ivk: Option<ExternalIvk>,
     pub address: Option<String>,
 }
 
 pub struct SaplingKeys {
     pub xsk: Option<ExtendedSpendingKey>,
     pub xvk: Option<DiversifiableFullViewingKey>,
+    pub ivk: Option<SaplingIvk>,
     pub address: Option<PaymentAddress>,
 }
 
 pub struct OrchardKeys {
     pub xsk: Option<SpendingKey>,
     pub xvk: Option<FullViewingKey>,
+    pub ivk: Option<OrchardIvk>,
 }
 
 pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Result<Vec<Account>> {

@@ -9,11 +9,15 @@ use crate::{
     bip38,
     db::{
         init_account_orchard, init_account_sapling, init_account_transparent,
-        store_account_orchard_sk, store_account_orchard_vk, store_account_sapling_sk,
-        store_account_sapling_vk, store_account_seed, store_account_transparent_addr,
+        store_account_orchard_ivk, store_account_orchard_sk, store_account_orchard_vk,
+        store_account_sapling_ivk, store_account_sapling_sk, store_account_sapling_vk,
+        store_account_seed, store_account_transparent_addr, store_account_transparent_ivk,
         store_account_transparent_sk, store_account_transparent_vk, update_dindex,
     },
-    key::{is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk},
+    key::{
+        is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk,
+        is_valid_uivk,
+    },
     keys::{sapling_dfvk_to_fvk, SaplingAddressDerivation, ScopeExt},
     ledger::{HwKind, LedgerHandle},
     pay::pool::PoolMask,
@@ -33,12 +37,15 @@ use crate::{
     pay::pool::{ALL_POOLS, POOL_IRONWOOD, POOL_ORCHARD, POOL_SAPLING, POOL_TRANSPARENT},
 };
 use secp256k1::{PublicKey, SecretKey};
-use zcash_keys::keys::{sapling::ExtendedSpendingKey, UnifiedFullViewingKey, UnifiedSpendingKey};
+use zcash_keys::keys::{
+    sapling::ExtendedSpendingKey, UnifiedFullViewingKey, UnifiedIncomingViewingKey,
+    UnifiedSpendingKey,
+};
 use zcash_transparent::address::TransparentAddress;
 
 use anyhow::{anyhow, Context, Result};
 use bincode::config::legacy;
-use bip32::{ExtendedPrivateKey, ExtendedPublicKey, PrivateKey};
+use bip32::{ChildNumber, ExtendedPrivateKey, ExtendedPublicKey, PrivateKey};
 use jubjub::Fr;
 use orchard::{
     keys::FullViewingKey,
@@ -59,7 +66,8 @@ use zcash_keys::{
 };
 use zcash_protocol::consensus::{NetworkConstants, Parameters};
 use zcash_transparent::keys::{
-    AccountPrivKey, AccountPubKey, NonHardenedChildIndex, TransparentKeyScope,
+    AccountPrivKey, AccountPubKey, ExternalIvk, IncomingViewingKey as _, NonHardenedChildIndex,
+    TransparentKeyScope,
 };
 use zcash_trees::warp::FragmentAuthPath;
 use zip32::{fingerprint::SeedFingerprint, AccountId};
@@ -86,11 +94,22 @@ pub async fn new_account(
     });
 
     let ledger_kind = HwKind::from_hw(na.hw);
+    let mut key = na.key.clone();
+    if key.is_empty() && !ledger_kind.is_ledger() {
+        key = generate_seed()?;
+    }
+    let pools = resolve_pools(ledger_kind, na.pools)?;
+    let source = classify_key(network, ledger_kind, &key)?;
+    let passphrase = na.passphrase.clone().unwrap_or_default();
+
     // Official Ledger accounts always use an internal change address, so the
     // transparent change output can carry the derivation path the Ledger app
-    // requires to verify it as change.
+    // requires to verify it as change. An incoming-only account never
+    // spends, and its key cannot derive the internal chain anyway.
     let use_internal = if ledger_kind == HwKind::Official {
         true
+    } else if source.is_incoming_only() {
+        false
     } else {
         na.use_internal
     };
@@ -105,15 +124,6 @@ pub async fn new_account(
         na.internal,
     )
     .await?;
-
-    let mut key = na.key.clone();
-    if key.is_empty() && !ledger_kind.is_ledger() {
-        key = generate_seed()?;
-    }
-
-    let pools = resolve_pools(ledger_kind, na.pools)?;
-    let source = classify_key(network, ledger_kind, &key)?;
-    let passphrase = na.passphrase.clone().unwrap_or_default();
 
     let keys = match source {
         KeySource::ZondaxSeed(mnemonic) => {
@@ -177,8 +187,11 @@ enum KeySource {
     Seed(String),
     /// Transparent extended private key (xprv).
     TransparentSk(AccountPrivKey),
-    /// Transparent extended public key (xpub).
+    /// Transparent extended public key (xpub) of the account (depth 3).
     TransparentVk(AccountPubKey),
+    /// Transparent xpub of the external chain (depth 4, child 0): sees
+    /// payments to the receiving addresses, nothing else.
+    TransparentIvk(ExternalIvk),
     /// Single transparent key: a BIP-38 secret key, or a bare `zpk` public key.
     TransparentSingle {
         sk: Option<Vec<u8>>,
@@ -188,12 +201,22 @@ enum KeySource {
     SaplingSk(Box<ExtendedSpendingKey>),
     SaplingVk(Box<sapling_crypto::zip32::ExtendedFullViewingKey>),
     Ufvk(Box<UnifiedFullViewingKey>),
+    /// Unified incoming viewing key: payments received and nothing else.
+    Uivk(Box<UnifiedIncomingViewingKey>),
     /// Zondax Ledger account recovered from its seed phrase (no device).
     ZondaxSeed(String),
     /// Zondax Ledger account whose keys are read from the device.
     ZondaxDevice,
     /// Official Ledger account whose viewing key is read from the device.
     OfficialDevice,
+}
+
+impl KeySource {
+    /// Whether the account can only see payments it receives: no spends,
+    /// no change, no spending.
+    fn is_incoming_only(&self) -> bool {
+        matches!(self, KeySource::TransparentIvk(_) | KeySource::Uivk(_))
+    }
 }
 
 fn classify_key(network: &Network, hw: HwKind, key: &str) -> Result<KeySource> {
@@ -224,11 +247,26 @@ fn classify_key(network: &Network, hw: HwKind, key: &str) -> Result<KeySource> {
         if let Ok(xsk) = ExtendedPrivateKey::<SecretKey>::from_str(key) {
             Ok(KeySource::TransparentSk(AccountPrivKey::from_extended_privkey(xsk)))
         } else if let Ok(xvk) = ExtendedPublicKey::<PublicKey>::from_str(key) {
-            // No AccountPubKey::from_extended_pubkey, we need to use the bytes
+            // An xpub carries its depth and child number: the account key
+            // (m/44'/coin'/a') is at depth 3, the external chain below it
+            // (/0) at depth 4. Neither type has a constructor from an
+            // extended key, so both go through their 65-byte encoding.
             let mut buf = xvk.attrs().chain_code.to_vec();
             buf.extend_from_slice(&xvk.to_bytes());
-            let xvk = AccountPubKey::deserialize(&buf.try_into().unwrap()).unwrap();
-            Ok(KeySource::TransparentVk(xvk))
+            let buf: [u8; 65] = buf.try_into().unwrap();
+            let attrs = xvk.attrs();
+            match (attrs.depth, attrs.child_number) {
+                (3, _) => Ok(KeySource::TransparentVk(
+                    AccountPubKey::deserialize(&buf).unwrap(),
+                )),
+                (4, child) if child == ChildNumber::new(0, false).unwrap() => {
+                    Ok(KeySource::TransparentIvk(ExternalIvk::deserialize(&buf)?))
+                }
+                (depth, child) => Err(anyhow!(
+                    "Unsupported xpub at depth {depth}, child {child}: expected an account \
+                     key (depth 3) or its external chain (depth 4, child 0)"
+                )),
+            }
         } else if let Ok(sk) = bip38::import_tsk(key) {
             let pk = sk.0.public_key();
             let tpk = if sk.1 {
@@ -268,6 +306,10 @@ fn classify_key(network: &Network, hw: HwKind, key: &str) -> Result<KeySource> {
         let uvk =
             UnifiedFullViewingKey::decode(network, key).map_err(|_| anyhow!("Invalid Key"))?;
         Ok(KeySource::Ufvk(Box::new(uvk)))
+    } else if is_valid_uivk(network, key) {
+        let uivk = UnifiedIncomingViewingKey::decode(network, key)
+            .map_err(|_| anyhow!("Invalid Key"))?;
+        Ok(KeySource::Uivk(Box::new(uivk)))
     } else {
         Err(anyhow!("Unsupported key"))
     }
@@ -296,6 +338,8 @@ struct SeedKeys {
 struct TransparentKeys {
     sk: Option<AccountPrivKey>,
     vk: Option<AccountPubKey>,
+    /// The external chain's incoming key, for an incoming-only account.
+    ivk: Option<ExternalIvk>,
     /// External (scope 0) addresses to register.
     addresses: Vec<TransparentAddr>,
 }
@@ -308,15 +352,20 @@ struct TransparentAddr {
     uncompressed: bool,
 }
 
+/// Exactly one of `vk` and `ivk` is set: the full key, or the incoming key
+/// of an incoming-only account.
 struct SaplingKeys {
     sk: Option<ExtendedSpendingKey>,
-    vk: DiversifiableFullViewingKey,
+    vk: Option<DiversifiableFullViewingKey>,
+    ivk: Option<sapling_crypto::zip32::IncomingViewingKey>,
     address: String,
 }
 
+/// Exactly one of `vk` and `ivk` is set, as for [`SaplingKeys`].
 struct OrchardKeys {
     sk: Option<orchard::keys::SpendingKey>,
-    vk: FullViewingKey,
+    vk: Option<FullViewingKey>,
+    ivk: Option<orchard::keys::IncomingViewingKey>,
 }
 
 async fn transparent_addr(
@@ -332,6 +381,41 @@ async fn transparent_addr(
         address: derived.address,
         uncompressed: false,
     })
+}
+
+/// An external address derived from the external chain's incoming key, the
+/// way [`derive_transparent_address`] derives it from the account key.
+fn transparent_addr_from_ivk(
+    network: &Network,
+    ivk: &ExternalIvk,
+    dindex: u32,
+) -> Result<TransparentAddr> {
+    let pk = ivk
+        .derive_pubkey(NonHardenedChildIndex::from_index(dindex).unwrap())?
+        .serialize()
+        .to_vec();
+    let pkh: [u8; 20] = Ripemd160::digest(Sha256::digest(&pk)).into();
+    Ok(TransparentAddr {
+        dindex,
+        sk: None,
+        pk,
+        address: TransparentAddress::PublicKeyHash(pkh).encode(network),
+        uncompressed: false,
+    })
+}
+
+/// The external addresses an incoming-only account registers: index 0 and
+/// its default diversifier index, like [`external_transparent_addrs`].
+fn external_addrs_from_ivk(
+    network: &Network,
+    ivk: &ExternalIvk,
+    dindex: u32,
+) -> Result<Vec<TransparentAddr>> {
+    let mut addresses = vec![transparent_addr_from_ivk(network, ivk, 0)?];
+    if dindex != 0 {
+        addresses.push(transparent_addr_from_ivk(network, ivk, dindex)?);
+    }
+    Ok(addresses)
 }
 
 /// The external transparent addresses a new account registers: index 0 and
@@ -386,6 +470,7 @@ async fn derive_account_keys(
                 keys.transparent = Some(TransparentKeys {
                     sk: Some(tsk.clone()),
                     vk: Some(tvk),
+                    ivk: None,
                     addresses,
                 });
             }
@@ -395,7 +480,8 @@ async fn derive_account_keys(
                 let address = derive_sapling_address(network, &sxvk, dindex);
                 keys.sapling = Some(SaplingKeys {
                     sk: Some(sxsk.clone()),
-                    vk: sxvk,
+                    vk: Some(sxvk),
+                    ivk: None,
                     address,
                 });
             }
@@ -403,7 +489,8 @@ async fn derive_account_keys(
                 let oxsk = usk.orchard();
                 keys.orchard = Some(OrchardKeys {
                     sk: Some(oxsk.clone()),
-                    vk: FullViewingKey::from(oxsk),
+                    vk: Some(FullViewingKey::from(oxsk)),
+                    ivk: None,
                 });
             }
         }
@@ -413,6 +500,7 @@ async fn derive_account_keys(
             keys.transparent = Some(TransparentKeys {
                 sk: Some(xsk),
                 vk: Some(xvk),
+                ivk: None,
                 addresses,
             });
         }
@@ -421,7 +509,16 @@ async fn derive_account_keys(
             keys.transparent = Some(TransparentKeys {
                 sk: None,
                 vk: Some(xvk),
+                ivk: None,
                 addresses,
+            });
+        }
+        KeySource::TransparentIvk(ivk) => {
+            keys.transparent = Some(TransparentKeys {
+                sk: None,
+                vk: None,
+                addresses: external_addrs_from_ivk(network, &ivk, 0)?,
+                ivk: Some(ivk),
             });
         }
         KeySource::TransparentSingle {
@@ -434,6 +531,7 @@ async fn derive_account_keys(
             keys.transparent = Some(TransparentKeys {
                 sk: None,
                 vk: None,
+                ivk: None,
                 addresses: vec![TransparentAddr {
                     dindex: 0,
                     sk,
@@ -449,7 +547,8 @@ async fn derive_account_keys(
             keys.dindex = di.try_into()?;
             keys.sapling = Some(SaplingKeys {
                 sk: Some(*xsk),
-                vk: xvk,
+                vk: Some(xvk),
+                ivk: None,
                 address: address.encode(network),
             });
         }
@@ -458,7 +557,8 @@ async fn derive_account_keys(
             keys.dindex = di.try_into()?;
             keys.sapling = Some(SaplingKeys {
                 sk: None,
-                vk: xvk.to_diversifiable_full_viewing_key(),
+                vk: Some(xvk.to_diversifiable_full_viewing_key()),
+                ivk: None,
                 address: address.encode(network),
             });
         }
@@ -471,6 +571,7 @@ async fn derive_account_keys(
                 keys.transparent = Some(TransparentKeys {
                     sk: None,
                     vk: Some(tvk.clone()),
+                    ivk: None,
                     addresses,
                 });
             }
@@ -478,14 +579,47 @@ async fn derive_account_keys(
                 let address = ua.sapling().unwrap().encode(network);
                 keys.sapling = Some(SaplingKeys {
                     sk: None,
-                    vk: sxvk.clone(),
+                    vk: Some(sxvk.clone()),
+                    ivk: None,
                     address,
                 });
             }
             if let Some(ovk) = uvk.orchard().filter(|_| pools & POOL_ORCHARD != 0) {
                 keys.orchard = Some(OrchardKeys {
                     sk: None,
-                    vk: ovk.clone(),
+                    vk: Some(ovk.clone()),
+                    ivk: None,
+                });
+            }
+        }
+        // Incoming-only: the same addresses and default diversifier index
+        // as the full key would give, with the incoming key of each pool
+        // stored in place of a full key.
+        KeySource::Uivk(uivk) => {
+            let (ua, di) = uivk.default_address(UnifiedAddressRequest::AllAvailableKeys)?;
+            let dindex: u32 = di.try_into()?;
+            keys.dindex = dindex;
+            if let Some(tivk) = uivk.p2pkh().filter(|_| pools & POOL_TRANSPARENT != 0) {
+                keys.transparent = Some(TransparentKeys {
+                    sk: None,
+                    vk: None,
+                    ivk: Some(tivk.clone()),
+                    addresses: external_addrs_from_ivk(network, tivk, dindex)?,
+                });
+            }
+            if let Some(sivk) = uivk.sapling().as_ref().filter(|_| pools & POOL_SAPLING != 0) {
+                keys.sapling = Some(SaplingKeys {
+                    sk: None,
+                    vk: None,
+                    ivk: Some(sivk.clone()),
+                    address: ua.sapling().unwrap().encode(network),
+                });
+            }
+            if let Some(oivk) = uivk.orchard().as_ref().filter(|_| pools & POOL_ORCHARD != 0) {
+                keys.orchard = Some(OrchardKeys {
+                    sk: None,
+                    vk: None,
+                    ivk: Some(oivk.clone()),
                 });
             }
         }
@@ -514,7 +648,8 @@ async fn derive_zondax_seed_keys(
         let address = derive_sapling_address(network, &sxvk, keys.dindex);
         keys.sapling = Some(SaplingKeys {
             sk: Some(sxsk),
-            vk: sxvk,
+            vk: Some(sxvk),
+            ivk: None,
             address,
         });
     }
@@ -543,7 +678,8 @@ async fn derive_zondax_device_keys(
         let address = ledger.get_sapling_address(network, aindex).await?;
         keys.sapling = Some(SaplingKeys {
             sk: None,
-            vk: xvk,
+            vk: Some(xvk),
+            ivk: None,
             address,
         });
     }
@@ -584,6 +720,7 @@ async fn derive_official_device_keys(
         keys.transparent = Some(TransparentKeys {
             sk: None,
             vk: Some(tvk.clone()),
+            ivk: None,
             addresses,
         });
     }
@@ -593,7 +730,8 @@ async fn derive_official_device_keys(
             .ok_or_else(|| anyhow!("device viewing key has no orchard key"))?;
         keys.orchard = Some(OrchardKeys {
             sk: None,
-            vk: ovk.clone(),
+            vk: Some(ovk.clone()),
+            ivk: None,
         });
     }
     Ok(keys)
@@ -627,6 +765,9 @@ async fn store_account_keys(
         if let Some(vk) = &t.vk {
             store_account_transparent_vk(db_tx, account, vk).await?;
         }
+        if let Some(ivk) = &t.ivk {
+            store_account_transparent_ivk(db_tx, account, ivk).await?;
+        }
         for a in &t.addresses {
             store_account_transparent_addr(
                 db_tx,
@@ -647,7 +788,12 @@ async fn store_account_keys(
         if let Some(sk) = &s.sk {
             store_account_sapling_sk(db_tx, account, sk).await?;
         }
-        store_account_sapling_vk(db_tx, account, &s.vk, &s.address).await?;
+        if let Some(vk) = &s.vk {
+            store_account_sapling_vk(db_tx, account, vk, &s.address).await?;
+        }
+        if let Some(ivk) = &s.ivk {
+            store_account_sapling_ivk(db_tx, account, ivk, &s.address).await?;
+        }
     }
 
     if let Some(o) = &keys.orchard {
@@ -655,7 +801,12 @@ async fn store_account_keys(
         if let Some(sk) = &o.sk {
             store_account_orchard_sk(db_tx, account, sk).await?;
         }
-        store_account_orchard_vk(db_tx, account, &o.vk).await?;
+        if let Some(vk) = &o.vk {
+            store_account_orchard_vk(db_tx, account, vk).await?;
+        }
+        if let Some(ivk) = &o.ivk {
+            store_account_orchard_ivk(db_tx, account, ivk).await?;
+        }
     }
 
     update_dindex(db_tx, account, keys.dindex, true).await?;
@@ -746,7 +897,12 @@ mod new_account_tests {
         ));
 
         let seed = bip39::Mnemonic::from_str(MNEMONIC).unwrap().to_seed("");
-        let xprv = ExtendedPrivateKey::<SecretKey>::new(&seed).unwrap();
+        let master = ExtendedPrivateKey::<SecretKey>::new(&seed).unwrap();
+        let xprv = ExtendedPrivateKey::<SecretKey>::derive_from_path(
+            &seed,
+            &"m/44'/133'/0'".parse().unwrap(),
+        )
+        .unwrap();
         let xprv_str = xprv.to_extended_key(Prefix::XPRV).to_string();
         let xpub_str = xprv.public_key().to_extended_key(Prefix::XPUB).to_string();
         assert!(matches!(
@@ -757,6 +913,25 @@ mod new_account_tests {
             classify_key(&NETWORK, HwKind::Software, &xpub_str).unwrap(),
             KeySource::TransparentVk(_)
         ));
+
+        // An xpub is read by its depth and child number: the account key
+        // at depth 3, its external chain at depth 4 child 0; anything else
+        // would import at the wrong addresses and is refused.
+        let xpub_at = |depth_path: &str| {
+            ExtendedPrivateKey::<SecretKey>::derive_from_path(&seed, &depth_path.parse().unwrap())
+                .unwrap()
+                .public_key()
+                .to_extended_key(Prefix::XPUB)
+                .to_string()
+        };
+        assert!(matches!(
+            classify_key(&NETWORK, HwKind::Software, &xpub_at("m/44'/133'/0'/0")).unwrap(),
+            KeySource::TransparentIvk(_)
+        ));
+        assert!(classify_key(&NETWORK, HwKind::Software, &xpub_at("m/44'/133'/0'/1")).is_err());
+        assert!(classify_key(&NETWORK, HwKind::Software, &xpub_at("m/44'/133'/0'/0/0")).is_err());
+        let master_xpub = master.public_key().to_extended_key(Prefix::XPUB).to_string();
+        assert!(classify_key(&NETWORK, HwKind::Software, &master_xpub).is_err());
 
         let usk = usk();
         let sxsk = usk.sapling();
@@ -782,8 +957,157 @@ mod new_account_tests {
             classify_key(&NETWORK, HwKind::Software, &ufvk).unwrap(),
             KeySource::Ufvk(_)
         ));
+        let uivk = usk
+            .to_unified_full_viewing_key()
+            .to_unified_incoming_viewing_key()
+            .encode(&NETWORK)
+            .unwrap();
+        assert!(matches!(
+            classify_key(&NETWORK, HwKind::Software, &uivk).unwrap(),
+            KeySource::Uivk(_)
+        ));
 
         assert!(classify_key(&NETWORK, HwKind::Software, "garbage").is_err());
+    }
+
+    /// An incoming-only account derives the same addresses and default
+    /// diversifier index as the full key would, and stores an incoming key
+    /// per pool in place of the full key.
+    #[tokio::test]
+    async fn uivk_derivation_matches_ufvk_derivation() {
+        let ufvk = usk().to_unified_full_viewing_key();
+        let uivk = ufvk.to_unified_incoming_viewing_key().encode(&NETWORK).unwrap();
+        let ufvk_str = ufvk.encode(&NETWORK).unwrap();
+        let from_ufvk = derive_account_keys(
+            &NETWORK,
+            classify_key(&NETWORK, HwKind::Software, &ufvk_str).unwrap(),
+            "",
+            0,
+            ALL_POOLS,
+        )
+        .await
+        .unwrap();
+        let from_uivk = derive_account_keys(
+            &NETWORK,
+            classify_key(&NETWORK, HwKind::Software, &uivk).unwrap(),
+            "",
+            0,
+            ALL_POOLS,
+        )
+        .await
+        .unwrap();
+
+        assert!(from_uivk.seed.is_none());
+        assert_eq!(from_uivk.dindex, from_ufvk.dindex);
+
+        let (ft, it) = (from_ufvk.transparent.unwrap(), from_uivk.transparent.unwrap());
+        assert!(it.sk.is_none() && it.vk.is_none());
+        assert_eq!(
+            it.ivk.as_ref().map(|k| k.serialize()),
+            ft.vk.as_ref().map(|k| k.derive_external_ivk().unwrap().serialize())
+        );
+        let addrs = |t: &TransparentKeys| -> Vec<(u32, String, Vec<u8>)> {
+            t.addresses
+                .iter()
+                .map(|a| (a.dindex, a.address.clone(), a.pk.clone()))
+                .collect()
+        };
+        assert_eq!(addrs(&it), addrs(&ft));
+
+        let (fs, is) = (from_ufvk.sapling.unwrap(), from_uivk.sapling.unwrap());
+        assert!(is.sk.is_none() && is.vk.is_none());
+        assert_eq!(is.address, fs.address);
+        assert_eq!(
+            is.ivk.map(|k| k.to_bytes()),
+            fs.vk.map(|k| k.to_external_ivk().to_bytes())
+        );
+
+        let (fo, io) = (from_ufvk.orchard.unwrap(), from_uivk.orchard.unwrap());
+        assert!(io.sk.is_none() && io.vk.is_none());
+        assert_eq!(
+            io.ivk.map(|k| k.to_bytes()),
+            fo.vk.map(|k| k.to_ivk(orchard::keys::Scope::External).to_bytes())
+        );
+
+        // Transparent alone: the external chain's xpub imports the same way.
+        let xpub = usk()
+            .transparent()
+            .to_account_pubkey()
+            .derive_external_ivk()
+            .unwrap()
+            .serialize();
+        let xpub = crate::key::xpub_for_test(&xpub, 4, ChildNumber::new(0, false).unwrap());
+        let from_xpub = derive_account_keys(
+            &NETWORK,
+            classify_key(&NETWORK, HwKind::Software, &xpub).unwrap(),
+            "",
+            0,
+            POOL_TRANSPARENT,
+        )
+        .await
+        .unwrap();
+        let xt = from_xpub.transparent.unwrap();
+        assert_eq!(addrs(&xt)[0], addrs(&ft)[0]);
+        assert_eq!(xt.ivk.map(|k| k.serialize()), it.ivk.map(|k| k.serialize()));
+    }
+
+    /// Creating an account from an incoming key stores the incoming key of
+    /// each pool with the full key NULL, and never uses internal change.
+    #[tokio::test]
+    async fn an_incoming_only_account_is_stored_without_full_keys() {
+        let mut db = sqlx::SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        crate::db::create_schema(&mut db).await.unwrap();
+        let uivk = usk()
+            .to_unified_full_viewing_key()
+            .to_unified_incoming_viewing_key()
+            .encode(&NETWORK)
+            .unwrap();
+        let na = NewAccount {
+            icon: None,
+            name: "watch".into(),
+            restore: true,
+            key: uivk,
+            passphrase: None,
+            fingerprint: None,
+            aindex: 0,
+            birth: Some(1),
+            folder: String::new(),
+            pools: Some(ALL_POOLS),
+            use_internal: true,
+            internal: false,
+            hw: 0,
+        };
+        let account = new_account(&NETWORK, &mut db, &na).await.unwrap();
+
+        let dindex = get_account_dindex(&mut db, account).await.unwrap();
+        let t = crate::db::select_account_transparent(&mut db, account, dindex)
+            .await
+            .unwrap();
+        assert!(t.xsk.is_none() && t.xvk.is_none() && t.ivk.is_some());
+        let s = crate::db::select_account_sapling(&NETWORK, &mut db, account)
+            .await
+            .unwrap();
+        assert!(s.xsk.is_none() && s.xvk.is_none() && s.ivk.is_some() && s.address.is_some());
+        let o = crate::db::select_account_orchard(&mut db, account).await.unwrap();
+        assert!(o.xsk.is_none() && o.xvk.is_none() && o.ivk.is_some());
+
+        let (use_internal,): (bool,) =
+            sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
+                .bind(account)
+                .fetch_one(&mut db)
+                .await
+                .unwrap();
+        assert!(!use_internal, "an incoming-only account never uses internal change");
+        let (external, internal): (i64, i64) = sqlx::query_as(
+            "SELECT SUM(scope = 0), SUM(scope = 1) FROM transparent_address_accounts
+             WHERE account = ?",
+        )
+        .bind(account)
+        .fetch_one(&mut db)
+        .await
+        .unwrap();
+        assert!(external >= 1);
+        assert_eq!(internal, 0, "no internal chain to derive from");
     }
 
     #[tokio::test]
@@ -804,7 +1128,10 @@ mod new_account_tests {
 
         let s = keys.sapling.as_ref().unwrap();
         assert!(s.sk.is_some());
-        assert_eq!(s.address, derive_sapling_address(&NETWORK, &s.vk, keys.dindex));
+        assert_eq!(
+            s.address,
+            derive_sapling_address(&NETWORK, s.vk.as_ref().unwrap(), keys.dindex)
+        );
         assert!(keys.orchard.as_ref().unwrap().sk.is_some());
 
         let keys = seed_keys(POOL_SAPLING).await;
@@ -842,11 +1169,11 @@ mod new_account_tests {
         let (ss, us) = (from_seed.sapling.unwrap(), from_ufvk.sapling.unwrap());
         assert!(us.sk.is_none());
         assert_eq!(ss.address, us.address);
-        assert_eq!(ss.vk.to_bytes(), us.vk.to_bytes());
+        assert_eq!(ss.vk.unwrap().to_bytes(), us.vk.unwrap().to_bytes());
 
         let (so, uo) = (from_seed.orchard.unwrap(), from_ufvk.orchard.unwrap());
         assert!(uo.sk.is_none());
-        assert_eq!(so.vk.to_bytes(), uo.vk.to_bytes());
+        assert_eq!(so.vk.unwrap().to_bytes(), uo.vk.unwrap().to_bytes());
     }
 
     #[tokio::test]
