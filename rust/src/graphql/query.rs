@@ -3,7 +3,6 @@ use dataloader::cached::Loader;
 use sqlx::SqlitePool;
 use std::collections::HashMap;
 use std::sync::Arc;
-use zcash_keys::keys::UnifiedFullViewingKey;
 
 use crate::api::coin::{Coin, Network};
 use crate::api::pay::PcztPackage;
@@ -295,8 +294,7 @@ impl Query {
         check_auth(context, id_account, false)?;
         let network = context.coin.network();
         let mut conn = context.coin.get_connection().await?;
-        let ufvk = crate::key::get_account_ufvk(&network, &mut conn, id_account as u32, 7).await?;
-        let ufvk = UnifiedFullViewingKey::decode(&network, &ufvk)?;
+        let keys = crate::db::account_viewing_keys(&mut conn, id_account as u32).await?;
 
         let indices: Option<Vec<i64>> = diversifier_indices
             .map(|list| list.into_iter().filter_map(|bd| bd.to_i64()).collect());
@@ -311,7 +309,7 @@ impl Query {
                     .as_ref()
                     .is_some_and(|di| indices.contains(di)),
             })
-            .map(|n| resolve_note(&network, &ufvk, n))
+            .map(|n| resolve_note(&network, &keys, n))
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| format!("Failed to resolve note: {e}"))?;
         Ok(notes)
@@ -474,16 +472,15 @@ pub async fn prepare_tx(
 
 fn resolve_note(
     network: &Network,
-    ufvk: &UnifiedFullViewingKey,
+    keys: &crate::keys::AccountViewingKeys,
     n: crate::api::account::TxNote,
 ) -> Result<Note, String> {
     let resolved = match (&n.diversifier, n.pool) {
         (None, 0) => None,
         (None, _) => return Err("shielded note missing diversifier".to_string()),
-        (Some(diversifier), pool) => {
-            crate::keys::note_address(network, ufvk, pool, n.scope, diversifier)
-                .map_err(|e| e.to_string())?
-        }
+        (Some(diversifier), pool) => keys
+            .note_address(network, pool, n.scope, diversifier)
+            .map_err(|e| e.to_string())?,
     };
     let (address, diversifier_index) = match resolved {
         Some(r) => (Some(r.address), r.diversifier_index),
@@ -580,13 +577,11 @@ impl Transaction {
     pub async fn notes(&self, context: &Context) -> FieldResult<Vec<Note>> {
         let network = context.coin.network();
         let mut conn = context.coin.get_connection().await?;
-        let ufvk =
-            crate::key::get_account_ufvk(&network, &mut conn, self.account as u32, 7).await?;
-        let ufvk = UnifiedFullViewingKey::decode(&network, &ufvk)?;
+        let keys = crate::db::account_viewing_keys(&mut conn, self.account as u32).await?;
         let notes = crate::db::get_tx_notes(&mut conn, self.account as u32, self.id as u32).await?;
         let notes: Vec<_> = notes
             .into_iter()
-            .map(|n| resolve_note(&network, &ufvk, n))
+            .map(|n| resolve_note(&network, &keys, n))
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| format!("Failed to resolve note: {e}"))?;
         Ok(notes)
@@ -612,14 +607,12 @@ impl Transaction {
     pub async fn spends(&self, context: &Context) -> FieldResult<Vec<Note>> {
         let network = context.coin.network();
         let mut conn = context.coin.get_connection().await?;
-        let ufvk =
-            crate::key::get_account_ufvk(&network, &mut conn, self.account as u32, 7).await?;
-        let ufvk = UnifiedFullViewingKey::decode(&network, &ufvk)?;
+        let keys = crate::db::account_viewing_keys(&mut conn, self.account as u32).await?;
         let spends =
             crate::db::get_spent_notes(&mut conn, self.account as u32, self.id as u32).await?;
         let spends: Vec<_> = spends
             .into_iter()
-            .map(|n| resolve_note(&network, &ufvk, n))
+            .map(|n| resolve_note(&network, &keys, n))
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| format!("Failed to resolve note: {e}"))?;
         Ok(spends)

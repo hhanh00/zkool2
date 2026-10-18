@@ -359,9 +359,103 @@ pub struct NoteAddress {
     pub diversifier_index: Option<u64>,
 }
 
-/// Rebuilds the receiving address of a note from its pool, scope and raw
-/// diversifier. Pool 1 is Sapling; pools 2 and 3 (Orchard, Ironwood) share
-/// the Orchard key. Transparent notes carry no diversifier and yield `None`.
+/// An account's shielded viewing keys, full or incoming-only per pool: what
+/// rebuilds the address a note was received on.
+pub struct AccountViewingKeys {
+    pub sapling: Option<SaplingViewingKeys>,
+    pub orchard: Option<OrchardViewingKeys>,
+}
+
+impl AccountViewingKeys {
+    pub fn from_ufvk(ufvk: &zcash_keys::keys::UnifiedFullViewingKey) -> Self {
+        AccountViewingKeys {
+            sapling: ufvk.sapling().cloned().map(SaplingViewingKeys::Full),
+            orchard: ufvk.orchard().cloned().map(OrchardViewingKeys::Full),
+        }
+    }
+
+    /// Rebuilds the receiving address of a note from its pool, scope and raw
+    /// diversifier. Pool 1 is Sapling; pools 2 and 3 (Orchard, Ironwood)
+    /// share the Orchard key. Transparent notes carry no diversifier and
+    /// yield `None`. An incoming key has external addresses only.
+    pub fn note_address(
+        &self,
+        network: &crate::api::coin::Network,
+        pool: u8,
+        scope: u8,
+        diversifier: &[u8],
+    ) -> anyhow::Result<Option<NoteAddress>> {
+        use zcash_keys::encoding::AddressCodec as _;
+
+        let diversifier: [u8; 11] = diversifier.try_into().map_err(|_| {
+            anyhow::anyhow!("diversifier wrong length: {} bytes", diversifier.len())
+        })?;
+        match pool {
+            1 => {
+                let keys = self
+                    .sapling
+                    .as_ref()
+                    .ok_or_else(|| anyhow::anyhow!("account has no sapling key"))?;
+                let d = sapling_crypto::keys::Diversifier(diversifier);
+                let (address, diversifier_index) = match keys {
+                    SaplingViewingKeys::Full(sfvk) => {
+                        let address = sfvk.diversified_address_for_scope(scope, d).ok_or_else(
+                            || anyhow::anyhow!("Sapling diversified address derivation failed"),
+                        )?;
+                        let di = sfvk.decrypt_diversifier(&address).and_then(|d| d.0.try_into().ok());
+                        (address, di)
+                    }
+                    SaplingViewingKeys::Incoming(_) if scope != 0 => {
+                        anyhow::bail!("an incoming-only account has no internal addresses")
+                    }
+                    SaplingViewingKeys::Incoming(ivk) => {
+                        let address = ivk.address(d).ok_or_else(|| {
+                            anyhow::anyhow!("Sapling diversified address derivation failed")
+                        })?;
+                        let di = ivk.decrypt_diversifier(&address).and_then(|d| d.try_into().ok());
+                        (address, di)
+                    }
+                };
+                Ok(Some(NoteAddress {
+                    address: address.encode(network),
+                    diversifier_index,
+                }))
+            }
+            2 | 3 => {
+                let keys = self
+                    .orchard
+                    .as_ref()
+                    .ok_or_else(|| anyhow::anyhow!("account has no orchard key"))?;
+                let d = orchard::keys::Diversifier::from_bytes(diversifier);
+                let (ivk, address) = match keys {
+                    OrchardViewingKeys::Full(ofvk) => orchard_ivk_and_address(ofvk, scope, d),
+                    OrchardViewingKeys::Incoming(_) if scope != 0 => {
+                        anyhow::bail!("an incoming-only account has no internal addresses")
+                    }
+                    OrchardViewingKeys::Incoming(ivk) => (ivk.clone(), ivk.address(d)),
+                };
+                let diversifier_index = ivk
+                    .diversifier_index(&address)
+                    .and_then(|d| d.try_into().ok());
+                let ua = zcash_keys::address::UnifiedAddress::from_receivers(
+                    Some(address),
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+                .ok_or_else(|| anyhow::anyhow!("UnifiedAddress::from_receivers returned None"))?;
+                Ok(Some(NoteAddress {
+                    address: ua.encode(network),
+                    diversifier_index,
+                }))
+            }
+            _ => Ok(None),
+        }
+    }
+}
+
+/// [`AccountViewingKeys::note_address`] for a full viewing key.
 pub fn note_address(
     network: &crate::api::coin::Network,
     ufvk: &zcash_keys::keys::UnifiedFullViewingKey,
@@ -369,51 +463,7 @@ pub fn note_address(
     scope: u8,
     diversifier: &[u8],
 ) -> anyhow::Result<Option<NoteAddress>> {
-    use zcash_keys::encoding::AddressCodec as _;
-
-    let diversifier: [u8; 11] = diversifier.try_into().map_err(|_| {
-        anyhow::anyhow!("diversifier wrong length: {} bytes", diversifier.len())
-    })?;
-    match pool {
-        1 => {
-            let sfvk = ufvk
-                .sapling()
-                .ok_or_else(|| anyhow::anyhow!("UFVK missing sapling key"))?;
-            let address = sfvk
-                .diversified_address_for_scope(scope, sapling_crypto::keys::Diversifier(diversifier))
-                .ok_or_else(|| anyhow::anyhow!("Sapling diversified address derivation failed"))?;
-            let diversifier_index = sfvk
-                .decrypt_diversifier(&address)
-                .and_then(|d| d.0.try_into().ok());
-            Ok(Some(NoteAddress {
-                address: address.encode(network),
-                diversifier_index,
-            }))
-        }
-        2 | 3 => {
-            let ofvk = ufvk
-                .orchard()
-                .ok_or_else(|| anyhow::anyhow!("UFVK missing orchard key"))?;
-            let (ivk, address) =
-                orchard_ivk_and_address(ofvk, scope, orchard::keys::Diversifier::from_bytes(diversifier));
-            let diversifier_index = ivk
-                .diversifier_index(&address)
-                .and_then(|d| d.try_into().ok());
-            let ua = zcash_keys::address::UnifiedAddress::from_receivers(
-                Some(address),
-                None,
-                None,
-                None,
-                None,
-            )
-            .ok_or_else(|| anyhow::anyhow!("UnifiedAddress::from_receivers returned None"))?;
-            Ok(Some(NoteAddress {
-                address: ua.encode(network),
-                diversifier_index,
-            }))
-        }
-        _ => Ok(None),
-    }
+    AccountViewingKeys::from_ufvk(ufvk).note_address(network, pool, scope, diversifier)
 }
 
 #[cfg(test)]

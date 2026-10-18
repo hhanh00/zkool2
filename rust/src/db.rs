@@ -1,6 +1,8 @@
 use std::fs::File;
 
-use crate::keys::{OrchardViewingKeys, SaplingDiversifiedAddress, SaplingViewingKeys, ScopeExt};
+use crate::keys::{
+    AccountViewingKeys, OrchardViewingKeys, SaplingDiversifiedAddress, SaplingViewingKeys, ScopeExt,
+};
 use anyhow::{anyhow, Result};
 use csv_async::AsyncWriter;
 use futures::TryStreamExt;
@@ -1421,6 +1423,17 @@ pub async fn sapling_viewing_keys(
             .fetch_optional(&mut *connection)
             .await?;
     Ok(row.and_then(|(xvk, ivk)| SaplingViewingKeys::from_stored(xvk, ivk)))
+}
+
+/// An account's shielded viewing keys, full or incoming-only per pool.
+pub async fn account_viewing_keys(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<AccountViewingKeys> {
+    Ok(AccountViewingKeys {
+        sapling: sapling_viewing_keys(&mut *connection, account).await?,
+        orchard: orchard_viewing_keys(&mut *connection, account).await?,
+    })
 }
 
 /// An account's Orchard viewing keys, full or incoming-only (they serve
