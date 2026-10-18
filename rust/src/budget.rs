@@ -4,27 +4,43 @@ use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 
 use crate::net::http;
 
+/// The CoinGecko API base used when the wallet has no `coingecko_url` prop.
+pub const DEFAULT_COINGECKO_URL: &str = "https://api.coingecko.com";
+
+/// Base URL of the CoinGecko API for this wallet: the `coingecko_url` prop,
+/// without a trailing slash, or [`DEFAULT_COINGECKO_URL`]. Tests point it at
+/// a local mock; nothing in the app sets it.
+pub async fn coingecko_url(connection: &mut SqliteConnection) -> Result<String> {
+    let url = crate::db::get_prop(connection, "coingecko_url").await?;
+    Ok(url
+        .map(|u| u.trim_end_matches('/').to_string())
+        .filter(|u| !u.is_empty())
+        .unwrap_or_else(|| DEFAULT_COINGECKO_URL.to_string()))
+}
+
 async fn get_historical_prices_all(
+    base: &str,
     currency: &str,
     api: &str,
     client: &reqwest::Client,
 ) -> Result<Vec<PriceQuote>> {
     // 1, 90 and 365 are the max day ranges per interval
-    let mut pqs = get_historical_prices(1, currency, api, client).await?;
-    pqs.extend(get_historical_prices(90, currency, api, client).await?);
-    pqs.extend(get_historical_prices(365, currency, api, client).await?);
+    let mut pqs = get_historical_prices(base, 1, currency, api, client).await?;
+    pqs.extend(get_historical_prices(base, 90, currency, api, client).await?);
+    pqs.extend(get_historical_prices(base, 365, currency, api, client).await?);
     pqs.sort_by_key(|pq| pq.time);
     Ok(pqs)
 }
 
 async fn get_historical_prices(
+    base: &str,
     days: u32,
     currency: &str,
     api: &str,
     client: &reqwest::Client,
 ) -> Result<Vec<PriceQuote>> {
     let historical_price_url = format!(
-        "https://api.coingecko.com/api/v3/coins/zcash/market_chart?vs_currency={currency}&days={days}&x_cg_demo_api_key={api}"
+        "{base}/api/v3/coins/zcash/market_chart?vs_currency={currency}&days={days}&x_cg_demo_api_key={api}"
     );
     let rep: Value = http::http_get(client, &[&historical_price_url], http::RetryPolicy::default())
         .await?
@@ -110,7 +126,8 @@ pub async fn fill_missing_tx_prices(
 ) -> Result<u32> {
     let mut txs = fetch_missing_tx_prices(&mut *connection, account).await?;
     let n = txs.len() as u32;
-    let pqs = get_historical_prices_all(currency, api, client).await?;
+    let base = coingecko_url(&mut *connection).await?;
+    let pqs = get_historical_prices_all(&base, currency, api, client).await?;
     fill_historical_prices(&mut txs, &pqs).await?;
     store_tx_prices(&mut *connection, &txs).await?;
     Ok(n)
