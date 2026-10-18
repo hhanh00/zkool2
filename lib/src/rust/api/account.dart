@@ -232,6 +232,7 @@ sealed class Account with _$Account {
     required int height,
     required int time,
     required BigInt balance,
+    required bool incomingOnly,
   }) = _Account;
 }
 

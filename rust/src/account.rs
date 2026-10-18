@@ -1208,6 +1208,9 @@ mod new_account_tests {
                 .await
                 .unwrap();
         assert!(!use_internal, "an incoming-only account never uses internal change");
+        assert!(crate::db::is_incoming_only(&mut db, account).await.unwrap());
+        let listed = crate::db::list_accounts(&mut db, 0).await.unwrap();
+        assert!(listed.iter().find(|a| a.id == account).unwrap().incoming_only);
         let (external, internal): (i64, i64) = sqlx::query_as(
             "SELECT SUM(scope = 0), SUM(scope = 1) FROM transparent_address_accounts
              WHERE account = ?",

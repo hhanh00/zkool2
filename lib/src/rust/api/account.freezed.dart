@@ -34,6 +34,7 @@ mixin _$Account {
   int get height;
   int get time;
   BigInt get balance;
+  bool get incomingOnly;
 
   /// Create a copy of Account
   /// with the given fields replaced by the non-null parameter values.
@@ -70,7 +71,9 @@ mixin _$Account {
             (identical(other.hw, hw) || other.hw == hw) &&
             (identical(other.height, height) || other.height == height) &&
             (identical(other.time, time) || other.time == time) &&
-            (identical(other.balance, balance) || other.balance == balance));
+            (identical(other.balance, balance) || other.balance == balance) &&
+            (identical(other.incomingOnly, incomingOnly) ||
+                other.incomingOnly == incomingOnly));
   }
 
   @override
@@ -95,12 +98,13 @@ mixin _$Account {
         hw,
         height,
         time,
-        balance
+        balance,
+        incomingOnly
       ]);
 
   @override
   String toString() {
-    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, passphrase: $passphrase, aindex: $aindex, dindex: $dindex, icon: $icon, useInternal: $useInternal, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance)';
+    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, passphrase: $passphrase, aindex: $aindex, dindex: $dindex, icon: $icon, useInternal: $useInternal, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance, incomingOnly: $incomingOnly)';
   }
 }
 
@@ -129,7 +133,8 @@ abstract mixin class $AccountCopyWith<$Res> {
       int hw,
       int height,
       int time,
-      BigInt balance});
+      BigInt balance,
+      bool incomingOnly});
 
   $FolderCopyWith<$Res> get folder;
 }
@@ -166,6 +171,7 @@ class _$AccountCopyWithImpl<$Res> implements $AccountCopyWith<$Res> {
     Object? height = null,
     Object? time = null,
     Object? balance = null,
+    Object? incomingOnly = null,
   }) {
     return _then(_self.copyWith(
       coin: null == coin
@@ -248,6 +254,10 @@ class _$AccountCopyWithImpl<$Res> implements $AccountCopyWith<$Res> {
           ? _self.balance
           : balance // ignore: cast_nullable_to_non_nullable
               as BigInt,
+      incomingOnly: null == incomingOnly
+          ? _self.incomingOnly
+          : incomingOnly // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 
@@ -373,7 +383,8 @@ extension AccountPatterns on Account {
             int hw,
             int height,
             int time,
-            BigInt balance)?
+            BigInt balance,
+            bool incomingOnly)?
         $default, {
     required TResult orElse(),
   }) {
@@ -400,7 +411,8 @@ extension AccountPatterns on Account {
             _that.hw,
             _that.height,
             _that.time,
-            _that.balance);
+            _that.balance,
+            _that.incomingOnly);
       case _:
         return orElse();
     }
@@ -441,7 +453,8 @@ extension AccountPatterns on Account {
             int hw,
             int height,
             int time,
-            BigInt balance)
+            BigInt balance,
+            bool incomingOnly)
         $default,
   ) {
     final _that = this;
@@ -467,7 +480,8 @@ extension AccountPatterns on Account {
             _that.hw,
             _that.height,
             _that.time,
-            _that.balance);
+            _that.balance,
+            _that.incomingOnly);
     }
   }
 
@@ -505,7 +519,8 @@ extension AccountPatterns on Account {
             int hw,
             int height,
             int time,
-            BigInt balance)?
+            BigInt balance,
+            bool incomingOnly)?
         $default,
   ) {
     final _that = this;
@@ -531,7 +546,8 @@ extension AccountPatterns on Account {
             _that.hw,
             _that.height,
             _that.time,
-            _that.balance);
+            _that.balance,
+            _that.incomingOnly);
       case _:
         return null;
     }
@@ -561,7 +577,8 @@ class _Account implements Account {
       required this.hw,
       required this.height,
       required this.time,
-      required this.balance});
+      required this.balance,
+      required this.incomingOnly});
 
   @override
   final int coin;
@@ -603,6 +620,8 @@ class _Account implements Account {
   final int time;
   @override
   final BigInt balance;
+  @override
+  final bool incomingOnly;
 
   /// Create a copy of Account
   /// with the given fields replaced by the non-null parameter values.
@@ -640,7 +659,9 @@ class _Account implements Account {
             (identical(other.hw, hw) || other.hw == hw) &&
             (identical(other.height, height) || other.height == height) &&
             (identical(other.time, time) || other.time == time) &&
-            (identical(other.balance, balance) || other.balance == balance));
+            (identical(other.balance, balance) || other.balance == balance) &&
+            (identical(other.incomingOnly, incomingOnly) ||
+                other.incomingOnly == incomingOnly));
   }
 
   @override
@@ -665,12 +686,13 @@ class _Account implements Account {
         hw,
         height,
         time,
-        balance
+        balance,
+        incomingOnly
       ]);
 
   @override
   String toString() {
-    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, passphrase: $passphrase, aindex: $aindex, dindex: $dindex, icon: $icon, useInternal: $useInternal, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance)';
+    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, passphrase: $passphrase, aindex: $aindex, dindex: $dindex, icon: $icon, useInternal: $useInternal, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance, incomingOnly: $incomingOnly)';
   }
 }
 
@@ -700,7 +722,8 @@ abstract mixin class _$AccountCopyWith<$Res> implements $AccountCopyWith<$Res> {
       int hw,
       int height,
       int time,
-      BigInt balance});
+      BigInt balance,
+      bool incomingOnly});
 
   @override
   $FolderCopyWith<$Res> get folder;
@@ -738,6 +761,7 @@ class __$AccountCopyWithImpl<$Res> implements _$AccountCopyWith<$Res> {
     Object? height = null,
     Object? time = null,
     Object? balance = null,
+    Object? incomingOnly = null,
   }) {
     return _then(_Account(
       coin: null == coin
@@ -820,6 +844,10 @@ class __$AccountCopyWithImpl<$Res> implements _$AccountCopyWith<$Res> {
           ? _self.balance
           : balance // ignore: cast_nullable_to_non_nullable
               as BigInt,
+      incomingOnly: null == incomingOnly
+          ? _self.incomingOnly
+          : incomingOnly // ignore: cast_nullable_to_non_nullable
+              as bool,
     ));
   }
 

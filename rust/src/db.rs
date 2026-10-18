@@ -1487,7 +1487,14 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
         icon, birth, use_internal, a.position, hidden, saved, enabled, internal,
         sh.height, COALESCE(hdr.time, 0), COALESCE(SUM(unspent.value), 0) AS balance,
         COALESCE(f.id_folder, 0), COALESCE(f.name, '') AS folder_name,
-        hw
+        hw,
+        EXISTS(SELECT 1 FROM transparent_accounts k
+            WHERE k.account = a.id_account AND k.xvk IS NULL AND k.ivk IS NOT NULL)
+        OR EXISTS(SELECT 1 FROM sapling_accounts k
+            WHERE k.account = a.id_account AND k.xvk IS NULL AND k.ivk IS NOT NULL)
+        OR EXISTS(SELECT 1 FROM orchard_accounts k
+            WHERE k.account = a.id_account AND k.xvk IS NULL AND k.ivk IS NOT NULL)
+        AS incoming_only
         FROM accounts a
         JOIN sh ON a.id_account = sh.account
         LEFT JOIN headers hdr ON sh.height = hdr.height AND sh.account = hdr.account
@@ -1522,6 +1529,7 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
             balance: row.get::<i64, _>(16) as u64,
             folder,
             hw: row.get::<u8, _>(19),
+            incoming_only: row.get::<bool, _>(20),
         }
     })
     .fetch(&mut *connection);
@@ -1532,6 +1540,24 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
     }
 
     Ok(accounts)
+}
+
+/// Whether the account was created from an incoming viewing key: some pool
+/// holds an incoming key and no full key. Such an account sees payments
+/// received and nothing else, and cannot spend.
+pub async fn is_incoming_only(connection: &mut SqliteConnection, account: u32) -> Result<bool> {
+    let (incoming_only,): (bool,) = sqlx::query_as(
+        "SELECT EXISTS(SELECT 1 FROM transparent_accounts
+            WHERE account = ?1 AND xvk IS NULL AND ivk IS NOT NULL)
+        OR EXISTS(SELECT 1 FROM sapling_accounts
+            WHERE account = ?1 AND xvk IS NULL AND ivk IS NOT NULL)
+        OR EXISTS(SELECT 1 FROM orchard_accounts
+            WHERE account = ?1 AND xvk IS NULL AND ivk IS NOT NULL)",
+    )
+    .bind(account)
+    .fetch_one(&mut *connection)
+    .await?;
+    Ok(incoming_only)
 }
 
 pub async fn get_account_fingerprint(

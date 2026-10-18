@@ -265,6 +265,30 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
             ),
           ),
         );
+    if (account.account.incomingOnly) {
+      return [
+        Card(
+          color: t.colorScheme.secondaryContainer,
+          margin: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+            child: Row(
+              children: [
+                Icon(Icons.visibility, color: t.colorScheme.onSecondaryContainer),
+                Gap(12),
+                Expanded(
+                  child: Text(
+                    "This account was created from an incoming viewing key. It shows the payments received; "
+                    "spends are not visible to it, so the shielded figures only grow.",
+                    style: t.textTheme.bodyMedium?.copyWith(color: t.colorScheme.onSecondaryContainer),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ];
+    }
     if (fp != null && fp.dkgVersion < 2 && !fp.quantumRecoverable) {
       final text = fp.sibling == null
           ? "This group's funds are not quantum recoverable. Upgrade creates the group's ZIP 2005 account with a new address, then sweeps the funds into it."
@@ -286,6 +310,9 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
   Widget _buildAccountScaffold(BuildContext context, FullAccountPageData fullData) {
     final account = fullData.currentAccount!;
     final b = account.balance.field0;
+    // Created from an incoming viewing key: sees payments received only,
+    // cannot spend, so every spending action is hidden.
+    final incomingOnly = account.account.incomingOnly;
     final settings = ref.read(appSettingsProvider).requireValue;
     final currency = settings.currency;
     final hasOrchardBalance = b[2] > BigInt.zero || b[3] > BigInt.zero;
@@ -328,11 +355,12 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
             onPressed: onReceive,
             icon: Icon(Icons.download),
           ),
-          IconButton(
-            tooltip: "Send funds to one or many addresses",
-            onPressed: onSend,
-            icon: Icon(Icons.send),
-          ),
+          if (!incomingOnly)
+            IconButton(
+              tooltip: "Send funds to one or many addresses",
+              onPressed: onSend,
+              icon: Icon(Icons.send),
+            ),
           PopupMenuButton<String>(
             onSelected: (String result) async {
               switch (result) {
@@ -363,7 +391,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
               }
             },
             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              if (settings.expertMode)
+              if (settings.expertMode && !incomingOnly)
                 const PopupMenuItem<String>(
                   value: "swap",
                   child: Text("Swaps"),
@@ -406,15 +434,16 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                   child: Text("Charts"),
                 ),
               // Show migration option when Ironwood is active and there are Orchard/IW notes
-              if (hasOrchardBalance && ironwoodActive)
+              if (hasOrchardBalance && ironwoodActive && !incomingOnly)
                 const PopupMenuItem<String>(
                   value: "migration",
                   child: Text("Note Migration"),
                 ),
-              const PopupMenuItem<String>(
-                value: "voting",
-                child: Text("Voting"),
-              ),
+              if (!incomingOnly)
+                const PopupMenuItem<String>(
+                  value: "voting",
+                  child: Text("Voting"),
+                ),
             ],
           ),
         ],
@@ -452,8 +481,11 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                               DisplayPanel(
                                 child: Column(children: [
                                   Tooltip(
-                                    message: "Balance across all pools",
+                                    message: incomingOnly
+                                        ? "Total received across all pools; spends are not visible to this account"
+                                        : "Balance across all pools",
                                     child: Column(children: [
+                                      if (incomingOnly) Text("Received", style: tt.labelLarge),
                                       zatToText(
                                         b[0] + b[1] + b[2] + b[3],
                                         selectable: true,
@@ -478,7 +510,7 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                                               children: [
                                                 Icon(Icons.expand_more, size: 18),
                                                 const Gap(4),
-                                                Text("Pool Balances", style: tt.bodySmall),
+                                                Text(incomingOnly ? "Received by Pool" : "Pool Balances", style: tt.bodySmall),
                                               ],
                                             )
                                           : BalanceWidget(account.balance),
@@ -1466,6 +1498,8 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
   // Without internal change, change goes to external addresses, which an
   // incoming key sees.
   bool useInternal = true;
+  // An incoming-only account has only its incoming key to show.
+  bool incomingOnly = false;
   bool showSeed = false;
   FrostParams? frostParams;
   String? frostBackup;
@@ -1478,10 +1512,12 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
       accountPools = await getAccountPools(account: widget.account, c: c);
       frostParams = await getAccountFrostParams(account: widget.account, c: c);
       final accounts = await ref.read(getAccountsProvider.future);
-      useInternal = accounts.firstWhere((a) => a.id == widget.account).useInternal;
+      final a = accounts.firstWhere((a) => a.id == widget.account);
+      useInternal = a.useInternal;
+      incomingOnly = a.incomingOnly;
       setState(() {});
+      await loadKey(pools, incomingOnly);
     });
-    Future(() => onPoolChanged(pools));
   }
 
   @override
@@ -1541,22 +1577,23 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
               ),
             ),
           ],
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-              child: Center(
-                child: SegmentedButton<bool>(
+          if (!incomingOnly)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+                child: Center(
+                  child: SegmentedButton<bool>(
                   segments: const [
                     ButtonSegment(value: false, label: Text("Full"), tooltip: "Sees payments received, spends and change"),
                     ButtonSegment(value: true, label: Text("Incoming"), tooltip: "Sees payments received only"),
                   ],
-                  selected: {incoming},
-                  showSelectedIcon: false,
-                  onSelectionChanged: (s) => onKindChanged(s.first),
+                    selected: {incoming},
+                    showSelectedIcon: false,
+                    onSelectionChanged: (s) => onKindChanged(s.first),
+                  ),
                 ),
               ),
             ),
-          ),
           SliverPersistentHeader(
             pinned: true,
             delegate: _PoolSelectHeaderDelegate(

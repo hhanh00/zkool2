@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use age::{scrypt::Identity, Decryptor, Encryptor};
 use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
+use zcash_keys::encoding::AddressCodec as _;
 use serde_with::{hex::Hex, serde_as};
 use sqlx::{
     encode::IsNull,
@@ -82,15 +83,17 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
 
     info!("Exporting transparent account");
     if let Some(t_account) =
-        sqlx::query("SELECT xsk, xvk FROM transparent_accounts WHERE account = ?")
+        sqlx::query("SELECT xsk, xvk, ivk FROM transparent_accounts WHERE account = ?")
             .bind(account)
             .map(|row: SqliteRow| {
                 let xsk: Option<Vec<u8>> = row.get(0);
-                let xvk: Vec<u8> = row.get(1);
+                let xvk: Option<Vec<u8>> = row.get(1);
+                let ivk: Option<Vec<u8>> = row.get(2);
 
                 IOKeys {
                     xsk: xsk.map(HexBytes),
-                    xvk: xvk.into(),
+                    xvk: xvk.map(HexBytes),
+                    ivk: ivk.map(HexBytes),
                 }
             })
             .fetch_optional(&mut *connection)
@@ -100,15 +103,17 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
     }
 
     info!("Exporting sapling account");
-    if let Some(s_account) = sqlx::query("SELECT xsk, xvk FROM sapling_accounts WHERE account = ?")
+    if let Some(s_account) = sqlx::query("SELECT xsk, xvk, ivk FROM sapling_accounts WHERE account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
             let xsk: Option<Vec<u8>> = row.get(0);
-            let xvk: Vec<u8> = row.get(1);
+            let xvk: Option<Vec<u8>> = row.get(1);
+            let ivk: Option<Vec<u8>> = row.get(2);
 
             IOKeys {
                 xsk: xsk.map(HexBytes),
-                xvk: xvk.into(),
+                xvk: xvk.map(HexBytes),
+                ivk: ivk.map(HexBytes),
             }
         })
         .fetch_optional(&mut *connection)
@@ -118,15 +123,17 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
     }
 
     info!("Exporting orchard account");
-    if let Some(o_account) = sqlx::query("SELECT xsk, xvk FROM orchard_accounts WHERE account = ?")
+    if let Some(o_account) = sqlx::query("SELECT xsk, xvk, ivk FROM orchard_accounts WHERE account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
             let xsk: Option<Vec<u8>> = row.get(0);
-            let xvk: Vec<u8> = row.get(1);
+            let xvk: Option<Vec<u8>> = row.get(1);
+            let ivk: Option<Vec<u8>> = row.get(2);
 
             IOKeys {
                 xsk: xsk.map(HexBytes),
-                xvk: xvk.into(),
+                xvk: xvk.map(HexBytes),
+                ivk: ivk.map(HexBytes),
             }
         })
         .fetch_optional(&mut *connection)
@@ -610,11 +617,12 @@ pub async fn import_account(
     if let Some(tkeys) = io_account.tkeys.as_ref() {
         sqlx::query(
             "INSERT INTO transparent_accounts
-            (account, xsk, xvk) VALUES (?, ?, ?)",
+            (account, xsk, xvk, ivk) VALUES (?, ?, ?, ?)",
         )
         .bind(new_id_account)
         .bind(&tkeys.xsk)
         .bind(&tkeys.xvk)
+        .bind(&tkeys.ivk)
         .execute(&mut *tx)
         .await?;
     }
@@ -622,33 +630,53 @@ pub async fn import_account(
     if let Some(skeys) = io_account.skeys.as_ref() {
         sqlx::query(
             "INSERT INTO sapling_accounts
-            (account, xsk, xvk) VALUES (?, ?, ?)",
+            (account, xsk, xvk, ivk) VALUES (?, ?, ?, ?)",
         )
         .bind(new_id_account)
         .bind(&skeys.xsk)
         .bind(&skeys.xvk)
+        .bind(&skeys.ivk)
         .execute(&mut *tx)
         .await?;
         // The backup file carries only the sapling keys; the address column
         // would stay at its empty default, which select_account_sapling
         // cannot decode (it panicked on it). Derive the address from the
-        // imported keys, mirroring new_account's seed-restore derivation.
-        let sxvk = match skeys.xsk.as_ref() {
-            Some(xsk) => ExtendedSpendingKey::from_bytes(&xsk.0)
-                .map_err(|_| anyhow!("invalid sapling xsk in account backup"))?
-                .to_diversifiable_full_viewing_key(),
-            None => {
-                let bytes: [u8; 128] = skeys
-                    .xvk
+        // imported keys, mirroring new_account's derivation: from the full
+        // key, or from the incoming key of an incoming-only account.
+        let address = match (skeys.xsk.as_ref(), skeys.xvk.as_ref(), skeys.ivk.as_ref()) {
+            (Some(xsk), _, _) => {
+                let sxvk = ExtendedSpendingKey::from_bytes(&xsk.0)
+                    .map_err(|_| anyhow!("invalid sapling xsk in account backup"))?
+                    .to_diversifiable_full_viewing_key();
+                crate::account::derive_sapling_address(network, &sxvk, io_account.dindex)
+            }
+            (None, Some(xvk), _) => {
+                let bytes: [u8; 128] = xvk
                     .0
                     .as_slice()
                     .try_into()
                     .map_err(|_| anyhow!("invalid sapling xvk length in account backup"))?;
-                DiversifiableFullViewingKey::from_bytes(&bytes)
-                    .ok_or_else(|| anyhow!("invalid sapling xvk in account backup"))?
+                let sxvk = DiversifiableFullViewingKey::from_bytes(&bytes)
+                    .ok_or_else(|| anyhow!("invalid sapling xvk in account backup"))?;
+                crate::account::derive_sapling_address(network, &sxvk, io_account.dindex)
+            }
+            (None, None, Some(ivk)) => {
+                let bytes: [u8; 64] = ivk
+                    .0
+                    .as_slice()
+                    .try_into()
+                    .map_err(|_| anyhow!("invalid sapling ivk length in account backup"))?;
+                let ivk = sapling_crypto::zip32::IncomingViewingKey::from_bytes(&bytes)
+                    .into_option()
+                    .ok_or_else(|| anyhow!("invalid sapling ivk in account backup"))?;
+                ivk.address_at(io_account.dindex)
+                    .ok_or_else(|| anyhow!("no sapling address at the backup's diversifier index"))?
+                    .encode(network)
+            }
+            (None, None, None) => {
+                anyhow::bail!("the sapling keys in the account backup carry no viewing key")
             }
         };
-        let address = crate::account::derive_sapling_address(network, &sxvk, io_account.dindex);
         sqlx::query("UPDATE sapling_accounts SET address = ?2 WHERE account = ?1")
             .bind(new_id_account)
             .bind(&address)
@@ -659,11 +687,12 @@ pub async fn import_account(
     if let Some(okeys) = io_account.okeys.as_ref() {
         sqlx::query(
             "INSERT INTO orchard_accounts
-            (account, xsk, xvk) VALUES (?, ?, ?)",
+            (account, xsk, xvk, ivk) VALUES (?, ?, ?, ?)",
         )
         .bind(new_id_account)
         .bind(&okeys.xsk)
         .bind(&okeys.xvk)
+        .bind(&okeys.ivk)
         .execute(&mut *tx)
         .await?;
     }
@@ -1078,9 +1107,13 @@ pub struct IOAsset {
 }
 
 #[derive(Clone, Serialize, Deserialize, Default, Debug)]
+/// One pool's keys. A full account has `xvk`; an incoming-only account,
+/// created from an incoming viewing key, has `ivk` alone and no `xvk`.
 pub struct IOKeys {
     pub xsk: Option<HexBytes>,
-    pub xvk: HexBytes,
+    pub xvk: Option<HexBytes>,
+    #[serde(default)]
+    pub ivk: Option<HexBytes>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Default, Debug)]
@@ -1293,6 +1326,85 @@ impl<'r> Decode<'r, Sqlite> for HexBytes {
 impl Type<Sqlite> for HexBytes {
     fn type_info() -> <sqlx::Sqlite as sqlx::Database>::TypeInfo {
         <Vec<u8> as Type<Sqlite>>::type_info()
+    }
+}
+
+#[cfg(test)]
+mod incoming_only_export_tests {
+    use super::*;
+    use crate::{account::new_account, api::account::NewAccount, db::create_schema};
+    use sqlx::Connection;
+    use zcash_keys::keys::UnifiedSpendingKey;
+    use zip32::AccountId;
+
+    const NETWORK: Network = Network::Main;
+
+    type KeyRow = (Option<Vec<u8>>, Option<Vec<u8>>, Option<Vec<u8>>);
+
+    async fn key_rows(db: &mut SqliteConnection, account: u32) -> Result<(KeyRow, KeyRow, KeyRow, String)> {
+        let t = sqlx::query_as("SELECT xsk, xvk, ivk FROM transparent_accounts WHERE account = ?")
+            .bind(account)
+            .fetch_one(&mut *db)
+            .await?;
+        let s = sqlx::query_as("SELECT xsk, xvk, ivk FROM sapling_accounts WHERE account = ?")
+            .bind(account)
+            .fetch_one(&mut *db)
+            .await?;
+        let o = sqlx::query_as("SELECT xsk, xvk, ivk FROM orchard_accounts WHERE account = ?")
+            .bind(account)
+            .fetch_one(&mut *db)
+            .await?;
+        let (address,): (String,) =
+            sqlx::query_as("SELECT address FROM sapling_accounts WHERE account = ?")
+                .bind(account)
+                .fetch_one(&mut *db)
+                .await?;
+        Ok((t, s, o, address))
+    }
+
+    /// An incoming-only account survives the encrypted export: the imported
+    /// account holds the same incoming keys, no full key, and the same
+    /// sapling address, derived from the incoming key.
+    #[tokio::test]
+    async fn an_incoming_only_account_round_trips() -> Result<()> {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        create_schema(&mut db).await?;
+        let seed = bip39::Mnemonic::parse(
+            "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+        )?
+        .to_seed("");
+        let uivk = UnifiedSpendingKey::from_seed(&NETWORK, &seed, AccountId::ZERO)?
+            .to_unified_full_viewing_key()
+            .to_unified_incoming_viewing_key()
+            .encode(&NETWORK)?;
+        let na = NewAccount {
+            icon: None,
+            name: "watch".into(),
+            restore: true,
+            key: uivk,
+            passphrase: None,
+            fingerprint: None,
+            aindex: 0,
+            birth: Some(1),
+            folder: String::new(),
+            pools: Some(7),
+            use_internal: false,
+            internal: false,
+            hw: 0,
+        };
+        let account = new_account(&NETWORK, &mut db, &na).await?;
+        let before = key_rows(&mut db, account).await?;
+        assert!(before.1 .1.is_none() && before.1 .2.is_some(), "incoming-only sapling row");
+
+        let data = export_account(&mut db, account).await?;
+        import_account(&NETWORK, &mut db, &data).await?;
+        let (imported,): (u32,) = sqlx::query_as("SELECT MAX(id_account) FROM accounts")
+            .fetch_one(&mut db)
+            .await?;
+        assert_ne!(imported, account);
+        assert_eq!(key_rows(&mut db, imported).await?, before);
+        assert!(crate::db::is_incoming_only(&mut db, imported).await?);
+        Ok(())
     }
 }
 

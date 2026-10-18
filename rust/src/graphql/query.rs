@@ -126,6 +126,7 @@ impl Query {
                 birth: a.birth as i32,
                 height: a.height as i32,
                 balance: zats_to_zec(a.balance as i64),
+                incoming_only: a.incoming_only,
             })
             .collect();
 
@@ -539,6 +540,11 @@ impl Account {
     }
     pub fn balance(&self) -> BigDecimal {
         self.balance.clone()
+    }
+    /// Created from an incoming viewing key: `balance` is the total received,
+    /// spends being invisible to it, and it cannot spend.
+    pub fn incoming_only(&self) -> bool {
+        self.incoming_only
     }
 
     pub async fn transactions(&self, context: &Context) -> FieldResult<Vec<Transaction>> {

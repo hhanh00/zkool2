@@ -6943,8 +6943,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Account dco_decode_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 20)
-      throw Exception('unexpected arr length: expect 20 but see ${arr.length}');
+    if (arr.length != 21)
+      throw Exception('unexpected arr length: expect 21 but see ${arr.length}');
     return Account(
       coin: dco_decode_u_8(arr[0]),
       id: dco_decode_u_32(arr[1]),
@@ -6966,6 +6966,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       height: dco_decode_u_32(arr[17]),
       time: dco_decode_u_32(arr[18]),
       balance: dco_decode_u_64(arr[19]),
+      incomingOnly: dco_decode_bool(arr[20]),
     );
   }
 
@@ -8963,6 +8964,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_height = sse_decode_u_32(deserializer);
     var var_time = sse_decode_u_32(deserializer);
     var var_balance = sse_decode_u_64(deserializer);
+    var var_incomingOnly = sse_decode_bool(deserializer);
     return Account(
         coin: var_coin,
         id: var_id,
@@ -8983,7 +8985,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         hw: var_hw,
         height: var_height,
         time: var_time,
-        balance: var_balance);
+        balance: var_balance,
+        incomingOnly: var_incomingOnly);
   }
 
   @protected
@@ -11413,6 +11416,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_32(self.height, serializer);
     sse_encode_u_32(self.time, serializer);
     sse_encode_u_64(self.balance, serializer);
+    sse_encode_bool(self.incomingOnly, serializer);
   }
 
   @protected

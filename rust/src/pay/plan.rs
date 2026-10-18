@@ -747,6 +747,12 @@ pub async fn plan_transaction(
     request: &PaymentRequest,
     mode: &PlanMode<'_>,
 ) -> Result<PcztPackage> {
+    // An incoming-only account has no spending or nullifier keys: its notes
+    // may well be spent already, and nothing could sign for them.
+    anyhow::ensure!(
+        !crate::db::is_incoming_only(connection, account).await?,
+        "This account sees incoming payments only; it cannot spend"
+    );
     let input_pools = fetch_unspent_notes_by_pool(connection, account).await?;
     let height = client.latest_height().await?;
     let migration = mode.is_migration();

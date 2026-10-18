@@ -314,6 +314,10 @@ pub struct Account {
     pub height: u32,
     pub time: u32,
     pub balance: u64,
+    /// Created from an incoming viewing key: it sees payments received and
+    /// nothing else. `balance` is then the total received, since spends of
+    /// shielded notes are invisible to it, and it cannot spend.
+    pub incoming_only: bool,
 }
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]

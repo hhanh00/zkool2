@@ -16,6 +16,7 @@ pub struct Account {
     pub birth: i32,
     pub height: i32,
     pub balance: BigDecimal,
+    pub incoming_only: bool,
 }
 
 #[derive(Clone, Debug)]
