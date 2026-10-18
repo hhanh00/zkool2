@@ -46,15 +46,34 @@ async def rpc(rpc_url: str, method: str, params: list):
         return response.json()
 
 
-def lib_line_coverage(lcov_path: str) -> tuple[int, int]:
-    """(hit, found) line counts over lib/ in an lcov report."""
+# Hand-written code this test is not meant to reach: features with their own
+# stacks or tests (voting, FROST and DKG, swaps, the cloud vault, ZSA), the
+# webview pages (market, charts), and note migration, which needs a chain
+# from before Ironwood activates.
+OUT_OF_SCOPE = (
+    "lib/pages/voting", "lib/pages/dkg.dart", "lib/pages/frost.dart",
+    "lib/widgets/frost_", "lib/pages/swap", "lib/services/swap_",
+    "lib/vault.dart", "lib/widgets/vault_", "lib/pages/zsa.dart",
+    "lib/pages/market.dart", "lib/chart.dart", "lib/pages/migrate.dart",
+)
+GENERATED = ("lib/src/rust/", ".g.dart", ".freezed.dart")
+
+
+def lib_line_coverage(lcov_path: str, in_scope_only: bool = False) -> tuple[int, int]:
+    """(hit, found) line counts over lib/ in an lcov report. With
+    `in_scope_only`, generated code and OUT_OF_SCOPE files are left out."""
     hit = found = 0
     counting = False
     with open(lcov_path) as f:
         for line in f:
             if line.startswith("SF:"):
                 path = line[3:].strip()
-                counting = "/lib/" in path or path.startswith("lib/")
+                path = path[path.index("lib/"):] if "lib/" in path else path
+                counting = path.startswith("lib/")
+                if in_scope_only and counting:
+                    counting = not any(g in path for g in GENERATED) and not any(
+                        path.startswith(o) for o in OUT_OF_SCOPE
+                    )
             elif counting and line.startswith("LH:"):
                 hit += int(line[3:])
             elif counting and line.startswith("LF:"):
@@ -172,10 +191,12 @@ async def test_wallet_flutter_ui(rpc_url, seed, zkool_binary):
         print(f"CoinGecko mock served {len(mock.requests)} requests")
         assert mock.requests, "the app never asked the price mock"
         if coverage and os.path.exists(lcov_path):
-            hit, found = lib_line_coverage(lcov_path)
             shutil.copy(lcov_path, LCOV_COPY)
-            pct = 100.0 * hit / found if found else 0.0
-            print(f"lib/ line coverage: {hit}/{found} = {pct:.1f}% (report copied to {LCOV_COPY})")
+            for label, only in (("lib/", False), ("in-scope lib/", True)):
+                hit, found = lib_line_coverage(lcov_path, in_scope_only=only)
+                pct = 100.0 * hit / found if found else 0.0
+                print(f"{label} line coverage: {hit}/{found} = {pct:.1f}%")
+            print(f"lcov report copied to {LCOV_COPY}")
     except Exception:
         ui = rendezvous.read_ui()
         print(f"\nLast phase: {ui.get('phase')}\nLast step: {ui.get('step')}")
