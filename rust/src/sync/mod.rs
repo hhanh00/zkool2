@@ -25,7 +25,7 @@ use session::SyncRun;
 
 pub use shielded::{
     get_compact_block_range, get_tree_state, preload_account_key_cache, shielded_sync,
-    AccountKeyCache, OrchardAccountKeys, SaplingAccountKeys, MIXNET_SYNC_CHUNK,
+    AccountKeyCache, MIXNET_SYNC_CHUNK,
 };
 pub use sweep::transparent_sweep;
 pub(crate) use transparent::transparent_sync;

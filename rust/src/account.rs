@@ -383,23 +383,33 @@ async fn transparent_addr(
     })
 }
 
-/// An external address derived from the external chain's incoming key, the
-/// way [`derive_transparent_address`] derives it from the account key.
-fn transparent_addr_from_ivk(
-    network: &Network,
+/// The external address at `dindex` from the external chain's incoming
+/// key: what [`derive_transparent_address`] gives for scope 0 from the
+/// account key. Compressed public key and its address.
+pub fn derive_transparent_address_from_ivk(
     ivk: &ExternalIvk,
     dindex: u32,
-) -> Result<TransparentAddr> {
+) -> Result<(Vec<u8>, TransparentAddress)> {
     let pk = ivk
         .derive_pubkey(NonHardenedChildIndex::from_index(dindex).unwrap())?
         .serialize()
         .to_vec();
     let pkh: [u8; 20] = Ripemd160::digest(Sha256::digest(&pk)).into();
+    Ok((pk, TransparentAddress::PublicKeyHash(pkh)))
+}
+
+/// An external address to register, derived from the incoming key.
+fn transparent_addr_from_ivk(
+    network: &Network,
+    ivk: &ExternalIvk,
+    dindex: u32,
+) -> Result<TransparentAddr> {
+    let (pk, address) = derive_transparent_address_from_ivk(ivk, dindex)?;
     Ok(TransparentAddr {
         dindex,
         sk: None,
         pk,
-        address: TransparentAddress::PublicKeyHash(pkh).encode(network),
+        address: address.encode(network),
         uncompressed: false,
     })
 }
@@ -1102,7 +1112,7 @@ mod new_account_tests {
     /// note as the full key does, and none for an internal-scope note.
     #[test]
     fn incoming_keys_resolve_the_same_diversifier_indexes() {
-        use crate::sync::{OrchardAccountKeys, SaplingAccountKeys};
+        use crate::keys::{OrchardViewingKeys as OrchardAccountKeys, SaplingViewingKeys as SaplingAccountKeys};
         let ufvk = usk().to_unified_full_viewing_key();
         let (ua, di) = ufvk.default_address(UnifiedAddressRequest::AllAvailableKeys).unwrap();
         let di: u64 = di.try_into().unwrap();
@@ -1122,6 +1132,33 @@ mod new_account_tests {
         assert_eq!(full.diversifier_index(0, &d), Some(di as i64));
         assert_eq!(incoming.diversifier_index(0, &d), Some(di as i64));
         assert_eq!(incoming.diversifier_index(1, &d), None);
+    }
+
+    /// An incoming-only account shows the receiving addresses the full
+    /// account shows, and has no change address to show.
+    #[tokio::test]
+    async fn an_incoming_only_account_shows_the_full_accounts_addresses() {
+        let mut db = sqlx::SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        crate::db::create_schema(&mut db).await.unwrap();
+        let ufvk = usk().to_unified_full_viewing_key();
+        let full = watch_account(&mut db, ufvk.encode(&NETWORK).unwrap(), "full").await;
+        let uivk = ufvk.to_unified_incoming_viewing_key().encode(&NETWORK).unwrap();
+        let incoming = watch_account(&mut db, uivk, "incoming").await;
+
+        let a = get_addresses(&NETWORK, &mut db, full, ALL_POOLS).await.unwrap();
+        let b = get_addresses(&NETWORK, &mut db, incoming, ALL_POOLS).await.unwrap();
+        assert!(a.taddr.is_some() && a.saddr.is_some() && a.oaddr.is_some() && a.ua.is_some());
+        assert_eq!((a.taddr, a.saddr, a.oaddr, a.ua), (b.taddr, b.saddr, b.oaddr, b.ua));
+
+        assert_eq!(
+            get_account_full_address(&NETWORK, &mut db, full, 0, 0).await.unwrap(),
+            get_account_full_address(&NETWORK, &mut db, incoming, 0, 0).await.unwrap()
+        );
+        assert!(get_account_full_address(&NETWORK, &mut db, full, 1, 0).await.is_ok());
+        let err = get_account_full_address(&NETWORK, &mut db, incoming, 1, 0)
+            .await
+            .unwrap_err();
+        assert!(err.to_string().contains("no change address"), "{err}");
     }
 
     /// Creating an account from an incoming key stores the incoming key of
@@ -1330,16 +1367,17 @@ pub async fn get_sapling_vk(
     connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<Option<DiversifiableFullViewingKey>> {
+    // NULL for an incoming-only account, which has no full key.
     let vk = sqlx::query("SELECT xvk FROM sapling_accounts WHERE account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
-            let vk: Vec<u8> = row.get(0);
-            DiversifiableFullViewingKey::from_bytes(&vk.try_into().unwrap()).unwrap()
+            let vk: Option<Vec<u8>> = row.get(0);
+            vk.map(|vk| DiversifiableFullViewingKey::from_bytes(&vk.try_into().unwrap()).unwrap())
         })
         .fetch_optional(&mut *connection)
         .await?;
 
-    Ok(vk)
+    Ok(vk.flatten())
 }
 
 pub async fn get_sapling_address(
@@ -1434,16 +1472,17 @@ pub async fn get_orchard_vk(
     connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<Option<orchard::keys::FullViewingKey>> {
+    // NULL for an incoming-only account, which has no full key.
     let vk = sqlx::query("SELECT xvk FROM orchard_accounts WHERE account = ?")
         .bind(account)
         .map(|row: SqliteRow| {
-            let fvk: Vec<u8> = row.get(0);
-            orchard::keys::FullViewingKey::read(&*fvk).unwrap()
+            let fvk: Option<Vec<u8>> = row.get(0);
+            fvk.map(|fvk| orchard::keys::FullViewingKey::read(&*fvk).unwrap())
         })
         .fetch_optional(&mut *connection)
         .await?;
 
-    Ok(vk)
+    Ok(vk.flatten())
 }
 
 pub async fn get_orchard_note(
@@ -1594,17 +1633,20 @@ pub async fn get_account_full_address(
     )
     .bind(account)
     .map(|row: SqliteRow| -> Result<PaymentAddress, anyhow::Error> {
-        let xvk: Vec<u8> = row.get(0);
+        let xvk: Option<Vec<u8>> = row.get(0);
         let address: String = row.get(1);
         let _dindex: u32 = row.get(2);
-        let fvk = DiversifiableFullViewingKey::from_bytes(
-            &xvk.try_into()
-                .map_err(|_| anyhow!("invalid sapling xvk length for account {account}"))?,
-        )
-        .ok_or_else(|| anyhow!("invalid sapling xvk for account {account}"))?;
         if scope == 1 && hw == 0 {
             // we do not need to derive a diversified change address
             // since they are not exposed to the user
+            let xvk = xvk.ok_or_else(|| {
+                anyhow!("account {account} sees incoming payments only: it has no change address")
+            })?;
+            let fvk = DiversifiableFullViewingKey::from_bytes(
+                &xvk.try_into()
+                    .map_err(|_| anyhow!("invalid sapling xvk length for account {account}"))?,
+            )
+            .ok_or_else(|| anyhow!("invalid sapling xvk for account {account}"))?;
             let (_, pa) = fvk.change_address();
             Ok(pa)
         } else {
@@ -1617,19 +1659,32 @@ pub async fn get_account_full_address(
     .transpose()?;
 
     let oaddress = sqlx::query(
-        "SELECT a.dindex, oa.xvk FROM orchard_accounts oa
+        "SELECT a.dindex, oa.xvk, oa.ivk FROM orchard_accounts oa
         JOIN accounts a ON oa.account = a.id_account AND oa.account = ?",
     )
     .bind(account)
-    .map(|row: SqliteRow| {
+    .map(|row: SqliteRow| -> Result<orchard::Address> {
         let dindex: u32 = row.get(0);
-        let xvk: Vec<u8> = row.get(1);
-        let fvk = FullViewingKey::read(&*xvk).unwrap();
-        let scope = scope.orchard_scope();
-        fvk.address_at(dindex, scope)
+        let xvk: Option<Vec<u8>> = row.get(1);
+        let ivk: Option<Vec<u8>> = row.get(2);
+        match (xvk, ivk) {
+            (Some(xvk), _) => {
+                Ok(FullViewingKey::read(&*xvk)?.address_at(dindex, scope.orchard_scope()))
+            }
+            // An incoming-only account: external addresses only.
+            (None, Some(ivk)) if scope == 0 => Ok(orchard::keys::IncomingViewingKey::from_bytes(
+                &ivk.try_into().unwrap(),
+            )
+            .unwrap()
+            .address_at(dindex)),
+            _ => Err(anyhow!(
+                "account {account} sees incoming payments only: it has no change address"
+            )),
+        }
     })
     .fetch_optional(connection)
-    .await?;
+    .await?
+    .transpose()?;
 
     let address = match (taddress, saddress, oaddress) {
         (Some(taddress), None, None) => taddress.encode(network),
@@ -1902,17 +1957,21 @@ pub async fn get_addresses(
     let skeys = crate::db::select_account_sapling(network, connection, account).await?;
     let okeys = crate::db::select_account_orchard(connection, account).await?;
 
-    let taddr = tkeys
-        .xvk
-        .as_ref()
-        .map(|xvk| derive_transparent_address(xvk, 0, dindex, false).unwrap().1);
+    // An incoming-only account derives its receiving addresses from its
+    // incoming keys; they are the ones the full key would give.
+    let taddr = match (&tkeys.xvk, &tkeys.ivk) {
+        (Some(xvk), _) => Some(derive_transparent_address(xvk, 0, dindex, false)?.1),
+        (None, Some(ivk)) => Some(derive_transparent_address_from_ivk(ivk, dindex)?.1),
+        (None, None) => None,
+    };
 
     let dindex = dindex as u64;
     let saddr = skeys.address;
-    let oaddr = okeys
-        .xvk
-        .as_ref()
-        .map(|xvk| xvk.address_at(dindex, orchard::keys::Scope::External));
+    let oaddr = match (&okeys.xvk, &okeys.ivk) {
+        (Some(xvk), _) => Some(xvk.address_at(dindex, orchard::keys::Scope::External)),
+        (None, Some(ivk)) => Some(ivk.address_at(dindex)),
+        (None, None) => None,
+    };
 
     let ua_orchard = UnifiedAddress::from_receivers(oaddr, None, None, None, None);
 

@@ -1,6 +1,6 @@
 use std::fs::File;
 
-use crate::keys::{SaplingDiversifiedAddress, ScopeExt};
+use crate::keys::{OrchardViewingKeys, SaplingDiversifiedAddress, SaplingViewingKeys, ScopeExt};
 use anyhow::{anyhow, Result};
 use csv_async::AsyncWriter;
 use futures::TryStreamExt;
@@ -1396,24 +1396,45 @@ pub async fn sapling_receiving_keys(
     account: u32,
     scope: u8,
 ) -> Result<Option<(SaplingIvk, Option<NullifierDerivingKey>)>> {
-    let row: Option<(Option<Vec<u8>>, Option<Vec<u8>>)> =
-        sqlx::query_as("SELECT xvk, ivk FROM sapling_accounts WHERE account = ?")
-            .bind(account)
-            .fetch_optional(&mut *connection)
-            .await?;
-    Ok(match row {
-        Some((Some(xvk), _)) => {
-            let dfvk = DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap();
+    Ok(match sapling_viewing_keys(connection, account).await? {
+        Some(SaplingViewingKeys::Full(dfvk)) => {
             let (ivk, nk) = crate::keys::sapling_ivk_nk_for_scope(scope, &dfvk);
             Some((ivk, Some(nk)))
         }
-        Some((None, Some(ivk))) if scope.is_external() => {
-            let ivk = SaplingZip32Ivk::from_bytes(&ivk.try_into().unwrap()).unwrap();
+        Some(SaplingViewingKeys::Incoming(ivk)) if scope.is_external() => {
             let ivk = SaplingIvk::from_bytes(ivk.to_bytes()[32..].try_into().unwrap()).unwrap();
             Some((ivk, None))
         }
         _ => None,
     })
+}
+
+/// An account's Sapling viewing keys, full or incoming-only; None when the
+/// account has no Sapling key.
+pub async fn sapling_viewing_keys(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Option<SaplingViewingKeys>> {
+    let row: Option<(Option<Vec<u8>>, Option<Vec<u8>>)> =
+        sqlx::query_as("SELECT xvk, ivk FROM sapling_accounts WHERE account = ?")
+            .bind(account)
+            .fetch_optional(&mut *connection)
+            .await?;
+    Ok(row.and_then(|(xvk, ivk)| SaplingViewingKeys::from_stored(xvk, ivk)))
+}
+
+/// An account's Orchard viewing keys, full or incoming-only (they serve
+/// Ironwood too); None when the account has no Orchard key.
+pub async fn orchard_viewing_keys(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Option<OrchardViewingKeys>> {
+    let row: Option<(Option<Vec<u8>>, Option<Vec<u8>>)> =
+        sqlx::query_as("SELECT xvk, ivk FROM orchard_accounts WHERE account = ?")
+            .bind(account)
+            .fetch_optional(&mut *connection)
+            .await?;
+    Ok(row.and_then(|(xvk, ivk)| OrchardViewingKeys::from_stored(xvk, ivk)))
 }
 
 /// The keys that find an account's incoming Orchard (and Ironwood) notes at
@@ -1424,19 +1445,11 @@ pub async fn orchard_receiving_keys(
     account: u32,
     scope: u8,
 ) -> Result<Option<(OrchardIvk, Option<FullViewingKey>)>> {
-    let row: Option<(Option<Vec<u8>>, Option<Vec<u8>>)> =
-        sqlx::query_as("SELECT xvk, ivk FROM orchard_accounts WHERE account = ?")
-            .bind(account)
-            .fetch_optional(&mut *connection)
-            .await?;
-    Ok(match row {
-        Some((Some(xvk), _)) => {
-            let fvk = FullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap();
+    Ok(match orchard_viewing_keys(connection, account).await? {
+        Some(OrchardViewingKeys::Full(fvk)) => {
             Some((fvk.to_ivk(scope.orchard_scope()), Some(fvk)))
         }
-        Some((None, Some(ivk))) if scope.is_external() => {
-            Some((OrchardIvk::from_bytes(&ivk.try_into().unwrap()).unwrap(), None))
-        }
+        Some(OrchardViewingKeys::Incoming(ivk)) if scope.is_external() => Some((ivk, None)),
         _ => None,
     })
 }

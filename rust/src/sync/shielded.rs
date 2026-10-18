@@ -11,6 +11,7 @@ use tokio::sync::mpsc::channel;
 use tracing::{debug, info};
 
 use crate::api::coin::Network;
+use crate::keys::{OrchardViewingKeys, SaplingViewingKeys};
 
 use crate::Client;
 use std::mem;
@@ -29,62 +30,11 @@ use tokio::sync::mpsc::Sender;
 use tokio_stream::wrappers::ReceiverStream;
 use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
 
-/// What resolves a received Sapling note's diversifier index for an
-/// account: its full viewing key, or, for an incoming-only account, the
-/// external incoming key (which carries the diversifier key).
-pub enum SaplingAccountKeys {
-    Full(sapling_crypto::zip32::DiversifiableFullViewingKey),
-    Incoming(sapling_crypto::zip32::IncomingViewingKey),
-}
-
-impl SaplingAccountKeys {
-    pub fn diversifier_index(&self, scope: u8, diversifier: &[u8]) -> Option<i64> {
-        match self {
-            SaplingAccountKeys::Full(dfvk) => {
-                crate::db::resolve_sapling_diversifier_index(dfvk, scope, diversifier)
-            }
-            // An incoming-only account has external addresses only.
-            SaplingAccountKeys::Incoming(_) if scope != 0 => None,
-            SaplingAccountKeys::Incoming(ivk) => {
-                let d = sapling_crypto::keys::Diversifier(diversifier.try_into().ok()?);
-                let address = ivk.address(d)?;
-                ivk.decrypt_diversifier(&address)
-                    .and_then(|di| di.try_into().ok())
-                    .map(|d: u64| d as i64)
-            }
-        }
-    }
-}
-
-/// As [`SaplingAccountKeys`], for Orchard and Ironwood.
-pub enum OrchardAccountKeys {
-    Full(orchard::keys::FullViewingKey),
-    Incoming(orchard::keys::IncomingViewingKey),
-}
-
-impl OrchardAccountKeys {
-    pub fn diversifier_index(&self, scope: u8, diversifier: &[u8]) -> Option<i64> {
-        match self {
-            OrchardAccountKeys::Full(fvk) => {
-                crate::db::resolve_orchard_diversifier_index(fvk, scope, diversifier)
-            }
-            OrchardAccountKeys::Incoming(_) if scope != 0 => None,
-            OrchardAccountKeys::Incoming(ivk) => {
-                let d = orchard::keys::Diversifier::from_bytes(diversifier.try_into().ok()?);
-                let address = ivk.address(d);
-                ivk.diversifier_index(&address)
-                    .and_then(|di| di.try_into().ok())
-                    .map(|d: u64| d as i64)
-            }
-        }
-    }
-}
-
 /// Cache of all per-account key material needed during shielded sync.
 /// Preloaded once and shared via Arc between the db_writer and warp_sync tasks.
 pub struct AccountKeyCache {
-    pub sapling: HashMap<u32, SaplingAccountKeys>,
-    pub orchard: HashMap<u32, OrchardAccountKeys>,
+    pub sapling: HashMap<u32, SaplingViewingKeys>,
+    pub orchard: HashMap<u32, OrchardViewingKeys>,
 }
 
 
@@ -148,20 +98,9 @@ pub async fn preload_account_key_cache(
             .fetch_all(&mut *connection)
             .await?;
     for (account, xvk, ivk) in sapling_rows {
-        let keys = match (xvk, ivk) {
-            (Some(xvk), _) => SaplingAccountKeys::Full(
-                sapling_crypto::zip32::DiversifiableFullViewingKey::from_bytes(
-                    &xvk.try_into().unwrap(),
-                )
-                .unwrap(),
-            ),
-            (None, Some(ivk)) => SaplingAccountKeys::Incoming(
-                sapling_crypto::zip32::IncomingViewingKey::from_bytes(&ivk.try_into().unwrap())
-                    .unwrap(),
-            ),
-            (None, None) => continue,
-        };
-        sapling.insert(account, keys);
+        if let Some(keys) = SaplingViewingKeys::from_stored(xvk, ivk) {
+            sapling.insert(account, keys);
+        }
     }
 
     let mut orchard = HashMap::new();
@@ -170,16 +109,9 @@ pub async fn preload_account_key_cache(
             .fetch_all(&mut *connection)
             .await?;
     for (account, xvk, ivk) in orchard_rows {
-        let keys = match (xvk, ivk) {
-            (Some(xvk), _) => OrchardAccountKeys::Full(
-                orchard::keys::FullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap(),
-            ),
-            (None, Some(ivk)) => OrchardAccountKeys::Incoming(
-                orchard::keys::IncomingViewingKey::from_bytes(&ivk.try_into().unwrap()).unwrap(),
-            ),
-            (None, None) => continue,
-        };
-        orchard.insert(account, keys);
+        if let Some(keys) = OrchardViewingKeys::from_stored(xvk, ivk) {
+            orchard.insert(account, keys);
+        }
     }
 
     Ok(AccountKeyCache { sapling, orchard })

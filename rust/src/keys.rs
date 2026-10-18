@@ -192,6 +192,162 @@ pub fn orchard_ivk_and_address(
     (ofvk.to_ivk(s), ofvk.address(d, s))
 }
 
+// ── Viewing keys of an account in a pool ─────────────────────────────────
+
+/// An account's Sapling viewing keys: its full viewing key, or, for an
+/// incoming-only account imported from an incoming viewing key, the external
+/// incoming key alone. The incoming key finds payments received and recovers
+/// their diversifier index; it has no internal scope and no outgoing key.
+pub enum SaplingViewingKeys {
+    Full(sapling_crypto::zip32::DiversifiableFullViewingKey),
+    Incoming(sapling_crypto::zip32::IncomingViewingKey),
+}
+
+impl SaplingViewingKeys {
+    /// From the stored columns: the full key when there is one, else the
+    /// incoming key, else nothing.
+    pub fn from_stored(xvk: Option<Vec<u8>>, ivk: Option<Vec<u8>>) -> Option<Self> {
+        match (xvk, ivk) {
+            (Some(xvk), _) => Some(SaplingViewingKeys::Full(
+                sapling_crypto::zip32::DiversifiableFullViewingKey::from_bytes(
+                    &xvk.try_into().unwrap(),
+                )
+                .unwrap(),
+            )),
+            (None, Some(ivk)) => Some(SaplingViewingKeys::Incoming(
+                sapling_crypto::zip32::IncomingViewingKey::from_bytes(&ivk.try_into().unwrap())
+                    .unwrap(),
+            )),
+            (None, None) => None,
+        }
+    }
+
+    /// The incoming keys to trial-decrypt with, by scope: both scopes of a
+    /// full key, the external scope of an incoming key.
+    pub fn prepared_ivks(&self) -> Vec<(u8, sapling_crypto::keys::PreparedIncomingViewingKey)> {
+        match self {
+            SaplingViewingKeys::Full(dfvk) => [zip32::Scope::External, zip32::Scope::Internal]
+                .into_iter()
+                .map(|scope| {
+                    (
+                        scope_to_u8(scope),
+                        sapling_crypto::keys::PreparedIncomingViewingKey::new(&dfvk.to_ivk(scope)),
+                    )
+                })
+                .collect(),
+            SaplingViewingKeys::Incoming(ivk) => vec![(0, ivk.prepare())],
+        }
+    }
+
+    pub fn external_prepared_ivk(&self) -> sapling_crypto::keys::PreparedIncomingViewingKey {
+        match self {
+            SaplingViewingKeys::Full(dfvk) => sapling_crypto::keys::PreparedIncomingViewingKey::new(
+                &dfvk.to_ivk(zip32::Scope::External),
+            ),
+            SaplingViewingKeys::Incoming(ivk) => ivk.prepare(),
+        }
+    }
+
+    /// The external outgoing viewing key, which recovers what the account
+    /// sent; an incoming key has none.
+    pub fn external_ovk(&self) -> Option<sapling_crypto::keys::OutgoingViewingKey> {
+        match self {
+            SaplingViewingKeys::Full(dfvk) => Some(dfvk.fvk().ovk),
+            SaplingViewingKeys::Incoming(_) => None,
+        }
+    }
+
+    /// The diversifier index of a received note from its raw diversifier,
+    /// when the key produced that address; an incoming key only for the
+    /// external scope.
+    pub fn diversifier_index(&self, scope: u8, diversifier: &[u8]) -> Option<i64> {
+        match self {
+            SaplingViewingKeys::Full(dfvk) => {
+                crate::db::resolve_sapling_diversifier_index(dfvk, scope, diversifier)
+            }
+            SaplingViewingKeys::Incoming(_) if scope != 0 => None,
+            SaplingViewingKeys::Incoming(ivk) => {
+                let d = sapling_crypto::keys::Diversifier(diversifier.try_into().ok()?);
+                let address = ivk.address(d)?;
+                ivk.decrypt_diversifier(&address)
+                    .and_then(|di| di.try_into().ok())
+                    .map(|d: u64| d as i64)
+            }
+        }
+    }
+}
+
+/// As [`SaplingViewingKeys`], for Orchard; the same keys serve Ironwood.
+pub enum OrchardViewingKeys {
+    Full(orchard::keys::FullViewingKey),
+    Incoming(orchard::keys::IncomingViewingKey),
+}
+
+impl OrchardViewingKeys {
+    pub fn from_stored(xvk: Option<Vec<u8>>, ivk: Option<Vec<u8>>) -> Option<Self> {
+        match (xvk, ivk) {
+            (Some(xvk), _) => Some(OrchardViewingKeys::Full(
+                orchard::keys::FullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap(),
+            )),
+            (None, Some(ivk)) => Some(OrchardViewingKeys::Incoming(
+                orchard::keys::IncomingViewingKey::from_bytes(&ivk.try_into().unwrap()).unwrap(),
+            )),
+            (None, None) => None,
+        }
+    }
+
+    pub fn prepared_ivks(&self) -> Vec<(u8, orchard::keys::PreparedIncomingViewingKey)> {
+        match self {
+            OrchardViewingKeys::Full(fvk) => {
+                [orchard::keys::Scope::External, orchard::keys::Scope::Internal]
+                    .into_iter()
+                    .map(|scope| {
+                        (
+                            orchard_scope_to_u8(scope),
+                            orchard::keys::PreparedIncomingViewingKey::new(&fvk.to_ivk(scope)),
+                        )
+                    })
+                    .collect()
+            }
+            OrchardViewingKeys::Incoming(ivk) => {
+                vec![(0, orchard::keys::PreparedIncomingViewingKey::new(ivk))]
+            }
+        }
+    }
+
+    pub fn external_prepared_ivk(&self) -> orchard::keys::PreparedIncomingViewingKey {
+        match self {
+            OrchardViewingKeys::Full(fvk) => orchard::keys::PreparedIncomingViewingKey::new(
+                &fvk.to_ivk(orchard::keys::Scope::External),
+            ),
+            OrchardViewingKeys::Incoming(ivk) => orchard::keys::PreparedIncomingViewingKey::new(ivk),
+        }
+    }
+
+    pub fn external_ovk(&self) -> Option<orchard::keys::OutgoingViewingKey> {
+        match self {
+            OrchardViewingKeys::Full(fvk) => Some(fvk.to_ovk(orchard::keys::Scope::External)),
+            OrchardViewingKeys::Incoming(_) => None,
+        }
+    }
+
+    pub fn diversifier_index(&self, scope: u8, diversifier: &[u8]) -> Option<i64> {
+        match self {
+            OrchardViewingKeys::Full(fvk) => {
+                crate::db::resolve_orchard_diversifier_index(fvk, scope, diversifier)
+            }
+            OrchardViewingKeys::Incoming(_) if scope != 0 => None,
+            OrchardViewingKeys::Incoming(ivk) => {
+                let d = orchard::keys::Diversifier::from_bytes(diversifier.try_into().ok()?);
+                let address = ivk.address(d);
+                ivk.diversifier_index(&address)
+                    .and_then(|di| di.try_into().ok())
+                    .map(|d: u64| d as i64)
+            }
+        }
+    }
+}
+
 // ── Note address recovery ────────────────────────────────────────────────
 
 /// The address a shielded note was received on, rebuilt from the note's raw

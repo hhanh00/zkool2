@@ -1,12 +1,11 @@
 use crate::sync::chain_log::{self, MemoRow, NoteKey, OutputRow, TransactionDetails};
 use anyhow::{Context as _, Result};
 use orchard::{
-    keys::Scope,
     note::ExtractedNoteCommitment,
     note_encryption::{IronwoodDomain, OrchardDomain},
     zsa::OrchardZSADomain,
 };
-use sapling_crypto::{keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain};
+use sapling_crypto::note_encryption::SaplingDomain;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
 use tracing::debug;
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec};
@@ -16,8 +15,8 @@ use zcash_primitives::transaction::{components::sapling::zip212_enforcement, Orc
 use zcash_protocol::memo::Memo;
 
 use crate::{
-    account::{get_orchard_vk, get_sapling_vk},
     api::coin::Network,
+    db::{orchard_viewing_keys, sapling_viewing_keys},
     pay::fee::FeeManager,
     Client,
 };
@@ -158,7 +157,7 @@ fn try_zsa_decrypt(
     >,
     raw_enc: &[u8],
     pivk: &orchard::keys::PreparedIncomingViewingKey,
-    ovk: &orchard::keys::OutgoingViewingKey,
+    ovk: Option<&orchard::keys::OutgoingViewingKey>,
 ) -> Option<(orchard::Note, orchard::Address, [u8; 512])> {
     use orchard::note::TransmittedNoteCiphertext;
     use zcash_note_encryption::{try_note_decryption, try_output_recovery_with_ovk};
@@ -192,16 +191,16 @@ fn try_zsa_decrypt(
     if let Some((note, _address, memo_bytes)) = try_note_decryption(&zsa_domain, pivk, &zsa_action)
     {
         Some((note, _address, memo_bytes))
-    } else if let Some((note, address, memo_bytes)) = try_output_recovery_with_ovk(
-        &zsa_domain,
-        ovk,
-        &zsa_action,
-        zsa_action.cv_net(),
-        &zsa_action.encrypted_note().out_ciphertext,
-    ) {
-        Some((note, address, memo_bytes))
     } else {
-        None
+        ovk.and_then(|ovk| {
+            try_output_recovery_with_ovk(
+                &zsa_domain,
+                ovk,
+                &zsa_action,
+                zsa_action.cv_net(),
+                &zsa_action.encrypted_note().out_ciphertext,
+            )
+        })
     }
 }
 
@@ -225,7 +224,9 @@ pub async fn decrypt_memo(
         .context("Failed to find transaction")?;
 
     let mut fee_manager = FeeManager::default();
-    let svk = get_sapling_vk(connection, account).await?;
+    // Full or incoming-only keys: an incoming key decrypts what the account
+    // received; only a full key also recovers what it sent, through the ovk.
+    let skeys = sapling_viewing_keys(connection, account).await?;
 
     let zip212_enforcement = zip212_enforcement(network, height.into());
     let domain = SaplingDomain::new(zip212_enforcement);
@@ -262,9 +263,9 @@ pub async fn decrypt_memo(
             fee_manager.add_output(1);
         }
 
-        if let Some(svk) = svk.as_ref() {
-            let pivk = PreparedIncomingViewingKey::new(&svk.fvk().vk.ivk());
-            let ovk = &svk.fvk().ovk;
+        if let Some(skeys) = skeys.as_ref() {
+            let pivk = skeys.external_prepared_ivk();
+            let ovk = skeys.external_ovk();
             for (vout, sout) in bundle.shielded_outputs().iter().enumerate() {
                 if let Some((note, _address, memo_bytes)) =
                     try_note_decryption(&domain, &pivk, sout)
@@ -286,13 +287,9 @@ pub async fn decrypt_memo(
                         &memo_bytes,
                     )
                     .await?;
-                } else if let Some((note, address, memo_bytes)) = try_output_recovery_with_ovk(
-                    &domain,
-                    ovk,
-                    sout,
-                    sout.cv(),
-                    sout.out_ciphertext(),
-                ) {
+                } else if let Some((note, address, memo_bytes)) = ovk.as_ref().and_then(|ovk| {
+                    try_output_recovery_with_ovk(&domain, ovk, sout, sout.cv(), sout.out_ciphertext())
+                }) {
                     let address = address.encode(network);
                     let id_output = store_output(
                         connection,
@@ -323,7 +320,7 @@ pub async fn decrypt_memo(
         }
     }
 
-    let ovk = get_orchard_vk(connection, account).await?;
+    let okeys = orchard_viewing_keys(connection, account).await?;
 
     macro_rules! process_orchard_memo {
         ($bundle:expr, $pool:expr, $domain:ident) => {{
@@ -334,9 +331,9 @@ pub async fn decrypt_memo(
                 fee_manager.add_output(pool);
             }
 
-            if let Some(ovk) = ovk.as_ref() {
-                let pivk = orchard::keys::PreparedIncomingViewingKey::new(&ovk.to_ivk(Scope::External));
-                let ovk = ovk.to_ovk(Scope::External);
+            if let Some(okeys) = okeys.as_ref() {
+                let pivk = okeys.external_prepared_ivk();
+                let ovk = okeys.external_ovk();
                 for (vout, action) in bundle.actions().iter().enumerate() {
                     let domain = $domain::for_action(action);
 
@@ -366,13 +363,15 @@ pub async fn decrypt_memo(
                             &memo_bytes,
                         )
                         .await?;
-                    } else if let Some((note, address, memo_bytes)) = try_output_recovery_with_ovk(
-                        &domain,
-                        &ovk,
-                        action,
-                        action.cv_net(),
-                        &action.encrypted_note().out_ciphertext,
-                    ) {
+                    } else if let Some((note, address, memo_bytes)) = ovk.as_ref().and_then(|ovk| {
+                        try_output_recovery_with_ovk(
+                            &domain,
+                            ovk,
+                            action,
+                            action.cv_net(),
+                            &action.encrypted_note().out_ciphertext,
+                        )
+                    }) {
                         let address =
                             UnifiedAddress::from_receivers(Some(address), None, None, None, None).unwrap();
                         let id_output = store_output(
@@ -405,7 +404,7 @@ pub async fn decrypt_memo(
                             action,
                             &zsa_raw_ciphertexts[vout],
                             &pivk,
-                            &ovk,
+                            ovk.as_ref(),
                         ) {
                             let (note, address, memo_bytes) = zsa_action;
                             let cmx: ExtractedNoteCommitment = note.commitment().into();

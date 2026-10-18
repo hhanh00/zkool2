@@ -1,16 +1,10 @@
 use crate::api::coin::Network;
 use crate::api::mempool::{MempoolAmount, MempoolMsg, MempoolNote, MempoolTx};
-use crate::keys::{orchard_scope_to_u8, scope_to_u8};
+use crate::keys::{OrchardViewingKeys, SaplingViewingKeys};
 use anyhow::{Context as _, Result};
 use itertools::Itertools;
-use orchard::{
-    keys::Scope,
-    note_encryption::{IronwoodDomain, OrchardDomain},
-};
-use sapling_crypto::{
-    keys::PreparedIncomingViewingKey, note_encryption::SaplingDomain,
-    zip32::DiversifiableFullViewingKey,
-};
+use orchard::note_encryption::{IronwoodDomain, OrchardDomain};
+use sapling_crypto::note_encryption::SaplingDomain;
 use sqlx::SqliteConnection;
 use sqlx::{sqlite::SqliteRow, Row};
 use tokio_stream::StreamExt;
@@ -63,35 +57,41 @@ pub async fn run_mempool_impl<S: Sink<MempoolMsg> + Send + 'static>(
         .await
         .context("transparent_accounts")?;
 
+        // Full or incoming-only keys per account; an incoming key sees the
+        // external scope only.
         let sapling_accounts = sqlx::query(
-            r#"SELECT account, name, xvk FROM accounts a JOIN sapling_accounts s
+            r#"SELECT account, name, xvk, ivk FROM accounts a JOIN sapling_accounts s
             ON a.id_account = s.account"#,
         )
         .map(|row: SqliteRow| {
             let account: u32 = row.get(0);
             let name: String = row.get(1);
-            let xvk: Vec<u8> = row.get(2);
-            let fvk = DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap();
-            (account, name, fvk)
+            let keys = SaplingViewingKeys::from_stored(row.get(2), row.get(3));
+            keys.map(|keys| (account, name, keys))
         })
         .fetch_all(&mut *connection)
         .await
-        .context("sapling_accounts")?;
+        .context("sapling_accounts")?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
 
         let orchard_accounts = sqlx::query(
-            r#"SELECT account, name, xvk FROM accounts a JOIN orchard_accounts o
+            r#"SELECT account, name, xvk, ivk FROM accounts a JOIN orchard_accounts o
             ON a.id_account = o.account"#,
         )
         .map(|row: SqliteRow| {
             let account: u32 = row.get(0);
             let name: String = row.get(1);
-            let xvk: Vec<u8> = row.get(2);
-            let fvk = orchard::keys::FullViewingKey::read(&*xvk).unwrap();
-            (account, name, fvk)
+            let keys = OrchardViewingKeys::from_stored(row.get(2), row.get(3));
+            keys.map(|keys| (account, name, keys))
         })
         .fetch_all(&mut *connection)
         .await
-        .context("orchard_accounts")?;
+        .context("orchard_accounts")?
+        .into_iter()
+        .flatten()
+        .collect::<Vec<_>>();
 
         let height = client.latest_height().await?;
         mempool_tx.send(MempoolMsg::BlockHeight(height)).await;
@@ -162,8 +162,8 @@ pub async fn decode_raw_transaction(
     connection: &mut SqliteConnection,
     height: u32,
     tkeys: &[(u32, String, TransparentAddress)],
-    zkeys: &[(u32, String, DiversifiableFullViewingKey)],
-    okeys: &[(u32, String, orchard::keys::FullViewingKey)],
+    zkeys: &[(u32, String, SaplingViewingKeys)],
+    okeys: &[(u32, String, OrchardViewingKeys)],
     tx_data: &TransactionData<Authorized>,
 ) -> Result<Vec<MempoolNote>> {
     let mut notes = vec![];
@@ -243,25 +243,20 @@ pub async fn decode_raw_transaction(
         }
         let domain = SaplingDomain::new(zip212_enforcement(network, height.into()));
         for v in sbundle.shielded_outputs().iter() {
-            for (account, name, dfvk) in zkeys.iter() {
-                for scope in [zip32::Scope::External, zip32::Scope::Internal] {
-                    let ivk = dfvk.to_ivk(scope);
-                    let pivk = PreparedIncomingViewingKey::new(&ivk);
+            for (account, name, keys) in zkeys.iter() {
+                for (scope, pivk) in keys.prepared_ivks() {
                     if let Some((note, recipient, memo_bytes)) =
                         try_note_decryption(&domain, &pivk, v)
                     {
                         let diversifier = recipient.diversifier().0.to_vec();
                         let address = recipient.encode(network);
-                        let diversifier_index = dfvk
-                            .decrypt_diversifier(&recipient)
-                            .and_then(|(di, _)| di.try_into().ok())
-                            .map(|d: u64| d as i64);
+                        let diversifier_index = keys.diversifier_index(scope, &diversifier);
                         notes.push(MempoolNote {
                             account: *account,
                             name: name.clone(),
                             value: note.value().inner() as i64,
                             pool: 1,
-                            scope: scope_to_u8(scope),
+                            scope,
                             diversifier: Some(diversifier),
                             diversifier_index,
                             address: Some(address),
@@ -304,10 +299,8 @@ pub async fn decode_raw_transaction(
                 notes.extend(spent_amount);
 
                 let domain = $domain::for_action(v);
-                for (account, name, fvk) in okeys.iter() {
-                    for scope in [Scope::External, Scope::Internal] {
-                        let ivk = fvk.to_ivk(scope);
-                        let pivk = orchard::keys::PreparedIncomingViewingKey::new(&ivk);
+                for (account, name, keys) in okeys.iter() {
+                    for (scope, pivk) in keys.prepared_ivks() {
                         if let Some((note, recipient, memo_bytes)) =
                             try_note_decryption(&domain, &pivk, v)
                         {
@@ -315,16 +308,13 @@ pub async fn decode_raw_transaction(
                             let ua =
                                 UnifiedAddress::from_receivers(Some(recipient), None, None, None, None).unwrap();
                             let address = ua.encode(network);
-                            let diversifier_index = ivk
-                                .diversifier_index(&recipient)
-                                .and_then(|di| di.try_into().ok())
-                                .map(|d: u64| d as i64);
+                            let diversifier_index = keys.diversifier_index(scope, &diversifier);
                             notes.push(MempoolNote {
                                 account: *account,
                                 name: name.clone(),
                                 value: note.value().inner() as i64,
                                 pool,
-                                scope: orchard_scope_to_u8(scope),
+                                scope,
                                 diversifier: Some(diversifier),
                                 diversifier_index,
                                 address: Some(address),

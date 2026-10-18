@@ -14,9 +14,12 @@
 use anyhow::{anyhow, Result};
 use sqlx::SqliteConnection;
 use zcash_keys::encoding::AddressCodec;
-use zcash_transparent::keys::{AccountPrivKey, AccountPubKey};
+use zcash_transparent::keys::{AccountPrivKey, AccountPubKey, ExternalIvk, IncomingViewingKey as _};
 
-use crate::account::{derive_transparent_address, derive_transparent_sk, get_transparent_keys};
+use crate::account::{
+    derive_transparent_address, derive_transparent_address_from_ivk, derive_transparent_sk,
+    get_transparent_keys,
+};
 use crate::api::coin::Network;
 use crate::db::{get_account_aindex, get_account_hw, store_account_transparent_addr};
 use crate::ledger::LedgerHandle;
@@ -37,6 +40,9 @@ pub enum TransparentKeySource {
         xvk: AccountPubKey,
         xsk: Option<AccountPrivKey>,
     },
+    /// The external chain's incoming key of an incoming-only account:
+    /// receiving addresses only, no change chain, no signing.
+    Incoming { ivk: ExternalIvk },
     /// A Ledger device deriving for ZIP-32 account `aindex`.
     Ledger { handle: LedgerHandle, aindex: u32 },
 }
@@ -52,6 +58,15 @@ impl TransparentKeySource {
         let (xsk, xvk) = get_transparent_keys(conn, account).await?;
         if let Some(xvk) = xvk {
             return Ok(Some(TransparentKeySource::Software { xvk, xsk }));
+        }
+        let ivk: Option<(Option<Vec<u8>>,)> =
+            sqlx::query_as("SELECT ivk FROM transparent_accounts WHERE account = ?")
+                .bind(account)
+                .fetch_optional(&mut *conn)
+                .await?;
+        if let Some((Some(ivk),)) = ivk {
+            let ivk = ExternalIvk::deserialize(&ivk.try_into().unwrap())?;
+            return Ok(Some(TransparentKeySource::Incoming { ivk }));
         }
         let hw = get_account_hw(conn, account).await?;
         if hw == 0 {
@@ -91,6 +106,19 @@ impl TransparentKeySource {
                 let (pk, address) = derive_transparent_address(xvk, scope, dindex, false)?;
                 Ok(DerivedTransparentAddr {
                     sk,
+                    pk,
+                    address: address.encode(network),
+                })
+            }
+            TransparentKeySource::Incoming { ivk } => {
+                if scope != 0 {
+                    return Err(anyhow!(
+                        "an incoming-only account has no internal (change) addresses"
+                    ));
+                }
+                let (pk, address) = derive_transparent_address_from_ivk(ivk, dindex)?;
+                Ok(DerivedTransparentAddr {
+                    sk: None,
                     pk,
                     address: address.encode(network),
                 })
@@ -189,6 +217,39 @@ pub(crate) mod tests {
                 }
             );
         }
+        Ok(())
+    }
+
+    /// The incoming source derives the external chain exactly as the
+    /// account key does, refuses the change chain, and loads for an account
+    /// that stores an incoming key alone.
+    #[tokio::test]
+    async fn incoming_source_derives_the_external_chain_only() -> Result<()> {
+        let (xvk, _) = software_keys();
+        let ivk = xvk.derive_external_ivk().unwrap();
+        let full = TransparentKeySource::software(xvk, None);
+        let incoming = TransparentKeySource::Incoming { ivk: ivk.clone() };
+        for dindex in [0, 7] {
+            assert_eq!(
+                incoming.derive(&Network::Main, 0, dindex).await?,
+                full.derive(&Network::Main, 0, dindex).await?
+            );
+        }
+        assert!(incoming.derive(&Network::Main, 1, 0).await.is_err());
+        assert!(!incoming.is_software());
+
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        create_schema(&mut db).await?;
+        sqlx::query("INSERT INTO accounts(id_account, name, aindex, dindex, def_dindex, birth, position, use_internal, hidden, saved, hw)
+            VALUES (1, 'a', 0, 0, 0, 1, 1, FALSE, FALSE, FALSE, 0)")
+            .execute(&mut db)
+            .await?;
+        crate::db::init_account_transparent(&mut db, 1, 1).await?;
+        crate::db::store_account_transparent_ivk(&mut db, 1, &ivk).await?;
+        assert!(matches!(
+            TransparentKeySource::load(&mut db, 1).await?,
+            TransparentKeySource::Incoming { .. }
+        ));
         Ok(())
     }
 
