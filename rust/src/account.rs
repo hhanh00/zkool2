@@ -1051,6 +1051,79 @@ mod new_account_tests {
         assert_eq!(xt.ivk.map(|k| k.serialize()), it.ivk.map(|k| k.serialize()));
     }
 
+    async fn watch_account(db: &mut sqlx::SqliteConnection, key: String, name: &str) -> u32 {
+        let na = NewAccount {
+            icon: None,
+            name: name.into(),
+            restore: true,
+            key,
+            passphrase: None,
+            fingerprint: None,
+            aindex: 0,
+            birth: Some(1),
+            folder: String::new(),
+            pools: Some(ALL_POOLS),
+            use_internal: true,
+            internal: false,
+            hw: 0,
+        };
+        new_account(&NETWORK, db, &na).await.unwrap()
+    }
+
+    /// Sync finds an incoming-only account's notes with the same incoming
+    /// keys as the full account's, but has no nullifier key for them and
+    /// no internal scope at all.
+    #[tokio::test]
+    async fn an_incoming_only_account_syncs_with_the_full_accounts_incoming_keys() {
+        use crate::db::{orchard_receiving_keys, sapling_receiving_keys};
+        let mut db = sqlx::SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        crate::db::create_schema(&mut db).await.unwrap();
+        let ufvk = usk().to_unified_full_viewing_key();
+        let full = watch_account(&mut db, ufvk.encode(&NETWORK).unwrap(), "full").await;
+        let uivk = ufvk.to_unified_incoming_viewing_key().encode(&NETWORK).unwrap();
+        let incoming = watch_account(&mut db, uivk, "incoming").await;
+
+        let (full_ivk, full_nk) = sapling_receiving_keys(&mut db, full, 0).await.unwrap().unwrap();
+        let (ivk, nk) = sapling_receiving_keys(&mut db, incoming, 0).await.unwrap().unwrap();
+        assert_eq!(ivk.to_repr(), full_ivk.to_repr());
+        assert!(full_nk.is_some() && nk.is_none());
+        assert!(sapling_receiving_keys(&mut db, full, 1).await.unwrap().is_some());
+        assert!(sapling_receiving_keys(&mut db, incoming, 1).await.unwrap().is_none());
+
+        let (full_ivk, full_nk) = orchard_receiving_keys(&mut db, full, 0).await.unwrap().unwrap();
+        let (ivk, nk) = orchard_receiving_keys(&mut db, incoming, 0).await.unwrap().unwrap();
+        assert_eq!(ivk.to_bytes(), full_ivk.to_bytes());
+        assert!(full_nk.is_some() && nk.is_none());
+        assert!(orchard_receiving_keys(&mut db, full, 1).await.unwrap().is_some());
+        assert!(orchard_receiving_keys(&mut db, incoming, 1).await.unwrap().is_none());
+    }
+
+    /// The incoming key recovers the same diversifier index for a received
+    /// note as the full key does, and none for an internal-scope note.
+    #[test]
+    fn incoming_keys_resolve_the_same_diversifier_indexes() {
+        use crate::sync::{OrchardAccountKeys, SaplingAccountKeys};
+        let ufvk = usk().to_unified_full_viewing_key();
+        let (ua, di) = ufvk.default_address(UnifiedAddressRequest::AllAvailableKeys).unwrap();
+        let di: u64 = di.try_into().unwrap();
+
+        let dfvk = ufvk.sapling().unwrap().clone();
+        let d = ua.sapling().unwrap().diversifier().0;
+        let full = SaplingAccountKeys::Full(dfvk.clone());
+        let incoming = SaplingAccountKeys::Incoming(dfvk.to_external_ivk());
+        assert_eq!(full.diversifier_index(0, &d), Some(di as i64));
+        assert_eq!(incoming.diversifier_index(0, &d), Some(di as i64));
+        assert_eq!(incoming.diversifier_index(1, &d), None);
+
+        let fvk = ufvk.orchard().unwrap().clone();
+        let d = *ua.orchard().unwrap().diversifier().as_array();
+        let full = OrchardAccountKeys::Full(fvk.clone());
+        let incoming = OrchardAccountKeys::Incoming(fvk.to_ivk(orchard::keys::Scope::External));
+        assert_eq!(full.diversifier_index(0, &d), Some(di as i64));
+        assert_eq!(incoming.diversifier_index(0, &d), Some(di as i64));
+        assert_eq!(incoming.diversifier_index(1, &d), None);
+    }
+
     /// Creating an account from an incoming key stores the incoming key of
     /// each pool with the full key NULL, and never uses internal change.
     #[tokio::test]

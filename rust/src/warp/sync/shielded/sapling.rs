@@ -1,6 +1,5 @@
-use crate::keys::sapling_ivk_nk_for_scope;
 use anyhow::Result;
-use sapling_crypto::{zip32::DiversifiableFullViewingKey, Note, NullifierDerivingKey, SaplingIvk};
+use sapling_crypto::{Note, NullifierDerivingKey, SaplingIvk};
 use sqlx::SqliteConnection;
 
 use crate::{
@@ -44,18 +43,8 @@ impl ShieldedProtocol for SaplingProtocol {
         connection: &mut SqliteConnection,
         account: u32,
         scope: u8,
-    ) -> Result<Option<(Self::IVK, Self::NK)>> {
-        let vk: Option<(Vec<u8>,)> =
-            sqlx::query_as("SELECT xvk FROM sapling_accounts WHERE account = ?")
-                .bind(account)
-                .fetch_optional(&mut *connection)
-                .await?;
-        let keys = vk.map(|(vk,)| {
-            let vk = DiversifiableFullViewingKey::from_bytes(&vk.try_into().unwrap()).unwrap();
-            let (ivk, nk) = sapling_ivk_nk_for_scope(scope, &vk);
-            (ivk, nk)
-        });
-        Ok(keys)
+    ) -> Result<Option<(Self::IVK, Option<Self::NK>)>> {
+        crate::db::sapling_receiving_keys(connection, account, scope).await
     }
 
     fn try_decrypt(

@@ -34,11 +34,14 @@ pub trait ShieldedProtocol {
     /// synthesis has been removed in favor of trial decryption via actions.
     type IssueAuth: Sync;
 
+    /// The account's keys at `scope`: the incoming key, and the nullifier
+    /// key when the account has its full key. An incoming-only account has
+    /// no nullifier key; its notes get their commitment as a stand-in.
     fn extract_ivk(
         connection: &mut SqliteConnection,
         account: u32,
         scope: u8,
-    ) -> impl std::future::Future<Output = Result<Option<(Self::IVK, Self::NK)>>>;
+    ) -> impl std::future::Future<Output = Result<Option<(Self::IVK, Option<Self::NK>)>>>;
     fn extract_inputs(tx: &CompactTx) -> &Vec<Self::Spend>;
     fn extract_outputs(tx: &CompactTx) -> &Vec<Self::Output>;
 
@@ -95,7 +98,7 @@ pub struct Synchronizer<P: ShieldedProtocol> {
     pub hasher: P::Hasher,
     pub network: Network,
     pub pool: u8,
-    pub keys: Vec<(u32, u8, P::IVK, P::NK)>,
+    pub keys: Vec<(u32, u8, P::IVK, Option<P::NK>)>,
     pub position: u32,
     pub utxos: HashMap<Vec<u8>, UTXO>,
     pub tree_state: Edge,
@@ -211,7 +214,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         let mut notes: Vec<(
             <P as ShieldedProtocol>::Note,
             Note,
-            &<P as ShieldedProtocol>::NK,
+            &Option<<P as ShieldedProtocol>::NK>,
         )> = outputs
             .flat_map_iter(|(height, ivtx, vout, o)| {
                 self.keys.iter().flat_map(move |(account, scope, ivk, nk)| {
@@ -326,8 +329,15 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                             if dbn.height == cb.height as u32 && dbn.ivtx == ivtx as u32 =>
                         {
                             dbn.position = position + dbn.vout;
-                            let nf = P::derive_nf(nk, dbn.position, n)?;
-                            dbn.nf = nf.to_vec();
+                            dbn.nf = match nk {
+                                Some(nk) => P::derive_nf(nk, dbn.position, n)?.to_vec(),
+                                // An incoming-only account cannot derive
+                                // nullifiers. The note commitment stands in:
+                                // unique per note, so rescans deduplicate,
+                                // and never equal to a spend on chain, so the
+                                // note is never marked spent.
+                                None => dbn.cmx.clone(),
+                            };
 
                             let transaction = Transaction {
                                 account: dbn.account,

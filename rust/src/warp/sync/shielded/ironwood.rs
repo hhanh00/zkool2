@@ -30,24 +30,9 @@ impl ShieldedProtocol for IronwoodProtocol {
         connection: &mut SqliteConnection,
         account: u32,
         scope: u8,
-    ) -> Result<Option<(Self::IVK, Self::NK)>> {
+    ) -> Result<Option<(Self::IVK, Option<Self::NK>)>> {
         // Ironwood uses the same keys as Orchard
-        let vk: Option<(Vec<u8>,)> =
-            sqlx::query_as("SELECT xvk FROM orchard_accounts WHERE account = ?")
-                .bind(account)
-                .fetch_optional(&mut *connection)
-                .await?;
-        let keys = vk.map(|(vk,)| {
-            let vk = FullViewingKey::from_bytes(&vk.try_into().unwrap()).unwrap();
-            let scope = if scope == 0 {
-                orchard::keys::Scope::External
-            } else {
-                orchard::keys::Scope::Internal
-            };
-            let ivk = vk.to_ivk(scope);
-            (ivk, vk)
-        });
-        Ok(keys)
+        crate::db::orchard_receiving_keys(connection, account, scope).await
     }
 
     fn extract_inputs(tx: &CompactTx) -> &Vec<Self::Spend> {

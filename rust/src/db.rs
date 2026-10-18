@@ -5,7 +5,11 @@ use anyhow::{anyhow, Result};
 use csv_async::AsyncWriter;
 use futures::TryStreamExt;
 use orchard::keys::{FullViewingKey, IncomingViewingKey as OrchardIvk, SpendingKey};
-use sapling_crypto::{zip32::IncomingViewingKey as SaplingIvk, PaymentAddress};
+use sapling_crypto::{
+    keys::{NullifierDerivingKey, SaplingIvk},
+    zip32::IncomingViewingKey as SaplingZip32Ivk,
+    PaymentAddress,
+};
 use sqlx::{
     sqlite::{SqliteConnectOptions, SqliteRow},
     Column, Connection, Row, SqliteConnection, TypeInfo,
@@ -1176,7 +1180,7 @@ pub async fn store_account_sapling_vk(
 pub async fn store_account_sapling_ivk(
     connection: &mut SqliteConnection,
     account: u32,
-    ivk: &SaplingIvk,
+    ivk: &SaplingZip32Ivk,
     address: &str,
 ) -> Result<()> {
     sqlx::query("UPDATE sapling_accounts SET ivk = ?2, address = ?3 WHERE account = ?1")
@@ -1342,7 +1346,7 @@ pub async fn select_account_sapling(
         }),
         xvk: xvk
             .map(|xvk| DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()),
-        ivk: ivk.map(|ivk| SaplingIvk::from_bytes(&ivk.try_into().unwrap()).unwrap()),
+        ivk: ivk.map(|ivk| SaplingZip32Ivk::from_bytes(&ivk.try_into().unwrap()).unwrap()),
         // A corrupt or empty stored address (e.g. rows imported before the
         // address was backfilled) must not panic the runtime: surface a
         // clear error instead.
@@ -1381,6 +1385,62 @@ pub async fn select_account_orchard(
     Ok(keys)
 }
 
+/// The keys that find an account's incoming Sapling notes at `scope`: the
+/// incoming key to trial-decrypt with and, for an account with its full
+/// key, the nullifier key. An incoming-only account has the external
+/// incoming key alone: it cannot derive nullifiers, so its notes are never
+/// seen spent, and it has no internal scope. None when the account has no
+/// Sapling key for that scope.
+pub async fn sapling_receiving_keys(
+    connection: &mut SqliteConnection,
+    account: u32,
+    scope: u8,
+) -> Result<Option<(SaplingIvk, Option<NullifierDerivingKey>)>> {
+    let row: Option<(Option<Vec<u8>>, Option<Vec<u8>>)> =
+        sqlx::query_as("SELECT xvk, ivk FROM sapling_accounts WHERE account = ?")
+            .bind(account)
+            .fetch_optional(&mut *connection)
+            .await?;
+    Ok(match row {
+        Some((Some(xvk), _)) => {
+            let dfvk = DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap();
+            let (ivk, nk) = crate::keys::sapling_ivk_nk_for_scope(scope, &dfvk);
+            Some((ivk, Some(nk)))
+        }
+        Some((None, Some(ivk))) if scope.is_external() => {
+            let ivk = SaplingZip32Ivk::from_bytes(&ivk.try_into().unwrap()).unwrap();
+            let ivk = SaplingIvk::from_bytes(ivk.to_bytes()[32..].try_into().unwrap()).unwrap();
+            Some((ivk, None))
+        }
+        _ => None,
+    })
+}
+
+/// The keys that find an account's incoming Orchard (and Ironwood) notes at
+/// `scope`, as [`sapling_receiving_keys`]: the full viewing key stands as
+/// the nullifier key, and is None for an incoming-only account.
+pub async fn orchard_receiving_keys(
+    connection: &mut SqliteConnection,
+    account: u32,
+    scope: u8,
+) -> Result<Option<(OrchardIvk, Option<FullViewingKey>)>> {
+    let row: Option<(Option<Vec<u8>>, Option<Vec<u8>>)> =
+        sqlx::query_as("SELECT xvk, ivk FROM orchard_accounts WHERE account = ?")
+            .bind(account)
+            .fetch_optional(&mut *connection)
+            .await?;
+    Ok(match row {
+        Some((Some(xvk), _)) => {
+            let fvk = FullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap();
+            Some((fvk.to_ivk(scope.orchard_scope()), Some(fvk)))
+        }
+        Some((None, Some(ivk))) if scope.is_external() => {
+            Some((OrchardIvk::from_bytes(&ivk.try_into().unwrap()).unwrap(), None))
+        }
+        _ => None,
+    })
+}
+
 /// An account's stored keys for one pool. A full account has `xvk` (and
 /// `xsk` when it can spend); an incoming-only account has `ivk` alone.
 pub struct TransparentKeys {
@@ -1393,7 +1453,7 @@ pub struct TransparentKeys {
 pub struct SaplingKeys {
     pub xsk: Option<ExtendedSpendingKey>,
     pub xvk: Option<DiversifiableFullViewingKey>,
-    pub ivk: Option<SaplingIvk>,
+    pub ivk: Option<SaplingZip32Ivk>,
     pub address: Option<PaymentAddress>,
 }
 

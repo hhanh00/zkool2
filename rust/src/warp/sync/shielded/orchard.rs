@@ -1,4 +1,3 @@
-use crate::keys::ScopeExt;
 use anyhow::Result;
 use orchard::{
     keys::{FullViewingKey, IncomingViewingKey},
@@ -33,19 +32,8 @@ impl ShieldedProtocol for OrchardProtocol {
         connection: &mut SqliteConnection,
         account: u32,
         scope: u8,
-    ) -> Result<Option<(Self::IVK, Self::NK)>> {
-        let vk: Option<(Vec<u8>,)> =
-            sqlx::query_as("SELECT xvk FROM orchard_accounts WHERE account = ?")
-                .bind(account)
-                .fetch_optional(&mut *connection)
-                .await?;
-        let keys = vk.map(|(vk,)| {
-            let vk = FullViewingKey::from_bytes(&vk.try_into().unwrap()).unwrap();
-            let scope = scope.orchard_scope();
-            let ivk = vk.to_ivk(scope);
-            (ivk, vk)
-        });
-        Ok(keys)
+    ) -> Result<Option<(Self::IVK, Option<Self::NK>)>> {
+        crate::db::orchard_receiving_keys(connection, account, scope).await
     }
 
     fn extract_inputs(tx: &CompactTx) -> &Vec<Self::Spend> {
