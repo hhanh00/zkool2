@@ -64,6 +64,9 @@ runs:
       shell: bash
       run: mkdir -p "$HOME/Documents"
 
+    # ZKOOL_UI_COVERAGE makes the orchestrators that support it run the app
+    # with `--coverage`; the wallet test prints the lib/ line percentage and
+    # copies the lcov report to /tmp for the artifact below.
     - name: Run ${{ inputs.test }}
       shell: bash
       run: |
@@ -76,6 +79,7 @@ runs:
         TEST: ${{ inputs.test }}
         SEED: ${{ inputs.seed }}
         ZKOOL_BINARY: ${{ github.workspace }}/target/release/zkool_graphql
+        ZKOOL_UI_COVERAGE: "1"
 
     - name: Save the app build
       if: always() && steps.app-cache.outputs.cache-hit != 'true'
@@ -94,3 +98,12 @@ runs:
           /tmp/graphql_*.log
         if-no-files-found: ignore
         retention-days: 5
+
+    - name: Upload coverage
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ui-test-coverage-${{ inputs.test }}
+        path: /tmp/*_lcov.info
+        if-no-files-found: ignore
+        retention-days: 14
