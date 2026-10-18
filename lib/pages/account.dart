@@ -1460,6 +1460,12 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
   String? uvk;
   Seed? seed;
   int accountPools = 7; // default to all pools
+  // Full by default, every time the page opens: never remembered, so a
+  // user cannot hand out one key believing it is the other.
+  bool incoming = false;
+  // Without internal change, change goes to external addresses, which an
+  // incoming key sees.
+  bool useInternal = true;
   bool showSeed = false;
   FrostParams? frostParams;
   String? frostBackup;
@@ -1471,6 +1477,8 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
       seed = await getAccountSeed(account: widget.account, c: c);
       accountPools = await getAccountPools(account: widget.account, c: c);
       frostParams = await getAccountFrostParams(account: widget.account, c: c);
+      final accounts = await ref.read(getAccountsProvider.future);
+      useInternal = accounts.firstWhere((a) => a.id == widget.account).useInternal;
       setState(() {});
     });
     Future(() => onPoolChanged(pools));
@@ -1533,6 +1541,22 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
               ),
             ),
           ],
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: Center(
+                child: SegmentedButton<bool>(
+                  segments: const [
+                    ButtonSegment(value: false, label: Text("Full"), tooltip: "Sees payments received, spends and change"),
+                    ButtonSegment(value: true, label: Text("Incoming"), tooltip: "Sees payments received only"),
+                  ],
+                  selected: {incoming},
+                  showSelectedIcon: false,
+                  onSelectionChanged: (s) => onKindChanged(s.first),
+                ),
+              ),
+            ),
+          ),
           SliverPersistentHeader(
             pinned: true,
             delegate: _PoolSelectHeaderDelegate(
@@ -1548,6 +1572,16 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: CopyableText(uvk!),
+              ),
+            ),
+          if (uvk != null && incoming && !useInternal)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Text(
+                  "This account sends change to its external addresses, so the incoming key also shows your change.",
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ),
             ),
           SliverToBoxAdapter(child: Gap(32)),
@@ -1571,16 +1605,29 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
 
   onPoolChanged(int? v) async {
     if (v == null) return;
+    await loadKey(v, incoming);
+  }
+
+  onKindChanged(bool v) async {
+    await loadKey(pools, v);
+  }
+
+  Future<void> loadKey(int v, bool incomingKey) async {
     try {
-      final uuvk = await getAccountUfvk(account: widget.account, pools: v, c: c);
+      final uuvk = incomingKey
+          ? await getAccountUivk(account: widget.account, pools: v, c: c)
+          : await getAccountUfvk(account: widget.account, pools: v, c: c);
       setState(() {
         pools = v;
+        incoming = incomingKey;
         uvk = uuvk;
       });
     } on AnyhowException catch (e) {
       if (!mounted) return;
       await showException(context, e.message);
       setState(() {
+        pools = v;
+        incoming = incomingKey;
         uvk = null;
       });
     }

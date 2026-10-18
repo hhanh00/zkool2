@@ -215,9 +215,13 @@ impl Query {
 
     /// Export viewing keys for the selected pools (defaults to all available pools).
     /// Transparent-only selections return an xpub. Ironwood shares Orchard's key.
+    /// With `incoming`, the incoming viewing key instead: it shows payments
+    /// received and nothing else; transparent alone gives the xpub of the
+    /// external chain (depth 4, child 0).
     async fn unified_full_viewing_key(
         id_account: i32,
         pools: Option<i32>,
+        incoming: Option<bool>,
         context: &Context,
     ) -> FieldResult<String> {
         check_auth(context, id_account, false)?;
@@ -237,7 +241,11 @@ impl Query {
                 juniper::Value::Null,
             ));
         }
-        Ok(crate::api::account::get_account_ufvk(account, pools, &context.coin).await?)
+        if incoming.unwrap_or(false) {
+            Ok(crate::api::account::get_account_uivk(account, pools, &context.coin).await?)
+        } else {
+            Ok(crate::api::account::get_account_ufvk(account, pools, &context.coin).await?)
+        }
     }
 
     async fn address_by_account(

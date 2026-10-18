@@ -13,7 +13,10 @@ use zcash_keys::{
     keys::UnifiedFullViewingKey,
 };
 use zcash_protocol::consensus::NetworkConstants as _;
-use zcash_transparent::address::TransparentAddress;
+use zcash_transparent::{
+    address::TransparentAddress,
+    keys::{AccountPubKey, IncomingViewingKey as _},
+};
 
 use crate::{
     bip38,
@@ -32,64 +35,47 @@ fn key_pools(pools: u8) -> u8 {
     }
 }
 
-pub async fn get_account_ufvk(
-    network: &Network,
+/// What a pool selection of an account's viewing keys comes to: a unified
+/// full viewing key, or, for the transparent pool alone, the transparent
+/// account key, since a Revision 0 unified key needs a shielded item.
+enum AccountViewingKey {
+    Transparent(AccountPubKey),
+    Unified(UnifiedFullViewingKey),
+}
+
+async fn account_viewing_key(
     connection: &mut SqliteConnection,
+    network: &Network,
     account: u32,
     pools: u8,
-) -> Result<String> {
+) -> Result<AccountViewingKey> {
     let pools = key_pools(pools);
     let dindex = get_account_dindex(connection, account).await?;
     let tkeys = select_account_transparent(connection, account, dindex).await?;
     let skeys = select_account_sapling(network, connection, account).await?;
     let okeys = select_account_orchard(connection, account).await?;
 
-    let items = vec![
-        tkeys.xvk.clone().and_then(|vk| {
-            if pools & 1 != 0 {
-                Some(Fvk::P2pkh(vk.serialize().try_into().unwrap()))
-            } else {
-                None
-            }
-        }),
-        skeys.xvk.and_then(|vk| {
-            if pools & 2 != 0 {
-                Some(Fvk::Sapling(vk.to_bytes()))
-            } else {
-                None
-            }
-        }),
-        okeys.xvk.and_then(|vk| {
-            if pools & 4 != 0 {
-                Some(Fvk::Orchard(vk.to_bytes()))
-            } else {
-                None
-            }
-        }),
+    let transparent = tkeys.xvk.filter(|_| pools & 1 != 0);
+    let items = [
+        transparent
+            .as_ref()
+            .map(|vk| Fvk::P2pkh(vk.serialize().try_into().unwrap())),
+        skeys
+            .xvk
+            .filter(|_| pools & 2 != 0)
+            .map(|vk| Fvk::Sapling(vk.to_bytes())),
+        okeys
+            .xvk
+            .filter(|_| pools & 4 != 0)
+            .map(|vk| Fvk::Orchard(vk.to_bytes())),
     ];
     let items = items.into_iter().flatten().collect::<Vec<Fvk>>();
 
     if items.is_empty() {
         return Err(anyhow::anyhow!("Viewing key has no receivers"));
     }
-    if items.len() == 1 {
-        if let Some(Fvk::P2pkh(data)) = items.first() {
-            // special case for transparent keys since UFVK do not support them
-            let chain_code = data[..32].try_into().unwrap(); // first 32 bytes is the chain code
-            let public_key = PublicKey::from_slice(&data[32..])?; // next 33 bytes is the public key
-            let xpub = ExtendedPublicKey::new(
-                public_key,
-                ExtendedKeyAttrs {
-                    depth: 3,
-                    // dummy values for parent fingerprint and child number
-                    parent_fingerprint: [0xff, 0xff, 0xff, 0xff],
-                    child_number: ChildNumber::new(0, true).unwrap(),
-                    chain_code,
-                },
-            );
-            let xpub = xpub.to_extended_key(Prefix::XPUB);
-            return Ok(xpub.to_string());
-        }
+    if let ([Fvk::P2pkh(_)], Some(vk)) = (items.as_slice(), transparent) {
+        return Ok(AccountViewingKey::Transparent(vk));
     }
 
     let ufvk = Ufvk::try_from_items(
@@ -99,9 +85,65 @@ pub async fn get_account_ufvk(
             .map(zcash_address::unified::Uitem::Data)
             .collect(),
     )?;
-    let ufvk = UnifiedFullViewingKey::parse(&ufvk)?;
+    Ok(AccountViewingKey::Unified(UnifiedFullViewingKey::parse(&ufvk)?))
+}
 
-    Ok(ufvk.encode(network)?)
+/// An xpub over `data`, the 32-byte chain code followed by the 33-byte
+/// public key, at `depth` and `child_number`. The parent fingerprint is
+/// a dummy: the key's own derivation path is not recorded.
+fn xpub(data: &[u8], depth: u8, child_number: ChildNumber) -> Result<String> {
+    let chain_code = data[..32].try_into().unwrap();
+    let public_key = PublicKey::from_slice(&data[32..])?;
+    let xpub = ExtendedPublicKey::new(
+        public_key,
+        ExtendedKeyAttrs {
+            depth,
+            parent_fingerprint: [0xff, 0xff, 0xff, 0xff],
+            child_number,
+            chain_code,
+        },
+    );
+    Ok(xpub.to_extended_key(Prefix::XPUB).to_string())
+}
+
+/// The account's full viewing key for the selected pools: a unified full
+/// viewing key, or for the transparent pool alone the account-level xpub
+/// (depth 3, hardened child 0).
+pub async fn get_account_ufvk(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+    pools: u8,
+) -> Result<String> {
+    match account_viewing_key(connection, network, account, pools).await? {
+        AccountViewingKey::Transparent(vk) => {
+            xpub(&vk.serialize(), 3, ChildNumber::new(0, true).unwrap())
+        }
+        AccountViewingKey::Unified(ufvk) => Ok(ufvk.encode(network)?),
+    }
+}
+
+/// The account's incoming viewing key for the selected pools: it finds
+/// payments to the account's external addresses and nothing else, neither
+/// spends nor internal change. A unified incoming viewing key, or for the
+/// transparent pool alone the xpub of the external chain (depth 4,
+/// non-hardened child 0), which the importer tells apart from an account
+/// key by those two fields.
+pub async fn get_account_uivk(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+    pools: u8,
+) -> Result<String> {
+    match account_viewing_key(connection, network, account, pools).await? {
+        AccountViewingKey::Transparent(vk) => {
+            let external = vk.derive_external_ivk()?;
+            xpub(&external.serialize(), 4, ChildNumber::new(0, false).unwrap())
+        }
+        AccountViewingKey::Unified(ufvk) => {
+            Ok(ufvk.to_unified_incoming_viewing_key().encode(network)?)
+        }
+    }
 }
 
 pub fn is_valid_phrase(phrase: &str) -> bool {
@@ -157,6 +199,8 @@ pub fn is_valid_transparent_address(network: &Network, address: &str) -> bool {
 mod tests {
     use sqlx::{Connection as _, SqliteConnection};
 
+    use zcash_keys::keys::UnifiedIncomingViewingKey;
+
     use super::*;
     use crate::{
         account::new_account,
@@ -210,4 +254,79 @@ mod tests {
         );
         assert!(ufvk(POOL_TRANSPARENT).await.starts_with("xpub"));
     }
+
+    /// Every incoming key the account exports is the one its full key
+    /// derives, item by item, carries exactly the selected pools, and is a
+    /// Revision 0 `uivk`. Transparent items are compared as bytes: the
+    /// library's own subsumption check compares them with their BIP 32
+    /// depth and parent fingerprint, which decoding resets, so it rejects
+    /// a decoded key that is byte-for-byte the derived one.
+    #[tokio::test]
+    async fn incoming_keys_follow_the_full_key_and_the_selection() {
+        let (mut db, account) = seed_account().await;
+        let full = get_account_ufvk(&NETWORK, &mut db, account, ALL_POOLS)
+            .await
+            .unwrap();
+        let derived = UnifiedFullViewingKey::decode(&NETWORK, &full)
+            .unwrap()
+            .to_unified_incoming_viewing_key();
+        let cases = [
+            (ALL_POOLS, true, true, true),
+            (POOL_SAPLING | POOL_ORCHARD, false, true, true),
+            (POOL_TRANSPARENT | POOL_ORCHARD, true, false, true),
+            (POOL_IRONWOOD, false, false, true),
+            (POOL_SAPLING, false, true, false),
+        ];
+        for (pools, t, s, o) in cases {
+            let encoded = get_account_uivk(&NETWORK, &mut db, account, pools)
+                .await
+                .unwrap();
+            assert!(encoded.starts_with("uivk1"), "{pools}: {encoded}");
+            let uivk = UnifiedIncomingViewingKey::decode(&NETWORK, &encoded).unwrap();
+            if uivk.has_orchard() {
+                assert_eq!(uivk.orchard(), derived.orchard(), "{pools}");
+            }
+            if uivk.has_sapling() {
+                assert_eq!(uivk.sapling(), derived.sapling(), "{pools}");
+            }
+            if uivk.has_transparent() {
+                let bytes = |k: &UnifiedIncomingViewingKey| k.p2pkh().map(|t| t.serialize());
+                assert_eq!(bytes(&uivk), bytes(&derived), "{pools}");
+            }
+            assert_eq!(
+                (uivk.has_transparent(), uivk.has_sapling(), uivk.has_orchard()),
+                (t, s, o),
+                "{pools}"
+            );
+        }
+    }
+
+    /// For the transparent pool alone the incoming key is the external
+    /// chain's xpub, one level below the full key's account xpub, and the
+    /// two are told apart by depth and child number.
+    #[tokio::test]
+    async fn transparent_alone_exports_the_external_chain() {
+        let (mut db, account) = seed_account().await;
+        let full = get_account_ufvk(&NETWORK, &mut db, account, POOL_TRANSPARENT)
+            .await
+            .unwrap();
+        let incoming = get_account_uivk(&NETWORK, &mut db, account, POOL_TRANSPARENT)
+            .await
+            .unwrap();
+        let full = ExtendedPublicKey::<PublicKey>::from_str(&full).unwrap();
+        let incoming = ExtendedPublicKey::<PublicKey>::from_str(&incoming).unwrap();
+
+        assert_eq!(full.attrs().depth, 3);
+        assert_eq!(full.attrs().child_number, ChildNumber::new(0, true).unwrap());
+        assert_eq!(incoming.attrs().depth, 4);
+        assert_eq!(incoming.attrs().child_number, ChildNumber::new(0, false).unwrap());
+
+        let mut account_key = full.attrs().chain_code.to_vec();
+        account_key.extend_from_slice(&full.to_bytes());
+        let account_key = AccountPubKey::deserialize(&account_key.try_into().unwrap()).unwrap();
+        let mut external = incoming.attrs().chain_code.to_vec();
+        external.extend_from_slice(&incoming.to_bytes());
+        assert_eq!(external, account_key.derive_external_ivk().unwrap().serialize());
+    }
 }
+

@@ -22,6 +22,13 @@ Future<String> getAccountUfvk(
     RustLib.instance.api
         .crateApiAccountGetAccountUfvk(account: account, pools: pools, c: c);
 
+/// The account's incoming viewing key for the selected pools: it shows
+/// payments received and nothing else. See `key::get_account_uivk`.
+Future<String> getAccountUivk(
+        {required int account, required int pools, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiAccountGetAccountUivk(account: account, pools: pools, c: c);
+
 Future<Seed?> getAccountSeed({required int account, required Coin c}) =>
     RustLib.instance.api.crateApiAccountGetAccountSeed(account: account, c: c);
 

@@ -60,6 +60,15 @@ pub async fn get_account_ufvk(account: u32, pools: u8, c: &Coin) -> Result<Strin
     Ok(ufvk)
 }
 
+/// The account's incoming viewing key for the selected pools: it shows
+/// payments received and nothing else. See `key::get_account_uivk`.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn get_account_uivk(account: u32, pools: u8, c: &Coin) -> Result<String> {
+    let network = c.network();
+    let mut connection = c.get_connection().await?;
+    crate::key::get_account_uivk(&network, &mut connection, account, pools).await
+}
+
 pub async fn get_account_seed(account: u32, c: &Coin) -> Result<Option<Seed>> {
     let mut connection = c.get_connection().await?;
     crate::account::get_account_seed(&mut connection, account).await
