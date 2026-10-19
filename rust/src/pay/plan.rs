@@ -111,9 +111,10 @@ pub async fn build_puri(recipients: &[Recipient]) -> Result<String> {
             let address = ZcashAddress::from_str(&r.address)?;
             let amount = Zatoshis::const_from_u64(r.amount);
             let memo = encode_memo(r)?;
-            Ok::<_, anyhow::Error>(
-                Payment::new(address, Some(amount), memo, None, None, vec![]).expect("payment"),
-            )
+            // Refused for a memo to an address that cannot take one, or a
+            // zero-valued transparent output.
+            Payment::new(address, Some(amount), memo, None, None, vec![])
+                .map_err(|e| anyhow!("invalid payment to {}: {e}", r.address))
         })
         .collect::<Result<Vec<_>>>()?;
     let puri = TransactionRequest::new(payments)?;
@@ -2076,6 +2077,19 @@ mod tests {
 
             // Nothing set → no memo.
             assert!(encode_memo(&Recipient::default()).unwrap().is_none());
+        }
+
+        /// zip321 refuses a memo to an address that cannot carry one; that
+        /// is an error for the caller, not a panic (#1355).
+        #[tokio::test]
+        async fn build_puri_refuses_a_memo_to_a_transparent_address() {
+            let mut r = recipient(T_ADDR, 10_000);
+            r.user_memo = Some("hello".to_string());
+            let err = build_puri(&[r]).await.unwrap_err();
+            assert!(err.to_string().contains("invalid payment to"), "{err}");
+
+            let r = recipient(T_ADDR, 10_000);
+            assert!(build_puri(&[r]).await.is_ok());
         }
 
         #[test]

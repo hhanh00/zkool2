@@ -226,31 +226,31 @@ void main() {
       appRouter.go(accountRoute("/send", a));
       await pumpUntil(tester, () => fieldNamed("address").evaluate().isNotEmpty,
           timeout: _shortTimeout, what: "the send page",);
+      // The recipient with a memo goes first and the transparent one right
+      // after it, and it is the transparent one that gets edited: queued after
+      // a memo, or loaded for editing, a transparent recipient used to inherit
+      // the memo and the app crashed on send (#1355).
+      await _enterRecipient(tester, bAddresses.oaddr!, "0.05", memo: _memo);
+      await tapTooltip(tester, "Queue this recipient to create a multi send");
       // The price arrived at startup from the mock; the amount gets a fiat twin.
-      // The transparent recipient goes first: queued after a memo it would
-      // inherit that memo and the app crashes on send (#1355).
-      await _enterRecipient(tester, bAddresses.taddr!, "0.05");
-      await pumpUntil(tester, () => _fieldValue(tester, "fiat") == doubleToString(0.05 * usdPrice, decimals: 3),
+      await _enterRecipient(tester, bAddresses.taddr!, "0.02");
+      await pumpUntil(tester, () => _fieldValue(tester, "fiat") == doubleToString(0.02 * usdPrice, decimals: 3),
           timeout: _shortTimeout, what: "the fiat amount next to the ZEC amount",);
       expect(fieldNamed("memo").hitTestable(), findsNothing, reason: "no memo for a transparent recipient");
-      await tapTooltip(tester, "Queue this recipient to create a multi send");
-      await _enterRecipient(tester, bAddresses.oaddr!, "0.02", memo: _memo);
       await tapTooltip(tester, "Queue this recipient to create a multi send");
       await _enterRecipient(tester, bAddresses.saddr!, "0.01");
       await tapTooltip(tester, "Queue this recipient to create a multi send");
       expect(find.byType(ListTile), findsNWidgets(3));
-      // Edit the Orchard recipient's amount, saved by tapping the Sapling
-      // tile. A transparent recipient must never be loaded for editing: on
-      // send it is saved back with a memo and the app crashes (#1355). Switch
-      // to editing the transparent one once that is fixed. The queue sits
-      // below the form, so each tile is scrolled into view first.
-      await _tapTile(tester, bAddresses.oaddr!);
+      // Edit the transparent recipient's amount, saved by tapping the Sapling
+      // tile. The queue sits below the form, so each tile is scrolled into
+      // view first.
+      await _tapTile(tester, bAddresses.taddr!);
       await _enterAmount(tester, "0.05");
       await _tapTile(tester, bAddresses.saddr!);
       step("queue tiles: ${_tileTexts().join(" || ")}");
       // The amount is a Text.rich of two spans; match its plain text.
-      final oaddrTile = find.ancestor(of: find.text(bAddresses.oaddr!), matching: find.byType(ListTile));
-      expect(find.descendant(of: oaddrTile, matching: find.text(zatToString(_zat("0.05")), findRichText: true)), findsOneWidget,
+      final taddrTile = find.ancestor(of: find.text(bAddresses.taddr!), matching: find.byType(ListTile));
+      expect(find.descendant(of: taddrTile, matching: find.text(zatToString(_zat("0.05")), findRichText: true)), findsOneWidget,
           reason: "the edited amount shows on the tile",);
       final editedTile = find.ancestor(of: find.text(bAddresses.saddr!), matching: find.byType(ListTile));
       expect(tester.widget<ListTile>(editedTile).selected, isTrue, reason: "the tapped tile is highlighted");

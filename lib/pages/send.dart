@@ -170,11 +170,14 @@ class SendPageState extends ConsumerState<SendPage> {
                           onFocusChange: (v) => {
                             if (!v) onAddressEditComplete(),
                           },
+                          // No initialValue bound to `address`, which onChanged
+                          // keeps in step with the text: a form reset would
+                          // restore it. Everything that sets the address goes
+                          // through didChange.
                           child: FormBuilderTextField(
                             name: "address",
                             decoration: const InputDecoration(labelText: "Address"),
                             validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAddressOrPaymentURI]),
-                            initialValue: address,
                             onChanged: onAddressChanged,
                             textInputAction: TextInputAction.next,
                             onEditingComplete: () {
@@ -244,11 +247,14 @@ class SendPageState extends ConsumerState<SendPage> {
                 Visibility(
                   visible: supportsMemo,
                   maintainState: true,
+                  // No initialValue bound to `memo`: a form reset would restore
+                  // the text last typed, and the field keeps its state while
+                  // hidden for a transparent address (#1355). Edits set it
+                  // through didChange.
                   child: FormBuilderTextField(
                     name: "memo",
                     decoration: const InputDecoration(labelText: "Memo"),
                     maxLines: 8,
-                    initialValue: memo,
                     onChanged: (v) => setState(() => memo = v),
                   ),
                 ),
@@ -560,6 +566,12 @@ class SendPageState extends ConsumerState<SendPage> {
             form.fields['memo']!.didChange(memo);
           }
         }
+      }
+
+      // A transparent recipient takes no memo, and the hidden memo field may
+      // still hold one from an earlier recipient (#1355).
+      if (memo != null && (memo.isEmpty || isValidTransparentAddress(address: address, c: c))) {
+        memo = null;
       }
 
       logger.i("Send $amount to $address");
