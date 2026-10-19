@@ -1,5 +1,47 @@
 # Changelog
 
+## [6.35.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.34.0...zkool-v6.35.0-rc) (2026-10-19)
+
+
+### Features
+
+* **account:** import an incoming viewing key as an incoming-only account ([fe31c4c](https://github.com/hhanh00/zkool2/commit/fe31c4ce5bd1d94e36f770ff01aa6af1ee7a26a8))
+* **account:** incoming-only accounts show what they received and cannot spend ([fe71291](https://github.com/hhanh00/zkool2/commit/fe7129146d4e85b348c71bbe7513a4306edc16df))
+* **account:** memos, mempool and addresses from incoming keys ([3467ea3](https://github.com/hhanh00/zkool2/commit/3467ea348303ae85d72f7c949d1432c03b2c4850))
+* **db:** incoming-key columns; full viewing key may be NULL ([4926a1e](https://github.com/hhanh00/zkool2/commit/4926a1ef73e49f7a4a7c2dbded29bbc8d40bc8dd))
+* **frost:** account export carries dkg_version and sk ([7d241e0](https://github.com/hhanh00/zkool2/commit/7d241e0a44abbe5322b446a854153fdc3d37099f))
+* **frost:** coordinator announces its mailbox at session start; restore regtest test ([b1e6f7f](https://github.com/hhanh00/zkool2/commit/b1e6f7f20d5de009ac36d45ce244dd0e390b9437))
+* **frost:** dkg_version and sk columns; frost account built by the versioned FVK builder ([5b3a5c5](https://github.com/hhanh00/zkool2/commit/5b3a5c5e1e4ae928213eba4fadcfa96d712a1db0))
+* **frost:** legacy upgrade to ZIP 2005, sweep into the sibling, recoverability flag ([6dc7098](https://github.com/hhanh00/zkool2/commit/6dc70981c8575b95ea06b1f47057c27531e2c02f))
+* **frost:** one broadcast account per signing session, keyed by the transaction ([60eb032](https://github.com/hhanh00/zkool2/commit/60eb0324462174eec480ba843caa9278b072e0f8))
+* **frost:** pages for the flag, upgrade, backup string and restore; restore both generations ([e5957ca](https://github.com/hhanh00/zkool2/commit/e5957caee52f4611fad89eaf261c9a819eeae508))
+* **frost:** round-0 package carries the DKG version; mismatch ends the DKG ([ae0e8ed](https://github.com/hhanh00/zkool2/commit/ae0e8ed473a2f9cbd59336fee5105f27bf49cad8))
+* **frost:** signing transport that needs no peer addresses after the DKG ([55db12f](https://github.com/hhanh00/zkool2/commit/55db12fdf5287146282e3cc36d86e67de64428b7))
+* **frost:** ZIP 2005 use_qsk key derivation and versioned group FVK builder ([472991d](https://github.com/hhanh00/zkool2/commit/472991d39ffc96bf702359e3cc325b3382dcd4dc))
+* **frost:** zkfrost member backup string, export and restore ([c0e8451](https://github.com/hhanh00/zkool2/commit/c0e845157e9bef625af227d1f7730dbbf199618c))
+* **key:** export an account's incoming viewing key (UIVK) ([c8b08df](https://github.com/hhanh00/zkool2/commit/c8b08dfd631447e7e8149893a761483431d4d046))
+* **price:** read the CoinGecko API base from the coingecko_url prop ([2ba6af3](https://github.com/hhanh00/zkool2/commit/2ba6af39b0a616e0a200a0749c70a0cb179add2d)), closes [#1350](https://github.com/hhanh00/zkool2/issues/1350)
+* **sync:** scan incoming-only accounts with their incoming keys ([c1ef8e3](https://github.com/hhanh00/zkool2/commit/c1ef8e3fe88831994d94f6cd9e50e912989f894e))
+
+
+### Bug Fixes
+
+* **api:** gate two flutter-only imports on the feature ([8db2b04](https://github.com/hhanh00/zkool2/commit/8db2b04d60560609fcc69b7547503c27fc4a6a66))
+* **contacts:** vCard import and export in the contact editor ([6934a4d](https://github.com/hhanh00/zkool2/commit/6934a4dcd1280e15bf78d54b8d334907cedab456)), closes [#1362](https://github.com/hhanh00/zkool2/issues/1362) [#1363](https://github.com/hhanh00/zkool2/issues/1363) [#1364](https://github.com/hhanh00/zkool2/issues/1364) [#1365](https://github.com/hhanh00/zkool2/issues/1365) [#1366](https://github.com/hhanh00/zkool2/issues/1366)
+* **db:** change the database password through a copy beside the database ([#1374](https://github.com/hhanh00/zkool2/issues/1374)) ([5b9c6c6](https://github.com/hhanh00/zkool2/commit/5b9c6c6fcb35fbd4cf97c8182f0958c9a38a311b)), closes [#1370](https://github.com/hhanh00/zkool2/issues/1370)
+* **frost:** export and import the V9 DKG tables ([#1335](https://github.com/hhanh00/zkool2/issues/1335)) ([8822d2c](https://github.com/hhanh00/zkool2/commit/8822d2c09e1af74b15d0910d5513a32afd6ad69c)), closes [#1333](https://github.com/hhanh00/zkool2/issues/1333)
+* **frost:** report signing progress and recover from aborts and lost accounts ([f8472ae](https://github.com/hhanh00/zkool2/commit/f8472ae398e0ef13cb99cc27b8fffb8bcf7bfa39))
+* **frost:** signing package in per-signer memos; DKG refuses a threshold the memos cannot carry ([fdc267e](https://github.com/hhanh00/zkool2/commit/fdc267e9c98b59db809e57425831a6a644c6a5ec))
+* **graphql:** rebuild note addresses from the stored keys ([2adf383](https://github.com/hhanh00/zkool2/commit/2adf3834ab4ae06a13fea4c5f2343877a62a35bf))
+* **key:** selecting Ironwood exports the Orchard viewing key item ([708c9bc](https://github.com/hhanh00/zkool2/commit/708c9bcf584f62f68d447d85896363bbdecf8318))
+* **pay:** refuse to sign for a viewing-key account instead of panicking ([2758af6](https://github.com/hhanh00/zkool2/commit/2758af6d27122e3a50234371e0174b1154b75935))
+* **send:** a recipient no longer inherits the previous memo or address ([8b31a22](https://github.com/hhanh00/zkool2/commit/8b31a2212bec594b5cac452b0d4b3fd01796d67f))
+* **sync:** queue a sync requested while one is running ([a5ea677](https://github.com/hhanh00/zkool2/commit/a5ea677c100c7f659c07c15feb335868a13a4250))
+* **ui:** error dialog shows the anyhow context chain, backtrace in details ([#1372](https://github.com/hhanh00/zkool2/issues/1372)) ([3728a1c](https://github.com/hhanh00/zkool2/commit/3728a1ccd9f898feed303153675afbf4be7f5794)), closes [#1368](https://github.com/hhanh00/zkool2/issues/1368)
+* **ui:** format amounts in en_US when intl does not know the platform locale ([9ffd460](https://github.com/hhanh00/zkool2/commit/9ffd460129d61818620e39d564f920c743038d36))
+* **ui:** shorter signing step title so it fits on one line ([dffbf98](https://github.com/hhanh00/zkool2/commit/dffbf9807ae3d7b3bf170338b994c8e3f9ecbb42))
+* **ui:** stable keys on list rows, UI tests find rows by key ([#1373](https://github.com/hhanh00/zkool2/issues/1373)) ([aefa9a7](https://github.com/hhanh00/zkool2/commit/aefa9a7fcb78f43751308fa0b82330e1d7a38df1)), closes [#1367](https://github.com/hhanh00/zkool2/issues/1367)
+
 ## [6.34.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.33.0...zkool-v6.34.0) (2026-10-11)
 
 
