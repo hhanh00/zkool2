@@ -30,6 +30,7 @@ import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/contacts.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -52,6 +53,10 @@ const _transportLabels = {0: "Direct", 1: "Tor", 2: "Nym", 3: "Proxy"};
 
 const _userMemo = "edited by the wallet-ext test";
 const _exportPassword = "wallet-ext";
+const _contactNotes = "wallet-ext contact";
+const _contactImported = "Carol";
+const _contactImportedCopy = "Carol-copy";
+const _contactListImported = "Dave";
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -421,6 +426,143 @@ void main() {
       expect(await tester.runAsync(() => totalBalance(a)), zecToZat(fundTaddr) + zecToZat(fundSaddr) + zecToZat(fundOaddr) + zecToZat(fundDust),
           reason: "the balance is back after the resync",);
 
+      // ── Contacts ─────────────────────────────────────────────────────────
+      // B is the contact: created and edited on the editor page, exported
+      // and imported as vCards through the fake picker, picked on A's send
+      // page by name, and deleted.
+      phase("contacts");
+      final bAddresses = (await tester.runAsync(
+        () => getAddresses(uaPools: 7, account: b, c: coinContext.coin),
+      ))!;
+      step("new contact");
+      await openMenuItem(tester, "Account Manager");
+      await waitForAccountList(tester);
+      await openMenuItem(tester, "Contacts");
+      await _waitForContacts(tester);
+      await tapTooltip(tester, "New contact");
+      await pumpUntil(tester, () => find.text("New Contact").evaluate().isNotEmpty && fieldNamed("address_0").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the new contact page",);
+      await _enterField(tester, "name", _accountB);
+      await _enterField(tester, "address_0", bAddresses.ua!);
+      await _enterField(tester, "notes", _contactNotes);
+      await _back(tester); // saves on the way out
+      await _waitForContacts(tester);
+      var contacts = await _contacts(tester);
+      expect(contacts.single.name, _accountB);
+      expect(contacts.single.addresses, [bAddresses.ua!]);
+      expect(contacts.single.notes, _contactNotes);
+      expect(find.widgetWithText(ListTile, _accountB), findsOneWidget, reason: "the contact is listed");
+
+      step("edit contact: add and remove an address");
+      await tester.tap(find.widgetWithText(ListTile, _accountB));
+      await pumpUntil(tester, () => find.text("Edit Contact").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the contact editor",);
+      await tester.tap(find.text("Add Address"));
+      await pumpFor(tester, const Duration(seconds: 1));
+      await _enterField(tester, "address_1", bAddresses.taddr!);
+      await _back(tester);
+      await _waitForContacts(tester);
+      contacts = await _contacts(tester);
+      expect(contacts.single.addresses, [bAddresses.ua!, bAddresses.taddr!], reason: "the second address is saved");
+      await tester.tap(find.widgetWithText(ListTile, _accountB));
+      await pumpUntil(tester, () => fieldNamed("address_1").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the contact editor with two addresses",);
+      await tapTooltip(tester, "Remove address");
+      expect(fieldNamed("address_1"), findsNothing);
+      // The removed address is still saved and exported (#1362): the checks
+      // below expect both addresses until that is fixed.
+      await _enterField(tester, "notes", "$_contactNotes edited");
+      step("export the contact as a vCard");
+      await tapTooltip(tester, "Export as vCard");
+      await _savedFile(tester, picker, "$_accountB.vcf");
+      final vcard = File(picker.saved.last).readAsStringSync();
+      expect(vcard, contains("FN:$_accountB"));
+      expect(vcard, contains("zcash:${bAddresses.ua!}"));
+      await _back(tester);
+      await _waitForContacts(tester);
+      contacts = await _contacts(tester);
+      expect(contacts.single.addresses, [bAddresses.ua!, bAddresses.taddr!], reason: "both addresses kept (#1362)");
+      expect(contacts.single.notes, "$_contactNotes edited");
+
+      step("import a vCard into a new contact, and into the list");
+      // The editor's export is not importable (#1363); the list's export
+      // is, and it has only B so far.
+      await tapTooltip(tester, "Export as vCard");
+      await _savedFile(tester, picker, "contacts.vcf");
+      final exported = File(picker.saved.last).readAsStringSync();
+      expect(exported, contains("FN:$_accountB"));
+      // vCard folds long lines at 75 characters.
+      expect(exported.replaceAll("\r\n ", ""), contains("zcash:${bAddresses.ua!}"));
+      final carolVcard = File("${picker.dir.path}/$_contactImported.vcf")
+        ..writeAsStringSync(exported.replaceAll("FN:$_accountB", "FN:$_contactImported"));
+      picker.picks.add(carolVcard.path);
+      await tapTooltip(tester, "New contact");
+      await pumpUntil(tester, () => find.text("New Contact").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the new contact page for the import",);
+      await tapTooltip(tester, "Import from vCard");
+      await pumpUntil(tester, () => fieldValue(tester, "name") == _contactImported,
+          timeout: shortTimeout, what: "the imported name in the editor",);
+      // The export's "Zcash addresses:" label comes back as a note line (#1365).
+      expect(fieldValue(tester, "notes"), startsWith("$_contactNotes edited"), reason: "the imported notes");
+      // The import has already stored the contact (#1366) and left the first
+      // address field empty (#1364): fill it and save under another name.
+      await _enterField(tester, "address_0", bAddresses.ua!);
+      await _enterField(tester, "name", _contactImportedCopy);
+      await _back(tester);
+      await _waitForContacts(tester);
+      await pumpUntil(tester, () => find.widgetWithText(ListTile, _contactImportedCopy).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the saved copy in the list",);
+      await pumpUntil(tester, () => find.widgetWithText(ListTile, _contactImported).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the imported contact in the list",);
+      final daveVcard = File("${picker.dir.path}/$_contactListImported.vcf")
+        ..writeAsStringSync(exported.replaceAll("FN:$_accountB", "FN:$_contactListImported"));
+      picker.picks.add(daveVcard.path);
+      await tapTooltip(tester, "Import from vCard");
+      await pumpUntil(tester, () => find.widgetWithText(ListTile, _contactListImported).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the contact imported into the list",);
+      contacts = await _contacts(tester);
+      expect(contacts.map((x) => x.name).toSet(), {_accountB, _contactImported, _contactImportedCopy, _contactListImported});
+
+      step("export every contact as a vCard");
+      await tapTooltip(tester, "Export as vCard");
+      await _savedFile(tester, picker, "contacts.vcf");
+      final all = File(picker.saved.last).readAsStringSync();
+      for (final name in [_accountB, _contactImported, _contactImportedCopy, _contactListImported]) {
+        expect(all, contains("FN:$name"));
+      }
+
+      step("delete the imported contacts");
+      for (final name in [_contactImported, _contactImportedCopy, _contactListImported]) {
+        await tester.tap(find.widgetWithText(ListTile, name));
+        await pumpUntil(tester, () => find.text("Edit Contact").evaluate().isNotEmpty,
+            timeout: shortTimeout, what: "the editor of $name",);
+        await tapTooltip(tester, "Delete contact");
+        await answerDialog(tester, "'$name' will be permanently deleted.", "Ok");
+        await _waitForContacts(tester);
+        await pumpUntil(tester, () => find.widgetWithText(ListTile, name).evaluate().isEmpty,
+            timeout: shortTimeout, what: "$name to leave the list",);
+      }
+      contacts = await _contacts(tester);
+      expect(contacts.map((x) => x.name), [_accountB]);
+
+      step("pick the contact as a send recipient");
+      await _back(tester);
+      await waitForAccountList(tester);
+      appRouter.go(accountRoute("/", a));
+      await waitForAccountView(tester, _accountA);
+      await pumpFor(tester, const Duration(seconds: 1)); // the route transition
+      await tapTooltip(tester, "Send funds to one or many addresses");
+      await pumpUntil(tester, () => fieldNamed("address").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the send page",);
+      await tester.enterText(fieldNamed("address"), "@${_accountB.substring(0, 2)}");
+      await pumpUntil(tester, () => find.widgetWithText(ListTile, _accountB).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the contact suggestion",);
+      await tester.tap(find.widgetWithText(ListTile, _accountB));
+      await pumpUntil(tester, () => fieldValue(tester, "address") == bAddresses.ua!,
+          timeout: shortTimeout, what: "the contact's address in the recipient field",);
+      await _back(tester);
+      await waitForAccountView(tester, _accountA);
+
       phase("done");
       rendezvous.publish("done", "true");
       await pumpFor(tester, const Duration(seconds: 3));
@@ -452,6 +594,16 @@ Future<void> _savedFile(WidgetTester tester, FakeFilePicker picker, String fileN
       timeout: shortTimeout, what: "$fileName to be saved",);
   expect(File(picker.saved.lastWhere((p) => p.endsWith("/$fileName"))).lengthSync(), greaterThan(0));
 }
+
+Future<void> _waitForContacts(WidgetTester tester) => pumpUntil(
+      tester,
+      () => find.text("Contacts").evaluate().isNotEmpty && find.byTooltip("New contact").evaluate().isNotEmpty,
+      timeout: shortTimeout,
+      what: "the contacts page",
+    );
+
+Future<List<Contact>> _contacts(WidgetTester tester) async =>
+    (await tester.runAsync(() => listContacts(c: coinContext.coin)))!;
 
 Future<Set<int>> _lockedNotes(WidgetTester tester, int account) async {
   final notes = (await tester.runAsync(() => listNotes(account: account, c: coinContext.coin)))!;
