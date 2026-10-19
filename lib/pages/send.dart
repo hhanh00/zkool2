@@ -106,6 +106,7 @@ class SendPageState extends ConsumerState<SendPage> {
     final recipientTiles = recipients
         .mapIndexed(
           (i, r) => ListTile(
+            key: ValueKey(i),
             title: Text(r.address),
             subtitle: r.assetBase.every((b) => b == 0) ? zatToText(r.amount, selectable: false) : Text("${r.amount} ${r.assetName!}"),
             trailing: IconButton(
@@ -196,6 +197,7 @@ class SendPageState extends ConsumerState<SendPage> {
                     cs,
                     children: _accountSuggestions
                         .map((a) => ListTile(
+                              key: ValueKey(a.id),
                               dense: true,
                               leading: a.avatar(),
                               title: Text(a.name),
@@ -209,6 +211,7 @@ class SendPageState extends ConsumerState<SendPage> {
                     cs,
                     children: _contactSuggestions
                         .map((c) => ListTile(
+                              key: ValueKey(c.id),
                               dense: true,
                               leading: Icon(Icons.person),
                               title: Text(c.name),

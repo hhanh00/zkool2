@@ -1184,7 +1184,7 @@ Widget showMemos(BuildContext context, List<Memo> memos, int account, VoidCallba
   return SearchableList(
     key: ValueKey(memoKey),
     initialList: memos,
-    itemBuilder: (memo) => MemoWidget(memo, account: account, onMemoChanged: onMemoChanged),
+    itemBuilder: (memo) => MemoWidget(memo, key: ValueKey(memo.id), account: account, onMemoChanged: onMemoChanged),
     filter: (query) => memos.where((m) => query.isEmpty || (m.memo?.contains(query) == true)).toList(),
     inputDecoration: InputDecoration(
       labelText: "Search Memos",

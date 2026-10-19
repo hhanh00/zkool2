@@ -100,7 +100,7 @@ void main() {
       await tester.enterText(find.byType(TextField).last, _scratchDbRenamed);
       await tester.pump();
       await tester.tap(find.text("Ok").last);
-      await pumpUntil(tester, () => find.widgetWithText(ListTile, _scratchDbRenamed).evaluate().isNotEmpty && find.widgetWithText(ListTile, _scratchDb).evaluate().isEmpty,
+      await pumpUntil(tester, () => find.byKey(ValueKey(_scratchDbRenamed)).evaluate().isNotEmpty && find.byKey(ValueKey(_scratchDb)).evaluate().isEmpty,
           timeout: shortTimeout, what: "the renamed database in the list",);
       expect(File("${docsDir.path}/$_scratchDbRenamed.db").existsSync(), isTrue);
 
@@ -134,7 +134,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.delete));
       await answerDialog(tester, "Do you really want to delete the selected databases? This will remove all your data and cannot be undone!", "Ok");
       await answerDialog(tester, "Databases deleted", "Ok");
-      await pumpUntil(tester, () => find.widgetWithText(ListTile, _scratchDbRenamed).evaluate().isEmpty,
+      await pumpUntil(tester, () => find.byKey(ValueKey(_scratchDbRenamed)).evaluate().isEmpty,
           timeout: shortTimeout, what: "the scratch database to leave the list",);
       expect(File("${docsDir.path}/$_scratchDbRenamed.db").existsSync(), isFalse);
 
@@ -165,14 +165,14 @@ void main() {
 
 Future<void> _waitForDbManager(WidgetTester tester, String row) => pumpUntil(
       tester,
-      () => find.text("Database Manager").evaluate().isNotEmpty && find.widgetWithText(ListTile, row).evaluate().isNotEmpty,
+      () => find.text("Database Manager").evaluate().isNotEmpty && find.byKey(ValueKey(row)).evaluate().isNotEmpty,
       timeout: shortTimeout,
       what: "the database manager listing $row",
     );
 
 /// Ticks the checkbox of the database [name], which reveals the actions.
 Future<void> _checkDb(WidgetTester tester, String name) async {
-  await tester.tap(find.descendant(of: find.widgetWithText(ListTile, name), matching: find.byType(Checkbox)));
+  await tester.tap(find.descendant(of: find.byKey(ValueKey(name)), matching: find.byType(Checkbox)));
   await pumpFor(tester, const Duration(seconds: 1));
   expect(find.byIcon(Icons.delete), findsOneWidget, reason: "$name selected");
 }
