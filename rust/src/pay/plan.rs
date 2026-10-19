@@ -542,6 +542,7 @@ pub(crate) fn plan_outputs(inp: PlanInputs) -> Result<PlanOutputs> {
                     pool: pool as u8,
                     amount: n.amount,
                     pool_index: idx,
+                    uncompressed: n.uncompressed,
                     asset_index,
                 })
             })
@@ -1329,10 +1330,12 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
 ) -> Result<Vec<InputNote>> {
     let unspent_notes = sqlx::query(
         "SELECT a.id_note, a.height, a.pool, a.value, a.id_asset, a.taddress,
-                COALESCE(ast.asset_base, X'0000000000000000000000000000000000000000000000000000000000000000') as asset_base
+                COALESCE(ast.asset_base, X'0000000000000000000000000000000000000000000000000000000000000000') as asset_base,
+                COALESCE(t.uncompressed, FALSE) as uncompressed
         FROM notes a
         LEFT JOIN spends b ON a.id_note = b.id_note
         LEFT JOIN assets ast ON a.id_asset = ast.id_asset
+        LEFT JOIN transparent_address_accounts t ON a.taddress = t.id_taddress
         WHERE b.id_note IS NULL AND a.account = ?
         AND locked = 0
         ORDER BY a.pool",
@@ -1346,6 +1349,7 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
         let id_asset: Option<i64> = row.get(4);
         let taddress: Option<i64> = row.get(5);
         let asset_base: Vec<u8> = row.get(6);
+        let uncompressed: bool = row.get(7);
         InputNote {
             id: id_note,
             height,
@@ -1355,6 +1359,7 @@ pub async fn fetch_unspent_notes_grouped_by_pool(
             id_asset: id_asset.map(|v| v as u32),
             asset_base,
             taddress: taddress.map(|v| v as u32),
+            uncompressed,
         }
     })
     .fetch_all(connection)
@@ -1369,10 +1374,12 @@ pub async fn fetch_unspent_notes_by_pool(
 ) -> Result<Vec<Vec<InputNote>>> {
     let unspent_notes = sqlx::query(
         "SELECT a.id_note, a.height, a.pool, a.value, a.id_asset, a.taddress,
-                COALESCE(ast.asset_base, X'0000000000000000000000000000000000000000000000000000000000000000') as asset_base
+                COALESCE(ast.asset_base, X'0000000000000000000000000000000000000000000000000000000000000000') as asset_base,
+                COALESCE(t.uncompressed, FALSE) as uncompressed
         FROM notes a
         LEFT JOIN spends b ON a.id_note = b.id_note
         LEFT JOIN assets ast ON a.id_asset = ast.id_asset
+        LEFT JOIN transparent_address_accounts t ON a.taddress = t.id_taddress
         WHERE b.id_note IS NULL AND a.account = ?
         AND locked = 0",
     )
@@ -1385,6 +1392,7 @@ pub async fn fetch_unspent_notes_by_pool(
         let id_asset: Option<i64> = row.get(4);
         let taddress: Option<i64> = row.get(5);
         let asset_base: Vec<u8> = row.get(6);
+        let uncompressed: bool = row.get(7);
         InputNote {
             id: id_note,
             height,
@@ -1394,6 +1402,7 @@ pub async fn fetch_unspent_notes_by_pool(
             id_asset: id_asset.map(|v| v as u32),
             asset_base,
             taddress: taddress.map(|v| v as u32),
+            uncompressed,
         }
     })
     .fetch_all(connection)
@@ -1593,6 +1602,7 @@ mod tests {
                 id_asset: None,
                 asset_base: vec![],
                 taddress: Some(1),
+                uncompressed: false,
             });
             let plan = plan_outputs(PlanInputs {
                 network,
@@ -1770,6 +1780,7 @@ mod tests {
                 id_asset: None,
                 asset_base: vec![],
                 taddress: (pool == 0).then_some(0),
+                uncompressed: false,
             }
         }
 

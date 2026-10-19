@@ -17,7 +17,7 @@ use zcash_protocol::memo::Memo;
 use crate::{
     api::coin::Network,
     db::{orchard_viewing_keys, sapling_viewing_keys},
-    pay::fee::FeeManager,
+    pay::fee::{script_sig_pushes_uncompressed_key, FeeManager},
     Client,
 };
 
@@ -232,8 +232,8 @@ pub async fn decrypt_memo(
     let domain = SaplingDomain::new(zip212_enforcement);
 
     if let Some(bundle) = tx_data.transparent_bundle() {
-        for _vin in bundle.vin.iter() {
-            fee_manager.add_input(0);
+        for vin in bundle.vin.iter() {
+            fee_manager.add_transparent_input(script_sig_pushes_uncompressed_key(vin.script_sig()));
         }
         for (vout, output) in bundle.vout.iter().enumerate() {
             fee_manager.add_output(0);

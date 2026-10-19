@@ -91,6 +91,9 @@ pub struct InputNote {
     pub id_asset: Option<u32>,
     pub asset_base: Vec<u8>,
     pub taddress: Option<u32>,
+    /// Transparent only: the coin is held by an uncompressed key, whose
+    /// spend pushes a 65-byte pubkey and so costs more under ZIP 317.
+    pub uncompressed: bool,
 }
 
 impl InputNote {

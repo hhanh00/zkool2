@@ -31,6 +31,9 @@ pub(super) struct Note {
     /// Index within the original per-pool `input_pools[pool]` array so the
     /// caller can map results back after sorting/reordering.
     pub pool_index: usize,
+    /// Transparent only: the coin is held by an uncompressed key. Its spend
+    /// is bigger, and ZIP 317 prices transparent inputs by size.
+    pub uncompressed: bool,
     /// Asset index: 0 = ZEC, 1+ = ZSA asset. Determines which output
     /// asset this note can satisfy. ZEC notes only cover ZEC outputs;
     /// ZSA notes only cover outputs of the same asset.
@@ -73,6 +76,10 @@ struct State {
     balance: [i64; N_POOLS],
     /// Number of inputs selected per pool.  Drives the fee computation.
     n_inputs: [u32; N_POOLS],
+    /// Total ZIP 317 size of the transparent inputs selected, in bytes. The
+    /// transparent fee term is `ceil(t_in_size / 150)`, not the input count:
+    /// an uncompressed-key coin's spend is bigger than a compressed one's.
+    t_in_size: u64,
     /// Number of Orchard inputs selected per asset. ZSA Orchard actions must
     /// pair spends and outputs within the same asset.
     orchard_asset_inputs: Vec<u32>,
@@ -149,6 +156,7 @@ impl BudgetTracker {
 /// `orchard_actions` overrides the ordinary global input/output maximum for
 /// ZSA bundles, whose spends and outputs must instead be paired per asset.
 fn compute_fee(
+    t_in_size: u64,
     n_inputs: &[u32; N_POOLS],
     n_outputs: &[u32; N_POOLS],
     change_pool: u8,
@@ -160,8 +168,10 @@ fn compute_fee(
     let mut n_outs = *n_outputs;
     n_outs[cp] = n_outs[cp].saturating_add(1); // ZEC change output
 
-    // Transparent: max(inputs, outputs), no padding
-    let t = n_inputs[0].max(n_outs[0]) as u64;
+    // Transparent: max(ceil(input bytes / 150), outputs), no padding
+    let t = t_in_size
+        .div_ceil(super::fee::P2PKH_INPUT_SIZE)
+        .max(n_outs[0] as u64);
 
     // Sapling: if any activity, max(inputs, outputs, 2)
     let s: u64 = if n_inputs[1] > 0 || n_outs[1] > 0 {
@@ -265,6 +275,7 @@ fn is_feasible(state: &State, ctx: &Context, fee: u64) -> bool {
 
 fn fee_for_change_pool(state: &State, ctx: &Context, change_pool: u8) -> u64 {
     compute_fee(
+        state.t_in_size,
         &state.n_inputs,
         &ctx.n_outputs,
         change_pool,
@@ -382,6 +393,7 @@ fn initial_state(ctx: &Context) -> State {
         n_inputs: [0; N_POOLS],
         orchard_asset_inputs: vec![0; ctx.n_assets as usize],
         tin: 0,
+        t_in_size: 0,
         tout: ctx.output_amounts[0],
         selected: Vec::new(),
     }
@@ -393,6 +405,13 @@ fn apply(state: &State, note_idx: usize, note: &Note) -> State {
     child.selected.push(note_idx);
     child.asset_sums[note.asset_index as usize] += note.amount;
     child.n_inputs[note.pool as usize] = child.n_inputs[note.pool as usize].saturating_add(1);
+    if note.pool == 0 {
+        child.t_in_size += if note.uncompressed {
+            super::fee::P2PKH_UNCOMPRESSED_INPUT_SIZE
+        } else {
+            super::fee::P2PKH_INPUT_SIZE
+        };
+    }
     if note.pool == 2 {
         child.orchard_asset_inputs[note.asset_index as usize] =
             child.orchard_asset_inputs[note.asset_index as usize].saturating_add(1);
@@ -798,42 +817,49 @@ mod tests {
                 pool: 1,
                 amount: 120_000,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 0,
             },
             Note {
                 pool: 1,
                 amount: 80_000,
                 pool_index: 1,
+                uncompressed: false,
                 asset_index: 0,
             },
             Note {
                 pool: 1,
                 amount: 30_000,
                 pool_index: 2,
+                uncompressed: false,
                 asset_index: 0,
             },
             Note {
                 pool: 2,
                 amount: 200_000,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 0,
             },
             Note {
                 pool: 2,
                 amount: 15_000,
                 pool_index: 1,
+                uncompressed: false,
                 asset_index: 0,
             },
             Note {
                 pool: 3,
                 amount: 60_000,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 0,
             },
             Note {
                 pool: 0,
                 amount: 500_000,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 0,
             },
         ];
@@ -882,18 +908,21 @@ mod tests {
                 pool: 1,
                 amount: 120,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 0,
             }, // dust
             Note {
                 pool: 1,
                 amount: 4_000,
                 pool_index: 1,
+                uncompressed: false,
                 asset_index: 0,
             }, // dust
             Note {
                 pool: 2,
                 amount: 1_000_000,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 0,
             }, // only usable note
         ];
@@ -919,12 +948,14 @@ mod tests {
                 pool: 2,
                 amount: 1,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 1,
             },
             Note {
                 pool: 2,
                 amount: 100_000,
                 pool_index: 1,
+                uncompressed: false,
                 asset_index: 0,
             },
         ];
@@ -950,18 +981,21 @@ mod tests {
                 pool: 2,
                 amount: 200_000,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 0,
             },
             Note {
                 pool: 2,
                 amount: 100_000,
                 pool_index: 1,
+                uncompressed: false,
                 asset_index: 0,
             },
             Note {
                 pool: 2,
                 amount: 50_000,
                 pool_index: 2,
+                uncompressed: false,
                 asset_index: 0,
             },
         ];
@@ -993,24 +1027,28 @@ mod tests {
                 pool: 2,
                 amount: 200_000,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 0,
             },
             Note {
                 pool: 2,
                 amount: 100_000,
                 pool_index: 1,
+                uncompressed: false,
                 asset_index: 0,
             },
             Note {
                 pool: 1,
                 amount: 300_000,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 0,
             },
             Note {
                 pool: 0,
                 amount: 500_000,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 0,
             },
         ];
@@ -1041,6 +1079,7 @@ mod tests {
             pool: 2,
             amount: 10_000,
             pool_index: 0,
+            uncompressed: false,
             asset_index: 0,
         }];
         let outputs = vec![Output {
@@ -1057,6 +1096,42 @@ mod tests {
         );
     }
 
+    /// Two uncompressed-key coins spent together cost three transparent
+    /// actions (ZIP 317 sums their 181-byte inputs), where two compressed
+    /// ones cost two.
+    #[test]
+    fn uncompressed_inputs_raise_the_transparent_fee() {
+        let fee_with = |uncompressed: bool| {
+            let notes = vec![
+                Note {
+                    pool: 0,
+                    amount: 100_000,
+                    pool_index: 0,
+                    uncompressed,
+                    asset_index: 0,
+                },
+                Note {
+                    pool: 0,
+                    amount: 100_000,
+                    pool_index: 1,
+                    uncompressed,
+                    asset_index: 0,
+                },
+            ];
+            // Needs both coins; with transparent change there are two outputs.
+            let outputs = vec![Output {
+                pool: 0,
+                amount: 150_000,
+                asset_index: 0,
+            }];
+            select_notes(&notes, &outputs, 5_000, false, false, 0)
+                .expect("feasible")
+                .fee
+        };
+        assert_eq!(fee_with(false), 10_000);
+        assert_eq!(fee_with(true), 15_000);
+    }
+
     #[test]
     fn test_compute_fee_matches_feemanager() {
         // Compare compute_fee against FeeManager for a representative case.
@@ -1067,7 +1142,7 @@ mod tests {
         // Total logical = max(2+3,2) = 5, fee = 25000
         let n_inputs: [u32; 4] = [0, 2, 1, 0];
         let n_outputs: [u32; 4] = [0, 1, 2, 0];
-        let fee = compute_fee(&n_inputs, &n_outputs, 2, 5_000, false, None);
+        let fee = compute_fee(0, &n_inputs, &n_outputs, 2, 5_000, false, None);
         // With change in pool 2: n_outputs[2] becomes 3
         // Sapling: max(2,1,2) = 2
         // Orchard: max(1,3,2) = 3
@@ -1098,6 +1173,7 @@ mod tests {
             n_inputs: [0, 0, 3, 0],
             orchard_asset_inputs: vec![2, 1],
             tin: 0,
+            t_in_size: 0,
             tout: 0,
             selected: vec![],
         };
@@ -1113,18 +1189,21 @@ mod tests {
                 pool: 2,
                 amount: 20_082_510_000,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 0,
             },
             Note {
                 pool: 2,
                 amount: 200_000_000,
                 pool_index: 1,
+                uncompressed: false,
                 asset_index: 0,
             },
             Note {
                 pool: 2,
                 amount: 499_500,
                 pool_index: 2,
+                uncompressed: false,
                 asset_index: 1,
             },
         ];
@@ -1162,6 +1241,7 @@ mod tests {
             asset_sums: vec![100_000],
             balance: [-40_000, 20_000, 0, 0],
             n_inputs: [2, 1, 0, 0],
+            t_in_size: 2 * super::super::fee::P2PKH_INPUT_SIZE,
             orchard_asset_inputs: vec![0],
             tin: 80_000,
             tout: 40_000,
@@ -1192,12 +1272,14 @@ mod tests {
                 pool: 2,
                 amount: 400_000,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 0,
             },
             Note {
                 pool: 2,
                 amount: 300_000,
                 pool_index: 1,
+                uncompressed: false,
                 asset_index: 0,
             },
         ];
@@ -1227,12 +1309,14 @@ mod tests {
                 pool: 2,
                 amount: 5_000_000,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 0,
             },
             Note {
                 pool: 1,
                 amount: 50_000,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 0,
             },
         ];
@@ -1266,12 +1350,14 @@ mod tests {
                 pool: 2,
                 amount: 100_000,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 0,
             },
             Note {
                 pool: 1,
                 amount: 100_000,
                 pool_index: 0,
+                uncompressed: false,
                 asset_index: 0,
             },
         ];

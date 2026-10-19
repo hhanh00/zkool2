@@ -546,6 +546,7 @@ mod tests {
             id_asset: None,
             asset_base: vec![],
             taddress: None,
+            uncompressed: false,
         };
         let mut input_pools = vec![vec![]; NUM_POOLS];
         input_pools[2].push(note(5, 2, 0));
