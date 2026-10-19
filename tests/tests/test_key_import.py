@@ -106,6 +106,9 @@ FUND_T0_EACH = "0.1"  # three coins, so three transparent signers can each spend
 FUND_T0_UNCOMPRESSED = "0.1"
 FUND_ZONDAX = "0.05"
 SPEND = "0.05"
+# What the uncompressed WIF account moves to itself in Step 7: by then it holds
+# FUND_T0_UNCOMPRESSED less the Step 6 payment and its fee, under SPEND.
+SELF_SPEND = "0.02"
 
 CREATE_ACCOUNT = gql(
     """
@@ -141,6 +144,19 @@ def pools_of(addrs: dict) -> set[str]:
 
 def dec(value: str | None) -> Decimal:
     return Decimal(value or "0")
+
+
+TRANSACTIONS = gql(
+    """
+    query ($account: Int!) {
+        transactionsByAccount(idAccount: $account) { height value fee }
+    }
+    """
+)
+
+
+def request_transactions(account: int) -> GraphQLRequest:
+    return GraphQLRequest(TRANSACTIONS, variable_values={"account": account})
 
 
 @pytest.mark.asyncio
@@ -263,10 +279,7 @@ async def test_import_every_key_type(rpc_url, seed, zkool_binary):
         print("\n=== Step 6: Every spending key spends; the watchers cannot ===")
         receiver = await create(wallet, "Receiver", "")
         receiver_address = await address(wallet, receiver)
-        # The uncompressed WIF holds a spending key too, but the ZSA line of
-        # librustzcash only knows compressed keys in a PCZT (hhanh00/librustzcash
-        # 75e7e3dc was never ported, #1353), so its spend is refused at plan time.
-        spenders = ["xprv", "wif", "sapling-sk"]
+        spenders = ["xprv", "wif", "wif-uncompressed", "sapling-sk"]
         before = {kind: dec((await balance(wallet, imports[kind]))["total"]) for kind in spenders}
         before["full"] = dec(full_balance["total"])
         for kind in spenders:
@@ -303,8 +316,19 @@ async def test_import_every_key_type(rpc_url, seed, zkool_binary):
             await wallet.execute(request(PREPARE, kind))
             with pytest.raises(TransportQueryError):
                 await wallet.execute(request(PAY, kind))
-        with pytest.raises(TransportQueryError, match="Invalid address"):
-            await wallet.execute(request(PREPARE, "wif-uncompressed"))
+
+        print("\n=== Step 7: A self-transfer from the uncompressed key reads as one ===")
+        # An uncompressed-key coin's spend is bigger, so ZIP 317 charges more
+        # for it. The fee the wallet records for the transaction must be the
+        # fee it paid, or a self-transfer shows up as a payment to someone.
+        legacy = imports["wif-uncompressed"]
+        own_address = (await addresses(wallet, legacy))["transparent"]
+        await pay(wallet, rpc_url, legacy, own_address, SELF_SPEND)
+        await sync_until_done(wallet, legacy)
+        txs = (await wallet.execute(request_transactions(legacy)))["transactionsByAccount"]
+        latest = max(txs, key=lambda tx: tx["height"])
+        assert Decimal(latest["value"]) == -Decimal(latest["fee"]), latest
+        print(f"self-transfer: value {latest['value']}, fee {latest['fee']}")
         print("\n=== ✅ Key import test passed ===")
         print(f"Receiver got {received} from {len(spenders) + 1} signers")
     except Exception:
