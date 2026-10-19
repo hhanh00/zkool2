@@ -27,7 +27,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/main.dart';
-import 'package:zkool/pages/account.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/coin.dart' hide initDatadir;
@@ -302,12 +301,14 @@ void main() {
       await tester.enterText(search, memo.substring(0, 6));
       await pumpFor(tester, const Duration(seconds: 1));
       expect(find.text(memo), findsOneWidget);
+      // The memo bubble is keyed by the memo's id (#1367).
+      final memoRow = find.byKey(ValueKey((await _memos(tester, a)).singleWhere((m) => m.memo == memo).id));
       // A long press on the bubble turns it into a field, and losing focus
       // saves it. The memo text itself is a CopyableText with its own long
       // press, so press the time label next to it.
-      await tester.longPress(find.descendant(of: find.byType(MemoWidget), matching: find.byType(Text)).first);
+      await tester.longPress(find.descendant(of: memoRow, matching: find.byType(Text)).first);
       await pumpFor(tester, const Duration(seconds: 1));
-      final memoField = find.descendant(of: find.byType(MemoWidget), matching: find.byType(TextField));
+      final memoField = find.descendant(of: memoRow, matching: find.byType(TextField));
       await tester.enterText(memoField, _userMemo);
       await tester.pump();
       await tapTab(tester, "Memos");
@@ -447,10 +448,11 @@ void main() {
       expect(contacts.single.name, _accountB);
       expect(contacts.single.addresses, [bAddresses.ua!]);
       expect(contacts.single.notes, _contactNotes);
-      expect(find.widgetWithText(ListTile, _accountB), findsOneWidget, reason: "the contact is listed");
+      final bobRow = await _contactRow(tester, _accountB);
+      expect(bobRow, findsOneWidget, reason: "the contact is listed");
 
       step("edit contact: add and remove an address");
-      await tester.tap(find.widgetWithText(ListTile, _accountB));
+      await tester.tap(bobRow);
       await pumpUntil(tester, () => find.text("Edit Contact").evaluate().isNotEmpty,
           timeout: shortTimeout, what: "the contact editor",);
       await tester.tap(find.text("Add Address"));
@@ -460,7 +462,7 @@ void main() {
       await _waitForContacts(tester);
       contacts = await _contacts(tester);
       expect(contacts.single.addresses, [bAddresses.ua!, bAddresses.taddr!], reason: "the second address is saved");
-      await tester.tap(find.widgetWithText(ListTile, _accountB));
+      await tester.tap(bobRow);
       await pumpUntil(tester, () => fieldNamed("address_1").evaluate().isNotEmpty,
           timeout: shortTimeout, what: "the contact editor with two addresses",);
       await tapTooltip(tester, "Remove address");
@@ -495,7 +497,8 @@ void main() {
       expect(_addressFields(tester), [bAddresses.ua!], reason: "the imported address fills the address row");
       await _back(tester); // saves on the way out
       await _waitForContacts(tester);
-      await pumpUntil(tester, () => find.widgetWithText(ListTile, _contactImported).evaluate().isNotEmpty,
+      final carolRow = await _contactRow(tester, _contactImported);
+      await pumpUntil(tester, () => carolRow.evaluate().isNotEmpty,
           timeout: shortTimeout, what: "the imported contact in the list",);
       contacts = await _contacts(tester);
       final carol = contacts.singleWhere((x) => x.name == _contactImported);
@@ -505,7 +508,8 @@ void main() {
         ..writeAsStringSync(vcard.replaceAll("FN:$_accountB", "FN:$_contactListImported"));
       picker.picks.add(daveVcard.path);
       await tapTooltip(tester, "Import from vCard");
-      await pumpUntil(tester, () => find.widgetWithText(ListTile, _contactListImported).evaluate().isNotEmpty,
+      final daveRow = await _contactRow(tester, _contactListImported);
+      await pumpUntil(tester, () => daveRow.evaluate().isNotEmpty,
           timeout: shortTimeout, what: "the contact imported into the list",);
       contacts = await _contacts(tester);
       expect(contacts.map((x) => x.name).toSet(), {_accountB, _contactImported, _contactListImported});
@@ -519,14 +523,14 @@ void main() {
       }
 
       step("delete the imported contacts");
-      for (final name in [_contactImported, _contactListImported]) {
-        await tester.tap(find.widgetWithText(ListTile, name));
+      for (final (name, row) in [(_contactImported, carolRow), (_contactListImported, daveRow)]) {
+        await tester.tap(row);
         await pumpUntil(tester, () => find.text("Edit Contact").evaluate().isNotEmpty,
             timeout: shortTimeout, what: "the editor of $name",);
         await tapTooltip(tester, "Delete contact");
         await answerDialog(tester, "'$name' will be permanently deleted.", "Ok");
         await _waitForContacts(tester);
-        await pumpUntil(tester, () => find.widgetWithText(ListTile, name).evaluate().isEmpty,
+        await pumpUntil(tester, () => row.evaluate().isEmpty,
             timeout: shortTimeout, what: "$name to leave the list",);
       }
       contacts = await _contacts(tester);
@@ -542,9 +546,10 @@ void main() {
       await pumpUntil(tester, () => fieldNamed("address").evaluate().isNotEmpty,
           timeout: shortTimeout, what: "the send page",);
       await tester.enterText(fieldNamed("address"), "@${_accountB.substring(0, 2)}");
-      await pumpUntil(tester, () => find.widgetWithText(ListTile, _accountB).evaluate().isNotEmpty,
+      // The suggestion is keyed by the contact's id, like the contact row.
+      await pumpUntil(tester, () => bobRow.evaluate().isNotEmpty,
           timeout: shortTimeout, what: "the contact suggestion",);
-      await tester.tap(find.widgetWithText(ListTile, _accountB));
+      await tester.tap(bobRow);
       await pumpUntil(tester, () => fieldValue(tester, "address") == bAddresses.ua!,
           timeout: shortTimeout, what: "the contact's address in the recipient field",);
       await _back(tester);
@@ -586,10 +591,10 @@ void main() {
       await tapTooltip(tester, "View All Addresses");
       await pumpUntil(tester, () => find.text("Addresses").evaluate().isNotEmpty && find.text("Scope").evaluate().isNotEmpty,
           timeout: shortTimeout, what: "the address list",);
-      // One row per address and index. The funded index and the one just
-      // generated depend on the seed (indexes without a Sapling address are
-      // skipped), so they come from the data. The rows are built as they
-      // scroll into view.
+      // One row per address and index, keyed by the address (#1367). The
+      // funded index and the one just generated depend on the seed (indexes
+      // without a Sapling address are skipped), so they come from the data.
+      // The rows are built as they scroll into view.
       final counts = (await tester.runAsync(() => fetchAddressTxCount(aggregate: false, poolFilter: aPools, account: a, c: coinContext.coin)))!;
       debugPrint("[wallet-ext] address rows: ${counts.map((x) => "p${x.pool} s${x.scope} i${x.dindex} ${x.txCount}tx").join(", ")}");
       final funded = counts.firstWhere((x) => x.pool == 0 && x.scope == 0 && x.txCount > 0);
@@ -597,34 +602,34 @@ void main() {
       expect(newest, greaterThan(funded.dindex), reason: "a newer index after the generation");
       await _scrollTo(tester, find.textContaining("Idx ${funded.dindex} · 1 txs").first);
       await _scrollTo(tester, find.textContaining("Idx $newest · 0 txs").first);
-      await _scrollTo(tester, find.text(_trimmed(oldTaddr)));
+      await _scrollTo(tester, find.byKey(ValueKey(oldTaddr)));
       await _pickFilter(tester, "Show", "Used");
       expect(find.textContaining("· 0 txs"), findsNothing, reason: "only used addresses");
-      await _scrollTo(tester, find.text(_trimmed(oldTaddr)));
+      await _scrollTo(tester, find.byKey(ValueKey(oldTaddr)));
       await _pickFilter(tester, "Show", "Unused");
-      expect(find.text(_trimmed(oldTaddr)), findsNothing, reason: "only unused addresses");
+      expect(find.byKey(ValueKey(oldTaddr)), findsNothing, reason: "only unused addresses");
       expect(find.textContaining("· 0 txs"), findsWidgets);
       await _pickFilter(tester, "Show", "All");
       // The change addresses are derived up front, one per pool.
       await _pickFilter(tester, "Scope", "Change");
       expect(find.byType(ListTile), findsWidgets);
-      expect(find.text(_trimmed(oldTaddr)), findsNothing, reason: "the funded address is external");
+      expect(find.byKey(ValueKey(oldTaddr)), findsNothing, reason: "the funded address is external");
       await _pickFilter(tester, "Scope", "External");
-      await _scrollTo(tester, find.text(_trimmed(oldTaddr)));
+      await _scrollTo(tester, find.byKey(ValueKey(oldTaddr)));
       await _pickFilter(tester, "Scope", "All");
       await _pickFilter(tester, "UA", "On");
       await pumpUntil(tester, () => find.textContaining("Unified · ").evaluate().isNotEmpty,
           timeout: shortTimeout, what: "the unified rows",);
-      expect(find.text(_trimmed(oldTaddr)), findsNothing, reason: "the pools are aggregated into unified addresses");
+      expect(find.byKey(ValueKey(oldTaddr)), findsNothing, reason: "the pools are aggregated into unified addresses");
       await _pickFilter(tester, "UA", "Off");
-      await _scrollTo(tester, find.text(_trimmed(oldTaddr)));
+      await _scrollTo(tester, find.byKey(ValueKey(oldTaddr)));
       // Dropping the transparent pool removes its rows.
       await tester.tap(find.text("Trp"));
-      await pumpUntil(tester, () => find.text(_trimmed(oldTaddr)).evaluate().isEmpty,
+      await pumpUntil(tester, () => find.byKey(ValueKey(oldTaddr)).evaluate().isEmpty,
           timeout: shortTimeout, what: "the transparent rows to go",);
       await tester.tap(find.text("Trp"));
       await pumpFor(tester, const Duration(seconds: 1));
-      await _scrollTo(tester, find.text(_trimmed(oldTaddr)));
+      await _scrollTo(tester, find.byKey(ValueKey(oldTaddr)));
       await tapTooltip(tester, "Hide filters");
       expect(find.text("Scope"), findsNothing);
       await tapTooltip(tester, "Show filters");
@@ -779,10 +784,6 @@ Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
   expect(finder, findsOneWidget);
 }
 
-/// An address as the address list shows it.
-String _trimmed(String address) =>
-    address.length > 20 ? '${address.substring(0, 10)}...${address.substring(address.length - 8)}' : address;
-
 Future<void> _waitForContacts(WidgetTester tester) => pumpUntil(
       tester,
       () => find.text("Contacts").evaluate().isNotEmpty && find.byTooltip("New contact").evaluate().isNotEmpty,
@@ -792,6 +793,22 @@ Future<void> _waitForContacts(WidgetTester tester) => pumpUntil(
 
 Future<List<Contact>> _contacts(WidgetTester tester) async =>
     (await tester.runAsync(() => listContacts(c: coinContext.coin)))!;
+
+/// The list row (and send-page suggestion) of the contact [name], keyed by
+/// the contact's id (#1367). Polls the contacts until it exists: an import
+/// saves the contact before the list shows it.
+Future<Finder> _contactRow(WidgetTester tester, String name) async {
+  final deadline = DateTime.now().add(shortTimeout);
+  while (true) {
+    final matches = (await _contacts(tester)).where((c) => c.name == name).toList();
+    if (matches.isNotEmpty) return find.byKey(ValueKey(matches.single.id));
+    if (DateTime.now().isAfter(deadline)) fail("no contact named $name");
+    await pumpFor(tester, const Duration(milliseconds: 500));
+  }
+}
+
+Future<List<Memo>> _memos(WidgetTester tester, int account) async =>
+    (await tester.runAsync(() => listMemos(account: account, c: coinContext.coin)))!;
 
 Future<Set<int>> _lockedNotes(WidgetTester tester, int account) async {
   final notes = (await tester.runAsync(() => listNotes(account: account, c: coinContext.coin)))!;

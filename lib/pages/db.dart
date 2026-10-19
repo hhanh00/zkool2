@@ -68,6 +68,7 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
           final dbName = dbNames[index];
           final isLastOpened = dbName.$1 == _lastOpenedDb;
           return ListTile(
+            key: ValueKey(dbName.$1),
             leading: Checkbox(
               value: dbName.$2,
               onChanged: (v) {

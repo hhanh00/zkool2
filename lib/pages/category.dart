@@ -50,6 +50,7 @@ class CategoryPageState extends ConsumerState<CategoryPage> {
         itemBuilder: (BuildContext context, int index) {
           final f = categories[index];
           return ListTile(
+            key: ValueKey(f.$1.id),
             leading: Checkbox(value: f.$2, onChanged: (v) => setState(() => categories[index] = (f.$1, v ?? false))),
             title: Text(f.$1.name),
           );

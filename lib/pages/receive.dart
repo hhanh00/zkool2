@@ -378,6 +378,7 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
                 final lastUsed = tx.time > 0 ? timeToString(tx.time) : "Never";
                 final trimmed = tx.address.length > 20 ? '${tx.address.substring(0, 10)}...${tx.address.substring(tx.address.length - 8)}' : tx.address;
                 return ListTile(
+                  key: ValueKey(tx.address),
                   leading: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: _aggregate
