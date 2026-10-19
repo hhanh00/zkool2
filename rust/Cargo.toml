@@ -12,7 +12,7 @@ path = "src/graphql-cli.rs"
 required-features = ["graphql"]
 
 [dependencies]
-zcash-trees = { git = "https://github.com/hhanh00/zcash-trees.git", rev = "1ddddd6b4fccb1b61fd69007298f274cbbc773ed" }
+zcash-trees = { git = "https://github.com/hhanh00/zcash-trees.git", rev = "01437822dff817763bac32d3b407895ef3499744" }
 # Fork of upstream 67edd7eb (branch sidecar-valar-v5.1.0): the zakura-wallet-lib
 # facade is dropped and the ZSA Orchard adaptations live there. Kept in the
 # build although zkool's voting modules are cut out, so dependency breakage

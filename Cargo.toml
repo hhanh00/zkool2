@@ -36,23 +36,23 @@ sapling-crypto = { git = "https://github.com/zcash-shielded-assets/sapling-crypt
 zcash_note_encryption = { git = "https://github.com/zcash-shielded-assets/zcash_note_encryption.git", rev = "54d2360c3b16561d7c00167dc0af7358251469c9" }
 
 # -- lrz ZSA branch --
-pczt = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c02df3cc303daa020b3d895a351a50afa1562818" }
-zcash_client_backend = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c02df3cc303daa020b3d895a351a50afa1562818" }
+pczt = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c42aab288e2e3eaf43afc2d62fe902bbd65a04c6" }
+zcash_client_backend = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c42aab288e2e3eaf43afc2d62fe902bbd65a04c6" }
 # zcash_voting 5.1.0 reaches zcash_client_sqlite through zakura-wallet-lib
 # (WalletDb/AccountUuid, ~29 uses), which drags zcash_pool_migration. The
 # crates.io copies are mainline-shaped and do not build against the ZSA
 # Orchard/pczt line; the ZSA branch already carries adapted versions of both,
 # they were simply missing from this list. pool_migration follows as an
 # in-repo path dep of client_sqlite.
-zcash_client_sqlite = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c02df3cc303daa020b3d895a351a50afa1562818" }
-zcash_address = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c02df3cc303daa020b3d895a351a50afa1562818" }
-zcash_encoding = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c02df3cc303daa020b3d895a351a50afa1562818" }
-zcash_keys = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c02df3cc303daa020b3d895a351a50afa1562818" }
-zcash_primitives = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c02df3cc303daa020b3d895a351a50afa1562818" }
-zcash_proofs = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c02df3cc303daa020b3d895a351a50afa1562818" }
-zcash_protocol = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c02df3cc303daa020b3d895a351a50afa1562818" }
-zcash_transparent = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c02df3cc303daa020b3d895a351a50afa1562818" }
-zip321 = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c02df3cc303daa020b3d895a351a50afa1562818" }
+zcash_client_sqlite = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c42aab288e2e3eaf43afc2d62fe902bbd65a04c6" }
+zcash_address = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c42aab288e2e3eaf43afc2d62fe902bbd65a04c6" }
+zcash_encoding = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c42aab288e2e3eaf43afc2d62fe902bbd65a04c6" }
+zcash_keys = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c42aab288e2e3eaf43afc2d62fe902bbd65a04c6" }
+zcash_primitives = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c42aab288e2e3eaf43afc2d62fe902bbd65a04c6" }
+zcash_proofs = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c42aab288e2e3eaf43afc2d62fe902bbd65a04c6" }
+zcash_protocol = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c42aab288e2e3eaf43afc2d62fe902bbd65a04c6" }
+zcash_transparent = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c42aab288e2e3eaf43afc2d62fe902bbd65a04c6" }
+zip321 = { git = "https://github.com/zcash-shielded-assets/librustzcash.git", rev = "c42aab288e2e3eaf43afc2d62fe902bbd65a04c6" }
 
 # -- remaining transitive deps --
 zcash_spec = { git = "https://github.com/zcash-shielded-assets/zcash_spec", rev = "d5e84264d2ad0646b587a837f4e2424ca64d3a05" }
