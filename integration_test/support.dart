@@ -64,6 +64,9 @@ class Rendezvous {
   Map<String, dynamic>? readOrchestrator() =>
       _readJson(File("${dir.path}/orchestrator.json"));
 
+  /// What an earlier app process published, for a test that runs after it.
+  Map<String, dynamic>? readUi() => _readJson(_ui);
+
   Map<String, dynamic>? _readJson(File f) {
     if (!f.existsSync()) return null;
     try {
