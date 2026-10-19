@@ -104,6 +104,23 @@ pub async fn export_contacts_vcard(c: &Coin) -> Result<String> {
     contacts::export_contacts_vcard(&mut connection).await
 }
 
+/// Render one contact as a vCard 4.0 block, in the same format as
+/// `export_contacts_vcard`. Does not touch the database.
+#[cfg_attr(feature = "flutter", frb(sync))]
+pub fn export_contact_vcard(name: &str, addresses: Vec<String>, notes: &str) -> String {
+    contacts::contact_to_vcard(name, &addresses, notes)
+}
+
+/// Parse a vCard 4.0 string into contacts without storing them.
+/// The returned contacts have id 0.
+#[cfg_attr(feature = "flutter", frb(sync))]
+pub fn parse_contacts_vcard(vcard_data: &str) -> Vec<Contact> {
+    contacts::parse_contacts_vcard(vcard_data)
+        .into_iter()
+        .map(|c| c.into())
+        .collect()
+}
+
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn import_contacts_vcard(vcard_data: &str, c: &Coin) -> Result<Vec<Contact>> {
     let mut connection = c.get_connection().await?;

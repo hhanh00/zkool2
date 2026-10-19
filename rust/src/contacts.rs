@@ -312,53 +312,61 @@ pub async fn find_contacts_for_address(
 // vCard import/export
 // ---------------------------------------------------------------------------
 
+/// The NOTE line that introduces the `zcash:` URIs in an exported vCard.
+const ADDRESSES_LABEL: &str = "Zcash addresses:";
+
+/// Render one contact as a vCard 4.0 block.
+///
+/// The addresses go into the NOTE as `zcash:` URIs under a label, so that
+/// other contact apps show them; `parse_contacts_vcard` reads them back.
+pub fn contact_to_vcard(name: &str, addresses: &[String], notes: &str) -> String {
+    let mut vcard = Vcard::new(name.to_string());
+    let mut note_parts: Vec<String> = Vec::new();
+    if !notes.is_empty() {
+        note_parts.push(notes.to_string());
+    }
+    if !addresses.is_empty() {
+        note_parts.push(format!(
+            "{ADDRESSES_LABEL}\n{}",
+            addresses
+                .iter()
+                .map(|a| format!("zcash:{a}"))
+                .collect::<Vec<_>>()
+                .join("\n")
+        ));
+    }
+    let note = note_parts.join("\n\n");
+    if !note.is_empty() {
+        vcard.note = vec![TextProperty {
+            group: None,
+            value: note,
+            parameters: None,
+        }];
+    }
+    vcard.to_string()
+}
+
 /// Export all contacts as a vCard 4.0 string.
 pub async fn export_contacts_vcard(connection: &mut SqliteConnection) -> Result<String> {
     let contacts = list_contacts(connection).await?;
     let mut output = String::new();
-
     for contact in &contacts {
-        let mut vcard = Vcard::new(contact.name.clone());
-        // Build note with addresses included
-        let mut note_parts: Vec<String> = Vec::new();
-        if !contact.notes.is_empty() {
-            note_parts.push(contact.notes.clone());
-        }
-        if !contact.addresses.is_empty() {
-            note_parts.push(format!(
-                "Zcash addresses:\n{}",
-                contact
-                    .addresses
-                    .iter()
-                    .map(|a| format!("zcash:{a}"))
-                    .collect::<Vec<_>>()
-                    .join("\n")
-            ));
-        }
-        let note = note_parts.join("\n\n");
-        if !note.is_empty() {
-            vcard.note = vec![TextProperty {
-                group: None,
-                value: note,
-                parameters: None,
-            }];
-        }
-        output.push_str(&vcard.to_string());
+        output.push_str(&contact_to_vcard(
+            &contact.name,
+            &contact.addresses,
+            &contact.notes,
+        ));
         output.push('\n');
     }
-
     Ok(output)
 }
 
-/// Import contacts from a vCard 4.0 string.
-/// Parses the vCard data and creates contacts in the database.
-/// Returns the list of imported contacts.
-pub async fn import_contacts_vcard(
-    connection: &mut SqliteConnection,
-    vcard_data: &str,
-    network: &Network,
-) -> Result<Vec<Contact>> {
-    let mut imported = Vec::new();
+/// Parse a vCard 4.0 string into contacts without storing them.
+///
+/// Contacts without a name or without a Zcash address are skipped.
+/// The returned contacts have id 0.
+pub fn parse_contacts_vcard(vcard_data: &str) -> Vec<Contact> {
+    let mut parsed = Vec::new();
 
     // Split on "END:VCARD" to handle multiple vCards
     for block in vcard_data.split("END:VCARD") {
@@ -400,7 +408,7 @@ pub async fn import_contacts_vcard(
         let mut addresses: Vec<String> = Vec::new();
         for line in full_note.lines() {
             let trimmed = line.trim();
-            if trimmed.is_empty() {
+            if trimmed.is_empty() || trimmed == ADDRESSES_LABEL {
                 continue;
             }
             // Try "zcash:<addr>" payment URI format first
@@ -445,6 +453,34 @@ pub async fn import_contacts_vcard(
             continue;
         }
 
+        parsed.push(Contact {
+            id: 0,
+            name,
+            addresses,
+            notes: notes.trim().to_string(),
+        });
+    }
+
+    parsed
+}
+
+/// Import contacts from a vCard 4.0 string.
+/// Parses the vCard data and creates contacts in the database.
+/// Returns the list of imported contacts.
+pub async fn import_contacts_vcard(
+    connection: &mut SqliteConnection,
+    vcard_data: &str,
+    network: &Network,
+) -> Result<Vec<Contact>> {
+    let mut imported = Vec::new();
+
+    for Contact {
+        name,
+        addresses,
+        notes,
+        ..
+    } in parse_contacts_vcard(vcard_data)
+    {
         // Check for duplicate name
         let existing: Option<u32> =
             sqlx::query_scalar("SELECT id_contact FROM contacts WHERE name = ?1")
@@ -482,7 +518,7 @@ pub async fn import_contacts_vcard(
             imported.push(Contact {
                 id,
                 name,
-                addresses: addresses.clone(),
+                addresses,
                 notes,
             });
         } else {
@@ -493,4 +529,49 @@ pub async fn import_contacts_vcard(
     }
 
     Ok(imported)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use zcash_address::{ToAddress, ZcashAddress};
+    use zcash_protocol::consensus::NetworkType;
+
+    fn p2pkh(byte: u8) -> String {
+        ZcashAddress::from_transparent_p2pkh(NetworkType::Main, [byte; 20]).encode()
+    }
+
+    #[test]
+    fn vcard_round_trip_keeps_name_notes_and_addresses() {
+        let addresses = vec![p2pkh(1), p2pkh(2)];
+        let notes = "first line\nsecond line, with a comma; and a semicolon";
+        let vcard = contact_to_vcard("Alice Example", &addresses, notes);
+
+        let parsed = parse_contacts_vcard(&vcard);
+        assert_eq!(parsed.len(), 1);
+        let contact = &parsed[0];
+        assert_eq!(contact.name, "Alice Example");
+        assert_eq!(contact.notes, notes);
+        assert_eq!(contact.addresses, addresses);
+    }
+
+    #[test]
+    fn vcard_round_trip_without_notes_has_empty_notes() {
+        let addresses = vec![p2pkh(3)];
+        let vcard = contact_to_vcard("Bob", &addresses, "");
+        let parsed = parse_contacts_vcard(&vcard);
+        assert_eq!(parsed.len(), 1);
+        assert_eq!(parsed[0].notes, "");
+        assert_eq!(parsed[0].addresses, addresses);
+    }
+
+    #[test]
+    fn parse_skips_unparseable_and_addressless_blocks() {
+        let good = contact_to_vcard("Carol", &[p2pkh(4)], "");
+        let no_address = contact_to_vcard("Dave", &[], "just notes");
+        let broken = "BEGIN:VCARD\nVERSION:4.0\nFN:Eve\nNOTE:line one\nline two\nEND:VCARD\n";
+        let parsed = parse_contacts_vcard(&format!("{no_address}\n{broken}\n{good}"));
+        assert_eq!(parsed.len(), 1);
+        assert_eq!(parsed[0].name, "Carol");
+    }
 }

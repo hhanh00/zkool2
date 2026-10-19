@@ -25,17 +25,88 @@ class ContactEditPage extends ConsumerStatefulWidget {
   ConsumerState<ContactEditPage> createState() => ContactEditPageState();
 }
 
+/// One address row of the editor. The id is stable for the row's lifetime
+/// and names its form field (`address_<id>`), so removing a row in the middle
+/// does not shift the other rows' state. A row whose value is set from code
+/// gets a new id, so its field is rebuilt with the new initial value.
+class _AddressRow {
+  final int id;
+  final String initial;
+  const _AddressRow(this.id, this.initial);
+}
+
 class ContactEditPageState extends ConsumerState<ContactEditPage> {
   final _formKey = GlobalKey<FormBuilderState>();
   late var c = coinContext.coin;
-  var _addresses = <String>[''];
+  var _nextRowId = 0;
+  var _rows = <_AddressRow>[];
+  // Set when an address row was removed or filled from code: those changes
+  // do not show in the form's own dirty state.
+  var _rowsChanged = false;
 
   bool get isEditing => widget.contact != null;
 
   @override
   void initState() {
     super.initState();
-    _addresses = widget.contact?.addresses.toList() ?? [''];
+    _rows = _rowsFor(widget.contact?.addresses ?? const []);
+  }
+
+  _AddressRow _newRow(String initial) => _AddressRow(_nextRowId++, initial);
+
+  /// Rows for the given addresses; at least one, empty, row.
+  List<_AddressRow> _rowsFor(List<String> addresses) =>
+      addresses.isEmpty ? [_newRow('')] : addresses.map(_newRow).toList();
+
+  /// The current text of each address row, as typed.
+  List<String> _currentAddresses() => _rows
+      .map((row) => (_formKey.currentState?.fields['address_${row.id}']?.value as String?) ?? row.initial)
+      .toList();
+
+  /// Reads the saved form: name, notes, and the non-empty addresses of the
+  /// rows that still exist.
+  (String, String, List<String>) _formValues() {
+    final values = _formKey.currentState!.value;
+    final name = (values['name'] as String?)?.trim() ?? '';
+    final notes = (values['notes'] as String?)?.trim() ?? '';
+    final addresses = <String>[];
+    for (final row in _rows) {
+      final addr = (values['address_${row.id}'] as String?)?.trim() ?? '';
+      if (addr.isNotEmpty) addresses.add(addr);
+    }
+    return (name, notes, addresses);
+  }
+
+  /// Replaces the whole form: name, notes and addresses.
+  void _load({required String name, required String notes, required List<String> addresses}) {
+    setState(() {
+      final form = _formKey.currentState!;
+      form.fields['name']!.didChange(name);
+      form.fields['notes']!.didChange(notes);
+      _rows = _rowsFor(addresses);
+      _rowsChanged = true;
+    });
+  }
+
+  /// Adds addresses to the form: empty rows are filled first, then rows are
+  /// appended. Rows with text keep it.
+  void _addAddresses(Iterable<String> addresses) {
+    final current = _currentAddresses();
+    final rows = List<_AddressRow>.from(_rows);
+    for (final address in addresses) {
+      final emptyIndex = current.indexWhere((a) => a.trim().isEmpty);
+      if (emptyIndex != -1) {
+        rows[emptyIndex] = _newRow(address);
+        current[emptyIndex] = address;
+      } else {
+        rows.add(_newRow(address));
+        current.add(address);
+      }
+    }
+    setState(() {
+      _rows = rows;
+      _rowsChanged = true;
+    });
   }
 
   @override
@@ -139,18 +210,20 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
 
   List<Widget> _buildAddressFields() {
     final widgets = <Widget>[];
-    for (var i = 0; i < _addresses.length; i++) {
+    for (var i = 0; i < _rows.length; i++) {
+      final row = _rows[i];
       widgets.add(
         Row(
+          key: ValueKey(row.id),
           children: [
             Expanded(
               child: FormBuilderTextField(
-                name: "address_$i",
+                name: "address_${row.id}",
                 decoration: InputDecoration(
                   labelText: "Address ${i + 1}",
                   prefixIcon: Icon(Icons.qr_code),
                 ),
-                initialValue: _addresses[i],
+                initialValue: row.initial,
                 validator: (v) {
                   if (v == null || v.trim().isEmpty) return 'Address is required';
                   if (validAddress(v) != null) return 'Invalid address';
@@ -166,7 +239,10 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
             if (i > 0)
               IconButton(
                 icon: Icon(Icons.remove_circle_outline, color: Colors.red),
-                onPressed: () => setState(() => _addresses.removeAt(i)),
+                onPressed: () => setState(() {
+                  _rows.removeAt(i);
+                  _rowsChanged = true;
+                }),
                 tooltip: "Remove address",
               ),
           ],
@@ -179,25 +255,21 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
         child: TextButton.icon(
           icon: Icon(Icons.add),
           label: Text("Add Address"),
-          onPressed: () => setState(() => _addresses.add('')),
+          onPressed: () => setState(() => _rows.add(_newRow(''))),
         ),
       ),
     );
     return widgets;
   }
 
-  bool _isFormClean() => !(_formKey.currentState?.isDirty ?? false);
+  bool _isFormClean() => !_rowsChanged && !(_formKey.currentState?.isDirty ?? false);
 
   void onScanAddress(int index) async {
     final scanned = await showScanner(context, validator: validAddress);
-    if (scanned != null) {
+    if (scanned != null && index < _rows.length) {
       setState(() {
-        // Ensure we have the right number of items
-        while (_addresses.length <= index) {
-          _addresses.add('');
-        }
-        _addresses[index] = scanned;
-        _formKey.currentState?.fields['address_$index']?.didChange(scanned);
+        _rows[index] = _newRow(scanned);
+        _rowsChanged = true;
       });
     }
   }
@@ -236,24 +308,7 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
         );
         if (!confirmed) return;
       }
-      // Fill empty slots first, then append remaining
-      final newAddresses = List<String>.from(_addresses);
-      for (final r in result.recipients) {
-        final emptyIndex = newAddresses.indexWhere((a) => a.isEmpty);
-        if (emptyIndex != -1) {
-          newAddresses[emptyIndex] = r.address;
-        } else {
-          newAddresses.add(r.address);
-        }
-      }
-      setState(() => _addresses = newAddresses);
-
-      // Wait for widgets to rebuild before updating form fields
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        for (var i = 0; i < _addresses.length; i++) {
-          _formKey.currentState?.fields['address_$i']?.didChange(_addresses[i]);
-        }
-      });
+      _addAddresses(result.recipients.map((r) => r.address));
     } on AnyhowException catch (e) {
       showMessage(context, e.message, title: "OpenAlias Error");
     } catch (e) {
@@ -264,84 +319,14 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
   void onImportFromContacts() async {
     final candidates = await showContactPicker(context, multiSelect: false);
     if (candidates == null || candidates.isEmpty) return;
-
     final candidate = candidates.first;
-    setState(() {
-      final form = _formKey.currentState!;
-      form.fields['name']!.didChange(candidate.name);
-
-      if (candidate.notes.isNotEmpty) {
-        form.fields['notes']!.didChange(candidate.notes);
-      }
-
-      // Fill empty address slots first, then append remaining
-      final newAddresses = List<String>.from(_addresses);
-      for (final addr in candidate.addresses) {
-        final emptyIndex = newAddresses.indexWhere((a) => a.isEmpty);
-        if (emptyIndex != -1) {
-          newAddresses[emptyIndex] = addr;
-        } else {
-          newAddresses.add(addr);
-        }
-      }
-      _addresses = newAddresses;
-    });
-
-    // Wait for widgets to rebuild before updating form fields
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      for (var i = 0; i < _addresses.length; i++) {
-        _formKey.currentState?.fields['address_$i']?.didChange(_addresses[i]);
-      }
-    });
-  }
-
-  void onSave() async {
-    if (!_formKey.currentState!.saveAndValidate()) return;
-
-    final values = _formKey.currentState!.value;
-    final name = (values['name'] as String).trim();
-    final notes = (values['notes'] as String?)?.trim() ?? '';
-    final addresses = <String>[];
-    for (final key in values.keys) {
-      if (key.startsWith('address_')) {
-        final addr = (values[key] as String).trim();
-        if (addr.isNotEmpty) addresses.add(addr);
-      }
-    }
-
-    if (isEditing) {
-      await updateContact(
-        id: widget.contact!.id,
-        name: name,
-        addresses: addresses,
-        notes: notes,
-        c: c,
-      );
-    } else {
-      await createContact(
-        name: name,
-        addresses: addresses,
-        notes: notes,
-        c: c,
-      );
-    }
-
-    ref.invalidate(getContactsProvider);
+    _load(name: candidate.name, notes: candidate.notes, addresses: candidate.addresses);
   }
 
   void onSaveAndPop() async {
     final form = _formKey.currentState!;
     form.save();
-    final values = form.value;
-    final name = (values['name'] as String?)?.trim() ?? '';
-    final notes = (values['notes'] as String?)?.trim() ?? '';
-    final addresses = <String>[];
-    for (final key in values.keys) {
-      if (key.startsWith('address_')) {
-        final addr = (values[key] as String).trim();
-        if (addr.isNotEmpty) addresses.add(addr);
-      }
-    }
+    final (name, notes, addresses) = _formValues();
 
     // Empty form: just pop without saving
     if (name.isEmpty && addresses.isEmpty) {
@@ -380,54 +365,36 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
       type: FileType.any,
       allowMultiple: false,
     );
-    if (result != null && result.files.single.path != null) {
-      final data = await File(result.files.single.path!).readAsString();
-      final contacts = await importContactsVcard(vcardData: data, c: c);
-      if (contacts.isNotEmpty) {
-        final contact = contacts.first;
-        setState(() {
-          final form = _formKey.currentState!;
-          form.fields['name']!.didChange(contact.name);
-          form.fields['notes']!.didChange(contact.notes);
-          _addresses = contact.addresses.isEmpty ? [''] : contact.addresses.toList();
-        });
-      }
-      ref.invalidate(getContactsProvider);
+    if (result == null || result.files.single.path == null) return;
+    final data = await File(result.files.single.path!).readAsString();
+    final contacts = parseContactsVcard(vcardData: data);
+    if (!mounted) return;
+    if (contacts.isEmpty) {
+      await showMessage(context, "The file has no contact with a Zcash address.", title: "Import from vCard");
+      return;
+    }
+    final contact = contacts.first;
+    _load(name: contact.name, notes: contact.notes, addresses: contact.addresses);
+    if (contacts.length > 1) {
+      await showMessage(
+        context,
+        "The file has ${contacts.length} contacts; only the first one was loaded. "
+        "To import them all, use Import from vCard on the contacts list.",
+        title: "Import from vCard",
+      );
     }
   }
 
   void onExport() async {
     final form = _formKey.currentState!;
-    form.saveAndValidate();
-    final values = form.value;
-    final name = (values['name'] as String?)?.trim() ?? '';
-    final notes = (values['notes'] as String?)?.trim() ?? '';
-    final addresses = <String>[];
-    for (final key in values.keys) {
-      if (key.startsWith('address_')) {
-        final addr = (values[key] as String).trim();
-        if (addr.isNotEmpty) addresses.add(addr);
-      }
-    }
-
-    // Build note with addresses as zcash:<addr> payment URIs
-    final noteLines = <String>[
-      if (notes.isNotEmpty) notes,
-      if (addresses.isNotEmpty) 'Zcash addresses:\n${addresses.map((a) => 'zcash:$a').join('\n')}',
-    ];
-    final note = noteLines.join('\n\n');
-
-    final buffer = StringBuffer();
-    buffer.writeln('BEGIN:VCARD');
-    buffer.writeln('VERSION:4.0');
-    buffer.writeln('FN:$name');
-    if (note.isNotEmpty) buffer.writeln('NOTE:$note');
-    buffer.writeln('END:VCARD');
+    if (!form.saveAndValidate()) return;
+    final (name, notes, addresses) = _formValues();
+    final vcard = exportContactVcard(name: name, addresses: addresses, notes: notes);
 
     await saveFile(
       title: 'Export Contact',
       fileName: '${name.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_')}.vcf',
-      data: Uint8List.fromList(buffer.toString().codeUnits),
+      data: Uint8List.fromList(vcard.codeUnits),
     );
   }
 }
