@@ -563,6 +563,103 @@ void main() {
       await _back(tester);
       await waitForAccountView(tester, _accountA);
 
+      // ── Receive ──────────────────────────────────────────────────────────
+      // The receive page's pool picker, QR page and new-address generation,
+      // the address list with its filters, and the transparent address scan.
+      phase("receive");
+      step("receive page: pools, QR, new addresses");
+      await tapTooltip(tester, "Show the account receiving addresses");
+      await pumpUntil(tester, () => find.text("Receive Funds").evaluate().isNotEmpty && find.byType(CopyableText).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the receive page",);
+      final aPools = (await tester.runAsync(() => getAccountPools(account: a, c: coinContext.coin)))!;
+      // The unified address starts with the shielded pools only.
+      final shieldedUa = (await tester.runAsync(() => getAddresses(uaPools: aPools & 6, account: a, c: coinContext.coin)))!.ua!;
+      expect(copyableWith(shieldedUa), findsOneWidget, reason: "the shielded-only unified address");
+      await tester.tap(find.text("Trp"));
+      await pumpFor(tester, const Duration(seconds: 1));
+      final fullUa = (await tester.runAsync(() => getAddresses(uaPools: (aPools & 6) | 1, account: a, c: coinContext.coin)))!.ua!;
+      expect(copyableWith(fullUa), findsOneWidget, reason: "the unified address with the transparent receiver");
+      await tapTooltip(tester, "Show address as a QR Code");
+      await pumpUntil(tester, () => find.text("Unified Address").evaluate().isNotEmpty && find.text("Receive Funds").evaluate().isEmpty,
+          timeout: shortTimeout, what: "the QR page",);
+      await _back(tester);
+      await pumpUntil(tester, () => find.text("Receive Funds").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the receive page after the QR page",);
+      final oldTaddr = aAddresses.taddr!;
+      expect(copyableWith(oldTaddr), findsOneWidget);
+      await tapTooltip(tester, "Generate a new set of addresses (transparent/sapling and orchard). Previous addresses can still receive funds");
+      await answerDialog(tester, "Do you want to generate a new set of addresses? Previous addresses can still receive funds", "Ok");
+      await pumpUntil(tester, () => copyableWith(oldTaddr).evaluate().isEmpty && find.text("Receive Funds").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the new addresses",);
+      final newTaddr = (await tester.runAsync(() => getAddresses(uaPools: 7, account: a, c: coinContext.coin)))!.taddr!;
+      expect(newTaddr, isNot(oldTaddr));
+      expect(copyableWith(newTaddr), findsOneWidget, reason: "the next transparent address");
+
+      step("address list and its filters");
+      await tapTooltip(tester, "View All Addresses");
+      await pumpUntil(tester, () => find.text("Addresses").evaluate().isNotEmpty && find.text("Scope").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the address list",);
+      // One row per address and index. The funded index and the one just
+      // generated depend on the seed (indexes without a Sapling address are
+      // skipped), so they come from the data. The rows are built as they
+      // scroll into view.
+      final counts = (await tester.runAsync(() => fetchAddressTxCount(aggregate: false, poolFilter: aPools, account: a, c: coinContext.coin)))!;
+      debugPrint("[wallet-ext] address rows: ${counts.map((x) => "p${x.pool} s${x.scope} i${x.dindex} ${x.txCount}tx").join(", ")}");
+      final funded = counts.firstWhere((x) => x.pool == 0 && x.scope == 0 && x.txCount > 0);
+      final newest = counts.where((x) => x.scope == 0).fold(0, (m, x) => x.dindex > m ? x.dindex : m);
+      expect(newest, greaterThan(funded.dindex), reason: "a newer index after the generation");
+      await _scrollTo(tester, find.textContaining("Idx ${funded.dindex} · 1 txs").first);
+      await _scrollTo(tester, find.textContaining("Idx $newest · 0 txs").first);
+      await _scrollTo(tester, find.text(_trimmed(oldTaddr)));
+      await _pickFilter(tester, "Show", "Used");
+      expect(find.textContaining("· 0 txs"), findsNothing, reason: "only used addresses");
+      await _scrollTo(tester, find.text(_trimmed(oldTaddr)));
+      await _pickFilter(tester, "Show", "Unused");
+      expect(find.text(_trimmed(oldTaddr)), findsNothing, reason: "only unused addresses");
+      expect(find.textContaining("· 0 txs"), findsWidgets);
+      await _pickFilter(tester, "Show", "All");
+      // The change addresses are derived up front, one per pool.
+      await _pickFilter(tester, "Scope", "Change");
+      expect(find.byType(ListTile), findsWidgets);
+      expect(find.text(_trimmed(oldTaddr)), findsNothing, reason: "the funded address is external");
+      await _pickFilter(tester, "Scope", "External");
+      await _scrollTo(tester, find.text(_trimmed(oldTaddr)));
+      await _pickFilter(tester, "Scope", "All");
+      await _pickFilter(tester, "UA", "On");
+      await pumpUntil(tester, () => find.textContaining("Unified · ").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the unified rows",);
+      expect(find.text(_trimmed(oldTaddr)), findsNothing, reason: "the pools are aggregated into unified addresses");
+      await _pickFilter(tester, "UA", "Off");
+      await _scrollTo(tester, find.text(_trimmed(oldTaddr)));
+      // Dropping the transparent pool removes its rows.
+      await tester.tap(find.text("Trp"));
+      await pumpUntil(tester, () => find.text(_trimmed(oldTaddr)).evaluate().isEmpty,
+          timeout: shortTimeout, what: "the transparent rows to go",);
+      await tester.tap(find.text("Trp"));
+      await pumpFor(tester, const Duration(seconds: 1));
+      await _scrollTo(tester, find.text(_trimmed(oldTaddr)));
+      await tapTooltip(tester, "Hide filters");
+      expect(find.text("Scope"), findsNothing);
+      await tapTooltip(tester, "Show filters");
+      expect(find.text("Scope"), findsOneWidget);
+      await _back(tester);
+      await pumpUntil(tester, () => find.text("Receive Funds").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the receive page after the address list",);
+
+      step("scan for transparent addresses");
+      await tapTooltip(tester, "Find other transparent addresses. If you restored from a wallet that has address rotation (such as Ledger, Exodus, etc), Tap, then Reset and Sync");
+      await pumpUntil(tester, () => find.text("Scan for alternative transparent addresses?").evaluate().isNotEmpty && fieldNamed("gap").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the transparent scan dialog",);
+      await _enterField(tester, "gap", "3");
+      await tester.tap(find.text("Run"));
+      await pumpUntil(tester, () => find.text("Scan Completed").evaluate().isNotEmpty,
+          timeout: chainTimeout, what: "the scan to complete",);
+      await tester.tap(find.text("Close"));
+      await pumpUntil(tester, () => find.text("Scan for alternative transparent addresses?").evaluate().isEmpty,
+          timeout: shortTimeout, what: "the scan dialog to close",);
+      await _back(tester);
+      await waitForAccountView(tester, _accountA);
+
       phase("done");
       rendezvous.publish("done", "true");
       await pumpFor(tester, const Duration(seconds: 3));
@@ -594,6 +691,28 @@ Future<void> _savedFile(WidgetTester tester, FakeFilePicker picker, String fileN
       timeout: shortTimeout, what: "$fileName to be saved",);
   expect(File(picker.saved.lastWhere((p) => p.endsWith("/$fileName"))).lengthSync(), greaterThan(0));
 }
+
+/// Picks [value] on the address list's filter row labelled [label].
+Future<void> _pickFilter(WidgetTester tester, String label, String value) async {
+  final row = find.ancestor(of: find.text(label), matching: find.byType(Row)).first;
+  await tester.tap(find.descendant(of: row, matching: find.text(value)));
+  await pumpFor(tester, const Duration(seconds: 1));
+}
+
+/// Scrolls the address list until [finder] is on screen: the rows are
+/// built lazily, so an off-screen row is not in the tree.
+Future<void> _scrollTo(WidgetTester tester, Finder finder) async {
+  if (finder.evaluate().isEmpty) {
+    debugPrint("[wallet-ext] scrolling for $finder; scrollables: ${find.bySubtype<ScrollView>().evaluate().map((e) => e.widget.runtimeType).join(", ")}");
+    await tester.dragUntilVisible(finder, find.byType(ListView).last, const Offset(0, -100));
+    await tester.pump();
+  }
+  expect(finder, findsOneWidget);
+}
+
+/// An address as the address list shows it.
+String _trimmed(String address) =>
+    address.length > 20 ? '${address.substring(0, 10)}...${address.substring(address.length - 8)}' : address;
 
 Future<void> _waitForContacts(WidgetTester tester) => pumpUntil(
       tester,
