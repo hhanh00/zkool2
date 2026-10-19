@@ -30,6 +30,7 @@ import 'package:zkool/main.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/coin.dart' hide initDatadir;
 import 'package:zkool/src/rust/api/contacts.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/store.dart';
@@ -57,6 +58,7 @@ const _contactNotes = "wallet-ext contact";
 const _contactImported = "Carol";
 const _contactImportedCopy = "Carol-copy";
 const _contactListImported = "Dave";
+const _scratchDb = "wallet-ext-scratch";
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -80,8 +82,8 @@ void main() {
     final fundOaddr = config["fund_oaddr"] as String;
     final fundDust = config["fund_dust"] as String;
     final memo = config["memo"] as String;
-    // The lock screen opens on a tap where the device has no biometrics
-    // (Linux, CI); on macOS it prompts Touch ID, so the lock step is skipped.
+    // The seed phrase is behind authenticate(): open where the device has no
+    // biometrics (Linux, CI), Touch ID on macOS, where the step is skipped.
     final biometricGate = config["biometric_gate"] as bool? ?? false;
     expect(dbPath, contains("regtest"));
 
@@ -95,6 +97,9 @@ void main() {
     final savedTransport = await prefs.getInt("transport");
     final savedDarkMode = await prefs.getBool("dark_mode");
     final savedPalette = await prefs.getString("palette_name");
+    // The database manager points the app at the test database.
+    final savedDatabase = await prefs.getString("database");
+    final savedRecovery = await prefs.getBool("recovery");
 
     void phase(String name) {
       debugPrint("[wallet-ext] phase: $name");
@@ -108,6 +113,8 @@ void main() {
       rendezvous.publish("step", what);
     }
 
+    // Set once the next process is to put the database preferences back.
+    var restarting = false;
     try {
       // ── Set up ───────────────────────────────────────────────────────────
       // Accounts come from the bridge: the new-account page is the base
@@ -121,7 +128,7 @@ void main() {
         );
         return (await _newAccount(_accountA), await _newAccount(_accountB));
       }))!;
-      debugPrint("[wallet-ext] accounts A=$a B=$b");
+      debugPrint("[wallet-ext] accounts A=$a B=$b; documents directory ${docsDir.path}");
 
       // Exports and imports go through the system file dialogs, which the
       // test cannot drive: a fake saves into the rendezvous directory.
@@ -244,17 +251,7 @@ void main() {
       await waitForAccountView(tester, _accountA);
       await _expectSettingsSaved(tester, container, prefs, changed, what: "the changed settings");
 
-      if (!biometricGate) {
-        step("lock the app, unlock with a tap");
-        await openMenuItem(tester, "Settings");
-        await _waitForSettings(tester);
-        await tapTooltip(tester, "Lock");
-        await _back(tester);
-        await pumpUntil(tester, () => find.text("Locked").evaluate().isNotEmpty,
-            timeout: shortTimeout, what: "the lock screen",);
-        await tester.tap(find.byType(InkWell).first);
-        await waitForAccountView(tester, _accountA);
-      }
+      // The Lock button only locks with Pin Lock on, which stays off (#1361).
 
       step("put the settings back");
       await openMenuItem(tester, "Settings");
@@ -686,15 +683,44 @@ void main() {
       await waitForAccountView(tester, _accountA);
       await pumpFor(tester, const Duration(seconds: 1));
 
-      phase("done");
-      rendezvous.publish("done", "true");
-      await pumpFor(tester, const Duration(seconds: 3));
+      // ── Database manager ─────────────────────────────────────────────────
+      // Last, since it changes databases. The manager is scheduled from the
+      // settings page and opens when the app starts again, and a start is a
+      // new process (the Rust side initialises once): this process ends here
+      // and the orchestrator runs wallet_ext_db_ui_test.dart, which works the
+      // manager on a scratch database created now.
+      phase("database");
+      final testDbName = dbPath.split("/").last.replaceFirst(RegExp(r"\.db$"), "");
+      step("create a scratch database");
+      await tester.runAsync(() => Coin().openDatabase(dbFilepath: "${docsDir.path}/$_scratchDb.db", password: null));
+      expect(File("${docsDir.path}/$_scratchDb.db").existsSync(), isTrue);
+      step("schedule the database manager");
+      await openMenuItem(tester, "Settings");
+      await _waitForSettings(tester);
+      await tapTooltip(tester, "Database Manager");
+      await answerDialog(tester, "The Database Manager will open when you restart the app. Do you want to schedule it now?", "Ok");
+      await answerDialog(tester, "Restart the app to enter the database manager", "Ok");
+      expect(await prefs.getBool("recovery"), isTrue, reason: "the manager is scheduled for the next start");
+      // Opened the usual way, this database would be the one the settings
+      // name; the next process reopens it by that name and puts the
+      // developer's values back.
+      await prefs.setString("database", testDbName);
+      rendezvous.publish("saved_database", savedDatabase ?? "");
+      rendezvous.publish("saved_recovery", savedRecovery?.toString() ?? "");
+      debugPrint("[wallet-ext] database preference was '$savedDatabase', recovery $savedRecovery");
+      restarting = true;
+      phase("restart");
+      await pumpFor(tester, const Duration(seconds: 2));
     } finally {
       await savedPrefs.restore(prefs);
       await _restorePref(prefs, "coingecko", savedApiKey);
       await _restorePref(prefs, "transport", savedTransport);
       await _restorePref(prefs, "dark_mode", savedDarkMode);
       await _restorePref(prefs, "palette_name", savedPalette);
+      if (!restarting) {
+        await _restorePref(prefs, "database", savedDatabase);
+        await _restorePref(prefs, "recovery", savedRecovery);
+      }
     }
   }, timeout: const Timeout(Duration(minutes: 12)));
 }

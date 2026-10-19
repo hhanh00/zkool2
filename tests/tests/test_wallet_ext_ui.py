@@ -2,12 +2,16 @@
 
 The app (integration_test/wallet_ext_ui_test.dart) opens the pages the
 everyday wallet test (test_wallet_ui.py) leaves out: settings and its
-sub-pages, the account view tabs, contacts, the address list, the error
-display and the database manager. This side owns the chain and the SEED
-wallet, funds the app's account at every pool in one transaction (with a
-dust note and a memo, which those pages need), serves a mock CoinGecko so
-the price settings stay offline, mines on demand, and holds the run to a
-ten-minute budget. Coverage is gathered and printed as in test_wallet_ui.py.
+sub-pages, the account view tabs, contacts, the address list and the error
+display. It ends by scheduling the database manager, which the app opens
+when it starts again; that start is a second process
+(integration_test/wallet_ext_db_ui_test.dart), launched here once the first
+has quit, which works the manager and reopens the test database. This side
+owns the chain and the SEED wallet, funds the app's account at every pool in
+one transaction (with a dust note and a memo, which those pages need),
+serves a mock CoinGecko so the price settings stay offline, mines on demand,
+and holds the two app runs to a ten-minute budget, the second build left
+out. Coverage is gathered per process and printed as in test_wallet_ui.py.
 
 Not in the UI workflow's default list: it runs when named in the `tests`
 input.
@@ -33,7 +37,9 @@ from utils import dump_server_log, kill_existing_zkool_processes
 DEFAULT_PORT = 8000
 LWD_URL = "http://localhost:8137"
 FLUTTER_LOG = "/tmp/wallet_ext_ui_flutter.log"
+FLUTTER_LOG_DB = "/tmp/wallet_ext_db_ui_flutter.log"
 LCOV_COPY = "/tmp/wallet_ext_ui_lcov.info"
+LCOV_COPY_DB = "/tmp/wallet_ext_db_ui_lcov.info"
 TARGET_SECONDS = 360
 FUND_TADDR = "0.3"
 FUND_SADDR = "0.2"
@@ -41,6 +47,8 @@ FUND_OADDR = "0.4"
 # Below the notes tab's dust threshold (5000 zats).
 FUND_DUST = "0.00003"
 MEMO = "wallet-ext memo"
+# Created, renamed and deleted by the database manager steps.
+SCRATCH_DBS = ("wallet-ext-scratch", "wallet-ext-scratch-renamed")
 
 
 @pytest.mark.dkg_ui
@@ -61,13 +69,27 @@ async def test_wallet_ext_flutter_ui(rpc_url, seed, zkool_binary):
     coverage = bool(os.getenv("ZKOOL_UI_COVERAGE"))
     repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
     lcov_path = os.path.join(repo_root, "coverage", "lcov.info")
+    lcov_path_db = os.path.join(repo_root, "coverage", "lcov_db.info")
 
     mock = CoingeckoMock()
     wallet = DkgParticipant(DEFAULT_PORT, "/tmp/regtest_wallet_ext_ui_funder.db", LWD_URL)
     flutter = None
+    flutter_db = None
     miner = None
     started = time.monotonic()
+    spent = 0.0  # budget used by the first process
     main = None
+
+    async def poll_phase(value: str, process, timeout: int):
+        """Wait until the app publishes phase `value`, or fail if it exits."""
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            if rendezvous.read_ui().get("phase") == value:
+                return
+            if process.returncode is not None:
+                raise RuntimeError(f"flutter test exited with {process.returncode} before phase {value!r}")
+            await asyncio.sleep(2)
+        raise TimeoutError(f"phase {value!r} not reached in {timeout}s")
 
     async def launch():
         nonlocal flutter, miner, started, main
@@ -122,49 +144,78 @@ async def test_wallet_ext_flutter_ui(rpc_url, seed, zkool_binary):
         print(f"Paid {FUND_TADDR} to {taddr}, {FUND_SADDR} to {saddr[:20]}…, "
               f"{FUND_OADDR} and {FUND_DUST} to {oaddr[:20]}…")
 
-        print("\n=== Step 4: The app works through the pages ===")
-        await rendezvous.poll_ui("done", timeout=BUDGET_SECONDS, process=flutter)
+        print("\n=== Step 4: The app works through the pages, then quits for the database manager ===")
+        await poll_phase("restart", flutter, BUDGET_SECONDS)
         returncode = await asyncio.wait_for(flutter.wait(), timeout=300)
         assert returncode == 0, f"flutter test failed with {returncode}, see {FLUTTER_LOG}"
+
+    async def relaunch():
+        nonlocal flutter_db
+        print("\n=== Step 5: Start the app again; it opens on the database manager ===")
+        extra = ["--coverage", "--coverage-path", lcov_path_db] if coverage else []
+        flutter_db = await launch_flutter_test(
+            "wallet_ext_db_ui_test.dart", rendezvous, FLUTTER_LOG_DB, extra_args=extra
+        )
+        await poll_phase("database", flutter_db, BUILD_TIMEOUT)
+
+    async def body_db():
+        print("\n=== Step 6: The manager's work, then the test database again ===")
+        await rendezvous.poll_ui("done", timeout=BUDGET_SECONDS, process=flutter_db)
+        returncode = await asyncio.wait_for(flutter_db.wait(), timeout=300)
+        assert returncode == 0, f"flutter test failed with {returncode}, see {FLUTTER_LOG_DB}"
 
     try:
         await kill_existing_zkool_processes()
         rendezvous.setup()
-        for stale in (ui_db_path, FLUTTER_LOG, LCOV_COPY):
+        # The scratch databases are left behind by a run that failed before
+        # deleting them, and the manager refuses to rename over a file.
+        scratch = [os.path.join(docs_dir, f"{n}.db") for n in SCRATCH_DBS]
+        for stale in (ui_db_path, FLUTTER_LOG, FLUTTER_LOG_DB, LCOV_COPY, LCOV_COPY_DB,
+                      *scratch, *(f"{p}.voting" for p in (ui_db_path, *scratch))):
             if os.path.exists(stale):
                 os.remove(stale)
         await launch()
         try:
             await asyncio.wait_for(body(), timeout=BUDGET_SECONDS)
+            spent = time.monotonic() - started
+            await relaunch()
+            started = time.monotonic()
+            await asyncio.wait_for(body_db(), timeout=BUDGET_SECONDS - spent)
         except asyncio.TimeoutError:
             ui = rendezvous.read_ui()
             pytest.fail(
                 f"the run exceeded {BUDGET_SECONDS}s "
                 f"(last phase: {ui.get('phase')}, last step: {ui.get('step')})"
             )
-        elapsed = time.monotonic() - started
+        elapsed = spent + time.monotonic() - started
         print(f"\n=== ✅ Extended wallet UI test passed in {elapsed:.0f}s (target {TARGET_SECONDS}s) ===")
-        if coverage and os.path.exists(lcov_path):
-            shutil.copy(lcov_path, LCOV_COPY)
-            for label, only in (("lib/", False), ("in-scope lib/", True)):
-                hit, found = lib_line_coverage(lcov_path, in_scope_only=only)
-                pct = 100.0 * hit / found if found else 0.0
-                print(f"{label} line coverage: {hit}/{found} = {pct:.1f}%")
-            print(f"lcov report copied to {LCOV_COPY}")
+        if coverage:
+            for path, copy, label in ((lcov_path, LCOV_COPY, "pages"), (lcov_path_db, LCOV_COPY_DB, "database manager")):
+                if not os.path.exists(path):
+                    continue
+                shutil.copy(path, copy)
+                for scope, only in (("lib/", False), ("in-scope lib/", True)):
+                    hit, found = lib_line_coverage(path, in_scope_only=only)
+                    pct = 100.0 * hit / found if found else 0.0
+                    print(f"{label}: {scope} line coverage: {hit}/{found} = {pct:.1f}%")
+                print(f"lcov report copied to {copy}")
     except Exception:
         ui = rendezvous.read_ui()
         print(f"\nLast phase: {ui.get('phase')}\nLast step: {ui.get('step')}")
         dump_server_log(FLUTTER_LOG, "FLUTTER TEST LOG")
+        if os.path.exists(FLUTTER_LOG_DB):
+            dump_server_log(FLUTTER_LOG_DB, "FLUTTER TEST LOG (DATABASE MANAGER)")
         dump_server_log(f"/tmp/graphql_{DEFAULT_PORT}.log", "FUNDING WALLET")
         raise
     finally:
         if miner is not None:
             miner.cancel()
             await asyncio.gather(miner, return_exceptions=True)
-        if flutter is not None and flutter.returncode is None:
-            flutter.terminate()
-            with contextlib.suppress(asyncio.TimeoutError):
-                await asyncio.wait_for(flutter.wait(), timeout=30)
+        for process in (flutter, flutter_db):
+            if process is not None and process.returncode is None:
+                process.terminate()
+                with contextlib.suppress(asyncio.TimeoutError):
+                    await asyncio.wait_for(process.wait(), timeout=30)
         await wallet.stop()
         mock.stop()
         rendezvous.cleanup()
