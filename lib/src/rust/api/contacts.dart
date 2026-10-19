@@ -47,6 +47,21 @@ Future<List<ContactMatch>> findContactsForAddress(
 Future<String> exportContactsVcard({required Coin c}) =>
     RustLib.instance.api.crateApiContactsExportContactsVcard(c: c);
 
+/// Render one contact as a vCard 4.0 block, in the same format as
+/// `export_contacts_vcard`. Does not touch the database.
+String exportContactVcard(
+        {required String name,
+        required List<String> addresses,
+        required String notes}) =>
+    RustLib.instance.api.crateApiContactsExportContactVcard(
+        name: name, addresses: addresses, notes: notes);
+
+/// Parse a vCard 4.0 string into contacts without storing them.
+/// The returned contacts have id 0.
+List<Contact> parseContactsVcard({required String vcardData}) =>
+    RustLib.instance.api
+        .crateApiContactsParseContactsVcard(vcardData: vcardData);
+
 Future<List<Contact>> importContactsVcard(
         {required String vcardData, required Coin c}) =>
     RustLib.instance.api

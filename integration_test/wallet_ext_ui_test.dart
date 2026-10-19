@@ -56,7 +56,6 @@ const _userMemo = "edited by the wallet-ext test";
 const _exportPassword = "wallet-ext";
 const _contactNotes = "wallet-ext contact";
 const _contactImported = "Carol";
-const _contactImportedCopy = "Carol-copy";
 const _contactListImported = "Dave";
 const _scratchDb = "wallet-ext-scratch";
 
@@ -466,32 +465,25 @@ void main() {
           timeout: shortTimeout, what: "the contact editor with two addresses",);
       await tapTooltip(tester, "Remove address");
       expect(fieldNamed("address_1"), findsNothing);
-      // The removed address is still saved and exported (#1362): the checks
-      // below expect both addresses until that is fixed.
       await _enterField(tester, "notes", "$_contactNotes edited");
       step("export the contact as a vCard");
       await tapTooltip(tester, "Export as vCard");
       await _savedFile(tester, picker, "$_accountB.vcf");
       final vcard = File(picker.saved.last).readAsStringSync();
       expect(vcard, contains("FN:$_accountB"));
-      expect(vcard, contains("zcash:${bAddresses.ua!}"));
+      // vCard folds long lines at 75 characters.
+      final unfolded = vcard.replaceAll("\r\n ", "");
+      expect(unfolded, contains("zcash:${bAddresses.ua!}"));
+      expect(unfolded, isNot(contains(bAddresses.taddr!)), reason: "the removed address is not exported");
       await _back(tester);
       await _waitForContacts(tester);
       contacts = await _contacts(tester);
-      expect(contacts.single.addresses, [bAddresses.ua!, bAddresses.taddr!], reason: "both addresses kept (#1362)");
+      expect(contacts.single.addresses, [bAddresses.ua!], reason: "the removed address is not saved");
       expect(contacts.single.notes, "$_contactNotes edited");
 
-      step("import a vCard into a new contact, and into the list");
-      // The editor's export is not importable (#1363); the list's export
-      // is, and it has only B so far.
-      await tapTooltip(tester, "Export as vCard");
-      await _savedFile(tester, picker, "contacts.vcf");
-      final exported = File(picker.saved.last).readAsStringSync();
-      expect(exported, contains("FN:$_accountB"));
-      // vCard folds long lines at 75 characters.
-      expect(exported.replaceAll("\r\n ", ""), contains("zcash:${bAddresses.ua!}"));
+      step("import the editor's vCard into a new contact, and into the list");
       final carolVcard = File("${picker.dir.path}/$_contactImported.vcf")
-        ..writeAsStringSync(exported.replaceAll("FN:$_accountB", "FN:$_contactImported"));
+        ..writeAsStringSync(vcard.replaceAll("FN:$_accountB", "FN:$_contactImported"));
       picker.picks.add(carolVcard.path);
       await tapTooltip(tester, "New contact");
       await pumpUntil(tester, () => find.text("New Contact").evaluate().isNotEmpty,
@@ -499,37 +491,35 @@ void main() {
       await tapTooltip(tester, "Import from vCard");
       await pumpUntil(tester, () => fieldValue(tester, "name") == _contactImported,
           timeout: shortTimeout, what: "the imported name in the editor",);
-      // The export's "Zcash addresses:" label comes back as a note line (#1365).
-      expect(fieldValue(tester, "notes"), startsWith("$_contactNotes edited"), reason: "the imported notes");
-      // The import has already stored the contact (#1366) and left the first
-      // address field empty (#1364): fill it and save under another name.
-      await _enterField(tester, "address_0", bAddresses.ua!);
-      await _enterField(tester, "name", _contactImportedCopy);
-      await _back(tester);
+      expect(fieldValue(tester, "notes"), "$_contactNotes edited", reason: "the imported notes, without the addresses label");
+      expect(_addressFields(tester), [bAddresses.ua!], reason: "the imported address fills the address row");
+      await _back(tester); // saves on the way out
       await _waitForContacts(tester);
-      await pumpUntil(tester, () => find.widgetWithText(ListTile, _contactImportedCopy).evaluate().isNotEmpty,
-          timeout: shortTimeout, what: "the saved copy in the list",);
       await pumpUntil(tester, () => find.widgetWithText(ListTile, _contactImported).evaluate().isNotEmpty,
           timeout: shortTimeout, what: "the imported contact in the list",);
+      contacts = await _contacts(tester);
+      final carol = contacts.singleWhere((x) => x.name == _contactImported);
+      expect(carol.addresses, [bAddresses.ua!]);
+      expect(carol.notes, "$_contactNotes edited");
       final daveVcard = File("${picker.dir.path}/$_contactListImported.vcf")
-        ..writeAsStringSync(exported.replaceAll("FN:$_accountB", "FN:$_contactListImported"));
+        ..writeAsStringSync(vcard.replaceAll("FN:$_accountB", "FN:$_contactListImported"));
       picker.picks.add(daveVcard.path);
       await tapTooltip(tester, "Import from vCard");
       await pumpUntil(tester, () => find.widgetWithText(ListTile, _contactListImported).evaluate().isNotEmpty,
           timeout: shortTimeout, what: "the contact imported into the list",);
       contacts = await _contacts(tester);
-      expect(contacts.map((x) => x.name).toSet(), {_accountB, _contactImported, _contactImportedCopy, _contactListImported});
+      expect(contacts.map((x) => x.name).toSet(), {_accountB, _contactImported, _contactListImported});
 
       step("export every contact as a vCard");
       await tapTooltip(tester, "Export as vCard");
       await _savedFile(tester, picker, "contacts.vcf");
       final all = File(picker.saved.last).readAsStringSync();
-      for (final name in [_accountB, _contactImported, _contactImportedCopy, _contactListImported]) {
+      for (final name in [_accountB, _contactImported, _contactListImported]) {
         expect(all, contains("FN:$name"));
       }
 
       step("delete the imported contacts");
-      for (final name in [_contactImported, _contactImportedCopy, _contactListImported]) {
+      for (final name in [_contactImported, _contactListImported]) {
         await tester.tap(find.widgetWithText(ListTile, name));
         await pumpUntil(tester, () => find.text("Edit Contact").evaluate().isNotEmpty,
             timeout: shortTimeout, what: "the editor of $name",);
@@ -877,6 +867,13 @@ Future<void> _tapSwitch(WidgetTester tester, Finder finder) async {
   await tester.tap(finder);
   await pumpFor(tester, const Duration(seconds: 1));
 }
+
+/// The values of the contact editor's address rows, top to bottom.
+List<String?> _addressFields(WidgetTester tester) => find
+    .byWidgetPredicate((w) => w is FormBuilderTextField && w.name.startsWith("address_"))
+    .evaluate()
+    .map((e) => ((e as StatefulElement).state as FormBuilderFieldState).value as String?)
+    .toList();
 
 Future<void> _enterField(WidgetTester tester, String name, String value) async {
   final field = fieldNamed(name);
