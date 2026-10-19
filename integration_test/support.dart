@@ -10,7 +10,9 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -421,6 +423,61 @@ Future<String> driveDkg(
 /// the test database live (the macOS app is sandboxed and cannot use /tmp).
 Future<Directory> appDocumentsDir() => getApplicationDocumentsDirectory();
 
+/// Stands in for the system file dialogs, which a test cannot drive: a save
+/// lands in [dir] under the name the app proposes (the desktop pickers write
+/// the bytes too), and a pick hands out the next path queued in [picks].
+/// Installed with `FilePicker.platform = FakeFilePicker(dir)`.
+class FakeFilePicker extends FilePicker {
+  final Directory dir;
+  final List<String> picks = [];
+  final List<String> saved = [];
+
+  FakeFilePicker(this.dir);
+
+  @override
+  Future<String?> saveFile({
+    String? dialogTitle,
+    String? fileName,
+    String? initialDirectory,
+    FileType type = FileType.any,
+    List<String>? allowedExtensions,
+    Uint8List? bytes,
+    bool lockParentWindow = false,
+  }) async {
+    final path = "${dir.path}/${fileName ?? "file-${saved.length}"}";
+    if (bytes != null) File(path).writeAsBytesSync(bytes);
+    saved.add(path);
+    return path;
+  }
+
+  @override
+  Future<FilePickerResult?> pickFiles({
+    String? dialogTitle,
+    String? initialDirectory,
+    FileType type = FileType.any,
+    List<String>? allowedExtensions,
+    Function(FilePickerStatus)? onFileLoading,
+    bool allowCompression = false,
+    int compressionQuality = 0,
+    bool allowMultiple = false,
+    bool withData = false,
+    bool withReadStream = false,
+    bool lockParentWindow = false,
+    bool readSequential = false,
+  }) async {
+    if (picks.isEmpty) return null;
+    final file = File(picks.removeAt(0));
+    return FilePickerResult([
+      PlatformFile(
+        path: file.path,
+        name: file.uri.pathSegments.last,
+        size: file.lengthSync(),
+        bytes: withData ? file.readAsBytesSync() : null,
+      ),
+    ]);
+  }
+}
+
 // ── Wallet pages ─────────────────────────────────────────────────────────────
 // Helpers for the account list, account view and send page, shared by the
 // wallet tests.
@@ -541,7 +598,8 @@ List<String> tileTexts() => [
     ];
 
 /// Waits for an AwesomeDialog showing [message] (its title is not a Text
-/// widget) and taps the [button] once it has slid in.
+/// widget), taps the [button] once it has slid in, and waits for the dialog
+/// to go: a tap during its exit lands on its barrier.
 Future<void> answerDialog(WidgetTester tester, String message, String button) async {
   await pumpUntil(
     tester,
@@ -550,7 +608,13 @@ Future<void> answerDialog(WidgetTester tester, String message, String button) as
     what: "the dialog '$message'",
   );
   await tester.tap(find.text(button).last);
-  await pumpFor(tester, const Duration(seconds: 1));
+  await pumpUntil(
+    tester,
+    () => find.text(message).evaluate().isEmpty,
+    timeout: shortTimeout,
+    what: "the dialog '$message' to close",
+  );
+  await pumpFor(tester, const Duration(milliseconds: 500));
 }
 
 Future<void> enterAmount(WidgetTester tester, String amount) async {
