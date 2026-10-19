@@ -1,8 +1,8 @@
 import 'package:awesome_dialog/awesome_dialog.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:gap/gap.dart';
+import 'package:zkool/utils.dart';
 
 /// A widget that displays errors with expandable stack trace
 /// and copy functionality for debugging
@@ -25,10 +25,7 @@ class ErrorDisplay extends StatefulWidget {
 class _ErrorDisplayState extends State<ErrorDisplay> {
   bool _isExpanded = false;
 
-  String get _errorMessage {
-    if (widget.customMessage != null) return widget.customMessage!;
-    return widget.error.toString();
-  }
+  String get _errorMessage => errorDisplayText(widget.customMessage ?? widget.error);
 
   String get _fullError {
     final buffer = StringBuffer();
@@ -225,14 +222,12 @@ class _ErrorDisplayState extends State<ErrorDisplay> {
 class ErrorDialog extends StatelessWidget {
   final Object error;
   final StackTrace? stackTrace;
-  final String? title;
   final String? customMessage;
 
   const ErrorDialog({
     super.key,
     required this.error,
     this.stackTrace,
-    this.title,
     this.customMessage,
   });
 
@@ -250,140 +245,179 @@ class ErrorDialog extends StatelessWidget {
     );
   }
 
-  /// Show the error dialog using AwesomeDialog
+  /// Show the error dialog using AwesomeDialog.
+  ///
+  /// The message is the compact form of [customMessage] (or of [error]: an
+  /// anyhow error's context chain, see [errorDisplayText]). A Rust backtrace
+  /// in the message and the Dart [stackTrace], if any, go into a collapsed
+  /// "Details" section, so the Ok button stays on screen (#1368).
   static Future<void> show(
     BuildContext context, {
     required Object error,
     StackTrace? stackTrace,
-    String? title,
     String? customMessage,
   }) {
-    final errorMessage = customMessage ?? error.toString();
+    final rawMessage = customMessage ?? errorRawText(error);
 
     return AwesomeDialog(
       context: context,
       dialogType: DialogType.error,
       animType: AnimType.rightSlide,
-      title: title ?? 'Error',
-      desc: errorMessage,
-      body: _buildErrorBody(context, error, stackTrace, errorMessage),
+      body: _ErrorDialogBody(rawMessage: rawMessage, stackTrace: stackTrace),
       btnOkOnPress: () {},
       autoDismiss: true,
     ).show();
   }
+}
 
-  static Widget _buildErrorBody(
-    BuildContext context,
-    Object error,
-    StackTrace? stackTrace,
-    String errorMessage,
-  ) {
+/// The body of [ErrorDialog]: the compact message, then a collapsible
+/// "Details" section holding the Rust backtrace and the Dart stack trace.
+/// The body is capped at 60% of the screen height and scrolls inside that
+/// cap, so the dialog's Ok button (laid out below the body by AwesomeDialog)
+/// is always visible.
+class _ErrorDialogBody extends StatefulWidget {
+  final String rawMessage;
+  final StackTrace? stackTrace;
+
+  const _ErrorDialogBody({required this.rawMessage, this.stackTrace});
+
+  @override
+  State<_ErrorDialogBody> createState() => _ErrorDialogBodyState();
+}
+
+class _ErrorDialogBodyState extends State<_ErrorDialogBody> {
+  bool _expanded = false;
+
+  String get _message => compactAnyhowError(widget.rawMessage);
+
+  /// The backtrace and Dart stack trace, or null when there is neither.
+  String? get _details {
+    final backtrace = anyhowBacktrace(widget.rawMessage);
+    final parts = <String>[
+      if (backtrace != null) backtrace,
+      if (widget.stackTrace != null) 'Dart stack trace:\n${widget.stackTrace}',
+    ];
+    return parts.isEmpty ? null : parts.join('\n\n');
+  }
+
+  /// What Copy puts on the clipboard: the raw, uncompacted message and the
+  /// Dart stack trace, so a bug report loses nothing.
+  String get _copyText {
+    final buffer = StringBuffer(widget.rawMessage);
+    if (widget.stackTrace != null) buffer.write('\n\nDart stack trace:\n${widget.stackTrace}');
+    return buffer.toString();
+  }
+
+  void _copy() {
+    Clipboard.setData(ClipboardData(text: _copyText));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Error details copied to clipboard'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final details = _details;
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.6;
 
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: SelectableText(
-              errorMessage,
-              style: textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurface,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          if (stackTrace != null && !kReleaseMode) ...[
-            const Gap(16),
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: colorScheme.errorContainer.withAlpha(26),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: colorScheme.error.withAlpha(38),
-                  width: 1,
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: SelectableText(
+                _message,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface,
                 ),
+                textAlign: TextAlign.center,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.error_outline,
-                        color: colorScheme.error,
-                        size: 16,
-                      ),
-                      const Gap(8),
-                      Text(
-                        'Stack Trace',
-                        style: textTheme.labelSmall?.copyWith(
-                          color: colorScheme.error,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Spacer(),
-                      InkWell(
-                        onTap: () {
-                          Clipboard.setData(ClipboardData(
-                            text: '$error\n\n$stackTrace',
-                          ),);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Error details copied to clipboard'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        },
+            ),
+            if (details != null) ...[
+              const Gap(16),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: colorScheme.errorContainer.withAlpha(26),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: colorScheme.error.withAlpha(38),
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    InkWell(
+                      onTap: () => setState(() => _expanded = !_expanded),
+                      borderRadius: BorderRadius.circular(8),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         child: Row(
-                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
-                              Icons.copy,
+                              _expanded ? Icons.expand_less : Icons.expand_more,
                               color: colorScheme.error,
-                              size: 16,
+                              size: 20,
                             ),
-                            const Gap(4),
+                            const Gap(8),
                             Text(
-                              'Copy',
-                              style: textTheme.labelSmall?.copyWith(
+                              'Details',
+                              style: textTheme.labelMedium?.copyWith(
                                 color: colorScheme.error,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Spacer(),
+                            TextButton.icon(
+                              onPressed: _copy,
+                              icon: const Icon(Icons.copy, size: 16),
+                              label: const Text('Copy'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: colorScheme.error,
+                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),
                             ),
                           ],
                         ),
                       ),
-                    ],
-                  ),
-                  const Gap(8),
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: colorScheme.surface.withAlpha(230),
-                      borderRadius: BorderRadius.circular(4),
                     ),
-                    child: SingleChildScrollView(
-                      child: SelectableText(
-                        stackTrace.toString(),
-                        style: textTheme.bodySmall?.copyWith(
-                          fontFamily: 'monospace',
-                          fontSize: 10,
-                          color: colorScheme.onSurface,
+                    if (_expanded)
+                      Container(
+                        margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                        padding: const EdgeInsets.all(8),
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: colorScheme.surface.withAlpha(230),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: SelectableText(
+                          details,
+                          style: textTheme.bodySmall?.copyWith(
+                            fontFamily: 'monospace',
+                            fontSize: 10,
+                            color: colorScheme.onSurface,
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }
@@ -432,7 +466,7 @@ class ErrorCard extends StatelessWidget {
               const Gap(12),
               Expanded(
                 child: SelectableText(
-                  customMessage ?? error.toString(),
+                  errorDisplayText(customMessage ?? error),
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onErrorContainer,
                   ),
@@ -461,13 +495,11 @@ Future<void> showException(
   BuildContext context,
   String message, {
   StackTrace? stackTrace,
-  String? title,
 }) {
   return ErrorDialog.show(
     context,
     error: Exception(message),
     stackTrace: stackTrace,
-    title: title,
     customMessage: message,
   );
 }
