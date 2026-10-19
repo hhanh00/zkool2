@@ -14,7 +14,6 @@ library;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -25,8 +24,6 @@ import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/tx_view.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
-import 'package:zkool/src/rust/api/network.dart';
-import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
@@ -40,9 +37,6 @@ const _folderName = "Tests";
 // A valid BIP-39 phrase that no other test funds.
 const _mnemonicC = "zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong";
 const _memo = "wallet-ui memo";
-
-const _shortTimeout = Duration(seconds: 30);
-const _chainTimeout = Duration(minutes: 4);
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -109,7 +103,7 @@ void main() {
       await _createAccount(tester, appRouter, name: _accountA);
       await _createAccount(tester, appRouter, name: _accountB);
       await _createAccount(tester, appRouter, name: _accountC, mnemonic: _mnemonicC);
-      final ids = await tester.runAsync(() => _accountIds());
+      final ids = await tester.runAsync(() => accountIds());
       final a = ids![_accountA]!, b = ids[_accountB]!, c = ids[_accountC]!;
       debugPrint("[wallet-ui] accounts A=$a B=$b C=$c");
       for (final name in [_accountA, _accountB, _accountC]) {
@@ -126,23 +120,23 @@ void main() {
       ))!;
       appRouter.go(accountRoute("/receive", a));
       await pumpUntil(tester, () => find.text("Receive Funds").evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the receive page",);
-      await pumpUntil(tester, () => _copyable(aAddresses.ua!).evaluate().isNotEmpty && _copyable(aAddresses.taddr!).evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "A's addresses on the receive page",);
+          timeout: shortTimeout, what: "the receive page",);
+      await pumpUntil(tester, () => copyableWith(aAddresses.ua!).evaluate().isNotEmpty && copyableWith(aAddresses.taddr!).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "A's addresses on the receive page",);
       rendezvous.publish("a_ua", aAddresses.ua!);
       rendezvous.publish("a_taddr", aAddresses.taddr!);
 
       appRouter.go(accountRoute("/", a));
-      await _waitForAccountView(tester, _accountA);
-      await _waitForBalance(tester, a, atLeast: _zat(fundUa) + _zat(fundTaddr),
+      await waitForAccountView(tester, _accountA);
+      await waitForBalance(tester, a, atLeast: zecToZat(fundUa) + zecToZat(fundTaddr),
           what: "A to receive the funding",);
       // pytest pays both addresses in one transaction: one entry in the
       // history, two notes (Ironwood from the unified address, transparent).
-      await _tapTab(tester, "Transactions");
+      await tapTab(tester, "Transactions");
       await pumpUntil(tester, () => find.text("Receive").evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the incoming transaction in A's history",);
+          timeout: shortTimeout, what: "the incoming transaction in A's history",);
       final aNotes = (await tester.runAsync(() => listNotes(account: a, c: coinContext.coin)))!;
-      expect(aNotes.map((n) => (n.pool, n.value)).toSet(), {(3, _zat(fundUa)), (0, _zat(fundTaddr))},
+      expect(aNotes.map((n) => (n.pool, n.value)).toSet(), {(3, zecToZat(fundUa)), (0, zecToZat(fundTaddr))},
           reason: "one Ironwood note and one transparent note",);
 
       // ── Edit ─────────────────────────────────────────────────────────────
@@ -151,15 +145,15 @@ void main() {
       // alive, and `go` would rebuild that page and lose the selection.
       phase("edit");
       appRouter.go("/accounts");
-      await _waitForAccountList(tester);
-      step("await _openMenuItem(tester, 'Folders');");
-      await _openMenuItem(tester, "Folders");
+      await waitForAccountList(tester);
+      step("await openMenuItem(tester, 'Folders');");
+      await openMenuItem(tester, "Folders");
       await pumpUntil(tester, () => find.text("Folders").evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the folders page",);
+          timeout: shortTimeout, what: "the folders page",);
       step('await tester.tap(find.byIcon(Icons.add));');
       await tester.tap(find.byIcon(Icons.add));
       await pumpUntil(tester, () => find.byType(TextField).evaluate().isNotEmpty && find.text("Ok").evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the new folder dialog",);
+          timeout: shortTimeout, what: "the new folder dialog",);
       await tester.enterText(find.byType(TextField).last, _folderName);
       await tester.pump();
       step("await tester.tap(find.text('Ok'));");
@@ -168,14 +162,14 @@ void main() {
       // for the dialog to close and the folder to show as a list tile before
       // leaving, or the pop would close the dialog with no result.
       await pumpUntil(tester, () => find.byType(TextField).evaluate().isEmpty && _folderTile().evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the new folder in the list",);
+          timeout: shortTimeout, what: "the new folder in the list",);
       step('appRouter.pop();');
       appRouter.pop();
-      await _waitForAccountList(tester);
+      await waitForAccountList(tester);
       step("select Carol and edit");
-      await _selectAndTap(tester, c, Icons.edit);
+      await selectAndTap(tester, c, Icons.edit);
       await pumpUntil(tester, () => fieldNamed("name").evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the account edit page",);
+          timeout: shortTimeout, what: "the account edit page",);
       await tester.enterText(fieldNamed("name"), _accountCRenamed);
       await tester.pump();
       await pickDropdown(tester, dropdownNamed("folder"), _folderName);
@@ -186,10 +180,10 @@ void main() {
       }
       appRouter.pop();
       await pumpUntil(tester, () => find.text("Save and leave").evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the unsaved changes dialog",);
+          timeout: shortTimeout, what: "the unsaved changes dialog",);
       step("await tester.tap(find.text('Save and leave'));");
       await tester.tap(find.text("Save and leave"));
-      await _waitForAccountList(tester);
+      await waitForAccountList(tester);
       final carol = (await tester.runAsync(() => listAccounts(c: coinContext.coin)))!
           .firstWhere((x) => x.id == c);
       expect(carol.name, _accountCRenamed, reason: "Carol renamed");
@@ -198,59 +192,59 @@ void main() {
       // Not in the root folder any more, and hidden inside hers until "Show All".
       // The list refreshes asynchronously after the save.
       await pumpUntil(tester, () => find.text(_accountCRenamed).evaluate().isEmpty && find.text(_accountC).evaluate().isEmpty,
-          timeout: _shortTimeout, what: "Carol to leave the root folder's list",);
-      step("await _openMenuItem(tester, 'Folders');");
-      await _openMenuItem(tester, "Folders");
+          timeout: shortTimeout, what: "Carol to leave the root folder's list",);
+      step("await openMenuItem(tester, 'Folders');");
+      await openMenuItem(tester, "Folders");
       await pumpUntil(tester, () => _folderTile().evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the folders page to pick Tests",);
+          timeout: shortTimeout, what: "the folders page to pick Tests",);
       await tester.tap(_folderTile());
       await pumpFor(tester, const Duration(seconds: 1));
       appRouter.pop();
-      await _waitForAccountList(tester);
+      await waitForAccountList(tester);
       await pumpUntil(tester, () => find.text(_accountA).evaluate().isEmpty,
-          timeout: _shortTimeout, what: "the list to show the Tests folder only",);
+          timeout: shortTimeout, what: "the list to show the Tests folder only",);
       if (hiddenFlow) {
         expect(find.text(_accountCRenamed), findsNothing, reason: "hidden accounts are not listed");
         step("Show All");
-        await _openMenuItem(tester, "Show All");
+        await openMenuItem(tester, "Show All");
       }
       await pumpUntil(tester, () => find.text(_accountCRenamed).evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "Carol listed in her folder",);
+          timeout: shortTimeout, what: "Carol listed in her folder",);
 
       // ── Pay ──────────────────────────────────────────────────────────────
       phase("pay");
       appRouter.go(accountRoute("/", a));
-      await _waitForAccountView(tester, _accountA);
-      await _waitForSync(tester, a);
+      await waitForAccountView(tester, _accountA);
+      await waitForSync(tester, a);
       step("appRouter.go(accountRoute('/send', a));");
       appRouter.go(accountRoute("/send", a));
       await pumpUntil(tester, () => fieldNamed("address").evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the send page",);
+          timeout: shortTimeout, what: "the send page",);
       // The recipient with a memo goes first and the transparent one right
       // after it, and it is the transparent one that gets edited: queued after
       // a memo, or loaded for editing, a transparent recipient used to inherit
       // the memo and the app crashed on send (#1355).
-      await _enterRecipient(tester, bAddresses.oaddr!, "0.05", memo: _memo);
+      await enterRecipient(tester, bAddresses.oaddr!, "0.05", memo: _memo);
       await tapTooltip(tester, "Queue this recipient to create a multi send");
       // The price arrived at startup from the mock; the amount gets a fiat twin.
-      await _enterRecipient(tester, bAddresses.taddr!, "0.02");
-      await pumpUntil(tester, () => _fieldValue(tester, "fiat") == doubleToString(0.02 * usdPrice, decimals: 3),
-          timeout: _shortTimeout, what: "the fiat amount next to the ZEC amount",);
+      await enterRecipient(tester, bAddresses.taddr!, "0.02");
+      await pumpUntil(tester, () => fieldValue(tester, "fiat") == doubleToString(0.02 * usdPrice, decimals: 3),
+          timeout: shortTimeout, what: "the fiat amount next to the ZEC amount",);
       expect(fieldNamed("memo").hitTestable(), findsNothing, reason: "no memo for a transparent recipient");
       await tapTooltip(tester, "Queue this recipient to create a multi send");
-      await _enterRecipient(tester, bAddresses.saddr!, "0.01");
+      await enterRecipient(tester, bAddresses.saddr!, "0.01");
       await tapTooltip(tester, "Queue this recipient to create a multi send");
       expect(find.byType(ListTile), findsNWidgets(3));
       // Edit the transparent recipient's amount, saved by tapping the Sapling
       // tile. The queue sits below the form, so each tile is scrolled into
       // view first.
       await _tapTile(tester, bAddresses.taddr!);
-      await _enterAmount(tester, "0.05");
+      await enterAmount(tester, "0.05");
       await _tapTile(tester, bAddresses.saddr!);
-      step("queue tiles: ${_tileTexts().join(" || ")}");
+      step("queue tiles: ${tileTexts().join(" || ")}");
       // The amount is a Text.rich of two spans; match its plain text.
       final taddrTile = find.ancestor(of: find.text(bAddresses.taddr!), matching: find.byType(ListTile));
-      expect(find.descendant(of: taddrTile, matching: find.text(zatToString(_zat("0.05")), findRichText: true)), findsOneWidget,
+      expect(find.descendant(of: taddrTile, matching: find.text(zatToString(zecToZat("0.05")), findRichText: true)), findsOneWidget,
           reason: "the edited amount shows on the tile",);
       final editedTile = find.ancestor(of: find.text(bAddresses.saddr!), matching: find.byType(ListTile));
       expect(tester.widget<ListTile>(editedTile).selected, isTrue, reason: "the tapped tile is highlighted");
@@ -266,7 +260,7 @@ void main() {
       step("await tapTooltip(tester, 'Send transaction (including queued recipients)');");
       await tapTooltip(tester, "Send transaction (including queued recipients)");
       await pumpUntil(tester, () => find.text("Extra Options").evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the send options page",);
+          timeout: shortTimeout, what: "the send options page",);
       await tapTooltip(tester, "Send (Summary and Confirmation)");
       await pumpUntil(tester, () => find.byType(TxPage).evaluate().isNotEmpty && find.text("Output 2").evaluate().isNotEmpty,
           timeout: const Duration(minutes: 2), what: "the transaction page with two outputs",);
@@ -278,7 +272,7 @@ void main() {
       expect(find.textContaining("Fee: "), findsOneWidget);
       step("await tapTooltip(tester, 'Confirm, broadcast transaction');");
       await tapTooltip(tester, "Confirm, broadcast transaction");
-      await _answerDialog(tester, "Are you sure you want to send this transaction?", "Ok");
+      await answerDialog(tester, "Are you sure you want to send this transaction?", "Ok");
       final txLine = await awaitStatus(
         tester,
         rendezvous,
@@ -298,37 +292,37 @@ void main() {
       // ── Settle ───────────────────────────────────────────────────────────
       phase("settle");
       await pumpUntil(tester, () => rendezvous.readOrchestrator()?["mined"] == true,
-          timeout: _chainTimeout, what: "the orchestrator to mine the payment",);
+          timeout: chainTimeout, what: "the orchestrator to mine the payment",);
       appRouter.go(accountRoute("/", b));
-      await _waitForAccountView(tester, _accountB);
-      await _waitForBalance(tester, b, atLeast: _zat("0.10"), what: "B to receive the two outputs");
+      await waitForAccountView(tester, _accountB);
+      await waitForBalance(tester, b, atLeast: zecToZat("0.10"), what: "B to receive the two outputs");
       final bNotes = (await tester.runAsync(() => listNotes(account: b, c: coinContext.coin)))!;
-      expect(bNotes.where((n) => n.value == _zat("0.05")).length, 2, reason: "two incoming notes of 0.05");
+      expect(bNotes.where((n) => n.value == zecToZat("0.05")).length, 2, reason: "two incoming notes of 0.05");
       expect(bNotes.map((n) => n.pool).toSet(), {0, 3}, reason: "one transparent, one Ironwood");
-      await _tapTab(tester, "Transactions");
+      await tapTab(tester, "Transactions");
       await pumpUntil(tester, () => find.text("Receive").evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the incoming transaction in B's history",);
+          timeout: shortTimeout, what: "the incoming transaction in B's history",);
       await tester.tap(find.text("Receive").first);
       await pumpUntil(tester, () => find.byType(TxViewPage).evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the transaction view",);
+          timeout: shortTimeout, what: "the transaction view",);
       await pumpUntil(tester, () => find.text(_memo).evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the memo in B's transaction view",);
+          timeout: shortTimeout, what: "the memo in B's transaction view",);
 
       // ── Pricing ──────────────────────────────────────────────────────────
       phase("pricing");
       appRouter.go("/accounts");
-      await _waitForAccountList(tester);
+      await waitForAccountList(tester);
       await pumpUntil(tester, () => find.text("1 ZEC = ${usdPrice.toStringAsFixed(2)} USD").evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the exchange rate button with the mock price",);
+          timeout: shortTimeout, what: "the exchange rate button with the mock price",);
       appRouter.go(accountRoute("/", a));
-      await _waitForAccountView(tester, _accountA);
-      var aBalance = await tester.runAsync(() => _total(a));
+      await waitForAccountView(tester, _accountA);
+      var aBalance = await tester.runAsync(() => totalBalance(a));
       await pumpUntil(tester, () => find.text(formatFiat(aBalance!.toDouble() / 1e8 * usdPrice, "usd")).evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "A's balance in USD",);
-      await _openMenuItem(tester, "Fetch Tx Prices");
-      await _answerDialog(tester, "Do you want to retrieve historical ZEC prices for your past transactions?", "Ok");
+          timeout: shortTimeout, what: "A's balance in USD",);
+      await openMenuItem(tester, "Fetch Tx Prices");
+      await answerDialog(tester, "Do you want to retrieve historical ZEC prices for your past transactions?", "Ok");
       await pumpUntil(tester, () => find.textContaining("transaction price").evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the prices updated snackbar",);
+          timeout: shortTimeout, what: "the prices updated snackbar",);
       var aTxs = (await tester.runAsync(() => listTxHistory(account: a, c: coinContext.coin)))!;
       expect(aTxs, isNotEmpty);
       for (final t in aTxs) {
@@ -338,28 +332,28 @@ void main() {
       // Switch to EUR: the conversion dialog pre-fills eur/usd from the mock.
       unawaited(appRouter.push("/settings"));
       await pumpUntil(tester, () => find.text("Currency").evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the settings page",);
+          timeout: shortTimeout, what: "the settings page",);
       await tester.ensureVisible(find.text("Currency"));
       await tester.tap(find.text("Currency"));
       await pumpUntil(tester, () => find.text("EUR").evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the currency list from the mock",);
+          timeout: shortTimeout, what: "the currency list from the mock",);
       await tester.tap(find.text("EUR"));
       await pumpFor(tester, const Duration(seconds: 1));
       // The page converts prices in its PopScope handler, which the back
       // button runs and a router pop skips.
       await tester.pageBack();
       await pumpUntil(tester, () => find.text("Convert Prices").evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the convert prices dialog",);
+          timeout: shortTimeout, what: "the convert prices dialog",);
       await tester.tap(find.text("Convert"));
       await pumpUntil(tester, () => find.text("Settings").evaluate().isNotEmpty && find.text("EUR").evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "settings showing EUR",);
+          timeout: shortTimeout, what: "settings showing EUR",);
       appRouter.pop(); // leaving settings saves them
-      await _waitForAccountView(tester, _accountA);
+      await waitForAccountView(tester, _accountA);
       await pumpUntil(tester, () => container.read(appSettingsProvider).value?.currency == "eur",
-          timeout: _shortTimeout, what: "the currency setting to be saved",);
-      aBalance = await tester.runAsync(() => _total(a));
+          timeout: shortTimeout, what: "the currency setting to be saved",);
+      aBalance = await tester.runAsync(() => totalBalance(a));
       await pumpUntil(tester, () => find.text(formatFiat(aBalance!.toDouble() / 1e8 * eurPrice, "eur")).evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "A's balance in EUR",);
+          timeout: shortTimeout, what: "A's balance in EUR",);
       aTxs = (await tester.runAsync(() => listTxHistory(account: a, c: coinContext.coin)))!;
       for (final t in aTxs) {
         expect(t.price!, closeTo(eurPrice, 1e-6), reason: "transaction prices converted to EUR");
@@ -370,24 +364,24 @@ void main() {
       // and "Show All" again to reach the hidden account.
       phase("delete");
       appRouter.go("/accounts");
-      await _waitForAccountList(tester);
-      step("await _openMenuItem(tester, 'Folders');");
-      await _openMenuItem(tester, "Folders");
+      await waitForAccountList(tester);
+      step("await openMenuItem(tester, 'Folders');");
+      await openMenuItem(tester, "Folders");
       await pumpUntil(tester, () => _folderTile().evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "the folders page before the delete",);
+          timeout: shortTimeout, what: "the folders page before the delete",);
       await tester.tap(_folderTile());
       await pumpFor(tester, const Duration(seconds: 1));
       appRouter.pop();
-      await _waitForAccountList(tester);
-      if (hiddenFlow && find.text(_accountCRenamed).evaluate().isEmpty) await _openMenuItem(tester, "Show All");
+      await waitForAccountList(tester);
+      if (hiddenFlow && find.text(_accountCRenamed).evaluate().isEmpty) await openMenuItem(tester, "Show All");
       await pumpUntil(tester, () => find.text(_accountCRenamed).evaluate().isNotEmpty,
-          timeout: _shortTimeout, what: "Carol listed for deletion",);
+          timeout: shortTimeout, what: "Carol listed for deletion",);
       step("select Carol and delete");
-      await _selectAndTap(tester, c, Icons.delete);
-      await _answerDialog(tester, "Are you sure you want to delete these accounts?", "Ok");
+      await selectAndTap(tester, c, Icons.delete);
+      await answerDialog(tester, "Are you sure you want to delete these accounts?", "Ok");
       await pumpUntil(tester, () => find.text(_accountCRenamed).evaluate().isEmpty,
-          timeout: _shortTimeout, what: "Carol to leave the list",);
-      final remaining = (await tester.runAsync(() => _accountIds()))!;
+          timeout: shortTimeout, what: "Carol to leave the list",);
+      final remaining = (await tester.runAsync(() => accountIds()))!;
       expect(remaining.keys.toSet(), {_accountA, _accountB});
 
       phase("done");
@@ -404,30 +398,11 @@ void main() {
   }, timeout: const Timeout(Duration(minutes: 12)));
 }
 
-BigInt _zat(String zec) => BigInt.from((double.parse(zec) * 1e8).round());
-
-Future<Map<String, int>> _accountIds() async {
-  final accounts = await listAccounts(c: coinContext.coin);
-  return {for (final a in accounts) a.name: a.id};
-}
-
-Future<BigInt> _total(int account) async {
-  final b = await balance(account: account, c: coinContext.coin);
-  return b.field0.fold<BigInt>(BigInt.zero, (sum, v) => sum + v);
-}
-
-String? _fieldValue(WidgetTester tester, String name) {
-  final found = fieldNamed(name).evaluate();
-  if (found.isEmpty) return null;
-  final state = (found.first as StatefulElement).state as FormBuilderFieldState;
-  return state.value as String?;
-}
-
 /// Creates an account through the new-account page; a [mnemonic] restores one.
 Future<void> _createAccount(WidgetTester tester, GoRouter appRouter, {required String name, String? mnemonic}) async {
   unawaited(appRouter.push("/account/new"));
   await pumpUntil(tester, () => find.text("Create a new wallet or restore an existing one").evaluate().isNotEmpty,
-      timeout: _shortTimeout, what: "the new account page",);
+      timeout: shortTimeout, what: "the new account page",);
   await tester.enterText(fieldNamed("name"), name);
   await tester.pump();
   if (mnemonic != null) {
@@ -464,11 +439,11 @@ Future<void> _createAccount(WidgetTester tester, GoRouter appRouter, {required S
     }
     await tester.pump(const Duration(milliseconds: 500));
   }
-  await _waitForAccountView(tester, name);
+  await waitForAccountView(tester, name);
   // The page may still be finishing (a late "synchronize now?" prompt, then
   // its own navigation to the account): keep answering and going back to
   // the list until the list stays up.
-  final listDeadline = DateTime.now().add(_shortTimeout);
+  final listDeadline = DateTime.now().add(shortTimeout);
   while (DateTime.now().isBefore(listDeadline)) {
     for (final entry in dialogs.entries) {
       if (find.text(entry.key).evaluate().isNotEmpty && find.text(entry.value).evaluate().isNotEmpty) {
@@ -481,116 +456,10 @@ Future<void> _createAccount(WidgetTester tester, GoRouter appRouter, {required S
     await pumpFor(tester, const Duration(seconds: 2));
     if (find.text("Account List").evaluate().isNotEmpty) break;
   }
-  await _waitForAccountList(tester);
+  await waitForAccountList(tester);
 }
-
-Future<void> _waitForAccountList(WidgetTester tester) => pumpUntil(
-      tester,
-      () => find.text("Account List").evaluate().isNotEmpty,
-      timeout: _shortTimeout,
-      what: "the account list",
-    );
-
-Future<void> _waitForAccountView(WidgetTester tester, String name) => pumpUntil(
-      tester,
-      () => find.text(name).evaluate().isNotEmpty && find.byTooltip("Sync this account").evaluate().isNotEmpty,
-      timeout: _shortTimeout,
-      what: "the account view of $name",
-    );
-
-/// Taps the sync button and waits until the account's total reaches [atLeast].
-/// Logs every poll: a stall here is the first thing to read in the log.
-Future<void> _waitForBalance(WidgetTester tester, int account, {required BigInt atLeast, required String what}) async {
-  final deadline = DateTime.now().add(_chainTimeout);
-  var polls = 0;
-  while (DateTime.now().isBefore(deadline)) {
-    debugPrint("[wallet-ui] ${DateTime.now().toIso8601String()} poll ${++polls}: reading balance of $account");
-    final total = await tester.runAsync(() => _total(account).timeout(const Duration(seconds: 60)));
-    debugPrint("[wallet-ui] balance of $account: $total (want $atLeast)");
-    if (total! >= atLeast) return;
-    if (polls % 3 == 1) await tapTooltip(tester, "Sync this account");
-    await pumpFor(tester, const Duration(seconds: 5));
-  }
-  debugPrint("[ui-test] visible texts: ${visibleTexts().join(" | ")}");
-  fail("timed out waiting for $what");
-}
-
-/// Syncs until the account is at the chain tip, so the send page needs no
-/// sync warning.
-Future<void> _waitForSync(WidgetTester tester, int account) async {
-  final deadline = DateTime.now().add(_chainTimeout);
-  var polls = 0;
-  while (DateTime.now().isBefore(deadline)) {
-    final tip = await tester.runAsync(() => getCurrentHeight(c: coinContext.coin).timeout(const Duration(seconds: 60)));
-    final accounts = await tester.runAsync(() => listAccounts(c: coinContext.coin).timeout(const Duration(seconds: 60)));
-    final height = accounts!.firstWhere((x) => x.id == account).height;
-    debugPrint("[wallet-ui] account $account at $height, tip $tip");
-    if (height >= tip!) return;
-    if (polls++ % 3 == 0) await tapTooltip(tester, "Sync this account");
-    await pumpFor(tester, const Duration(seconds: 5));
-  }
-  fail("timed out waiting for account $account to reach the chain tip");
-}
-
-Future<void> _tapTab(WidgetTester tester, String name) async {
-  await tester.tap(find.widgetWithText(Tab, name));
-  await pumpFor(tester, const Duration(seconds: 1));
-}
-
-Future<void> _openMenuItem(WidgetTester tester, String item) async {
-  await tester.tap(find.byType(PopupMenuButton<String>).first);
-  await pumpFor(tester, const Duration(seconds: 1));
-  await tester.tap(find.text(item).last);
-  await pumpFor(tester, const Duration(seconds: 1));
-}
-
-/// Selects an account in the list by tapping its avatar (rows are keyed by
-/// id) and taps the [action] icon the selection reveals. The list clears its
-/// selection whenever the page rebuilds with a new account list, which a
-/// height or price update does, so the two taps are retried as a unit.
-Future<void> _selectAndTap(WidgetTester tester, int id, IconData action) async {
-  for (var attempt = 1; attempt <= 5; attempt++) {
-    final row = find.byKey(ValueKey(id));
-    await tester.ensureVisible(row);
-    final avatar = find.descendant(of: row, matching: find.byType(CircleAvatar)).first;
-    await tester.tap(avatar);
-    await tester.pump(const Duration(milliseconds: 300));
-    if (find.byIcon(action).evaluate().isNotEmpty) {
-      await tester.tap(find.byIcon(action));
-      await pumpFor(tester, const Duration(seconds: 1));
-      return;
-    }
-    debugPrint("[wallet-ui] selection of $id lost before the action, attempt $attempt");
-    await pumpFor(tester, const Duration(seconds: 1));
-  }
-  fail("could not select account $id and tap its action");
-}
-
-Finder _copyable(String text) => find.byWidgetPredicate((w) => w is CopyableText && w.text == text);
 
 Finder _folderTile() => find.widgetWithText(ListTile, _folderName);
-
-/// Every ListTile on screen as its plain texts (Text and RichText), for the log.
-List<String> _tileTexts() => [
-      for (final tile in find.byType(ListTile).evaluate())
-        [
-          for (final e in find.descendant(of: find.byWidget(tile.widget), matching: find.byType(RichText)).evaluate())
-            (e.widget as RichText).text.toPlainText(),
-        ].join(" / "),
-    ];
-
-/// Waits for an AwesomeDialog showing [message] (its title is not a Text
-/// widget) and taps the [button] once it has slid in.
-Future<void> _answerDialog(WidgetTester tester, String message, String button) async {
-  await pumpUntil(
-    tester,
-    () => find.text(message).evaluate().isNotEmpty && find.text(button).evaluate().isNotEmpty,
-    timeout: _shortTimeout,
-    what: "the dialog '$message'",
-  );
-  await tester.tap(find.text(button).last);
-  await pumpFor(tester, const Duration(seconds: 1));
-}
 
 /// Taps the queued-recipient tile titled [address], scrolled into view.
 Future<void> _tapTile(WidgetTester tester, String address) async {
@@ -599,30 +468,4 @@ Future<void> _tapTile(WidgetTester tester, String address) async {
   await tester.pump();
   await tester.tap(tile);
   await pumpFor(tester, const Duration(seconds: 1));
-}
-
-Future<void> _enterAmount(WidgetTester tester, String amount) async {
-  // InputAmount nests a form whose ZEC field is named "zat".
-  final field = fieldNamed("zat");
-  await tester.ensureVisible(field.first);
-  final editableFinder = find.descendant(of: field.first, matching: find.byType(EditableText));
-  // With a queued recipient loaded for editing, the tap enterText makes does
-  // not focus the field; ask its focus node directly.
-  tester.widget<EditableText>(editableFinder).focusNode.requestFocus();
-  await tester.pump();
-  await tester.enterText(field.first, amount);
-  await tester.pump();
-  await pumpUntil(tester, () => _fieldValue(tester, "zat") == amount,
-      timeout: const Duration(seconds: 5), what: "the ZEC amount to read $amount",);
-}
-
-Future<void> _enterRecipient(WidgetTester tester, String address, String amount, {String? memo}) async {
-  await tester.enterText(fieldNamed("address"), address);
-  await tester.pump();
-  await pumpFor(tester, const Duration(seconds: 1)); // address validation and memo visibility
-  await _enterAmount(tester, amount);
-  if (memo != null) {
-    await tester.enterText(fieldNamed("memo"), memo);
-    await tester.pump();
-  }
 }
