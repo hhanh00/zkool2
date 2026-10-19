@@ -745,20 +745,17 @@ Future<void> _expectErrorDialog(WidgetTester tester, String? contains) async {
   final message = (find.byType(SelectableText).evaluate().last.widget as SelectableText).data ?? "";
   debugPrint("[wallet-ext] error dialog: $message");
   if (contains != null) expect(message, stringContainsInOrder([contains]));
+  // The dialog shows the error's context chain; the Rust backtrace is in
+  // its collapsed details (#1368).
+  expect(message.contains("Stack backtrace"), isFalse, reason: "the error dialog shows the compact message");
   // The dialog slides in; a tap before it settles misses the button.
   await pumpFor(tester, const Duration(seconds: 1));
   final ok = find.text("Ok").last;
   final okRect = tester.getRect(ok);
   final window = tester.view.physicalSize / tester.view.devicePixelRatio;
   debugPrint("[wallet-ext] error dialog Ok at $okRect, message at ${tester.getRect(find.byType(SelectableText).last)}, window $window");
-  if (okRect.bottom <= window.height) {
-    await tester.tap(ok);
-  } else {
-    // The dialog grows with the backtrace in the message and its button
-    // leaves the window (#1368); a tap outside the dialog dismisses it too.
-    debugPrint("[wallet-ext] the Ok button is off screen; dismissing the dialog by its barrier");
-    await tester.tapAt(const Offset(4, 4));
-  }
+  expect(okRect.bottom, lessThanOrEqualTo(window.height), reason: "the error dialog's Ok button is on screen");
+  await tester.tap(ok);
   await pumpFor(tester, const Duration(seconds: 1));
   expect(find.text("Ok"), findsNothing, reason: "the error dialog closed");
   await pumpFor(tester, const Duration(milliseconds: 500));
