@@ -660,6 +660,32 @@ void main() {
       await _back(tester);
       await waitForAccountView(tester, _accountA);
 
+      // ── Errors ───────────────────────────────────────────────────────────
+      // Two failing calls on the send page: an unknown contact name, which
+      // the page rejects, and a payment above the balance, which the summary
+      // page fails to build. Both end in the error dialog.
+      phase("errors");
+      step("unknown contact");
+      await tapTooltip(tester, "Send funds to one or many addresses");
+      await pumpUntil(tester, () => fieldNamed("address").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the send page for the errors",);
+      await tester.enterText(fieldNamed("address"), "@nobody");
+      await tester.pump();
+      await enterAmount(tester, "0.01");
+      await tapTooltip(tester, "Send transaction (including queued recipients)");
+      await _expectErrorDialog(tester, "Unknown contact: nobody");
+      step("payment above the balance");
+      await tapTooltip(tester, "Clear Form Inputs");
+      await enterRecipient(tester, bAddresses.ua!, "100");
+      await tapTooltip(tester, "Send transaction (including queued recipients)");
+      await pumpUntil(tester, () => find.text("Extra Options").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the send options page",);
+      await tapTooltip(tester, "Send (Summary and Confirmation)");
+      await _expectErrorDialog(tester, null);
+      appRouter.go(accountRoute("/", a));
+      await waitForAccountView(tester, _accountA);
+      await pumpFor(tester, const Duration(seconds: 1));
+
       phase("done");
       rendezvous.publish("done", "true");
       await pumpFor(tester, const Duration(seconds: 3));
@@ -690,6 +716,36 @@ Future<void> _savedFile(WidgetTester tester, FakeFilePicker picker, String fileN
   await pumpUntil(tester, () => picker.saved.any((p) => p.endsWith("/$fileName")),
       timeout: shortTimeout, what: "$fileName to be saved",);
   expect(File(picker.saved.lastWhere((p) => p.endsWith("/$fileName"))).lengthSync(), greaterThan(0));
+}
+
+/// Waits for the error dialog, logs its message, checks it holds [contains]
+/// when given, and closes it.
+Future<void> _expectErrorDialog(WidgetTester tester, String? contains) async {
+  // The dialog's title is not a plain Text widget; its message is selectable.
+  await pumpUntil(tester, () => find.byType(SelectableText).evaluate().isNotEmpty && find.text("Ok").evaluate().isNotEmpty,
+      timeout: const Duration(minutes: 2), what: "the error dialog",);
+  // The page underneath may show selectable text too (a payment URI); the
+  // dialog's is the topmost.
+  final message = (find.byType(SelectableText).evaluate().last.widget as SelectableText).data ?? "";
+  debugPrint("[wallet-ext] error dialog: $message");
+  if (contains != null) expect(message, stringContainsInOrder([contains]));
+  // The dialog slides in; a tap before it settles misses the button.
+  await pumpFor(tester, const Duration(seconds: 1));
+  final ok = find.text("Ok").last;
+  final okRect = tester.getRect(ok);
+  final window = tester.view.physicalSize / tester.view.devicePixelRatio;
+  debugPrint("[wallet-ext] error dialog Ok at $okRect, message at ${tester.getRect(find.byType(SelectableText).last)}, window $window");
+  if (okRect.bottom <= window.height) {
+    await tester.tap(ok);
+  } else {
+    // The dialog grows with the backtrace in the message and its button
+    // leaves the window (#1368); a tap outside the dialog dismisses it too.
+    debugPrint("[wallet-ext] the Ok button is off screen; dismissing the dialog by its barrier");
+    await tester.tapAt(const Offset(4, 4));
+  }
+  await pumpFor(tester, const Duration(seconds: 1));
+  expect(find.text("Ok"), findsNothing, reason: "the error dialog closed");
+  await pumpFor(tester, const Duration(milliseconds: 500));
 }
 
 /// Picks [value] on the address list's filter row labelled [label].
