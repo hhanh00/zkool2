@@ -21,6 +21,7 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/coin.dart' hide initDatadir;
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/network.dart';
+import 'package:zkool/src/rust/api/sync.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -419,3 +420,161 @@ Future<String> driveDkg(
 /// Documents directory the app actually uses, which is where the rendezvous and
 /// the test database live (the macOS app is sandboxed and cannot use /tmp).
 Future<Directory> appDocumentsDir() => getApplicationDocumentsDirectory();
+
+// ── Wallet pages ─────────────────────────────────────────────────────────────
+// Helpers for the account list, account view and send page, shared by the
+// wallet tests.
+
+const shortTimeout = Duration(seconds: 30);
+const chainTimeout = Duration(minutes: 4);
+
+BigInt zecToZat(String zec) => BigInt.from((double.parse(zec) * 1e8).round());
+
+Future<Map<String, int>> accountIds() async {
+  final accounts = await listAccounts(c: coinContext.coin);
+  return {for (final a in accounts) a.name: a.id};
+}
+
+Future<BigInt> totalBalance(int account) async {
+  final b = await balance(account: account, c: coinContext.coin);
+  return b.field0.fold<BigInt>(BigInt.zero, (sum, v) => sum + v);
+}
+
+String? fieldValue(WidgetTester tester, String name) {
+  final found = fieldNamed(name).evaluate();
+  if (found.isEmpty) return null;
+  final state = (found.first as StatefulElement).state as FormBuilderFieldState;
+  return state.value as String?;
+}
+
+Future<void> waitForAccountList(WidgetTester tester) => pumpUntil(
+      tester,
+      () => find.text("Account List").evaluate().isNotEmpty,
+      timeout: shortTimeout,
+      what: "the account list",
+    );
+
+Future<void> waitForAccountView(WidgetTester tester, String name) => pumpUntil(
+      tester,
+      () => find.text(name).evaluate().isNotEmpty && find.byTooltip("Sync this account").evaluate().isNotEmpty,
+      timeout: shortTimeout,
+      what: "the account view of $name",
+    );
+
+/// Taps the sync button and waits until the account's total reaches [atLeast].
+/// Logs every poll: a stall here is the first thing to read in the log.
+Future<void> waitForBalance(WidgetTester tester, int account, {required BigInt atLeast, required String what}) async {
+  final deadline = DateTime.now().add(chainTimeout);
+  var polls = 0;
+  while (DateTime.now().isBefore(deadline)) {
+    debugPrint("[ui-test] ${DateTime.now().toIso8601String()} poll ${++polls}: reading balance of $account");
+    final total = await tester.runAsync(() => totalBalance(account).timeout(const Duration(seconds: 60)));
+    debugPrint("[ui-test] balance of $account: $total (want $atLeast)");
+    if (total! >= atLeast) return;
+    if (polls % 3 == 1) await tapTooltip(tester, "Sync this account");
+    await pumpFor(tester, const Duration(seconds: 5));
+  }
+  debugPrint("[ui-test] visible texts: ${visibleTexts().join(" | ")}");
+  fail("timed out waiting for $what");
+}
+
+/// Syncs until the account is at the chain tip, so the send page needs no
+/// sync warning.
+Future<void> waitForSync(WidgetTester tester, int account) async {
+  final deadline = DateTime.now().add(chainTimeout);
+  var polls = 0;
+  while (DateTime.now().isBefore(deadline)) {
+    final tip = await tester.runAsync(() => getCurrentHeight(c: coinContext.coin).timeout(const Duration(seconds: 60)));
+    final accounts = await tester.runAsync(() => listAccounts(c: coinContext.coin).timeout(const Duration(seconds: 60)));
+    final height = accounts!.firstWhere((x) => x.id == account).height;
+    debugPrint("[ui-test] account $account at $height, tip $tip");
+    if (height >= tip!) return;
+    if (polls++ % 3 == 0) await tapTooltip(tester, "Sync this account");
+    await pumpFor(tester, const Duration(seconds: 5));
+  }
+  fail("timed out waiting for account $account to reach the chain tip");
+}
+
+Future<void> tapTab(WidgetTester tester, String name) async {
+  await tester.tap(find.widgetWithText(Tab, name));
+  await pumpFor(tester, const Duration(seconds: 1));
+}
+
+Future<void> openMenuItem(WidgetTester tester, String item) async {
+  await tester.tap(find.byType(PopupMenuButton<String>).first);
+  await pumpFor(tester, const Duration(seconds: 1));
+  await tester.tap(find.text(item).last);
+  await pumpFor(tester, const Duration(seconds: 1));
+}
+
+/// Selects an account in the list by tapping its avatar (rows are keyed by
+/// id) and taps the [action] icon the selection reveals. The list clears its
+/// selection whenever the page rebuilds with a new account list, which a
+/// height or price update does, so the two taps are retried as a unit.
+Future<void> selectAndTap(WidgetTester tester, int id, IconData action) async {
+  for (var attempt = 1; attempt <= 5; attempt++) {
+    final row = find.byKey(ValueKey(id));
+    await tester.ensureVisible(row);
+    final avatar = find.descendant(of: row, matching: find.byType(CircleAvatar)).first;
+    await tester.tap(avatar);
+    await tester.pump(const Duration(milliseconds: 300));
+    if (find.byIcon(action).evaluate().isNotEmpty) {
+      await tester.tap(find.byIcon(action));
+      await pumpFor(tester, const Duration(seconds: 1));
+      return;
+    }
+    debugPrint("[ui-test] selection of $id lost before the action, attempt $attempt");
+    await pumpFor(tester, const Duration(seconds: 1));
+  }
+  fail("could not select account $id and tap its action");
+}
+
+Finder copyableWith(String text) => find.byWidgetPredicate((w) => w is CopyableText && w.text == text);
+
+/// Every ListTile on screen as its plain texts (Text and RichText), for the log.
+List<String> tileTexts() => [
+      for (final tile in find.byType(ListTile).evaluate())
+        [
+          for (final e in find.descendant(of: find.byWidget(tile.widget), matching: find.byType(RichText)).evaluate())
+            (e.widget as RichText).text.toPlainText(),
+        ].join(" / "),
+    ];
+
+/// Waits for an AwesomeDialog showing [message] (its title is not a Text
+/// widget) and taps the [button] once it has slid in.
+Future<void> answerDialog(WidgetTester tester, String message, String button) async {
+  await pumpUntil(
+    tester,
+    () => find.text(message).evaluate().isNotEmpty && find.text(button).evaluate().isNotEmpty,
+    timeout: shortTimeout,
+    what: "the dialog '$message'",
+  );
+  await tester.tap(find.text(button).last);
+  await pumpFor(tester, const Duration(seconds: 1));
+}
+
+Future<void> enterAmount(WidgetTester tester, String amount) async {
+  // InputAmount nests a form whose ZEC field is named "zat".
+  final field = fieldNamed("zat");
+  await tester.ensureVisible(field.first);
+  final editableFinder = find.descendant(of: field.first, matching: find.byType(EditableText));
+  // With a queued recipient loaded for editing, the tap enterText makes does
+  // not focus the field; ask its focus node directly.
+  tester.widget<EditableText>(editableFinder).focusNode.requestFocus();
+  await tester.pump();
+  await tester.enterText(field.first, amount);
+  await tester.pump();
+  await pumpUntil(tester, () => fieldValue(tester, "zat") == amount,
+      timeout: const Duration(seconds: 5), what: "the ZEC amount to read $amount",);
+}
+
+Future<void> enterRecipient(WidgetTester tester, String address, String amount, {String? memo}) async {
+  await tester.enterText(fieldNamed("address"), address);
+  await tester.pump();
+  await pumpFor(tester, const Duration(seconds: 1)); // address validation and memo visibility
+  await enterAmount(tester, amount);
+  if (memo != null) {
+    await tester.enterText(fieldNamed("memo"), memo);
+    await tester.pump();
+  }
+}
