@@ -87,6 +87,7 @@ async def test_wallet_ext_flutter_ui(rpc_url, seed, zkool_binary):
             fund_saddr=FUND_SADDR,
             fund_oaddr=FUND_OADDR,
             fund_dust=FUND_DUST,
+            memo=MEMO,
             # The lock screen is behind authenticate(): Touch ID on macOS, open on Linux.
             biometric_gate=sys.platform == "darwin",
         )

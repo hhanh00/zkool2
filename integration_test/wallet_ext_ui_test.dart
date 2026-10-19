@@ -16,7 +16,10 @@
 /// Two accounts: A (funded, the pages are opened on it) and B (a contact).
 library;
 
+import 'dart:async';
+import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,10 +27,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/pages/account.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/utils.dart';
 
 import 'support.dart';
 
@@ -44,6 +49,9 @@ const _qrDelay = "250";
 const _qrRepair = "7";
 
 const _transportLabels = {0: "Direct", 1: "Tor", 2: "Nym", 3: "Proxy"};
+
+const _userMemo = "edited by the wallet-ext test";
+const _exportPassword = "wallet-ext";
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -66,6 +74,7 @@ void main() {
     final fundSaddr = config["fund_saddr"] as String;
     final fundOaddr = config["fund_oaddr"] as String;
     final fundDust = config["fund_dust"] as String;
+    final memo = config["memo"] as String;
     // The lock screen opens on a tap where the device has no biometrics
     // (Linux, CI); on macOS it prompts Touch ID, so the lock step is skipped.
     final biometricGate = config["biometric_gate"] as bool? ?? false;
@@ -109,11 +118,19 @@ void main() {
       }))!;
       debugPrint("[wallet-ext] accounts A=$a B=$b");
 
+      // Exports and imports go through the system file dialogs, which the
+      // test cannot drive: a fake saves into the rendezvous directory.
+      final picker = FakeFilePicker(Directory("${rendezvous.dir.path}/files")..createSync());
+      FilePicker.platform = picker;
+
       final appRouter = router(true, false, initialLocation: "/accounts");
       await tester.pumpWidget(ZkoolApp(router: appRouter));
       await tester.pump(const Duration(seconds: 1));
       final container = ProviderScope.containerOf(tester.element(find.byType(MaterialApp)));
       await primeProviders(tester, container);
+      // The splash starts the height stream at launch; without it the current
+      // height stays unknown and the notes tab's lock-recent does nothing.
+      unawaited(container.read(synchronizerProvider.notifier).autoSync());
       await waitForAccountList(tester);
 
       // ── Fund ─────────────────────────────────────────────────────────────
@@ -255,6 +272,155 @@ void main() {
       await waitForAccountView(tester, _accountA);
       await _expectSettingsSaved(tester, container, prefs, original, what: "the original settings");
 
+      // ── Account view ─────────────────────────────────────────────────────
+      // A's four notes (transparent, Sapling, Ironwood with the memo, and
+      // Ironwood dust) feed the notes and memos tabs; the exports and the
+      // encrypted account file land in the fake picker's directory.
+      phase("account");
+      await waitForSync(tester, a);
+
+      step("table view of the transactions");
+      await openMenuItem(tester, "View: Table");
+      await pumpUntil(tester, () => find.text("TxID").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the transaction table",);
+      expect(container.read(appSettingsProvider).value!.transactionTableMode, isTrue);
+      await openMenuItem(tester, "View: List");
+      await pumpUntil(tester, () => find.text("TxID").evaluate().isEmpty,
+          timeout: shortTimeout, what: "the transaction list",);
+      expect(container.read(appSettingsProvider).value!.transactionTableMode, isFalse);
+      await _export(tester, picker, "Export Transactions", "transactions");
+
+      step("memos tab: search, edit");
+      await tapTab(tester, "Memos");
+      await pumpUntil(tester, () => find.text(memo).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the memo in the memos tab",);
+      final search = find.ancestor(of: find.text("Search Memos"), matching: find.byType(TextField)).first;
+      await tester.enterText(search, "no such memo");
+      await pumpFor(tester, const Duration(seconds: 1));
+      expect(find.text(memo), findsNothing, reason: "the search filters the memos");
+      await tester.enterText(search, memo.substring(0, 6));
+      await pumpFor(tester, const Duration(seconds: 1));
+      expect(find.text(memo), findsOneWidget);
+      // A long press on the bubble turns it into a field, and losing focus
+      // saves it. The memo text itself is a CopyableText with its own long
+      // press, so press the time label next to it.
+      await tester.longPress(find.descendant(of: find.byType(MemoWidget), matching: find.byType(Text)).first);
+      await pumpFor(tester, const Duration(seconds: 1));
+      final memoField = find.descendant(of: find.byType(MemoWidget), matching: find.byType(TextField));
+      await tester.enterText(memoField, _userMemo);
+      await tester.pump();
+      await tapTab(tester, "Memos");
+      await pumpUntil(tester, () => find.text(_userMemo).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the edited memo",);
+      await _export(tester, picker, "Export Memos", "memos");
+
+      step("notes tab: lock, dust, group by pool");
+      await tapTab(tester, "Notes");
+      var notes = (await tester.runAsync(() => listNotes(account: a, c: coinContext.coin)))!;
+      expect(notes.length, 4, reason: "transparent, Sapling, Ironwood and Ironwood dust");
+      expect(notes.where((n) => n.locked), isEmpty);
+      final dust = notes.firstWhere((n) => n.value == zecToZat(fundDust));
+      final transparent = notes.firstWhere((n) => n.pool == 0);
+      final sapling = notes.firstWhere((n) => n.pool == 1);
+      await pumpUntil(tester, () => find.byKey(ValueKey(dust.id)).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the notes list",);
+      await tester.tap(find.byKey(ValueKey(transparent.id)));
+      await pumpFor(tester, const Duration(seconds: 1));
+      expect(await _lockedNotes(tester, a), {transparent.id}, reason: "a tap locks the note");
+      await tapTooltip(tester, "Hide dust notes");
+      expect(find.byKey(ValueKey(dust.id)), findsNothing);
+      await tapTooltip(tester, "Show dust notes");
+      expect(find.byKey(ValueKey(dust.id)), findsOneWidget);
+      await tapTooltip(tester, "Group by pool");
+      // Three pools; the transparent one is already locked.
+      expect(find.byTooltip("Lock all in pool"), findsNWidgets(2));
+      expect(find.byTooltip("Unlock all in pool"), findsOneWidget);
+      await tester.tap(find.byTooltip("Lock all in pool").first);
+      await pumpFor(tester, const Duration(seconds: 1));
+      expect(await _lockedNotes(tester, a), {transparent.id, sapling.id}, reason: "the Sapling pool is locked");
+      await tester.tap(find.byTooltip("Unlock all in pool").first);
+      await pumpFor(tester, const Duration(seconds: 1));
+      expect(await _lockedNotes(tester, a), {sapling.id}, reason: "the transparent pool is unlocked");
+      await tapTooltip(tester, "Ungroup notes");
+      await tapTooltip(tester, "Toggle all notes");
+      await answerDialog(tester, "Do you want to toggle the lock state of every note?", "Ok");
+      expect(await _lockedNotes(tester, a), {transparent.id, dust.id, notes.firstWhere((n) => n.value == zecToZat(fundOaddr)).id},
+          reason: "every lock state flipped",);
+      await tapTooltip(tester, "Unlock all notes");
+      await answerDialog(tester, "Do you want to unlock every note?", "Ok");
+      expect(await _lockedNotes(tester, a), isEmpty);
+      // The lock-recent button does nothing without a current height.
+      await pumpUntil(tester, () => container.read(currentHeightProvider).value != null,
+          timeout: shortTimeout, what: "the chain height to be known",);
+      await tapTooltip(tester, "Lock recently mined notes");
+      await pumpUntil(tester, () => find.text("Enter confirmation threshold").evaluate().isNotEmpty && find.byType(TextField).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the confirmation threshold dialog",);
+      await tester.enterText(find.byType(TextField).last, "1000");
+      await tester.pump();
+      await tester.tap(find.text("Ok").last);
+      await pumpFor(tester, const Duration(seconds: 1));
+      expect(await _lockedNotes(tester, a), notes.map((n) => n.id).toSet(), reason: "every note is within 1000 blocks of the tip");
+      await tapTooltip(tester, "Unlock all notes");
+      await answerDialog(tester, "Do you want to unlock every note?", "Ok");
+      expect(await _lockedNotes(tester, a), isEmpty);
+      await _export(tester, picker, "Export Notes", "notes");
+
+      step("viewing keys");
+      await openMenuItem(tester, "Backup");
+      await pumpUntil(tester, () => find.text("Viewing Keys").evaluate().isNotEmpty && find.byType(CopyableText).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the viewing keys page",);
+      final pools = (await tester.runAsync(() => getAccountPools(account: a, c: coinContext.coin)))!;
+      final ufvk = (await tester.runAsync(() => getAccountUfvk(account: a, pools: pools, c: coinContext.coin)))!;
+      expect(copyableWith(ufvk), findsOneWidget, reason: "the full viewing key for every pool");
+      await tester.tap(find.text("Incoming"));
+      await pumpFor(tester, const Duration(seconds: 1));
+      final uivk = (await tester.runAsync(() => getAccountUivk(account: a, pools: pools, c: coinContext.coin)))!;
+      expect(copyableWith(uivk), findsOneWidget, reason: "the incoming viewing key");
+      // Dropping the transparent pool changes the key.
+      await tester.tap(find.text("Trp"));
+      await pumpFor(tester, const Duration(seconds: 1));
+      final shielded = (await tester.runAsync(() => getAccountUivk(account: a, pools: pools & ~1, c: coinContext.coin)))!;
+      expect(copyableWith(shielded), findsOneWidget, reason: "the incoming key without the transparent pool");
+      if (!biometricGate) {
+        await tapTooltip(tester, "Show Seed Phrase");
+        await pumpUntil(tester, () => find.text("Mnemonic").evaluate().isNotEmpty,
+            timeout: shortTimeout, what: "the seed phrase",);
+      }
+      await _back(tester);
+      await waitForAccountView(tester, _accountA);
+
+      step("edit account: export, rewind, reset");
+      await openMenuItem(tester, "Edit Account");
+      await pumpUntil(tester, () => find.text("Account Edit").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the account edit page",);
+      await tapTooltip(tester, "Export an encrypted file of this account");
+      await pumpUntil(tester, () => fieldNamed("repeated_password").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the export password dialog",);
+      await tester.enterText(fieldNamed("password"), _exportPassword);
+      await tester.enterText(fieldNamed("repeated_password"), _exportPassword);
+      await tester.pump();
+      await tester.tap(find.text("Ok").last);
+      await _savedFile(tester, picker, "$_accountA.bin");
+      final heightBefore = await _accountHeight(tester, a);
+      await tapTooltip(tester, "Rewind back a few blocks");
+      await answerDialog(tester, "Are you sure you want to rewind this account? This will rollback the account to a previous height. You will not lose any funds, but you will need to resync the account", "Ok");
+      await pumpUntil(tester, () => find.text("Account Edit").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the account edit page after the rewind",);
+      final heightRewound = await _accountHeight(tester, a);
+      expect(heightRewound, lessThan(heightBefore), reason: "rewound");
+      await tapTooltip(tester, "Clear and reset account to birth height");
+      await answerDialog(tester, "Are you sure you want to reset this account? This will clear all sync data and reset the account to the birth height. You will not lose any funds, but you will need to resync the account", "Ok");
+      await pumpFor(tester, const Duration(seconds: 1));
+      // The rewind may already land on the birth checkpoint; the reset also
+      // drops everything scanned since.
+      expect(await _accountHeight(tester, a), lessThanOrEqualTo(heightRewound), reason: "reset to the birth height");
+      expect(await tester.runAsync(() => totalBalance(a)), BigInt.zero, reason: "the reset clears the sync data");
+      await _back(tester);
+      await waitForAccountView(tester, _accountA);
+      await waitForSync(tester, a);
+      expect(await tester.runAsync(() => totalBalance(a)), zecToZat(fundTaddr) + zecToZat(fundSaddr) + zecToZat(fundOaddr) + zecToZat(fundDust),
+          reason: "the balance is back after the resync",);
+
       phase("done");
       rendezvous.publish("done", "true");
       await pumpFor(tester, const Duration(seconds: 3));
@@ -266,6 +432,35 @@ void main() {
       await _restorePref(prefs, "palette_name", savedPalette);
     }
   }, timeout: const Timeout(Duration(minutes: 12)));
+}
+
+/// Picks "Export …" from the account view's menu and checks the file the
+/// fake picker saved; [what] names it in the log.
+Future<void> _export(WidgetTester tester, FakeFilePicker picker, String item, String what) async {
+  final before = picker.saved.length;
+  await openMenuItem(tester, item);
+  await pumpUntil(tester, () => picker.saved.length > before,
+      timeout: shortTimeout, what: "the $what export to be saved",);
+  final path = picker.saved.last;
+  await answerDialog(tester, "$path Saved", "Ok");
+  expect(File(path).lengthSync(), greaterThan(0), reason: "the $what export is not empty");
+}
+
+/// Waits for the fake picker to save [fileName] with some content.
+Future<void> _savedFile(WidgetTester tester, FakeFilePicker picker, String fileName) async {
+  await pumpUntil(tester, () => picker.saved.any((p) => p.endsWith("/$fileName")),
+      timeout: shortTimeout, what: "$fileName to be saved",);
+  expect(File(picker.saved.lastWhere((p) => p.endsWith("/$fileName"))).lengthSync(), greaterThan(0));
+}
+
+Future<Set<int>> _lockedNotes(WidgetTester tester, int account) async {
+  final notes = (await tester.runAsync(() => listNotes(account: account, c: coinContext.coin)))!;
+  return notes.where((n) => n.locked).map((n) => n.id).toSet();
+}
+
+Future<int> _accountHeight(WidgetTester tester, int account) async {
+  final accounts = (await tester.runAsync(() => listAccounts(c: coinContext.coin)))!;
+  return accounts.firstWhere((x) => x.id == account).height;
 }
 
 Future<void> _restorePref(SharedPreferencesAsync prefs, String key, Object? value) => switch (value) {
