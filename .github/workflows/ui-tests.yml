@@ -6,7 +6,8 @@ name: UI Tests
 #
 # Adding a UI test: a Dart file in integration_test/, a pytest orchestrator in
 # tests/tests that launches it through dkg.launch_flutter_test, and its file
-# name in the `tests` default below.
+# name in the `tests` default below. test_wallet_ext_ui.py (the pages the
+# wallet test leaves out) is not in the default: name it in the input to run it.
 
 on:
   workflow_dispatch:
