@@ -13,6 +13,7 @@ import 'package:flutter_passkey_service/flutter_passkey_service.dart';
 import 'package:flutter_passkey_service/pigeons/messages.g.dart'
     show CreatePasskeyResponseData, GetPasskeyAuthenticationResponseData, PasskeyException, PasskeyErrorType;
 import 'package:flutter/foundation.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart' show AnyhowException;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -27,6 +28,7 @@ import 'package:path_provider/path_provider.dart';
 
 import 'package:local_auth/local_auth.dart';
 import 'package:password_strength_checker/password_strength_checker.dart';
+import 'package:zkool/error_log_printer.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/router.dart';
@@ -367,6 +369,29 @@ String compactAnyhowError(String message) {
     }
   }
   return parts.join(': ');
+}
+
+/// The raw text of an error as it was reported: an [AnyhowException]'s
+/// message (the anyhow Debug output), otherwise `toString()`.
+String errorRawText(Object error) => error is AnyhowException ? error.message : error.toString();
+
+/// The text to show a user for [error]: the compact context chain of an
+/// anyhow error (see [compactAnyhowError]), a string as is (compacted too, a
+/// no-op for a single line), anything else via `toString()`. Every
+/// user-facing error surface (dialog, snackbar, inline card) goes through
+/// here so none of them shows a backtrace.
+String errorDisplayText(Object error) => compactAnyhowError(errorRawText(error));
+
+/// The "Stack backtrace:" section of an anyhow error's Debug output, with the
+/// `<unknown>` frames dropped as in the log, or null when [message] has none.
+/// Shown in the error dialog's collapsed details so it stays available for a
+/// bug report without pushing the buttons off screen (#1368).
+String? anyhowBacktrace(String message) {
+  final lines = message.split('\n');
+  final start = lines.indexWhere((l) => l.trim().toLowerCase().startsWith('stack backtrace'));
+  if (start < 0) return null;
+  final text = omitUnknownRustFrames(lines.sublist(start).join('\n')).trim();
+  return text.isEmpty ? null : text;
 }
 
 /// Show a transient warning in a snackbar. Used for errors we recover from
