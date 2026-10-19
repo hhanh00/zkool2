@@ -161,7 +161,8 @@ void main() {
       // The typed name also matches as text while the dialog is open: wait
       // for the dialog to close and the folder to show as a list tile before
       // leaving, or the pop would close the dialog with no result.
-      await pumpUntil(tester, () => find.byType(TextField).evaluate().isEmpty && _folderTile().evaluate().isNotEmpty,
+      final folderTile = await _folderTile(tester);
+      await pumpUntil(tester, () => find.byType(TextField).evaluate().isEmpty && folderTile.evaluate().isNotEmpty,
           timeout: shortTimeout, what: "the new folder in the list",);
       step('appRouter.pop();');
       appRouter.pop();
@@ -195,9 +196,9 @@ void main() {
           timeout: shortTimeout, what: "Carol to leave the root folder's list",);
       step("await openMenuItem(tester, 'Folders');");
       await openMenuItem(tester, "Folders");
-      await pumpUntil(tester, () => _folderTile().evaluate().isNotEmpty,
+      await pumpUntil(tester, () => folderTile.evaluate().isNotEmpty,
           timeout: shortTimeout, what: "the folders page to pick Tests",);
-      await tester.tap(_folderTile());
+      await tester.tap(folderTile);
       await pumpFor(tester, const Duration(seconds: 1));
       appRouter.pop();
       await waitForAccountList(tester);
@@ -235,24 +236,25 @@ void main() {
       await enterRecipient(tester, bAddresses.saddr!, "0.01");
       await tapTooltip(tester, "Queue this recipient to create a multi send");
       expect(find.byType(ListTile), findsNWidgets(3));
+      // The queued tiles are keyed by their index (#1367): Orchard 0,
+      // transparent 1, Sapling 2.
+      const taddrTile = ValueKey(1);
+      const saddrTile = ValueKey(2);
       // Edit the transparent recipient's amount, saved by tapping the Sapling
       // tile. The queue sits below the form, so each tile is scrolled into
       // view first.
-      await _tapTile(tester, bAddresses.taddr!);
+      await _tapTile(tester, taddrTile);
       await enterAmount(tester, "0.05");
-      await _tapTile(tester, bAddresses.saddr!);
+      await _tapTile(tester, saddrTile);
       step("queue tiles: ${tileTexts().join(" || ")}");
       // The amount is a Text.rich of two spans; match its plain text.
-      final taddrTile = find.ancestor(of: find.text(bAddresses.taddr!), matching: find.byType(ListTile));
-      expect(find.descendant(of: taddrTile, matching: find.text(zatToString(zecToZat("0.05")), findRichText: true)), findsOneWidget,
+      expect(find.descendant(of: find.byKey(taddrTile), matching: find.text(zatToString(zecToZat("0.05")), findRichText: true)), findsOneWidget,
           reason: "the edited amount shows on the tile",);
-      final editedTile = find.ancestor(of: find.text(bAddresses.saddr!), matching: find.byType(ListTile));
-      expect(tester.widget<ListTile>(editedTile).selected, isTrue, reason: "the tapped tile is highlighted");
+      expect(tester.widget<ListTile>(find.byKey(saddrTile)).selected, isTrue, reason: "the tapped tile is highlighted");
       // Drop the Sapling recipient.
-      final saddrTile = find.ancestor(of: find.text(bAddresses.saddr!), matching: find.byType(ListTile));
-      await tester.ensureVisible(saddrTile);
+      await tester.ensureVisible(find.byKey(saddrTile));
       await tester.pump();
-      await tester.tap(find.descendant(of: saddrTile, matching: find.byIcon(Icons.delete)));
+      await tester.tap(find.descendant(of: find.byKey(saddrTile), matching: find.byIcon(Icons.delete)));
       await pumpFor(tester, const Duration(seconds: 1));
       expect(find.byType(ListTile), findsNWidgets(2));
       // Clear the form so only the queue is sent, then send.
@@ -367,9 +369,9 @@ void main() {
       await waitForAccountList(tester);
       step("await openMenuItem(tester, 'Folders');");
       await openMenuItem(tester, "Folders");
-      await pumpUntil(tester, () => _folderTile().evaluate().isNotEmpty,
+      await pumpUntil(tester, () => folderTile.evaluate().isNotEmpty,
           timeout: shortTimeout, what: "the folders page before the delete",);
-      await tester.tap(_folderTile());
+      await tester.tap(folderTile);
       await pumpFor(tester, const Duration(seconds: 1));
       appRouter.pop();
       await waitForAccountList(tester);
@@ -459,11 +461,23 @@ Future<void> _createAccount(WidgetTester tester, GoRouter appRouter, {required S
   await waitForAccountList(tester);
 }
 
-Finder _folderTile() => find.widgetWithText(ListTile, _folderName);
+/// The row of the folder [_folderName], keyed by the folder's id (#1367).
+/// Polls the folders until it exists: the dialog saves it before the list
+/// shows it.
+Future<Finder> _folderTile(WidgetTester tester) async {
+  final deadline = DateTime.now().add(shortTimeout);
+  while (true) {
+    final folders = (await tester.runAsync(() => listFolders(c: coinContext.coin)))!;
+    final matches = folders.where((f) => f.name == _folderName).toList();
+    if (matches.isNotEmpty) return find.byKey(ValueKey(matches.single.id));
+    if (DateTime.now().isAfter(deadline)) fail("no folder named $_folderName");
+    await pumpFor(tester, const Duration(milliseconds: 500));
+  }
+}
 
 /// Taps the queued-recipient tile titled [address], scrolled into view.
-Future<void> _tapTile(WidgetTester tester, String address) async {
-  final tile = find.ancestor(of: find.text(address), matching: find.byType(ListTile));
+Future<void> _tapTile(WidgetTester tester, Key key) async {
+  final tile = find.byKey(key);
   await tester.ensureVisible(tile);
   await tester.pump();
   await tester.tap(tile);

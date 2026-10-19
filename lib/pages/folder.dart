@@ -82,6 +82,7 @@ class FolderPageState extends ConsumerState<FolderPage> {
         itemBuilder: (BuildContext context, int index) {
           final f = folders[index];
           return ListTile(
+            key: ValueKey(f.$1.id),
             leading: Checkbox(value: f.$2, onChanged: (v) => setState(() => folders[index] = (f.$1, v ?? false))),
             title: Text(f.$1.name),
             onTap: () => onSelect(index),

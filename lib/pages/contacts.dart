@@ -50,6 +50,7 @@ class ContactListPageState extends ConsumerState<ContactListPage> {
         itemBuilder: (BuildContext context, int index) {
           final contact = contacts[index];
           return ListTile(
+            key: ValueKey(contact.id),
             title: Text(contact.name),
             subtitle: Text(contact.addresses.isNotEmpty ? contact.addresses.first : 'No addresses'),
             onTap: () => onEdit(contact),
