@@ -64,13 +64,12 @@ pub async fn list_db_accounts(db_filepath: &str) -> Result<Vec<DbAccountPreview>
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn change_db_password(
     db_filepath: &str,
-    tmp_dir: &str,
     old_password: &str,
     new_password: &str,
     c: &Coin,
 ) -> Result<()> {
     c.close_pool_for(db_filepath).await;
-    crate::db::change_db_password(db_filepath, tmp_dir, old_password, new_password).await
+    crate::db::change_db_password(db_filepath, old_password, new_password).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]

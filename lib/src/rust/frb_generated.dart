@@ -225,7 +225,6 @@ abstract class RustLibApi extends BaseApi {
 
   Future<void> crateApiDbChangeDbPassword(
       {required String dbFilepath,
-      required String tmpDir,
       required String oldPassword,
       required String newPassword,
       required Coin c});
@@ -1810,7 +1809,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @override
   Future<void> crateApiDbChangeDbPassword(
       {required String dbFilepath,
-      required String tmpDir,
       required String oldPassword,
       required String newPassword,
       required Coin c}) {
@@ -1818,7 +1816,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(dbFilepath, serializer);
-        sse_encode_String(tmpDir, serializer);
         sse_encode_String(oldPassword, serializer);
         sse_encode_String(newPassword, serializer);
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
@@ -1831,14 +1828,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiDbChangeDbPasswordConstMeta,
-      argValues: [dbFilepath, tmpDir, oldPassword, newPassword, c],
+      argValues: [dbFilepath, oldPassword, newPassword, c],
       apiImpl: this,
     ));
   }
 
   TaskConstMeta get kCrateApiDbChangeDbPasswordConstMeta => const TaskConstMeta(
         debugName: "change_db_password",
-        argNames: ["dbFilepath", "tmpDir", "oldPassword", "newPassword", "c"],
+        argNames: ["dbFilepath", "oldPassword", "newPassword", "c"],
       );
 
   @override

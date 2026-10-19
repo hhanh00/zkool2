@@ -12,13 +12,11 @@ Future<List<DbAccountPreview>> listDbAccounts({required String dbFilepath}) =>
 
 Future<void> changeDbPassword(
         {required String dbFilepath,
-        required String tmpDir,
         required String oldPassword,
         required String newPassword,
         required Coin c}) =>
     RustLib.instance.api.crateApiDbChangeDbPassword(
         dbFilepath: dbFilepath,
-        tmpDir: tmpDir,
         oldPassword: oldPassword,
         newPassword: newPassword,
         c: c);
