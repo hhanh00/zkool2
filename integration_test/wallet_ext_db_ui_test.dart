@@ -17,7 +17,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/router.dart';
@@ -105,9 +104,6 @@ void main() {
       expect(File("${docsDir.path}/$_scratchDbRenamed.db").existsSync(), isTrue);
 
       step("set a password on it");
-      // The change goes through a file in the temporary directory, which the
-      // app expects to exist (#1370).
-      (await tester.runAsync(() => getTemporaryDirectory()))!.createSync(recursive: true);
       await _checkDb(tester, _scratchDbRenamed);
       await tester.tap(find.byIcon(Icons.password));
       await pumpUntil(tester, () => fieldNamed("new_password").evaluate().isNotEmpty,

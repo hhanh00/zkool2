@@ -2287,9 +2287,29 @@ pub async fn fetch_shielded_slot_stats(
     Ok(rows)
 }
 
+/// Re-encrypts the database at `db_filepath` under `new_password` (empty for
+/// no encryption). The copy is exported to `<db_filepath>.tmp` beside the
+/// database, then renamed over it: the same directory, so the rename never
+/// crosses a filesystem and no other directory has to exist (#1370). A
+/// stale copy from an earlier failure is truncated; the copy is removed if
+/// the export fails.
 pub async fn change_db_password(
     db_filepath: &str,
-    tmp_dir: &str,
+    old_password: &str,
+    new_password: &str,
+) -> Result<()> {
+    let tmp_db_filepath = format!("{db_filepath}.tmp");
+    File::create(&tmp_db_filepath)?;
+    let result = export_db(db_filepath, &tmp_db_filepath, old_password, new_password).await;
+    if result.is_err() {
+        let _ = std::fs::remove_file(&tmp_db_filepath);
+    }
+    result
+}
+
+async fn export_db(
+    db_filepath: &str,
+    tmp_db_filepath: &str,
     old_password: &str,
     new_password: &str,
 ) -> Result<()> {
@@ -2298,9 +2318,6 @@ pub async fn change_db_password(
         let escaped_old_password = old_password.replace('\'', "''");
         options = options.pragma("key", format!("'{escaped_old_password}'"));
     }
-
-    let tmp_db_filepath = format!("{tmp_dir}/__tmp.db");
-    File::create(&tmp_db_filepath)?;
 
     let mut connection = SqliteConnection::connect_with(&options).await?;
     let escaped_password = new_password.replace('\'', "''");
@@ -2449,6 +2466,88 @@ pub async fn max_spendable(connection: &mut SqliteConnection, account: u32) -> R
     .fetch_one(connection)
     .await?;
     Ok(amount.unwrap_or_default())
+}
+
+#[cfg(test)]
+mod change_db_password_tests {
+    use super::*;
+
+    /// A fresh database path under the system temp dir, with no leftovers.
+    fn db_path(name: &str) -> String {
+        let path = std::env::temp_dir().join(format!("{name}_{}.db", std::process::id()));
+        let path = path.to_str().unwrap().to_string();
+        let _ = std::fs::remove_file(&path);
+        let _ = std::fs::remove_file(format!("{path}.tmp"));
+        path
+    }
+
+    async fn open(path: &str, password: &str) -> Result<SqliteConnection> {
+        let mut options = SqliteConnectOptions::new()
+            .filename(path)
+            .create_if_missing(true);
+        if !password.is_empty() {
+            options = options.pragma("key", format!("'{password}'"));
+        }
+        Ok(SqliteConnection::connect_with(&options).await?)
+    }
+
+    async fn marker(connection: &mut SqliteConnection) -> Result<String> {
+        let (v,): (String,) = sqlx::query_as("SELECT v FROM t")
+            .fetch_one(connection)
+            .await?;
+        Ok(v)
+    }
+
+    fn copy_exists(path: &str) -> bool {
+        std::path::Path::new(&format!("{path}.tmp")).exists()
+    }
+
+    /// The copy goes beside the database, so the change needs no other
+    /// directory and leaves nothing behind (#1370). The new password opens
+    /// the result; the old one does not.
+    #[tokio::test]
+    async fn re_encrypts_in_place() -> Result<()> {
+        let path = db_path("change_db_password");
+        let mut db = open(&path, "old").await?;
+        sqlx::raw_sql("CREATE TABLE t(v TEXT); INSERT INTO t VALUES ('kept');")
+            .execute(&mut db)
+            .await?;
+        db.close().await?;
+
+        change_db_password(&path, "old", "new").await?;
+
+        assert!(!copy_exists(&path), "the copy is renamed over the database");
+        let mut db = open(&path, "new").await?;
+        assert_eq!(marker(&mut db).await?, "kept");
+        db.close().await?;
+        let mut db = open(&path, "old").await?;
+        assert!(
+            marker(&mut db).await.is_err(),
+            "the old password no longer opens the database"
+        );
+        let _ = std::fs::remove_file(&path);
+        Ok(())
+    }
+
+    /// A wrong old password fails the export; the database is untouched and
+    /// the half-written copy is removed.
+    #[tokio::test]
+    async fn failed_export_leaves_no_copy() -> Result<()> {
+        let path = db_path("change_db_password_fail");
+        let mut db = open(&path, "old").await?;
+        sqlx::raw_sql("CREATE TABLE t(v TEXT); INSERT INTO t VALUES ('kept');")
+            .execute(&mut db)
+            .await?;
+        db.close().await?;
+
+        assert!(change_db_password(&path, "wrong", "new").await.is_err());
+
+        assert!(!copy_exists(&path), "the copy is removed on failure");
+        let mut db = open(&path, "old").await?;
+        assert_eq!(marker(&mut db).await?, "kept", "the database is untouched");
+        let _ = std::fs::remove_file(&path);
+        Ok(())
+    }
 }
 
 #[cfg(test)]

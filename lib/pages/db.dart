@@ -9,7 +9,6 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/store.dart';
@@ -271,14 +270,13 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
     try {
       await changeDbPassword(
         dbFilepath: await getFullDatabasePath(databaseName),
-        tmpDir: (await getTemporaryDirectory()).path,
         oldPassword: oldPassword ?? "",
         newPassword: newPassword ?? "",
         c: coinContext.coin,
       );
     } on AnyhowException catch (e) {
       if (!mounted) return;
-      await showException(context, "Failed to change database password: $e");
+      await showException(context, "Failed to change database password: ${e.message}");
       return;
     }
     if (!mounted) return;

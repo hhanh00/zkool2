@@ -1828,7 +1828,6 @@ fn wire__crate__api__db__change_db_password_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_db_filepath = <String>::sse_decode(&mut deserializer);
-            let api_tmp_dir = <String>::sse_decode(&mut deserializer);
             let api_old_password = <String>::sse_decode(&mut deserializer);
             let api_new_password = <String>::sse_decode(&mut deserializer);
             let api_c = <RustOpaqueMoi<
@@ -1854,7 +1853,6 @@ fn wire__crate__api__db__change_db_password_impl(
                         let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::db::change_db_password(
                             &api_db_filepath,
-                            &api_tmp_dir,
                             &api_old_password,
                             &api_new_password,
                             &*api_c_guard,
