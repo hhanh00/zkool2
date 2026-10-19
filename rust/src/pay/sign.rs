@@ -203,34 +203,14 @@ async fn sign_transaction(
         };
         let sk = sk.ok_or(Error::NoSigningKey)?;
 
-        // Derive pubkey from secret key to check
-        let derived_pubkey = secp256k1::PublicKey::from_secret_key(&sk);
-        let derived_compressed = derived_pubkey.serialize();
-        let derived_uncompressed = derived_pubkey.serialize_uncompressed();
-        let hash_compressed = zcash_transparent::util::hash160::hash(&derived_compressed);
-        let hash_uncompressed = zcash_transparent::util::hash160::hash(&derived_uncompressed);
-        info!(
-            "Derived pubkey (compressed): hash={}, len={}",
-            hex::encode(hash_compressed),
-            derived_compressed.len()
-        );
-        info!(
-            "Derived pubkey (uncompressed): hash={}, len={}",
-            hex::encode(hash_uncompressed),
-            65
-        );
-
-        // Get the sighash and sign manually
+        // Sign the sighash ourselves and append the signature; the signer
+        // recovers the pubkey from the input's hash160 preimage.
         let sighash = signer.transparent_sighash(index).unwrap();
         let msg = secp256k1::Message::from_digest(sighash);
         let sig = secp256k1::ecdsa::sign(msg, &sk);
-
-        // Append the signature - the pubkey will be retrieved from hash160_preimages
-        info!("Appending signature for input {}", index);
-        match signer.append_transparent_signature(index, sig) {
-            Ok(_) => info!("Successfully appended signature"),
-            Err(e) => info!("Failed to append signature: {:?}", e),
-        }
+        signer
+            .append_transparent_signature(index, sig)
+            .map_err(|e| anyhow!("failed to sign transparent input {index}: {e:?}"))?;
     }
     for (index, bundle_index) in sapling_indices.iter().enumerate() {
         info!("signing sapling {index}");
