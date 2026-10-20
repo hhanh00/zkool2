@@ -11,6 +11,7 @@ on:
 
 jobs:
   zkool-graphql:
+    if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
     uses: ./.github/workflows/zkool-graphql-build.yml
     secrets:
       NEAR_INTENTS_API_KEY: ${{ secrets.NEAR_INTENTS_API_KEY }}
