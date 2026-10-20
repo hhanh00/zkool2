@@ -93,9 +93,12 @@ impl Mempool {
     }
 
     #[cfg(feature = "flutter")]
-    pub fn run(&mut self, mempool_sink: StreamSink<MempoolMsg>, c: Coin) -> Result<()> {
+    pub fn run(&mut self, mempool_sink: StreamSink<MempoolMsg>, c: &Coin) -> Result<()> {
         let ct = CancellationToken::new();
         self.cancel_token = Some(ct.clone());
+        // Borrow the handle: taking `Coin` by value makes the bridge move and
+        // dispose the caller's Dart handle, which is the app-wide one.
+        let c = c.clone();
         self.runtime.spawn(async move {
             if let Err(e) = run_mempool(mempool_sink, ct, &c).await {
                 tracing::error!("Error running mempool: {:#}", e);
