@@ -1,5 +1,12 @@
 # Changelog
 
+## [6.35.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.35.0-rc...zkool-v6.35.0-rc.1) (2026-10-20)
+
+
+### Bug Fixes
+
+* **mempool:** borrow the Coin handle in Mempool::run ([#1375](https://github.com/hhanh00/zkool2/issues/1375)) ([edda4ce](https://github.com/hhanh00/zkool2/commit/edda4ce7473933799c22d7a1835304d31840cdb4))
+
 ## [6.35.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.34.0...zkool-v6.35.0-rc) (2026-10-19)
 
 
