@@ -1306,7 +1306,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_Auto_RefMut_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerMempool(
             that, serializer);
         sse_encode_StreamSink_mempool_msg_Sse(mempoolSink, serializer);
-        sse_encode_Auto_Owned_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
             c, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
             funcId: 16, port: port_);
