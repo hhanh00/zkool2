@@ -6,9 +6,11 @@ on:
 
 jobs:
   regtest-tools:
+    if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
     uses: ./.github/workflows/regtest-tools-build.yml
 
   zkool-graphql:
+    if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
     uses: ./.github/workflows/zkool-graphql-build.yml
     with:
       ledger-transport: zemu
@@ -22,6 +24,7 @@ jobs:
       queue: max
 
   build:
+    if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
     needs: [zkool-graphql, regtest-tools]
     permissions:
       contents: write
