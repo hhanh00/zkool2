@@ -19,7 +19,6 @@ library;
 import 'dart:async';
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -130,8 +129,8 @@ void main() {
 
       // Exports and imports go through the system file dialogs, which the
       // test cannot drive: a fake saves into the rendezvous directory.
-      final picker = FakeFilePicker(Directory("${rendezvous.dir.path}/files")..createSync());
-      FilePicker.platform = picker;
+      final picker = FakeFileDialogs(Directory("${rendezvous.dir.path}/files")..createSync());
+      fileDialogs = picker;
 
       final appRouter = router(true, false, initialLocation: "/accounts");
       await tester.pumpWidget(ZkoolApp(router: appRouter));
@@ -722,7 +721,7 @@ void main() {
 
 /// Picks "Export …" from the account view's menu and checks the file the
 /// fake picker saved; [what] names it in the log.
-Future<void> _export(WidgetTester tester, FakeFilePicker picker, String item, String what) async {
+Future<void> _export(WidgetTester tester, FakeFileDialogs picker, String item, String what) async {
   final before = picker.saved.length;
   await openMenuItem(tester, item);
   await pumpUntil(tester, () => picker.saved.length > before,
@@ -733,7 +732,7 @@ Future<void> _export(WidgetTester tester, FakeFilePicker picker, String item, St
 }
 
 /// Waits for the fake picker to save [fileName] with some content.
-Future<void> _savedFile(WidgetTester tester, FakeFilePicker picker, String fileName) async {
+Future<void> _savedFile(WidgetTester tester, FakeFileDialogs picker, String fileName) async {
   await pumpUntil(tester, () => picker.saved.any((p) => p.endsWith("/$fileName")),
       timeout: shortTimeout, what: "$fileName to be saved",);
   expect(File(picker.saved.lastWhere((p) => p.endsWith("/$fileName"))).lengthSync(), greaterThan(0));

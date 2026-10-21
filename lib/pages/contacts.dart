@@ -1,10 +1,9 @@
-import 'dart:io';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:zkool/src/rust/api/contacts.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -72,17 +71,11 @@ class ContactListPageState extends ConsumerState<ContactListPage> {
   }
 
   void onImportVcard() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-      allowMultiple: false,
-    );
-    if (result != null && result.files.single.path != null) {
-      final path = result.files.single.path!;
-      final data = await File(path).readAsString();
-      await importContactsVcard(vcardData: data, c: c);
-      await refresh();
-      ref.invalidate(getContactsProvider);
-    }
+    final bytes = await openFile();
+    if (bytes == null) return;
+    await importContactsVcard(vcardData: utf8.decode(bytes), c: c);
+    await refresh();
+    ref.invalidate(getContactsProvider);
   }
 
   void onImportFromContacts() async {

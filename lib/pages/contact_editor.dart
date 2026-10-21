@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:zkool/src/rust/api/contacts.dart';
 import 'package:zkool/src/rust/api/openalias.dart';
 import 'package:zkool/store.dart';
@@ -361,13 +360,9 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
   }
 
   void onImport() async {
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.any,
-      allowMultiple: false,
-    );
-    if (result == null || result.files.single.path == null) return;
-    final data = await File(result.files.single.path!).readAsString();
-    final contacts = parseContactsVcard(vcardData: data);
+    final bytes = await openFile();
+    if (bytes == null) return;
+    final contacts = parseContactsVcard(vcardData: utf8.decode(bytes));
     if (!mounted) return;
     if (contacts.isEmpty) {
       await showMessage(context, "The file has no contact with a Zcash address.", title: "Import from vCard");

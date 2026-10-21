@@ -9,6 +9,7 @@ import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart';
 import 'package:decimal/intl.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:file_selector/file_selector.dart' as fs;
 import 'package:fixed/fixed.dart';
 import 'package:flutter_passkey_service/flutter_passkey_service.dart';
 import 'package:flutter_passkey_service/pigeons/messages.g.dart'
@@ -669,18 +670,55 @@ Widget showLoading(String area) =>
 Widget showError(Object error) =>
     Material(child: Padding(padding: EdgeInsetsGeometry.all(8), child: Text("Error $error...", style: TextStyle(fontSize: 21, color: Colors.red))));
 
-Future<Uint8List?> openFile({String? title}) async {
-  final files = await FilePicker.platform.pickFiles(
-    dialogTitle: title,
-  );
-  if (files != null) {
-    final file = files.files.first;
-    final encryptedFile = File(file.path!);
-    final data = encryptedFile.readAsBytesSync();
-    return data;
-  }
-  return null;
+/// The app's file dialogs, behind one object so a UI test can stand in for
+/// the system dialogs it cannot drive (FakeFileDialogs in integration_test).
+FileDialogs fileDialogs = const SystemFileDialogs();
+
+abstract class FileDialogs {
+  /// Lets the user pick a file; its content, or null when they cancel.
+  Future<Uint8List?> open({String? title});
+
+  /// Lets the user choose where to save [data], proposing [fileName]; the
+  /// path written, or null when they cancel.
+  Future<String?> save({String? title, String? fileName, required Uint8List data});
 }
+
+/// The system's dialogs. On desktop they come from file_selector, which
+/// opens the platform's own chooser inside the process: GTK's on Linux, so
+/// nothing else has to be installed there. (file_picker on Linux goes
+/// through the XDG desktop portal over D-Bus, a service a bare window
+/// manager does not run.) Mobile keeps file_picker, whose save goes through
+/// the system's document flow, which file_selector does not offer there.
+class SystemFileDialogs implements FileDialogs {
+  const SystemFileDialogs();
+
+  static bool get _desktop => Platform.isLinux || Platform.isMacOS || Platform.isWindows;
+
+  @override
+  Future<Uint8List?> open({String? title}) async {
+    if (_desktop) {
+      final file = await fs.openFile();
+      return file?.readAsBytes();
+    }
+    final files = await FilePicker.platform.pickFiles(dialogTitle: title);
+    final path = files?.files.first.path;
+    if (path == null) return null;
+    return File(path).readAsBytes();
+  }
+
+  @override
+  Future<String?> save({String? title, String? fileName, required Uint8List data}) async {
+    if (_desktop) {
+      final location = await fs.getSaveLocation(suggestedName: fileName);
+      if (location == null) return null;
+      await File(location.path).writeAsBytes(data);
+      return location.path;
+    }
+    return FilePicker.platform.saveFile(dialogTitle: title, fileName: fileName, bytes: data);
+  }
+}
+
+Future<Uint8List?> openFile({String? title}) => fileDialogs.open(title: title);
 
 Future<XFile?> pickImage() async {
   final picker = ImagePicker();
@@ -688,13 +726,8 @@ Future<XFile?> pickImage() async {
   return icon;
 }
 
-Future<String?> saveFile({String? title, String? fileName, required Uint8List data}) async {
-  return await FilePicker.platform.saveFile(
-    dialogTitle: title,
-    fileName: fileName,
-    bytes: data,
-  );
-}
+Future<String?> saveFile({String? title, String? fileName, required Uint8List data}) =>
+    fileDialogs.save(title: title, fileName: fileName, data: data);
 
 extension ScopeFunctions<T> on T {
   R let<R>(R Function(T) block) => block(this);

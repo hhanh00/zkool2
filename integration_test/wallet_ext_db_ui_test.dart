@@ -13,7 +13,6 @@ library;
 
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -23,6 +22,7 @@ import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:zkool/src/rust/api/plugin.dart';
 import 'package:zkool/src/rust/frb_generated.dart';
+import 'package:zkool/utils.dart';
 
 import 'support.dart';
 
@@ -84,8 +84,8 @@ void main() {
       final appRouter = router(true, recovery);
       await tester.pumpWidget(ZkoolApp(router: appRouter));
       await tester.pump(const Duration(seconds: 1));
-      final picker = FakeFilePicker(Directory("${rendezvous.dir.path}/files")..createSync());
-      FilePicker.platform = picker;
+      final picker = FakeFileDialogs(Directory("${rendezvous.dir.path}/files")..createSync());
+      fileDialogs = picker;
 
       phase("database");
       step("the manager opens at start");
@@ -174,7 +174,7 @@ Future<void> _checkDb(WidgetTester tester, String name) async {
 }
 
 /// Waits for the fake picker to save [fileName] with some content.
-Future<void> _savedFile(WidgetTester tester, FakeFilePicker picker, String fileName) async {
+Future<void> _savedFile(WidgetTester tester, FakeFileDialogs picker, String fileName) async {
   await pumpUntil(tester, () => picker.saved.any((p) => p.endsWith("/$fileName")),
       timeout: shortTimeout, what: "$fileName to be saved",);
   expect(File(picker.saved.lastWhere((p) => p.endsWith("/$fileName"))).lengthSync(), greaterThan(0));

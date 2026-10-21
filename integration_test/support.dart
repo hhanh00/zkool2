@@ -12,7 +12,6 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -445,57 +444,27 @@ Future<String> driveDkg(
 Future<Directory> appDocumentsDir() => getApplicationDocumentsDirectory();
 
 /// Stands in for the system file dialogs, which a test cannot drive: a save
-/// lands in [dir] under the name the app proposes (the desktop pickers write
-/// the bytes too), and a pick hands out the next path queued in [picks].
-/// Installed with `FilePicker.platform = FakeFilePicker(dir)`.
-class FakeFilePicker extends FilePicker {
+/// lands in [dir] under the name the app proposes, and a pick hands out the
+/// next path queued in [picks]. Installed with `fileDialogs = FakeFileDialogs(dir)`.
+class FakeFileDialogs implements FileDialogs {
   final Directory dir;
   final List<String> picks = [];
   final List<String> saved = [];
 
-  FakeFilePicker(this.dir);
+  FakeFileDialogs(this.dir);
 
   @override
-  Future<String?> saveFile({
-    String? dialogTitle,
-    String? fileName,
-    String? initialDirectory,
-    FileType type = FileType.any,
-    List<String>? allowedExtensions,
-    Uint8List? bytes,
-    bool lockParentWindow = false,
-  }) async {
-    final path = "${dir.path}/${fileName ?? "file-${saved.length}"}";
-    if (bytes != null) File(path).writeAsBytesSync(bytes);
-    saved.add(path);
-    return path;
+  Future<Uint8List?> open({String? title}) async {
+    if (picks.isEmpty) return null;
+    return File(picks.removeAt(0)).readAsBytes();
   }
 
   @override
-  Future<FilePickerResult?> pickFiles({
-    String? dialogTitle,
-    String? initialDirectory,
-    FileType type = FileType.any,
-    List<String>? allowedExtensions,
-    Function(FilePickerStatus)? onFileLoading,
-    bool allowCompression = false,
-    int compressionQuality = 0,
-    bool allowMultiple = false,
-    bool withData = false,
-    bool withReadStream = false,
-    bool lockParentWindow = false,
-    bool readSequential = false,
-  }) async {
-    if (picks.isEmpty) return null;
-    final file = File(picks.removeAt(0));
-    return FilePickerResult([
-      PlatformFile(
-        path: file.path,
-        name: file.uri.pathSegments.last,
-        size: file.lengthSync(),
-        bytes: withData ? file.readAsBytesSync() : null,
-      ),
-    ]);
+  Future<String?> save({String? title, String? fileName, required Uint8List data}) async {
+    final path = "${dir.path}/${fileName ?? "file-${saved.length}"}";
+    File(path).writeAsBytesSync(data);
+    saved.add(path);
+    return path;
   }
 }
 
