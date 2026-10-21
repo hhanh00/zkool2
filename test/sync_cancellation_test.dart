@@ -53,6 +53,10 @@ class _Api implements RustLibApi {
 }
 
 class _Settings extends AppSettingsNotifier {
+  final String interval;
+
+  _Settings([this.interval = '']);
+
   @override
   Future<AppSettings> build() async => AppSettings(
         dbName: '',
@@ -60,7 +64,7 @@ class _Settings extends AppSettingsNotifier {
         isLightNode: false,
         lwd: '',
         blockExplorer: '',
-        syncInterval: '',
+        syncInterval: interval,
         actionsPerSync: '100',
         transport: 0,
         proxy: '',
@@ -109,16 +113,44 @@ void main() {
   setUpAll(() => RustLib.initMock(api: api));
   tearDownAll(RustLib.dispose);
 
-  Future<ProviderContainer> setup() async {
+  Future<ProviderContainer> setup({String interval = '', List<Account> accounts = const []}) async {
     api.streams.clear();
     api.requests.clear();
     api.cancels = 0;
     final container = ProviderContainer(overrides: [
-      appSettingsProvider.overrideWith(_Settings.new),
+      appSettingsProvider.overrideWith(() => _Settings(interval)),
+      getAccountsProvider.overrideWith((ref) async => accounts),
     ]);
     await container.read(appSettingsProvider.future);
     return container;
   }
+
+  test('an autosync interval of 0 means never, and a positive one means behind by that much', () async {
+    // 0: a block arrives, nothing is due, even for an account far behind.
+    var container = await setup(interval: '0', accounts: [_account(1)]);
+    var notifier = container.read(synchronizerProvider.notifier);
+    await notifier.syncIfNeeded(1000, now: false);
+    expect(api.streams, isEmpty, reason: 'an interval of 0 turns autosync off');
+    // "Sync now" still works with autosync off.
+    final forced = notifier.syncIfNeeded(1000, now: true);
+    await Future<void>.delayed(Duration.zero);
+    expect(api.requests.map((r) => r.$1).toList(), [[1]]);
+    unawaited(api.streams.single.close());
+    await forced;
+    container.dispose();
+
+    // 30: due once the account is 30 blocks behind the tip, not before.
+    container = await setup(interval: '30', accounts: [_account(1)]);
+    addTearDown(container.dispose);
+    notifier = container.read(synchronizerProvider.notifier);
+    await notifier.syncIfNeeded(129, now: false);
+    expect(api.streams, isEmpty, reason: 'the account at 100 is 29 blocks behind');
+    final due = notifier.syncIfNeeded(130, now: false);
+    await Future<void>.delayed(Duration.zero);
+    expect(api.requests.map((r) => r.$1).toList(), [[1]]);
+    unawaited(api.streams.single.close());
+    await due;
+  });
 
   test('cancelling stays busy until Rust closes, then allows a new sync', () async {
     final container = await setup();

@@ -980,12 +980,17 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
 
   Future<void> syncIfNeeded(int currentHeight, {required bool now}) async {
     final settings = ref.read(appSettingsProvider).requireValue;
+    // An interval of 0 means never, not "behind by at least 0 blocks",
+    // which every account is: a block-height subscription that outlived
+    // the setting must not sync everything on every block.
+    final interval = int.tryParse(settings.syncInterval) ?? 0;
+    if (!now && interval <= 0) return;
     List<Account> accountsToSync = [];
     final accounts = await ref.read(getAccountsProvider.future);
     for (var account in accounts) {
       if (account.enabled) {
         final height = account.height;
-        if (now || currentHeight - height >= int.parse(settings.syncInterval)) {
+        if (now || currentHeight - height >= interval) {
           logger.i("Sync needed for ${account.name}");
           accountsToSync.add(account);
         }
