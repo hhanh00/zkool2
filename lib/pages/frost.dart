@@ -102,7 +102,8 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
       loading: () => blank(context),
       error: (error, stack) => showError(error),
       data: (accountData) {
-        accounts = accountData.allAccounts.where((e) => !e.hidden).toList();
+        // The group's own message accounts are internal: not a funding choice.
+        accounts = accountData.allAccounts.where((e) => !e.hidden && !e.internal).toList();
         account = accountData.currentAccount;
 
         if (frostParams == null) {

@@ -81,7 +81,8 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
   void initState() {
     super.initState();
     Future(() async {
-      final accounts = (await ref.read(getAccountsProvider.future)).where((e) => !e.hidden).toList();
+      // Message accounts of other groups are internal: not a funding choice.
+      final accounts = (await ref.read(getAccountsProvider.future)).where((e) => !e.hidden && !e.internal).toList();
       final dkgInProgress = await hasDkgParams(c: c);
       if (dkgInProgress && mounted) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
