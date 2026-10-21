@@ -125,6 +125,15 @@ pub async fn reset_sign(connection: &mut SqliteConnection) -> Result<()> {
     delete_frost_state(&mut *connection).await
 }
 
+/// The account paying for the messages of the signing session in
+/// progress, if any.
+pub async fn signing_funding_account(connection: &mut SqliteConnection) -> Result<Option<u32>> {
+    if !is_signing_in_progress(&mut *connection).await? {
+        return Ok(None);
+    }
+    Ok(Some(state::load_sign_params(&mut *connection).await?.funding_account))
+}
+
 /// The group account of the signing session in progress, if any.
 pub async fn signing_account(connection: &mut SqliteConnection) -> Result<Option<u32>> {
     if !is_signing_in_progress(&mut *connection).await? {

@@ -237,6 +237,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   FrostParams dco_decode_box_autoadd_frost_params(dynamic raw);
 
   @protected
+  FundingShortfall dco_decode_box_autoadd_funding_shortfall(dynamic raw);
+
+  @protected
   int dco_decode_box_autoadd_i_32(dynamic raw);
 
   @protected
@@ -319,6 +322,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FrostSignParams dco_decode_frost_sign_params(dynamic raw);
+
+  @protected
+  FundingShortfall dco_decode_funding_shortfall(dynamic raw);
 
   @protected
   int dco_decode_i_32(dynamic raw);
@@ -510,6 +516,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FrostParams? dco_decode_opt_box_autoadd_frost_params(dynamic raw);
+
+  @protected
+  FundingShortfall? dco_decode_opt_box_autoadd_funding_shortfall(dynamic raw);
 
   @protected
   int? dco_decode_opt_box_autoadd_i_32(dynamic raw);
@@ -861,6 +870,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   FrostParams sse_decode_box_autoadd_frost_params(SseDeserializer deserializer);
 
   @protected
+  FundingShortfall sse_decode_box_autoadd_funding_shortfall(
+      SseDeserializer deserializer);
+
+  @protected
   int sse_decode_box_autoadd_i_32(SseDeserializer deserializer);
 
   @protected
@@ -947,6 +960,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FrostSignParams sse_decode_frost_sign_params(SseDeserializer deserializer);
+
+  @protected
+  FundingShortfall sse_decode_funding_shortfall(SseDeserializer deserializer);
 
   @protected
   int sse_decode_i_32(SseDeserializer deserializer);
@@ -1150,6 +1166,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   FrostParams? sse_decode_opt_box_autoadd_frost_params(
+      SseDeserializer deserializer);
+
+  @protected
+  FundingShortfall? sse_decode_opt_box_autoadd_funding_shortfall(
       SseDeserializer deserializer);
 
   @protected
@@ -1519,6 +1539,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       FrostParams self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_funding_shortfall(
+      FundingShortfall self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_i_32(int self, SseSerializer serializer);
 
   @protected
@@ -1614,6 +1638,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_frost_sign_params(
       FrostSignParams self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_funding_shortfall(
+      FundingShortfall self, SseSerializer serializer);
 
   @protected
   void sse_encode_i_32(int self, SseSerializer serializer);
@@ -1834,6 +1862,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_frost_params(
       FrostParams? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_funding_shortfall(
+      FundingShortfall? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_box_autoadd_i_32(int? self, SseSerializer serializer);

@@ -387,6 +387,19 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
     _failed(message);
   }
 
+  /// Shows what the funding account holds against what a message costs.
+  void _shortFunds() async {
+    showWarningSnackbar("Not enough funds for the next message; add funds to the funding account");
+    final short = await fundingShortfall(c: c);
+    if (!mounted || short == null) return;
+    setState(() {
+      failure = ProtocolFailure.shortFunds(
+        zatToString(short.balance),
+        zatToString(short.messageCost),
+      );
+    });
+  }
+
   void _failed(String message) {
     setState(() => failure = failure?.again(message) ?? ProtocolFailure.first(message));
   }
@@ -423,12 +436,10 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
         index = 2;
       });
     } else if (s is DKGStatus_WaitingForFunds) {
-      // The previous round's change is not mined yet, so this round's
-      // publish has nothing to spend. The next block retries; surface it
-      // as a warning rather than failing so the user knows why it paused.
-      showWarningSnackbar(
-        "Waiting for the previous round's change to be confirmed…",
-      );
+      // The round's publish could not be funded. The protocol waits for
+      // its own previous message to be mined before sending the next, so
+      // this means the funding account is short; the next block retries.
+      _shortFunds();
     } else if (s is DKGStatus_WaitOwnPublish) {
       setState(() => message = "Waiting for our last message to be mined");
     } else if (s is DKGStatus_Finalize) {

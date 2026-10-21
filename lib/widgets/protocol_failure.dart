@@ -8,13 +8,24 @@ class ProtocolFailure {
   final String message;
   final int count;
   final DateTime last;
+  /// Replaces the "last attempt failed" headline, for a stall that is not
+  /// a failure, such as a funding account that needs topping up.
+  final String? headline;
 
-  const ProtocolFailure(this.message, {this.count = 1, required this.last});
+  const ProtocolFailure(this.message, {this.count = 1, required this.last, this.headline});
 
   /// This failure followed by another one.
   ProtocolFailure again(String message) => ProtocolFailure(message, count: count + 1, last: DateTime.now());
 
   static ProtocolFailure first(String message) => ProtocolFailure(message, last: DateTime.now());
+
+  /// The funding account cannot pay for the next protocol message.
+  static ProtocolFailure shortFunds(String balance, String cost) => ProtocolFailure(
+        "The funding account holds $balance ZEC; a protocol message costs about $cost ZEC. "
+        "Add funds to it to continue.",
+        last: DateTime.now(),
+        headline: "Not enough funds for the next message. It retries on the next block.",
+      );
 }
 
 /// Shows a [ProtocolFailure] under a protocol page's status, until the next
@@ -51,7 +62,7 @@ class ProtocolFailureLine extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Last attempt failed $ago$times. It retries on the next block.",
+                    failure.headline ?? "Last attempt failed $ago$times. It retries on the next block.",
                     style: t.labelLarge?.copyWith(color: theme.colorScheme.onErrorContainer),
                   ),
                   const SizedBox(height: 4),

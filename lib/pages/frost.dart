@@ -261,6 +261,19 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
     _failed(message);
   }
 
+  /// Shows what the funding account holds against what a message costs.
+  void _shortFunds() async {
+    showWarningSnackbar("Not enough funds for the next message; add funds to the funding account");
+    final short = await fundingShortfall(c: c);
+    if (!mounted || short == null) return;
+    setState(() {
+      failure = ProtocolFailure.shortFunds(
+        zatToString(short.balance),
+        zatToString(short.messageCost),
+      );
+    });
+  }
+
   void _failed(String message) {
     setState(() => failure = failure?.again(message) ?? ProtocolFailure.first(message));
   }
@@ -331,12 +344,10 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
     } else if (s is SigningStatus_WaitOwnPublish) {
       setState(() => message = "Waiting for our last message to be mined");
     } else if (s is SigningStatus_WaitingForFunds) {
-      // The previous message's change is not mined yet, so this one has
-      // nothing to spend. The next block retries; surface it as a warning
-      // rather than failing.
-      showWarningSnackbar(
-        "Waiting for the previous message's change to be confirmed…",
-      );
+      // The message could not be funded. The session waits for its own
+      // previous message to be mined before sending the next, so this
+      // means the funding account is short; the next block retries.
+      _shortFunds();
     }
   }
 

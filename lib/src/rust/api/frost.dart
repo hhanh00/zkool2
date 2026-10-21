@@ -13,7 +13,7 @@ part 'frost.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `get_funding_account`, `sync_frost_accounts`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DKGParams`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
 Future<void> setDkgParams(
         {required String name,
@@ -142,6 +142,9 @@ Future<void> checkGroupPczt(
 Future<bool> isSigningInProgress({required Coin c}) =>
     RustLib.instance.api.crateApiFrostIsSigningInProgress(c: c);
 
+Future<FundingShortfall?> fundingShortfall({required Coin c}) =>
+    RustLib.instance.api.crateApiFrostFundingShortfall(c: c);
+
 /// The group account whose signing session is in progress, if any: the
 /// session is one per wallet, so a page asks which account it belongs to.
 Future<int?> signingAccount({required Coin c}) =>
@@ -220,6 +223,19 @@ sealed class FrostSignParams with _$FrostSignParams {
   }) = _FrostSignParams;
   static Future<FrostSignParams> default_() =>
       RustLib.instance.api.crateApiFrostFrostSignParamsDefault();
+}
+
+/// What the account paying for a running protocol's messages holds, and
+/// what one message costs: the page's notice when a message cannot be
+/// funded. The signing session's funding account when one is in progress,
+/// else the DKG's; None when neither runs.
+@freezed
+sealed class FundingShortfall with _$FundingShortfall {
+  const factory FundingShortfall({
+    required int account,
+    required BigInt balance,
+    required BigInt messageCost,
+  }) = _FundingShortfall;
 }
 
 @freezed

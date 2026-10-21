@@ -338,6 +338,47 @@ pub async fn is_signing_in_progress(c: &Coin) -> Result<bool> {
     crate::frost::sign::is_signing_in_progress(&mut *connection).await
 }
 
+/// What the account paying for a running protocol's messages holds, and
+/// what one message costs: the page's notice when a message cannot be
+/// funded. The signing session's funding account when one is in progress,
+/// else the DKG's; None when neither runs.
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+#[derive(Debug, Clone)]
+pub struct FundingShortfall {
+    pub account: u32,
+    /// The account's balance, in zatoshis.
+    pub balance: u64,
+    /// What one protocol message costs, in zatoshis: the ZIP 317 fee of a
+    /// transaction with the minimum of logical actions. More fragmented
+    /// notes cost more.
+    pub message_cost: u64,
+}
+
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn funding_shortfall(c: &Coin) -> Result<Option<FundingShortfall>> {
+    use zcash_primitives::transaction::fees::zip317::{GRACE_ACTIONS, MARGINAL_FEE};
+    let mut connection = c.get_connection().await?;
+    let signing = crate::frost::sign::signing_funding_account(&mut *connection).await?;
+    let dkg: Option<u32> =
+        sqlx::query_as::<_, (String,)>("SELECT value FROM props WHERE key = 'dkg_account'")
+            .fetch_optional(&mut *connection)
+            .await?
+            .and_then(|(v,)| v.parse().ok());
+    let Some(account) = signing.or(dkg) else {
+        return Ok(None);
+    };
+    let balance = crate::db::calculate_balance(&mut *connection, account, None)
+        .await?
+        .0
+        .iter()
+        .sum();
+    Ok(Some(FundingShortfall {
+        account,
+        balance,
+        message_cost: MARGINAL_FEE.into_u64() * GRACE_ACTIONS as u64,
+    }))
+}
+
 /// The group account whose signing session is in progress, if any: the
 /// session is one per wallet, so a page asks which account it belongs to.
 #[cfg_attr(feature = "flutter", frb)]

@@ -48,6 +48,10 @@ class _Api implements RustLibApi {
   ProtocolDriver crateApiFrostProtocolDriverNew() => driver;
 
   @override
+  Future<FundingShortfall?> crateApiFrostFundingShortfall({required Coin c}) async =>
+      FundingShortfall(account: 1, balance: BigInt.from(50000), messageCost: BigInt.from(10000));
+
+  @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -131,7 +135,10 @@ void main() {
       expect(find.text('Signing completed'), findsNothing);
 
       await report(tester, const ProtocolStatus.dkg(DKGStatus.waitingForFunds()));
-      expect(find.textContaining("Waiting for the previous round's change"), findsOneWidget);
+      await tester.pump();
+      expect(find.textContaining('Not enough funds'), findsWidgets);
+      expect(find.textContaining('0.0005'), findsOneWidget, reason: "the funding account's balance");
+      expect(find.textContaining('0.0001'), findsOneWidget, reason: 'what a message costs');
     });
 
     testWidgets('a failed pass is a warning, and leaving cancels the driver', (tester) async {
@@ -204,6 +211,16 @@ void main() {
         expect(find.text('Home'), findsOneWidget, reason: "the account's page, at / in this router");
         expect(api.driver.cancels, 1, reason: 'leaving stops the protocol driver');
       }
+    });
+
+    testWidgets('a funds wait says what the account holds and a message costs', (tester) async {
+      await open(tester, '/frost2', const FrostPage2(account: 1));
+      await report(tester, const ProtocolStatus.sign(SigningStatus.waitingForFunds()));
+      await tester.pump();
+      expect(find.textContaining('0.0005'), findsOneWidget);
+      await report(tester, const ProtocolStatus.sign(SigningStatus.waitingForSigningPackage()));
+      // The snackbar lingers; the card under the status is what goes.
+      expect(find.textContaining('The funding account holds'), findsNothing);
     });
 
     testWidgets('a failed pass stays on the page until one succeeds', (tester) async {

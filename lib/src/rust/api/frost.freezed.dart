@@ -1454,6 +1454,326 @@ class __$FrostSignParamsCopyWithImpl<$Res>
 }
 
 /// @nodoc
+mixin _$FundingShortfall {
+  int get account;
+  BigInt get balance;
+  BigInt get messageCost;
+
+  /// Create a copy of FundingShortfall
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $FundingShortfallCopyWith<FundingShortfall> get copyWith =>
+      _$FundingShortfallCopyWithImpl<FundingShortfall>(
+          this as FundingShortfall, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is FundingShortfall &&
+            (identical(other.account, account) || other.account == account) &&
+            (identical(other.balance, balance) || other.balance == balance) &&
+            (identical(other.messageCost, messageCost) ||
+                other.messageCost == messageCost));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, account, balance, messageCost);
+
+  @override
+  String toString() {
+    return 'FundingShortfall(account: $account, balance: $balance, messageCost: $messageCost)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $FundingShortfallCopyWith<$Res> {
+  factory $FundingShortfallCopyWith(
+          FundingShortfall value, $Res Function(FundingShortfall) _then) =
+      _$FundingShortfallCopyWithImpl;
+  @useResult
+  $Res call({int account, BigInt balance, BigInt messageCost});
+}
+
+/// @nodoc
+class _$FundingShortfallCopyWithImpl<$Res>
+    implements $FundingShortfallCopyWith<$Res> {
+  _$FundingShortfallCopyWithImpl(this._self, this._then);
+
+  final FundingShortfall _self;
+  final $Res Function(FundingShortfall) _then;
+
+  /// Create a copy of FundingShortfall
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? account = null,
+    Object? balance = null,
+    Object? messageCost = null,
+  }) {
+    return _then(_self.copyWith(
+      account: null == account
+          ? _self.account
+          : account // ignore: cast_nullable_to_non_nullable
+              as int,
+      balance: null == balance
+          ? _self.balance
+          : balance // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      messageCost: null == messageCost
+          ? _self.messageCost
+          : messageCost // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [FundingShortfall].
+extension FundingShortfallPatterns on FundingShortfall {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_FundingShortfall value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _FundingShortfall() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_FundingShortfall value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _FundingShortfall():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_FundingShortfall value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _FundingShortfall() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(int account, BigInt balance, BigInt messageCost)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _FundingShortfall() when $default != null:
+        return $default(_that.account, _that.balance, _that.messageCost);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(int account, BigInt balance, BigInt messageCost) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _FundingShortfall():
+        return $default(_that.account, _that.balance, _that.messageCost);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(int account, BigInt balance, BigInt messageCost)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _FundingShortfall() when $default != null:
+        return $default(_that.account, _that.balance, _that.messageCost);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _FundingShortfall implements FundingShortfall {
+  const _FundingShortfall(
+      {required this.account,
+      required this.balance,
+      required this.messageCost});
+
+  @override
+  final int account;
+  @override
+  final BigInt balance;
+  @override
+  final BigInt messageCost;
+
+  /// Create a copy of FundingShortfall
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$FundingShortfallCopyWith<_FundingShortfall> get copyWith =>
+      __$FundingShortfallCopyWithImpl<_FundingShortfall>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _FundingShortfall &&
+            (identical(other.account, account) || other.account == account) &&
+            (identical(other.balance, balance) || other.balance == balance) &&
+            (identical(other.messageCost, messageCost) ||
+                other.messageCost == messageCost));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, account, balance, messageCost);
+
+  @override
+  String toString() {
+    return 'FundingShortfall(account: $account, balance: $balance, messageCost: $messageCost)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$FundingShortfallCopyWith<$Res>
+    implements $FundingShortfallCopyWith<$Res> {
+  factory _$FundingShortfallCopyWith(
+          _FundingShortfall value, $Res Function(_FundingShortfall) _then) =
+      __$FundingShortfallCopyWithImpl;
+  @override
+  @useResult
+  $Res call({int account, BigInt balance, BigInt messageCost});
+}
+
+/// @nodoc
+class __$FundingShortfallCopyWithImpl<$Res>
+    implements _$FundingShortfallCopyWith<$Res> {
+  __$FundingShortfallCopyWithImpl(this._self, this._then);
+
+  final _FundingShortfall _self;
+  final $Res Function(_FundingShortfall) _then;
+
+  /// Create a copy of FundingShortfall
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? account = null,
+    Object? balance = null,
+    Object? messageCost = null,
+  }) {
+    return _then(_FundingShortfall(
+      account: null == account
+          ? _self.account
+          : account // ignore: cast_nullable_to_non_nullable
+              as int,
+      balance: null == balance
+          ? _self.balance
+          : balance // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+      messageCost: null == messageCost
+          ? _self.messageCost
+          : messageCost // ignore: cast_nullable_to_non_nullable
+              as BigInt,
+    ));
+  }
+}
+
+/// @nodoc
 mixin _$ProtocolStatus {
   Object get field0;
 
