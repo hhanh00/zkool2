@@ -1,5 +1,30 @@
 # Changelog
 
+## [6.35.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.35.0-rc.1...zkool-v6.35.0-rc.2) (2026-10-21)
+
+
+### Features
+
+* **dkg:** add a Dismiss button when the DKG finishes ([ff38c30](https://github.com/hhanh00/zkool2/commit/ff38c3000baf24ba4a92c27f908946ee04e13954))
+* **frost:** add a Dismiss button when a signing session finishes ([21b1a16](https://github.com/hhanh00/zkool2/commit/21b1a16e57d3bc8f99b7356214afd7ffff1d38a7))
+* **frost:** give group transactions a longer expiry ([63a1e21](https://github.com/hhanh00/zkool2/commit/63a1e21542cba216193f6d3d3053119297667a43)), closes [#1343](https://github.com/hhanh00/zkool2/issues/1343)
+* **frost:** keep a failed pass's cause on the DKG and signing pages ([ecca98a](https://github.com/hhanh00/zkool2/commit/ecca98af2feccbd3efd94afa94228d991870eb50))
+* **frost:** publish the next protocol message only once the last is mined ([f635060](https://github.com/hhanh00/zkool2/commit/f635060ee53a36961d28a6ecb052d56649d94ddd))
+* **frost:** say what the funding account holds when a message cannot be funded ([4e966f5](https://github.com/hhanh00/zkool2/commit/4e966f5faf31e3a0181063fef38f8c20e930b04d))
+* **frost:** send a loaded transaction through the group from the send button ([58b0f9c](https://github.com/hhanh00/zkool2/commit/58b0f9c3634b6a8905ae5ecf0d8772b84594f59d))
+* **frost:** send on a group account goes to its running signing session ([8cf957d](https://github.com/hhanh00/zkool2/commit/8cf957d15e2c8216f4bf6a6caf5cd706bc2a2c75))
+* **frost:** show how far a wait on the others has got, and for how long ([b86a363](https://github.com/hhanh00/zkool2/commit/b86a363c1ca44398cb17d3a06543afab4bf8b694))
+* **frost:** warn before the transaction being signed expires, and say when it has ([b1cf77b](https://github.com/hhanh00/zkool2/commit/b1cf77bc000cfb38dfc2949cfe5bd92ee84343f6))
+* **frost:** warn when the funding account holds less than 0.001 ZEC ([a6a45c8](https://github.com/hhanh00/zkool2/commit/a6a45c8ef433bcd21f4b657e487e002b3fd277bb))
+
+
+### Bug Fixes
+
+* **account:** sync only the new account after a restore ([1f4cc40](https://github.com/hhanh00/zkool2/commit/1f4cc40e5e1bbe4de4418b09d7532c3e5c4eab88))
+* **frost:** keep the groups' message accounts out of the funding dropdowns ([12501dc](https://github.com/hhanh00/zkool2/commit/12501dc04898c143ff41ee4fbccd144b77493fce))
+* **frost:** keep the signing session until the transaction is broadcast ([cc21444](https://github.com/hhanh00/zkool2/commit/cc21444b31c973d3fcae16ff3cc83f7f8429e44f))
+* **frost:** refuse a transaction that was not prepared for the group ([412ea30](https://github.com/hhanh00/zkool2/commit/412ea305febbddeac347437d69319ffc10475fc4))
+
 ## [6.35.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.35.0-rc...zkool-v6.35.0-rc.1) (2026-10-20)
 
 
