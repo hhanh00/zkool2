@@ -1,5 +1,18 @@
 # Changelog
 
+## [6.35.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.35.0-rc.3...zkool-v6.35.0-rc.4) (2026-10-21)
+
+
+### Features
+
+* open the platform's own file dialogs on desktop ([f26d182](https://github.com/hhanh00/zkool2/commit/f26d1829ebedb3f2dfc46a20d52f04df0956cf1a))
+
+
+### Bug Fixes
+
+* **nix:** put gtk3's GSettings schemas on the Linux wrapper's XDG_DATA_DIRS ([e4fc589](https://github.com/hhanh00/zkool2/commit/e4fc589b5605f59c98af23dc787f99bf14c2a757))
+* **sync:** an autosync interval of 0 turns autosync off at once ([4074c28](https://github.com/hhanh00/zkool2/commit/4074c281b20d58eb47d583d2c376db001bd7723e))
+
 ## [6.35.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.35.0-rc.2...zkool-v6.35.0-rc.3) (2026-10-21)
 
 
