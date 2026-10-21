@@ -13,6 +13,7 @@ import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/widgets/protocol_failure.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/validators.dart';
 
@@ -345,6 +346,8 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
   String message = "";
   int index = 0;
   bool finished = false;
+  /// The last failed pass, until a pass succeeds.
+  ProtocolFailure? failure;
 
   @override
   void initState() {
@@ -363,20 +366,29 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
     if (!mounted) return;
     switch (status) {
       case ProtocolStatus_Dkg(:final field0):
+        // A status is a pass that got somewhere: the failure line goes.
+        if (failure != null) setState(() => failure = null);
         _onDkg(field0);
       case ProtocolStatus_Sign():
         break;
       // A failed pass is transient: the next block retries, so warn instead
-      // of a modal error.
+      // of a modal error, and keep the cause on the page meanwhile.
       case ProtocolStatus_Warning(:final field0):
         showWarningSnackbar(field0);
+        _failed(field0);
     }
   }
 
   // The stream itself failed (it ends on an error): nothing more will come.
   void _onError(Object e) {
     if (!mounted) return;
-    showWarningSnackbar(e is AnyhowException ? e.message : e.toString());
+    final message = e is AnyhowException ? e.message : e.toString();
+    showWarningSnackbar(message);
+    _failed(message);
+  }
+
+  void _failed(String message) {
+    setState(() => failure = failure?.again(message) ?? ProtocolFailure.first(message));
   }
 
   void _onDkg(DKGStatus s) {
@@ -453,7 +465,13 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
       ref,
       index: index,
       finished: finished,
-      child: CopyableText(message, style: t.bodyLarge),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CopyableText(message, style: t.bodyLarge),
+          if (failure != null) ProtocolFailureLine(failure!),
+        ],
+      ),
     );
   }
 }

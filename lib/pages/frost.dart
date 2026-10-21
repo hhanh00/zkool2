@@ -14,6 +14,7 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/widgets/protocol_failure.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/router.dart';
 
@@ -217,6 +218,8 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
   final ProtocolDriver _driver = ProtocolDriver();
   StreamSubscription<ProtocolStatus>? _statuses;
   String message = "";
+  /// The last failed pass, until a pass succeeds.
+  ProtocolFailure? failure;
   int currentIndex = 0;
   bool finished = false;
 
@@ -237,20 +240,29 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
     if (!mounted) return;
     switch (status) {
       case ProtocolStatus_Sign(:final field0):
+        // A status is a pass that got somewhere: the failure line goes.
+        if (failure != null) setState(() => failure = null);
         _onSign(field0);
       case ProtocolStatus_Dkg():
         break;
       // A failed pass is transient: the next block retries, so warn instead
-      // of a modal error.
+      // of a modal error, and keep the cause on the page meanwhile.
       case ProtocolStatus_Warning(:final field0):
         showWarningSnackbar(field0);
+        _failed(field0);
     }
   }
 
   // The stream itself failed (it ends on an error): nothing more will come.
   void _onError(Object e) {
     if (!mounted) return;
-    showWarningSnackbar(e is AnyhowException ? e.message : e.toString());
+    final message = e is AnyhowException ? e.message : e.toString();
+    showWarningSnackbar(message);
+    _failed(message);
+  }
+
+  void _failed(String message) {
+    setState(() => failure = failure?.again(message) ?? ProtocolFailure.first(message));
   }
 
   void _onSign(SigningStatus s) {
@@ -337,7 +349,13 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
       account: widget.account,
       index: currentIndex,
       finished: finished,
-      child: Column(children: [Text(message, style: t.bodyLarge)]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(message, style: t.bodyLarge),
+          if (failure != null) ProtocolFailureLine(failure!),
+        ],
+      ),
     );
   }
 }

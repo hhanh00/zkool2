@@ -141,10 +141,15 @@ void main() {
       // bridge ends a stream at its first error, which would freeze the
       // page while the driver retries on the next block.
       await report(tester, const ProtocolStatus.warning('publish DKG package'));
-      expect(find.textContaining('publish DKG package'), findsOneWidget);
+      // The message is in the snackbar and on the page's failure line.
+      expect(find.textContaining('publish DKG package'), findsWidgets);
+      expect(find.textContaining('Last attempt failed'), findsOneWidget, reason: 'the cause stays on the page');
+      await report(tester, const ProtocolStatus.warning('publish DKG package'));
+      expect(find.textContaining('2 in a row'), findsOneWidget, reason: 'failures in a row are counted');
       await report(tester, const ProtocolStatus.dkg(DKGStatus.waitRound1Pkg()));
       expect(find.textContaining('round 1 packages'), findsOneWidget,
           reason: 'the page keeps reporting after a warning',);
+      expect(find.textContaining('Last attempt failed'), findsNothing, reason: 'a pass that got somewhere clears it');
 
       expect(api.driver.cancels, 0);
       router.go('/');
@@ -199,6 +204,15 @@ void main() {
         expect(find.text('Home'), findsOneWidget, reason: "the account's page, at / in this router");
         expect(api.driver.cancels, 1, reason: 'leaving stops the protocol driver');
       }
+    });
+
+    testWidgets('a failed pass stays on the page until one succeeds', (tester) async {
+      await open(tester, '/frost2', const FrostPage2(account: 1));
+      await report(tester, const ProtocolStatus.warning('publish commitments'));
+      expect(find.textContaining('Last attempt failed'), findsOneWidget);
+      expect(find.textContaining('publish commitments'), findsWidgets);
+      await report(tester, const ProtocolStatus.sign(SigningStatus.waitingForSigningPackage()));
+      expect(find.textContaining('Last attempt failed'), findsNothing);
     });
 
     testWidgets('ignores DKG statuses and cancels the driver on leave', (tester) async {
