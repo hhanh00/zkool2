@@ -248,7 +248,15 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
         if (failure != null) setState(() => failure = null);
         final before = message;
         _onSign(field0);
-        if (message != before) setState(() => waitingSince = DateTime.now());
+        // A new phase: its wait starts now, and the progress of the last
+        // one is over. A wait's progress arrives after its status, so it
+        // is set again right after this, each pass, while the wait lasts.
+        if (message != before) {
+          setState(() {
+            waitingSince = DateTime.now();
+            progress = null;
+          });
+        }
       case ProtocolStatus_Dkg():
         break;
       // A failed pass is transient: the next block retries, so warn instead
@@ -355,7 +363,6 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
       setState(() {
         message = "This transaction expired before the group finished signing. "
             "Prepare a new one and sign it again.";
-        progress = null;
         finished = true;
       });
     } else if (s is SigningStatus_WaitOwnPublish) {

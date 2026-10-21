@@ -110,8 +110,12 @@ void main() {
       await report(tester, const ProtocolStatus.dkg(DKGStatus.waitProgress(what: 'Round 1 packages', have: 1, of: 2)));
       expect(find.textContaining('Round 1 packages: 1 of 2'), findsOneWidget, reason: 'how far the wait has got');
 
+      await report(tester, const ProtocolStatus.dkg(DKGStatus.publishRound2Pkg()));
+      expect(find.textContaining('Round 1 packages'), findsNothing, reason: 'the wait is over with its phase');
+
       await report(tester, const ProtocolStatus.dkg(DKGStatus.sharedAddress('uregtest1abc')));
       expect(find.text('The shared address is: uregtest1abc'), findsOneWidget);
+      expect(find.textContaining('waiting for'), findsNothing);
       expect(find.byIcon(Icons.close), findsOneWidget, reason: 'finished');
       expect(find.byIcon(Icons.cancel), findsNothing);
       expect(activeStep(tester), DKGSteps.done, reason: 'every step drawn as finished');
@@ -185,10 +189,19 @@ void main() {
       expect(find.textContaining('Signing package parts: 1 of 2'), findsOneWidget);
       expect(find.textContaining('waiting for under a minute'), findsOneWidget);
 
+      // The same wait, next pass: the progress line is refreshed, not lost.
+      await report(tester, const ProtocolStatus.sign(SigningStatus.waitingForSigningPackage()));
+      await report(tester, const ProtocolStatus.sign(SigningStatus.waitProgress(what: 'Signing package parts', have: 2, of: 2)));
+      expect(find.textContaining('Signing package parts: 2 of 2'), findsOneWidget);
+
+      await report(tester, const ProtocolStatus.sign(SigningStatus.sendingSignatureShare()));
+      expect(find.textContaining('Signing package parts'), findsNothing, reason: 'the wait is over with its phase');
+
       await report(tester, const ProtocolStatus.sign(SigningStatus.transactionSent('ab12')));
       expect(find.text('TX ID: ab12'), findsOneWidget);
       expect(find.byIcon(Icons.close), findsOneWidget, reason: 'finished');
       expect(activeStep(tester), FrostSteps.done, reason: 'every step drawn as finished');
+      expect(find.textContaining('waiting for'), findsNothing, reason: 'nothing is waited for any more');
     });
 
     testWidgets('shows the wait for our own message to be mined', (tester) async {

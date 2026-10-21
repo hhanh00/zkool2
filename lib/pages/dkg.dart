@@ -374,7 +374,15 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
         if (failure != null) setState(() => failure = null);
         final before = message;
         _onDkg(field0);
-        if (message != before) setState(() => waitingSince = DateTime.now());
+        // A new phase: its wait starts now, and the progress of the last
+        // one is over. A wait's progress arrives after its status, so it
+        // is set again right after this, each pass, while the wait lasts.
+        if (message != before) {
+          setState(() {
+            waitingSince = DateTime.now();
+            progress = null;
+          });
+        }
       case ProtocolStatus_Sign():
         break;
       // A failed pass is transient: the next block retries, so warn instead
