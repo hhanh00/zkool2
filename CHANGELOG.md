@@ -1,5 +1,20 @@
 # Changelog
 
+## [6.35.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.35.0-rc.2...zkool-v6.35.0-rc.3) (2026-10-21)
+
+
+### Features
+
+* **dkg:** pop up a message when the shared key is ready ([cd1aab7](https://github.com/hhanh00/zkool2/commit/cd1aab7046d94f26cb29dcacb8b37ce6ed5af80e))
+* **frost:** draw every step as finished once a session ends well ([66eac06](https://github.com/hhanh00/zkool2/commit/66eac06fdc48346dba7698b9383b1e1793373070))
+* **frost:** pop up the transaction id when the coordinator has sent it ([245b7b0](https://github.com/hhanh00/zkool2/commit/245b7b013d6f0f8e9a75ba46e17a8adfbc1200fd))
+
+
+### Bug Fixes
+
+* **frost:** drop a wait's progress line once its phase is over ([68afa24](https://github.com/hhanh00/zkool2/commit/68afa24b281dfce7d4ea0d871cbb7578c6fa3ebc))
+* **frost:** end a signer's session once its share is mined, and say so ([e44d2b6](https://github.com/hhanh00/zkool2/commit/e44d2b6bbaea99a5301e60894ff8fa00f51ecef9))
+
 ## [6.35.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.35.0-rc.1...zkool-v6.35.0-rc.2) (2026-10-21)
 
 
