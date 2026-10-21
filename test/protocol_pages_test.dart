@@ -118,6 +118,12 @@ void main() {
       expect(api.driver.cancels, 1, reason: 'leaving stops the protocol driver');
     });
 
+    testWidgets('shows the wait for our own package to be mined', (tester) async {
+      await open(tester, '/dkg3', const DKGPage3());
+      await report(tester, const ProtocolStatus.dkg(DKGStatus.waitOwnPublish()));
+      expect(find.text('Waiting for our last message to be mined'), findsOneWidget);
+    });
+
     testWidgets('ignores signing statuses and warns on a funding wait', (tester) async {
       await open(tester, '/dkg3', const DKGPage3());
 
@@ -161,6 +167,12 @@ void main() {
       await report(tester, const ProtocolStatus.sign(SigningStatus.transactionSent('ab12')));
       expect(find.text('TX ID: ab12'), findsOneWidget);
       expect(find.byIcon(Icons.close), findsOneWidget, reason: 'finished');
+    });
+
+    testWidgets('shows the wait for our own message to be mined', (tester) async {
+      await open(tester, '/frost2', const FrostPage2(account: 1));
+      await report(tester, const ProtocolStatus.sign(SigningStatus.waitOwnPublish()));
+      expect(find.text('Waiting for our last message to be mined'), findsOneWidget);
     });
 
     testWidgets('a participant is finished on SigningCompleted', (tester) async {

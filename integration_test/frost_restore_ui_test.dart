@@ -352,6 +352,7 @@ FrostParams? _frostParams(ProviderContainer container, int account) =>
 const _signingStatuses = [
   "Announcing our mailbox address to the participants",
   "Waiting for the coordinator to announce its mailbox address",
+  "Waiting for our last message to be mined",
   "Waiting for other participants to send their commitments",
   "Sending our commitments to the coordinator",
   "Broadcasting the signing package to all participants",

@@ -174,6 +174,7 @@ void main() {
 /// The messages FrostPage2 can show; used to pick the status Text out of the
 /// page without matching the AppBar title or the stepper labels.
 const _signingStatuses = [
+  "Waiting for our last message to be mined",
   "Waiting for other participants to send their commitments",
   "Sending our commitments to the coordinator",
   "Broadcasting the signing package to all participants",

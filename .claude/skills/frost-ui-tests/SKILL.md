@@ -135,6 +135,10 @@ Broadcasting round 2 packages
 The shared address is: uregtest1...
 ```
 
+A member behind the others may also show `Waiting for our last message to
+be mined` between two rounds: the next package waits for the previous one's
+transaction to be mined, so the two never compete for the funding note.
+
 `test_frost_ui.py` continues past that into the signing rounds. Participant #2
 coordinates, so the app is a plain signer:
 
