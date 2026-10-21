@@ -100,6 +100,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.text("Ok").last);
       await pumpUntil(tester, () => find.byKey(ValueKey(_scratchDbRenamed)).evaluate().isNotEmpty && find.byKey(ValueKey(_scratchDb)).evaluate().isEmpty,
+          beforeEach: () => _scrollTo(tester, _scratchDbRenamed),
           timeout: shortTimeout, what: "the renamed database in the list",);
       expect(File("${docsDir.path}/$_scratchDbRenamed.db").existsSync(), isTrue);
 
@@ -159,15 +160,40 @@ void main() {
   }, timeout: const Timeout(Duration(minutes: 12)));
 }
 
-Future<void> _waitForDbManager(WidgetTester tester, String row) => pumpUntil(
-      tester,
-      () => find.text("Database Manager").evaluate().isNotEmpty && find.byKey(ValueKey(row)).evaluate().isNotEmpty,
-      timeout: shortTimeout,
-      what: "the database manager listing $row",
-    );
+Future<void> _waitForDbManager(WidgetTester tester, String row) async {
+  await pumpUntil(
+    tester,
+    () => find.text("Database Manager").evaluate().isNotEmpty,
+    timeout: shortTimeout,
+    what: "the database manager",
+  );
+  await pumpUntil(
+    tester,
+    () => find.byKey(ValueKey(row)).evaluate().isNotEmpty,
+    timeout: shortTimeout,
+    what: "the database manager listing $row",
+    beforeEach: () => _scrollTo(tester, row),
+  );
+}
+
+/// Brings the row of the database [name] into the list, which is lazy: on
+/// a machine with many databases the row sits below the fold, unbuilt, and
+/// a finder cannot see it until the list is scrolled there.
+Future<void> _scrollTo(WidgetTester tester, String name) async {
+  final row = find.byKey(ValueKey(name));
+  for (final direction in [-300.0, 300.0]) {
+    for (var i = 0; i < 30 && row.evaluate().isEmpty; i++) {
+      await tester.drag(find.byType(ListView).first, Offset(0, direction));
+      await tester.pump();
+    }
+  }
+}
 
 /// Ticks the checkbox of the database [name], which reveals the actions.
 Future<void> _checkDb(WidgetTester tester, String name) async {
+  await _scrollTo(tester, name);
+  await tester.ensureVisible(find.byKey(ValueKey(name)));
+  await tester.pump();
   await tester.tap(find.descendant(of: find.byKey(ValueKey(name)), matching: find.byType(Checkbox)));
   await pumpFor(tester, const Duration(seconds: 1));
   expect(find.byIcon(Icons.delete), findsOneWidget, reason: "$name selected");

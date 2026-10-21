@@ -244,14 +244,18 @@ Future<void> pickDropdown(WidgetTester tester, Finder dropdown, String value) as
 /// Pumps real frames until [done] holds. `pumpAndSettle` is unusable on the
 /// FROST routes: both DKGPage3 and FrostPage2 install a 30s periodic timer and
 /// the synchronizer keeps scheduling frames, so the tree never settles.
+/// [beforeEach] runs before every check, for a wait that has to nudge the
+/// page first, such as scrolling a lazy list to the row it looks for.
 Future<void> pumpUntil(
   WidgetTester tester,
   bool Function() done, {
   required Duration timeout,
   required String what,
+  Future<void> Function()? beforeEach,
 }) async {
   final deadline = DateTime.now().add(timeout);
   while (DateTime.now().isBefore(deadline)) {
+    if (beforeEach != null) await beforeEach();
     if (done()) return;
     await tester.pump(const Duration(milliseconds: 500));
   }
