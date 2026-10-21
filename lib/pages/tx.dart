@@ -75,19 +75,29 @@ class TxPageState extends ConsumerState<TxPage> {
         title: Text(success ? "Transaction Sent" : "Transaction"),
         actions: [
           if (!success) ...[
-            if (hasFrost) IconButton(onPressed: onFrost, icon: Icon(Icons.group)),
             IconButton(onPressed: onCancel, tooltip: "Cancel, do NOT send", icon: Icon(Icons.cancel)),
-            IconButton(
-              onPressed: _sending ? null : (canSend ? onSend : onSave),
-              tooltip: "Confirm, broadcast transaction",
-              icon: Icon(
-                canSend
-                    ? Icons.send
-                    : txPlan.canSign
-                        ? Icons.draw
-                        : Icons.save,
+            // A group account has no spending key, so the planner never marks
+            // its transaction signable; the loader always does. A loaded one
+            // is the coordinator's, to sign with the group. A planned one is
+            // saved and handed to the other signers first, as before.
+            if (hasFrost && txPlan.canSign)
+              IconButton(
+                onPressed: onFrost,
+                tooltip: "Sign with the group and send",
+                icon: Icon(Icons.send),
+              )
+            else
+              IconButton(
+                onPressed: _sending ? null : (canSend ? onSend : onSave),
+                tooltip: "Confirm, broadcast transaction",
+                icon: Icon(
+                  canSend
+                      ? Icons.send
+                      : txPlan.canSign
+                          ? Icons.draw
+                          : Icons.save,
+                ),
               ),
-            ),
           ],
         ],
       ),
