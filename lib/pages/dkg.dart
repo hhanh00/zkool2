@@ -47,6 +47,21 @@ Widget buildDKGPage(
         ),
       ],
     ),
+    // Once the group exists, a clear way out, as on the transaction page.
+    bottomNavigationBar: finished
+        ? SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => onClose(context),
+                  child: const Text("Dismiss"),
+                ),
+              ),
+            ),
+          )
+        : null,
   );
 }
 

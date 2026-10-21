@@ -99,11 +99,23 @@ void main() {
       await report(tester, const ProtocolStatus.dkg(DKGStatus.waitRound1Pkg()));
       expect(find.text('Waiting for other participants to send their round 1 packages'), findsOneWidget);
       expect(find.byIcon(Icons.cancel), findsOneWidget, reason: 'not finished yet');
+      expect(find.text('Dismiss'), findsNothing, reason: 'not finished yet');
 
       await report(tester, const ProtocolStatus.dkg(DKGStatus.sharedAddress('uregtest1abc')));
       expect(find.text('The shared address is: uregtest1abc'), findsOneWidget);
       expect(find.byIcon(Icons.close), findsOneWidget, reason: 'finished');
       expect(find.byIcon(Icons.cancel), findsNothing);
+    });
+
+    testWidgets('a finished DKG offers Dismiss, which leaves the page', (tester) async {
+      await open(tester, '/dkg3', const DKGPage3());
+      await report(tester, const ProtocolStatus.dkg(DKGStatus.sharedAddress('uregtest1abc')));
+      expect(find.widgetWithText(ElevatedButton, 'Dismiss'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Dismiss'));
+      await tester.pumpAndSettle();
+      expect(find.text('Home'), findsOneWidget, reason: 'back at /');
+      expect(api.driver.cancels, 1, reason: 'leaving stops the protocol driver');
     });
 
     testWidgets('ignores signing statuses and warns on a funding wait', (tester) async {
