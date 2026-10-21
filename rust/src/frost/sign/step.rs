@@ -26,6 +26,9 @@ pub struct SignStepOutcome {
     pub waiting_for_funds: bool,
     /// The transaction id, once aggregation completed.
     pub txid: Option<String>,
+    /// When the pass stopped waiting on the others: what is awaited, how
+    /// many are in, how many are needed.
+    pub progress: Option<(String, u8, u8)>,
 }
 
 /// Run one signing pass for the account stored in `frost_sign_params`.
@@ -60,11 +63,27 @@ pub async fn sign_step(
         };
 
         if !matches!(task.kind(), TaskKind::Effect) {
+            let least = |counts: &[usize]| counts.iter().copied().min().unwrap_or(0) as u8;
+            let progress = match task {
+                SignTask::WaitCommitments => {
+                    Some(("Commitments".to_string(), least(&state.commitment_counts), state.t))
+                }
+                SignTask::WaitSigpackages => Some((
+                    "Signing package parts".to_string(),
+                    state.sigpackages_count as u8,
+                    state.nsigs as u8,
+                )),
+                SignTask::WaitSigshares => {
+                    Some(("Signature shares".to_string(), least(&state.sigshare_counts), state.t))
+                }
+                _ => None,
+            };
             executed.push(task);
             return Ok(Some(SignStepOutcome {
                 executed,
                 waiting_for_funds: false,
                 txid: None,
+                progress,
             }));
         }
 
@@ -90,6 +109,7 @@ pub async fn sign_step(
                             executed,
                             waiting_for_funds: true,
                             txid: None,
+                        progress: None,
                         }));
                     }
                 }
@@ -103,6 +123,7 @@ pub async fn sign_step(
                             executed,
                             waiting_for_funds: true,
                             txid: None,
+                        progress: None,
                         }));
                     }
                 }
@@ -116,6 +137,7 @@ pub async fn sign_step(
                             executed,
                             waiting_for_funds: true,
                             txid: None,
+                        progress: None,
                         }));
                     }
                 }
@@ -129,6 +151,7 @@ pub async fn sign_step(
                             executed,
                             waiting_for_funds: true,
                             txid: None,
+                        progress: None,
                         }));
                     }
                 }
@@ -142,6 +165,7 @@ pub async fn sign_step(
                     executed,
                     waiting_for_funds: false,
                     txid: Some(txid),
+                progress: None,
                 }));
             }
 

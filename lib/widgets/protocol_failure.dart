@@ -28,6 +28,19 @@ class ProtocolFailure {
       );
 }
 
+/// "Commitments: 2 of 3 · waiting for 4 min": a wait's progress and how
+/// long the current status has lasted. The pages refresh it with every
+/// pass, once a block.
+String waitLine(String progress, DateTime since) {
+  final d = DateTime.now().difference(since);
+  final ago = d.inMinutes < 1
+      ? "under a minute"
+      : d.inHours < 1
+          ? "${d.inMinutes} min"
+          : "${d.inHours} h ${d.inMinutes % 60} min";
+  return "$progress · waiting for $ago";
+}
+
 /// Shows a [ProtocolFailure] under a protocol page's status, until the next
 /// pass succeeds. A snackbar flashes by once per block; this stays, so a
 /// stall and its cause are visible whenever the page is looked at.

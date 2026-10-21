@@ -220,6 +220,10 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
   String message = "";
   /// The last failed pass, until a pass succeeds.
   ProtocolFailure? failure;
+  /// While waiting on the others: how many are in, of how many needed.
+  String? progress;
+  /// When the current status began, for how long the wait has lasted.
+  DateTime waitingSince = DateTime.now();
   int currentIndex = 0;
   bool finished = false;
 
@@ -242,7 +246,9 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
       case ProtocolStatus_Sign(:final field0):
         // A status is a pass that got somewhere: the failure line goes.
         if (failure != null) setState(() => failure = null);
+        final before = message;
         _onSign(field0);
+        if (message != before) setState(() => waitingSince = DateTime.now());
       case ProtocolStatus_Dkg():
         break;
       // A failed pass is transient: the next block retries, so warn instead
@@ -341,6 +347,8 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
         currentIndex = 3; // coordinator
         finished = true;
       });
+    } else if (s is SigningStatus_WaitProgress) {
+      setState(() => progress = "${s.what}: ${s.have} of ${s.of}");
     } else if (s is SigningStatus_WaitOwnPublish) {
       setState(() => message = "Waiting for our last message to be mined");
     } else if (s is SigningStatus_WaitingForFunds) {
@@ -364,6 +372,7 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(message, style: t.bodyLarge),
+          if (progress != null) Text(waitLine(progress!, waitingSince), style: t.bodyMedium),
           if (failure != null) ProtocolFailureLine(failure!),
         ],
       ),

@@ -35,6 +35,9 @@ pub struct DkgStepOutcome {
     /// spend. Transient — the staged `pending_publish` is kept and the caller
     /// retries on the next block. Surfaced as a warning, never an error.
     pub waiting_for_funds: bool,
+    /// When the pass stopped waiting on the others: what is awaited, how
+    /// many are in, how many are needed.
+    pub progress: Option<(String, u8, u8)>,
 }
 
 impl DkgStepOutcome {
@@ -67,6 +70,13 @@ impl DkgStepOutcome {
                 _ => None,
             })
             .collect();
+        if let Some((what, have, of)) = &self.progress {
+            out.push(DKGStatus::WaitProgress {
+                what: what.clone(),
+                have: *have,
+                of: *of,
+            });
+        }
         if self.waiting_for_funds {
             out.push(DKGStatus::WaitingForFunds);
         }
@@ -99,11 +109,23 @@ pub async fn dkg_step(
         let task = next_task(&state);
 
         if !matches!(task.kind(), TaskKind::Effect) {
+            let progress = match task {
+                DkgTask::WaitRound { round } => Some((
+                    match round {
+                        0 => "Participant keys".to_string(),
+                        r => format!("Round {r} packages"),
+                    },
+                    state.rounds[round as usize].others,
+                    state.params.n.saturating_sub(1),
+                )),
+                _ => None,
+            };
             executed.push(task);
             return Ok(DkgStepOutcome {
                 executed,
                 shared_address,
                 waiting_for_funds: false,
+                progress,
             });
         }
 
@@ -140,6 +162,7 @@ pub async fn dkg_step(
                             executed,
                             shared_address,
                             waiting_for_funds: true,
+                        progress: None,
                         });
                     }
                     Err(e) => return Err(e),
@@ -177,6 +200,7 @@ pub async fn dkg_step(
                     executed,
                     shared_address,
                     waiting_for_funds: false,
+                progress: None,
                 });
             }
             DkgTask::WaitAddresses

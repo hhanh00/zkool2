@@ -187,6 +187,15 @@ async fn report_outcome(outcome: &SignStepOutcome, status: &impl Sink<SigningSta
             status.send(s).await;
         }
     }
+    if let Some((what, have, of)) = &outcome.progress {
+        status
+            .send(SigningStatus::WaitProgress {
+                what: what.clone(),
+                have: *have,
+                of: *of,
+            })
+            .await;
+    }
     if outcome.waiting_for_funds {
         status.send(SigningStatus::WaitingForFunds).await;
     }
@@ -244,6 +253,7 @@ mod tests {
             executed,
             waiting_for_funds: false,
             txid: None,
+            progress: None,
         }
     }
 

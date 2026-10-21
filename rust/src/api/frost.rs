@@ -221,6 +221,9 @@ pub enum DKGStatus {
     /// Our last package is not mined yet; the next round waits for it so
     /// the two never compete for the funding note.
     WaitOwnPublish,
+    /// How far a wait on the others has got: [have] of [of] [what] are in.
+    /// Sent after the wait status of the pass that stopped there.
+    WaitProgress { what: String, have: u8, of: u8 },
     Finalize,
     SharedAddress(String),
     /// Terminal: participant `peer` runs DKG version `theirs` while this
@@ -415,6 +418,9 @@ pub enum SigningStatus {
     /// Our last message is not mined yet; the next one waits for it so the
     /// two never compete for the funding note.
     WaitOwnPublish,
+    /// How far a wait on the others has got: [have] of [of] [what] are in.
+    /// Sent after the wait status of the pass that stopped there.
+    WaitProgress { what: String, have: u8, of: u8 },
     PreparingTransaction,
     SendingTransaction,
     TransactionSent(String),

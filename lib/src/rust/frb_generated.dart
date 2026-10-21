@@ -7393,12 +7393,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 9:
         return DKGStatus_WaitOwnPublish();
       case 10:
-        return DKGStatus_Finalize();
+        return DKGStatus_WaitProgress(
+          what: dco_decode_String(raw[1]),
+          have: dco_decode_u_8(raw[2]),
+          of: dco_decode_u_8(raw[3]),
+        );
       case 11:
+        return DKGStatus_Finalize();
+      case 12:
         return DKGStatus_SharedAddress(
           dco_decode_String(raw[1]),
         );
-      case 12:
+      case 13:
         return DKGStatus_VersionMismatch(
           peer: dco_decode_u_8(raw[1]),
           ours: dco_decode_u_8(raw[2]),
@@ -8379,10 +8385,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 10:
         return SigningStatus_WaitOwnPublish();
       case 11:
-        return SigningStatus_PreparingTransaction();
+        return SigningStatus_WaitProgress(
+          what: dco_decode_String(raw[1]),
+          have: dco_decode_u_8(raw[2]),
+          of: dco_decode_u_8(raw[3]),
+        );
       case 12:
-        return SigningStatus_SendingTransaction();
+        return SigningStatus_PreparingTransaction();
       case 13:
+        return SigningStatus_SendingTransaction();
+      case 14:
         return SigningStatus_TransactionSent(
           dco_decode_String(raw[1]),
         );
@@ -9446,11 +9458,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 9:
         return DKGStatus_WaitOwnPublish();
       case 10:
-        return DKGStatus_Finalize();
+        var var_what = sse_decode_String(deserializer);
+        var var_have = sse_decode_u_8(deserializer);
+        var var_of = sse_decode_u_8(deserializer);
+        return DKGStatus_WaitProgress(
+            what: var_what, have: var_have, of: var_of);
       case 11:
+        return DKGStatus_Finalize();
+      case 12:
         var var_field0 = sse_decode_String(deserializer);
         return DKGStatus_SharedAddress(var_field0);
-      case 12:
+      case 13:
         var var_peer = sse_decode_u_8(deserializer);
         var var_ours = sse_decode_u_8(deserializer);
         var var_theirs = sse_decode_u_8(deserializer);
@@ -10740,10 +10758,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       case 10:
         return SigningStatus_WaitOwnPublish();
       case 11:
-        return SigningStatus_PreparingTransaction();
+        var var_what = sse_decode_String(deserializer);
+        var var_have = sse_decode_u_8(deserializer);
+        var var_of = sse_decode_u_8(deserializer);
+        return SigningStatus_WaitProgress(
+            what: var_what, have: var_have, of: var_of);
       case 12:
-        return SigningStatus_SendingTransaction();
+        return SigningStatus_PreparingTransaction();
       case 13:
+        return SigningStatus_SendingTransaction();
+      case 14:
         var var_field0 = sse_decode_String(deserializer);
         return SigningStatus_TransactionSent(var_field0);
       default:
@@ -11889,17 +11913,26 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_32(8, serializer);
       case DKGStatus_WaitOwnPublish():
         sse_encode_i_32(9, serializer);
-      case DKGStatus_Finalize():
+      case DKGStatus_WaitProgress(
+          what: final what,
+          have: final have,
+          of: final of
+        ):
         sse_encode_i_32(10, serializer);
-      case DKGStatus_SharedAddress(field0: final field0):
+        sse_encode_String(what, serializer);
+        sse_encode_u_8(have, serializer);
+        sse_encode_u_8(of, serializer);
+      case DKGStatus_Finalize():
         sse_encode_i_32(11, serializer);
+      case DKGStatus_SharedAddress(field0: final field0):
+        sse_encode_i_32(12, serializer);
         sse_encode_String(field0, serializer);
       case DKGStatus_VersionMismatch(
           peer: final peer,
           ours: final ours,
           theirs: final theirs
         ):
-        sse_encode_i_32(12, serializer);
+        sse_encode_i_32(13, serializer);
         sse_encode_u_8(peer, serializer);
         sse_encode_u_8(ours, serializer);
         sse_encode_u_8(theirs, serializer);
@@ -12912,12 +12945,21 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_i_32(9, serializer);
       case SigningStatus_WaitOwnPublish():
         sse_encode_i_32(10, serializer);
-      case SigningStatus_PreparingTransaction():
+      case SigningStatus_WaitProgress(
+          what: final what,
+          have: final have,
+          of: final of
+        ):
         sse_encode_i_32(11, serializer);
-      case SigningStatus_SendingTransaction():
+        sse_encode_String(what, serializer);
+        sse_encode_u_8(have, serializer);
+        sse_encode_u_8(of, serializer);
+      case SigningStatus_PreparingTransaction():
         sse_encode_i_32(12, serializer);
-      case SigningStatus_TransactionSent(field0: final field0):
+      case SigningStatus_SendingTransaction():
         sse_encode_i_32(13, serializer);
+      case SigningStatus_TransactionSent(field0: final field0):
+        sse_encode_i_32(14, serializer);
         sse_encode_String(field0, serializer);
     }
   }

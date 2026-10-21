@@ -189,6 +189,14 @@ sealed class DKGStatus with _$DKGStatus {
   /// Our last package is not mined yet; the next round waits for it so
   /// the two never compete for the funding note.
   const factory DKGStatus.waitOwnPublish() = DKGStatus_WaitOwnPublish;
+
+  /// How far a wait on the others has got: [have] of [of] [what] are in.
+  /// Sent after the wait status of the pass that stopped there.
+  const factory DKGStatus.waitProgress({
+    required String what,
+    required int have,
+    required int of,
+  }) = DKGStatus_WaitProgress;
   const factory DKGStatus.finalize() = DKGStatus_Finalize;
   const factory DKGStatus.sharedAddress(
     String field0,
@@ -289,6 +297,14 @@ sealed class SigningStatus with _$SigningStatus {
   /// Our last message is not mined yet; the next one waits for it so the
   /// two never compete for the funding note.
   const factory SigningStatus.waitOwnPublish() = SigningStatus_WaitOwnPublish;
+
+  /// How far a wait on the others has got: [have] of [of] [what] are in.
+  /// Sent after the wait status of the pass that stopped there.
+  const factory SigningStatus.waitProgress({
+    required String what,
+    required int have,
+    required int of,
+  }) = SigningStatus_WaitProgress;
   const factory SigningStatus.preparingTransaction() =
       SigningStatus_PreparingTransaction;
   const factory SigningStatus.sendingTransaction() =

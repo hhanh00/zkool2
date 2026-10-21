@@ -104,6 +104,8 @@ void main() {
       expect(find.text('Waiting for other participants to send their round 1 packages'), findsOneWidget);
       expect(find.byIcon(Icons.cancel), findsOneWidget, reason: 'not finished yet');
       expect(find.text('Dismiss'), findsNothing, reason: 'not finished yet');
+      await report(tester, const ProtocolStatus.dkg(DKGStatus.waitProgress(what: 'Round 1 packages', have: 1, of: 2)));
+      expect(find.textContaining('Round 1 packages: 1 of 2'), findsOneWidget, reason: 'how far the wait has got');
 
       await report(tester, const ProtocolStatus.dkg(DKGStatus.sharedAddress('uregtest1abc')));
       expect(find.text('The shared address is: uregtest1abc'), findsOneWidget);
@@ -175,6 +177,9 @@ void main() {
       await report(tester, const ProtocolStatus.sign(SigningStatus.waitingForSigningPackage()));
       expect(find.text('Waiting for the signing package from the coordinator'), findsOneWidget);
       expect(find.byIcon(Icons.cancel), findsOneWidget, reason: 'not finished yet');
+      await report(tester, const ProtocolStatus.sign(SigningStatus.waitProgress(what: 'Signing package parts', have: 1, of: 2)));
+      expect(find.textContaining('Signing package parts: 1 of 2'), findsOneWidget);
+      expect(find.textContaining('waiting for under a minute'), findsOneWidget);
 
       await report(tester, const ProtocolStatus.sign(SigningStatus.transactionSent('ab12')));
       expect(find.text('TX ID: ab12'), findsOneWidget);

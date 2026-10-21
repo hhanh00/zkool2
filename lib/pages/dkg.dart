@@ -348,6 +348,10 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
   bool finished = false;
   /// The last failed pass, until a pass succeeds.
   ProtocolFailure? failure;
+  /// While waiting on the others: how many are in, of how many needed.
+  String? progress;
+  /// When the current status began, for how long the wait has lasted.
+  DateTime waitingSince = DateTime.now();
 
   @override
   void initState() {
@@ -368,7 +372,9 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
       case ProtocolStatus_Dkg(:final field0):
         // A status is a pass that got somewhere: the failure line goes.
         if (failure != null) setState(() => failure = null);
+        final before = message;
         _onDkg(field0);
+        if (message != before) setState(() => waitingSince = DateTime.now());
       case ProtocolStatus_Sign():
         break;
       // A failed pass is transient: the next block retries, so warn instead
@@ -440,6 +446,8 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
       // its own previous message to be mined before sending the next, so
       // this means the funding account is short; the next block retries.
       _shortFunds();
+    } else if (s is DKGStatus_WaitProgress) {
+      setState(() => progress = "${s.what}: ${s.have} of ${s.of}");
     } else if (s is DKGStatus_WaitOwnPublish) {
       setState(() => message = "Waiting for our last message to be mined");
     } else if (s is DKGStatus_Finalize) {
@@ -480,6 +488,7 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CopyableText(message, style: t.bodyLarge),
+          if (progress != null) Text(waitLine(progress!, waitingSince), style: t.bodyMedium),
           if (failure != null) ProtocolFailureLine(failure!),
         ],
       ),

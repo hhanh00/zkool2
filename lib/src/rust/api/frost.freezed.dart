@@ -60,6 +60,7 @@ extension DKGStatusPatterns on DKGStatus {
     TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult Function(DKGStatus_WaitingForFunds value)? waitingForFunds,
     TResult Function(DKGStatus_WaitOwnPublish value)? waitOwnPublish,
+    TResult Function(DKGStatus_WaitProgress value)? waitProgress,
     TResult Function(DKGStatus_Finalize value)? finalize,
     TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
     TResult Function(DKGStatus_VersionMismatch value)? versionMismatch,
@@ -87,6 +88,8 @@ extension DKGStatusPatterns on DKGStatus {
         return waitingForFunds(_that);
       case DKGStatus_WaitOwnPublish() when waitOwnPublish != null:
         return waitOwnPublish(_that);
+      case DKGStatus_WaitProgress() when waitProgress != null:
+        return waitProgress(_that);
       case DKGStatus_Finalize() when finalize != null:
         return finalize(_that);
       case DKGStatus_SharedAddress() when sharedAddress != null:
@@ -126,6 +129,7 @@ extension DKGStatusPatterns on DKGStatus {
     required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
     required TResult Function(DKGStatus_WaitingForFunds value) waitingForFunds,
     required TResult Function(DKGStatus_WaitOwnPublish value) waitOwnPublish,
+    required TResult Function(DKGStatus_WaitProgress value) waitProgress,
     required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
     required TResult Function(DKGStatus_VersionMismatch value) versionMismatch,
@@ -152,6 +156,8 @@ extension DKGStatusPatterns on DKGStatus {
         return waitingForFunds(_that);
       case DKGStatus_WaitOwnPublish():
         return waitOwnPublish(_that);
+      case DKGStatus_WaitProgress():
+        return waitProgress(_that);
       case DKGStatus_Finalize():
         return finalize(_that);
       case DKGStatus_SharedAddress():
@@ -185,6 +191,7 @@ extension DKGStatusPatterns on DKGStatus {
     TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult? Function(DKGStatus_WaitingForFunds value)? waitingForFunds,
     TResult? Function(DKGStatus_WaitOwnPublish value)? waitOwnPublish,
+    TResult? Function(DKGStatus_WaitProgress value)? waitProgress,
     TResult? Function(DKGStatus_Finalize value)? finalize,
     TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
     TResult? Function(DKGStatus_VersionMismatch value)? versionMismatch,
@@ -211,6 +218,8 @@ extension DKGStatusPatterns on DKGStatus {
         return waitingForFunds(_that);
       case DKGStatus_WaitOwnPublish() when waitOwnPublish != null:
         return waitOwnPublish(_that);
+      case DKGStatus_WaitProgress() when waitProgress != null:
+        return waitProgress(_that);
       case DKGStatus_Finalize() when finalize != null:
         return finalize(_that);
       case DKGStatus_SharedAddress() when sharedAddress != null:
@@ -246,6 +255,7 @@ extension DKGStatusPatterns on DKGStatus {
     TResult Function()? waitRound2Pkg,
     TResult Function()? waitingForFunds,
     TResult Function()? waitOwnPublish,
+    TResult Function(String what, int have, int of)? waitProgress,
     TResult Function()? finalize,
     TResult Function(String field0)? sharedAddress,
     TResult Function(int peer, int ours, int theirs)? versionMismatch,
@@ -273,6 +283,8 @@ extension DKGStatusPatterns on DKGStatus {
         return waitingForFunds();
       case DKGStatus_WaitOwnPublish() when waitOwnPublish != null:
         return waitOwnPublish();
+      case DKGStatus_WaitProgress() when waitProgress != null:
+        return waitProgress(_that.what, _that.have, _that.of);
       case DKGStatus_Finalize() when finalize != null:
         return finalize();
       case DKGStatus_SharedAddress() when sharedAddress != null:
@@ -309,6 +321,7 @@ extension DKGStatusPatterns on DKGStatus {
     required TResult Function() waitRound2Pkg,
     required TResult Function() waitingForFunds,
     required TResult Function() waitOwnPublish,
+    required TResult Function(String what, int have, int of) waitProgress,
     required TResult Function() finalize,
     required TResult Function(String field0) sharedAddress,
     required TResult Function(int peer, int ours, int theirs) versionMismatch,
@@ -335,6 +348,8 @@ extension DKGStatusPatterns on DKGStatus {
         return waitingForFunds();
       case DKGStatus_WaitOwnPublish():
         return waitOwnPublish();
+      case DKGStatus_WaitProgress():
+        return waitProgress(_that.what, _that.have, _that.of);
       case DKGStatus_Finalize():
         return finalize();
       case DKGStatus_SharedAddress():
@@ -368,6 +383,7 @@ extension DKGStatusPatterns on DKGStatus {
     TResult? Function()? waitRound2Pkg,
     TResult? Function()? waitingForFunds,
     TResult? Function()? waitOwnPublish,
+    TResult? Function(String what, int have, int of)? waitProgress,
     TResult? Function()? finalize,
     TResult? Function(String field0)? sharedAddress,
     TResult? Function(int peer, int ours, int theirs)? versionMismatch,
@@ -394,6 +410,8 @@ extension DKGStatusPatterns on DKGStatus {
         return waitingForFunds();
       case DKGStatus_WaitOwnPublish() when waitOwnPublish != null:
         return waitOwnPublish();
+      case DKGStatus_WaitProgress() when waitProgress != null:
+        return waitProgress(_that.what, _that.have, _that.of);
       case DKGStatus_Finalize() when finalize != null:
         return finalize();
       case DKGStatus_SharedAddress() when sharedAddress != null:
@@ -660,6 +678,87 @@ class DKGStatus_WaitOwnPublish extends DKGStatus {
   @override
   String toString() {
     return 'DKGStatus.waitOwnPublish()';
+  }
+}
+
+/// @nodoc
+
+class DKGStatus_WaitProgress extends DKGStatus {
+  const DKGStatus_WaitProgress(
+      {required this.what, required this.have, required this.of})
+      : super._();
+
+  final String what;
+  final int have;
+  final int of;
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $DKGStatus_WaitProgressCopyWith<DKGStatus_WaitProgress> get copyWith =>
+      _$DKGStatus_WaitProgressCopyWithImpl<DKGStatus_WaitProgress>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is DKGStatus_WaitProgress &&
+            (identical(other.what, what) || other.what == what) &&
+            (identical(other.have, have) || other.have == have) &&
+            (identical(other.of, of) || other.of == of));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, what, have, of);
+
+  @override
+  String toString() {
+    return 'DKGStatus.waitProgress(what: $what, have: $have, of: $of)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $DKGStatus_WaitProgressCopyWith<$Res>
+    implements $DKGStatusCopyWith<$Res> {
+  factory $DKGStatus_WaitProgressCopyWith(DKGStatus_WaitProgress value,
+          $Res Function(DKGStatus_WaitProgress) _then) =
+      _$DKGStatus_WaitProgressCopyWithImpl;
+  @useResult
+  $Res call({String what, int have, int of});
+}
+
+/// @nodoc
+class _$DKGStatus_WaitProgressCopyWithImpl<$Res>
+    implements $DKGStatus_WaitProgressCopyWith<$Res> {
+  _$DKGStatus_WaitProgressCopyWithImpl(this._self, this._then);
+
+  final DKGStatus_WaitProgress _self;
+  final $Res Function(DKGStatus_WaitProgress) _then;
+
+  /// Create a copy of DKGStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? what = null,
+    Object? have = null,
+    Object? of = null,
+  }) {
+    return _then(DKGStatus_WaitProgress(
+      what: null == what
+          ? _self.what
+          : what // ignore: cast_nullable_to_non_nullable
+              as String,
+      have: null == have
+          ? _self.have
+          : have // ignore: cast_nullable_to_non_nullable
+              as int,
+      of: null == of
+          ? _self.of
+          : of // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
   }
 }
 
@@ -2265,6 +2364,7 @@ extension SigningStatusPatterns on SigningStatus {
         waitingForSignatureShares,
     TResult Function(SigningStatus_WaitingForFunds value)? waitingForFunds,
     TResult Function(SigningStatus_WaitOwnPublish value)? waitOwnPublish,
+    TResult Function(SigningStatus_WaitProgress value)? waitProgress,
     TResult Function(SigningStatus_PreparingTransaction value)?
         preparingTransaction,
     TResult Function(SigningStatus_SendingTransaction value)?
@@ -2303,6 +2403,8 @@ extension SigningStatusPatterns on SigningStatus {
         return waitingForFunds(_that);
       case SigningStatus_WaitOwnPublish() when waitOwnPublish != null:
         return waitOwnPublish(_that);
+      case SigningStatus_WaitProgress() when waitProgress != null:
+        return waitProgress(_that);
       case SigningStatus_PreparingTransaction()
           when preparingTransaction != null:
         return preparingTransaction(_that);
@@ -2352,6 +2454,7 @@ extension SigningStatusPatterns on SigningStatus {
         waitingForFunds,
     required TResult Function(SigningStatus_WaitOwnPublish value)
         waitOwnPublish,
+    required TResult Function(SigningStatus_WaitProgress value) waitProgress,
     required TResult Function(SigningStatus_PreparingTransaction value)
         preparingTransaction,
     required TResult Function(SigningStatus_SendingTransaction value)
@@ -2383,6 +2486,8 @@ extension SigningStatusPatterns on SigningStatus {
         return waitingForFunds(_that);
       case SigningStatus_WaitOwnPublish():
         return waitOwnPublish(_that);
+      case SigningStatus_WaitProgress():
+        return waitProgress(_that);
       case SigningStatus_PreparingTransaction():
         return preparingTransaction(_that);
       case SigningStatus_SendingTransaction():
@@ -2424,6 +2529,7 @@ extension SigningStatusPatterns on SigningStatus {
         waitingForSignatureShares,
     TResult? Function(SigningStatus_WaitingForFunds value)? waitingForFunds,
     TResult? Function(SigningStatus_WaitOwnPublish value)? waitOwnPublish,
+    TResult? Function(SigningStatus_WaitProgress value)? waitProgress,
     TResult? Function(SigningStatus_PreparingTransaction value)?
         preparingTransaction,
     TResult? Function(SigningStatus_SendingTransaction value)?
@@ -2461,6 +2567,8 @@ extension SigningStatusPatterns on SigningStatus {
         return waitingForFunds(_that);
       case SigningStatus_WaitOwnPublish() when waitOwnPublish != null:
         return waitOwnPublish(_that);
+      case SigningStatus_WaitProgress() when waitProgress != null:
+        return waitProgress(_that);
       case SigningStatus_PreparingTransaction()
           when preparingTransaction != null:
         return preparingTransaction(_that);
@@ -2498,6 +2606,7 @@ extension SigningStatusPatterns on SigningStatus {
     TResult Function()? waitingForSignatureShares,
     TResult Function()? waitingForFunds,
     TResult Function()? waitOwnPublish,
+    TResult Function(String what, int have, int of)? waitProgress,
     TResult Function()? preparingTransaction,
     TResult Function()? sendingTransaction,
     TResult Function(String field0)? transactionSent,
@@ -2534,6 +2643,8 @@ extension SigningStatusPatterns on SigningStatus {
         return waitingForFunds();
       case SigningStatus_WaitOwnPublish() when waitOwnPublish != null:
         return waitOwnPublish();
+      case SigningStatus_WaitProgress() when waitProgress != null:
+        return waitProgress(_that.what, _that.have, _that.of);
       case SigningStatus_PreparingTransaction()
           when preparingTransaction != null:
         return preparingTransaction();
@@ -2572,6 +2683,7 @@ extension SigningStatusPatterns on SigningStatus {
     required TResult Function() waitingForSignatureShares,
     required TResult Function() waitingForFunds,
     required TResult Function() waitOwnPublish,
+    required TResult Function(String what, int have, int of) waitProgress,
     required TResult Function() preparingTransaction,
     required TResult Function() sendingTransaction,
     required TResult Function(String field0) transactionSent,
@@ -2600,6 +2712,8 @@ extension SigningStatusPatterns on SigningStatus {
         return waitingForFunds();
       case SigningStatus_WaitOwnPublish():
         return waitOwnPublish();
+      case SigningStatus_WaitProgress():
+        return waitProgress(_that.what, _that.have, _that.of);
       case SigningStatus_PreparingTransaction():
         return preparingTransaction();
       case SigningStatus_SendingTransaction():
@@ -2634,6 +2748,7 @@ extension SigningStatusPatterns on SigningStatus {
     TResult? Function()? waitingForSignatureShares,
     TResult? Function()? waitingForFunds,
     TResult? Function()? waitOwnPublish,
+    TResult? Function(String what, int have, int of)? waitProgress,
     TResult? Function()? preparingTransaction,
     TResult? Function()? sendingTransaction,
     TResult? Function(String field0)? transactionSent,
@@ -2669,6 +2784,8 @@ extension SigningStatusPatterns on SigningStatus {
         return waitingForFunds();
       case SigningStatus_WaitOwnPublish() when waitOwnPublish != null:
         return waitOwnPublish();
+      case SigningStatus_WaitProgress() when waitProgress != null:
+        return waitProgress(_that.what, _that.have, _that.of);
       case SigningStatus_PreparingTransaction()
           when preparingTransaction != null:
         return preparingTransaction();
@@ -2910,6 +3027,88 @@ class SigningStatus_WaitOwnPublish extends SigningStatus {
   @override
   String toString() {
     return 'SigningStatus.waitOwnPublish()';
+  }
+}
+
+/// @nodoc
+
+class SigningStatus_WaitProgress extends SigningStatus {
+  const SigningStatus_WaitProgress(
+      {required this.what, required this.have, required this.of})
+      : super._();
+
+  final String what;
+  final int have;
+  final int of;
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $SigningStatus_WaitProgressCopyWith<SigningStatus_WaitProgress>
+      get copyWith =>
+          _$SigningStatus_WaitProgressCopyWithImpl<SigningStatus_WaitProgress>(
+              this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is SigningStatus_WaitProgress &&
+            (identical(other.what, what) || other.what == what) &&
+            (identical(other.have, have) || other.have == have) &&
+            (identical(other.of, of) || other.of == of));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, what, have, of);
+
+  @override
+  String toString() {
+    return 'SigningStatus.waitProgress(what: $what, have: $have, of: $of)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $SigningStatus_WaitProgressCopyWith<$Res>
+    implements $SigningStatusCopyWith<$Res> {
+  factory $SigningStatus_WaitProgressCopyWith(SigningStatus_WaitProgress value,
+          $Res Function(SigningStatus_WaitProgress) _then) =
+      _$SigningStatus_WaitProgressCopyWithImpl;
+  @useResult
+  $Res call({String what, int have, int of});
+}
+
+/// @nodoc
+class _$SigningStatus_WaitProgressCopyWithImpl<$Res>
+    implements $SigningStatus_WaitProgressCopyWith<$Res> {
+  _$SigningStatus_WaitProgressCopyWithImpl(this._self, this._then);
+
+  final SigningStatus_WaitProgress _self;
+  final $Res Function(SigningStatus_WaitProgress) _then;
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? what = null,
+    Object? have = null,
+    Object? of = null,
+  }) {
+    return _then(SigningStatus_WaitProgress(
+      what: null == what
+          ? _self.what
+          : what // ignore: cast_nullable_to_non_nullable
+              as String,
+      have: null == have
+          ? _self.have
+          : have // ignore: cast_nullable_to_non_nullable
+              as int,
+      of: null == of
+          ? _self.of
+          : of // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
   }
 }
 
