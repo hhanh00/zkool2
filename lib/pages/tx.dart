@@ -13,6 +13,7 @@ import 'package:zkool/services/continuation_context.dart';
 import 'package:zkool/pages/swaps.dart';
 import 'package:zkool/pages/raptor.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/frost.dart';
 import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
@@ -179,6 +180,15 @@ class TxPageState extends ConsumerState<TxPage> {
   }
 
   void onFrost() async {
+    // A file made for another account would start a session that can never
+    // sign: refuse it here, where the message makes sense.
+    try {
+      await checkGroupPczt(account: widget.account, pczt: widget.pczt, c: c);
+    } on AnyhowException catch (e) {
+      if (mounted) await showException(context, e.message);
+      return;
+    }
+    if (!mounted) return;
     await GoRouter.of(context).push(accountRoute("/frost1", widget.account), extra: widget.pczt);
   }
 

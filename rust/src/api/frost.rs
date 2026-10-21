@@ -320,6 +320,15 @@ pub async fn init_sign(
     .await
 }
 
+/// Fails with a clear message when [pczt] was not prepared for the group
+/// [account]; see `frost::sign::check_group_pczt`. The signing setup checks
+/// too; this lets a page refuse a loaded file before offering to sign it.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn check_group_pczt(account: u32, pczt: &PcztPackage, c: &Coin) -> Result<()> {
+    let mut connection = c.get_connection().await?;
+    crate::frost::sign::check_group_pczt(&mut *connection, account, pczt).await
+}
+
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn is_signing_in_progress(c: &Coin) -> Result<bool> {
     let mut connection = c.get_connection().await?;

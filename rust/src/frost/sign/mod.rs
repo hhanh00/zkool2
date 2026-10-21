@@ -20,8 +20,9 @@ pub(super) const COORDINATOR_PREFIX: &[u8] = b"CRD1";
 
 // ── Public API (unchanged surface for flutter / graphql callers) ──────────────
 
-use anyhow::Result;
+use anyhow::{anyhow, bail, Context as _, Result};
 use bincode::config;
+use pczt::{roles::verifier::Verifier, Pczt};
 use sqlx::SqliteConnection;
 use tracing::info;
 
@@ -31,12 +32,58 @@ use crate::{
         frost::{FrostSignParams, SigningStatus},
         pay::PcztPackage,
     },
+    account::get_orchard_vk,
     frost::dkg::delete_frost_state,
     Client, Sink,
 };
 
 use task::SignTask;
 
+
+/// Checks that a transaction to sign is this group's. Every value-carrying
+/// shielded spend of a PCZT carries the full viewing key of the note it
+/// spends (a dummy spend has a random key and no value), so a file prepared
+/// for another account is one whose spends carry another key. Caught here,
+/// with a clear message, rather than minutes into a session that cannot
+/// sign.
+pub async fn check_group_pczt(
+    connection: &mut SqliteConnection,
+    account: u32,
+    pczt: &PcztPackage,
+) -> Result<()> {
+    let ours = get_orchard_vk(&mut *connection, account)
+        .await?
+        .context("this account has no Orchard viewing key")?
+        .to_bytes();
+    let parsed = Pczt::parse(&pczt.pczt).map_err(|e| anyhow!("invalid transaction: {e:?}"))?;
+    let mut spends = 0;
+    let mut foreign = false;
+    let mut check = |bundle: &orchard::pczt::Bundle| {
+        for action in bundle.actions() {
+            let spend = action.spend();
+            if spend.value().is_none_or(|v| v.inner() == 0) {
+                continue;
+            }
+            spends += 1;
+            if spend.fvk().as_ref().map(|fvk| fvk.to_bytes()) != Some(ours) {
+                foreign = true;
+            }
+        }
+        Ok::<_, pczt::roles::verifier::OrchardError<()>>(())
+    };
+    Verifier::new(parsed)
+        .with_orchard(&mut check)
+        .map_err(|e| anyhow!("invalid Orchard bundle: {e:?}"))?
+        .with_ironwood(&mut check)
+        .map_err(|e| anyhow!("invalid Ironwood bundle: {e:?}"))?;
+    if foreign {
+        bail!("This transaction does not spend from this group: it was prepared for another account");
+    }
+    if spends == 0 {
+        bail!("This transaction spends nothing from the group's shielded notes");
+    }
+    Ok(())
+}
 
 pub async fn init_sign(
     connection: &mut SqliteConnection,
@@ -49,6 +96,7 @@ pub async fn init_sign(
         "init_sign: account={}, funding_account={}, coordinator={}",
         account, funding_account, coordinator
     );
+    check_group_pczt(&mut *connection, account, pczt).await?;
     let pczt_bytes = bincode::encode_to_vec(pczt, config::legacy()).unwrap();
     sqlx::query("INSERT INTO props(key, value) VALUES ('frost_pczt', ?) ON CONFLICT DO NOTHING")
         .bind(&pczt_bytes)

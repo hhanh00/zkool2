@@ -131,6 +131,14 @@ Future<void> initSign(
         account: account,
         c: c);
 
+/// Fails with a clear message when [pczt] was not prepared for the group
+/// [account]; see `frost::sign::check_group_pczt`. For a page to refuse a
+/// loaded file before offering to sign it.
+Future<void> checkGroupPczt(
+        {required int account, required PcztPackage pczt, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiFrostCheckGroupPczt(account: account, pczt: pczt, c: c);
+
 Future<bool> isSigningInProgress({required Coin c}) =>
     RustLib.instance.api.crateApiFrostIsSigningInProgress(c: c);
 
