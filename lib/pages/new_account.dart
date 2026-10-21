@@ -522,10 +522,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
             title: "Account Imported",
             message: "Account imported successfully. Would you like to synchronize it now?",
           );
-          if (shouldSync && mounted) {
-            await ref.read(getAccountsProvider.future);
-            unawaited(ref.read(synchronizerProvider.notifier).syncIfNeeded(currentHeight, now: true));
-          }
+          if (shouldSync && mounted) await _syncOnly([account], currentHeight);
         }
         if (mounted) GoRouter.of(context).go(accountRoute("/", account));
       } on AnyhowException catch (e) {
@@ -546,6 +543,14 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
     } on AnyhowException catch (_) {
       // Not a key of this group, or not a key yet; the restore reports it.
     }
+  }
+
+  /// Starts a sync of just the accounts this page created: the user said
+  /// yes to syncing the new account, not to catching up every other one.
+  Future<void> _syncOnly(Iterable<int> ids, int currentHeight) async {
+    final wanted = ids.toSet();
+    final accounts = (await ref.read(getAccountsProvider.future)).where((a) => wanted.contains(a.id)).toList();
+    unawaited(ref.read(synchronizerProvider.notifier).startSynchronize(accounts, currentHeight: currentHeight));
   }
 
   Future<void> onRestoreFrostBackup(String name, String ufvk, String? birth) async {
@@ -581,7 +586,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
               "Would you like to synchronize now?",
         );
         if (shouldSync && mounted) {
-          unawaited(ref.read(synchronizerProvider.notifier).syncIfNeeded(currentHeight, now: true));
+          await _syncOnly(restored.map((r) => r.account), currentHeight);
         }
       }
       if (mounted) GoRouter.of(context).go(accountRoute("/", account));
