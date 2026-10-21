@@ -93,8 +93,11 @@ class SavedPrefs {
   final bool? offline;
   final bool? vault;
   final bool? getFx;
+  /// Expert mode is toggled by the extended test; a run that failed in
+  /// between leaves it on for the next, which expects it off.
+  final bool? expertMode;
 
-  SavedPrefs(this.pinLock, this.offline, this.vault, this.getFx);
+  SavedPrefs(this.pinLock, this.offline, this.vault, this.getFx, this.expertMode);
 
   /// [getFx] turns on the market price fetch at startup; the wallet test
   /// points it at a mock through the `coingecko_url` prop.
@@ -107,11 +110,13 @@ class SavedPrefs {
       await prefs.getBool("offline"),
       await prefs.getBool("vault"),
       await prefs.getBool("get_fx"),
+      await prefs.getBool("expert_mode"),
     );
     await prefs.setBool("pin_lock", false);
     await prefs.setBool("offline", false);
     await prefs.setBool("vault", false);
     await prefs.setBool("get_fx", getFx);
+    await prefs.setBool("expert_mode", false);
     return saved;
   }
 
@@ -120,6 +125,7 @@ class SavedPrefs {
     await _restore(prefs, "offline", offline);
     await _restore(prefs, "vault", vault);
     await _restore(prefs, "get_fx", getFx);
+    await _restore(prefs, "expert_mode", expertMode);
   }
 
   static Future<void> _restore(
