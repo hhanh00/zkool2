@@ -191,6 +191,8 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
     if (form.saveAndValidate()) {
       final coordinator = form.fields["coordinator"]!.value as int;
       final fundingAccount = form.fields["account"]!.value as int;
+      if (!await confirmFundingBalance(context, fundingAccount)) return;
+      if (!mounted) return;
       await initSign(pczt: widget.pczt, coordinator: coordinator, fundingAccount: fundingAccount, account: widget.account, c: c);
       if (!mounted) return;
       await GoRouter.of(context).pushReplacement(accountRoute("/frost2", widget.account));

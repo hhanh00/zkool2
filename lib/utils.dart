@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:math';
 import 'dart:ui';
 import 'package:awesome_dialog/awesome_dialog.dart';
+import 'package:zkool/src/rust/api/sync.dart';
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart';
 import 'package:decimal/intl.dart';
@@ -561,6 +562,26 @@ Future<T?> inputData<T>(
     return onConfirmed();
   }
   return null;
+}
+
+/// The least a protocol funding account should hold, in zatoshis: below
+/// it, the DKG or signing messages are likely to run out of fees.
+const lowFundingZat = 100000; // 0.001 ZEC
+
+/// Warns when the account that pays for the FROST protocol messages holds
+/// less than [lowFundingZat], and asks whether to go on. True to continue.
+Future<bool> confirmFundingBalance(BuildContext context, int account) async {
+  final b = await balance(account: account, c: coinContext.coin);
+  final total = b.field0.fold<BigInt>(BigInt.zero, (sum, v) => sum + v);
+  if (total >= BigInt.from(lowFundingZat)) return true;
+  if (!context.mounted) return false;
+  return confirmDialog(
+    context,
+    title: "Low Funding Balance",
+    message: "The funding account holds ${zatToString(total)} ZEC, less than "
+        "${zatToString(BigInt.from(lowFundingZat))}. The protocol sends its messages as "
+        "transactions from it and may stall when it runs out. Continue anyway?",
+  );
 }
 
 Future<bool> authenticate({String? reason}) async {

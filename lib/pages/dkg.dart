@@ -219,6 +219,8 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
       final id = form.fields["id"]!.value as int;
       final threshold = form.fields["threshold"]!.value as int;
       final account = form.fields["account"]!.value as int;
+      if (!await confirmFundingBalance(context, account)) return;
+      if (!context.mounted) return;
       await setDkgParams(
         name: name,
         id: id,
