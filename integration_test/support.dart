@@ -293,6 +293,24 @@ Future<void> tapNext(WidgetTester tester) async {
   await tester.pump();
   await tester.tap(next);
   await pumpFor(tester, const Duration(seconds: 1));
+  await dismissLowFundingWarning(tester);
+}
+
+/// The DKG and FROST first pages warn, on Next, when the funding account
+/// holds under 0.001 ZEC. The orchestrator funds the app's account only
+/// after the app has published its address, so on the DKG page the warning
+/// is expected: answer it the way a user who knows the funds are coming
+/// would. The check waits a moment for the balance lookup behind the dialog.
+Future<void> dismissLowFundingWarning(WidgetTester tester) async {
+  // The dialog's title is not a plain Text; its message is.
+  final warning = find.textContaining("Continue anyway?");
+  if (warning.evaluate().isEmpty) {
+    await pumpFor(tester, const Duration(seconds: 1));
+    if (warning.evaluate().isEmpty) return;
+  }
+  debugPrint("[ui-test] dismissing the low funding balance warning");
+  await tester.tap(find.text("Ok"));
+  await pumpFor(tester, const Duration(seconds: 1));
 }
 
 /// Watches a status line, publishing every change so the run is observable from
