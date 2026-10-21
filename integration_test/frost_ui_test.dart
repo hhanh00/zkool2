@@ -152,11 +152,11 @@ void main() {
         readStatus: () {
           final found = find
               .byWidgetPredicate(
-                (w) => w is Text && (w.data ?? "").isNotEmpty && _isSigningStatus(w.data!),
+                (w) => _isSigningStatus(_statusText(w)),
               )
               .evaluate();
           if (found.isEmpty) return "";
-          return (found.first.widget as Text).data!;
+          return _statusText(found.first.widget);
         },
         isDone: (s) => s == completed,
         timeout: const Duration(minutes: 20),
@@ -188,6 +188,14 @@ const _signingStatuses = [
 
 bool _isSigningStatus(String s) =>
     _signingStatuses.contains(s) || s.startsWith("TX ID: ") || s.startsWith("This transaction expired");
+
+/// A status line's text: a plain Text, or the SelectableText the page uses
+/// for the transaction id so it can be copied. Empty for anything else.
+String _statusText(Widget w) => switch (w) {
+      Text(:final data) => data ?? "",
+      SelectableText(:final data) => data ?? "",
+      _ => "",
+    };
 
 List<int> _hexToBytes(String hex) => [
       for (var i = 0; i < hex.length; i += 2)

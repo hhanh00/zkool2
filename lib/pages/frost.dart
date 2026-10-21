@@ -227,6 +227,8 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
   DateTime waitingSince = DateTime.now();
   int currentIndex = 0;
   bool finished = false;
+  /// The coordinator's broadcast transaction, once sent.
+  String? txid;
 
   @override
   void initState() {
@@ -362,11 +364,21 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
         currentIndex = 3; // coordinator
       });
     } else if (s is SigningStatus_TransactionSent) {
+      final first = !finished;
       setState(() {
         message = "TX ID: ${s.field0}";
+        txid = s.field0;
         currentIndex = FrostSteps.done; // coordinator
         finished = true;
       });
+      if (first) {
+        unawaited(showMessage(
+          context,
+          "The transaction was sent to the network.\nTX ID: ${s.field0}",
+          title: "Transaction sent",
+          type: DialogType.success,
+        ));
+      }
     } else if (s is SigningStatus_WaitProgress) {
       setState(() => progress = "${s.what}: ${s.have} of ${s.of}");
     } else if (s is SigningStatus_ExpiringSoon) {
@@ -399,7 +411,8 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(message, style: t.bodyLarge),
+          // The transaction id is there to be copied; a status is not.
+          if (txid != null) CopyableText(message, style: t.bodyLarge) else Text(message, style: t.bodyLarge),
           if (progress != null) Text(waitLine(progress!, waitingSince), style: t.bodyMedium),
           if (failure != null) ProtocolFailureLine(failure!),
         ],

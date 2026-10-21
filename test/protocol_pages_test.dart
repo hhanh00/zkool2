@@ -213,10 +213,18 @@ void main() {
       expect(find.textContaining('Signing package parts'), findsNothing, reason: 'the wait is over with its phase');
 
       await report(tester, const ProtocolStatus.sign(SigningStatus.transactionSent('ab12')));
-      expect(find.text('TX ID: ab12'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 1)); // the popup's slide-in
+      expect(find.widgetWithText(SelectableText, 'TX ID: ab12'), findsOneWidget, reason: 'copyable');
+      expect(find.textContaining('sent to the network'), findsOneWidget, reason: 'the popup');
+      expect(find.textContaining('ab12'), findsNWidgets(2), reason: 'the popup carries the id too');
       expect(find.byIcon(Icons.close), findsOneWidget, reason: 'finished');
       expect(activeStep(tester), FrostSteps.done, reason: 'every step drawn as finished');
       expect(find.textContaining('waiting for'), findsNothing, reason: 'nothing is waited for any more');
+
+      await closePopup(tester);
+      await report(tester, const ProtocolStatus.sign(SigningStatus.transactionSent('ab12')));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.textContaining('sent to the network'), findsNothing, reason: 'told once');
     });
 
     testWidgets('shows the wait for our own message to be mined', (tester) async {
