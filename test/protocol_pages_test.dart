@@ -4,6 +4,7 @@
 // the driver fails here without a chain or peers.
 import 'dart:async';
 
+import 'package:easy_stepper/easy_stepper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -93,6 +94,8 @@ void main() {
     await tester.pump();
   }
 
+  int activeStep(WidgetTester tester) => tester.widget<EasyStepper>(find.byType(EasyStepper)).activeStep;
+
   group('DKG page', () {
     testWidgets('shows each round as the driver reports it, then the shared address', (tester) async {
       await open(tester, '/dkg3', const DKGPage3());
@@ -111,6 +114,7 @@ void main() {
       expect(find.text('The shared address is: uregtest1abc'), findsOneWidget);
       expect(find.byIcon(Icons.close), findsOneWidget, reason: 'finished');
       expect(find.byIcon(Icons.cancel), findsNothing);
+      expect(activeStep(tester), DKGSteps.done, reason: 'every step drawn as finished');
     });
 
     testWidgets('a finished DKG offers Dismiss, which leaves the page', (tester) async {
@@ -184,6 +188,7 @@ void main() {
       await report(tester, const ProtocolStatus.sign(SigningStatus.transactionSent('ab12')));
       expect(find.text('TX ID: ab12'), findsOneWidget);
       expect(find.byIcon(Icons.close), findsOneWidget, reason: 'finished');
+      expect(activeStep(tester), FrostSteps.done, reason: 'every step drawn as finished');
     });
 
     testWidgets('shows the wait for our own message to be mined', (tester) async {
@@ -198,6 +203,7 @@ void main() {
       await report(tester, const ProtocolStatus.sign(SigningStatus.signingCompleted()));
       expect(find.text('Signing completed'), findsOneWidget);
       expect(find.byIcon(Icons.close), findsOneWidget);
+      expect(activeStep(tester), FrostSteps.done);
     });
 
     testWidgets('a finished signer or coordinator gets Dismiss, back to the account', (tester) async {
@@ -238,6 +244,7 @@ void main() {
       await report(tester, const ProtocolStatus.sign(SigningStatus.expired()));
       expect(find.textContaining('expired before the group finished'), findsOneWidget);
       expect(find.widgetWithText(ElevatedButton, 'Dismiss'), findsOneWidget, reason: 'the session is over');
+      expect(activeStep(tester), lessThan(FrostSteps.done), reason: 'not a success: no step is drawn as finished past the last one reached');
     });
 
     testWidgets('a failed pass stays on the page until one succeeds', (tester) async {

@@ -323,7 +323,7 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
     } else if (s is SigningStatus_SigningCompleted) {
       setState(() {
         message = "Signing completed";
-        currentIndex = 3; // other
+        currentIndex = FrostSteps.done; // other
         finished = true;
       });
     } else if (s is SigningStatus_WaitingForSignatureShares) {
@@ -344,7 +344,7 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
     } else if (s is SigningStatus_TransactionSent) {
       setState(() {
         message = "TX ID: ${s.field0}";
-        currentIndex = 3; // coordinator
+        currentIndex = FrostSteps.done; // coordinator
         finished = true;
       });
     } else if (s is SigningStatus_WaitProgress) {
@@ -390,6 +390,12 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
 }
 
 class FrostSteps extends StatelessWidget {
+  /// One past the last step, for a session that ended well: the stepper
+  /// highlights its active step as the one in progress, so Finalize is drawn
+  /// as finished only with the active step beyond it. A session that ended
+  /// badly (expired) keeps Finalize highlighted.
+  static const done = 4;
+
   final int currentIndex;
 
   const FrostSteps({super.key, required this.currentIndex});

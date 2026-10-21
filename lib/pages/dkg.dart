@@ -460,7 +460,7 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
       ref.invalidate(getAccountsProvider);
       setState(() {
         message = "The shared address is: $sharedUA";
-        index = 3;
+        index = DKGSteps.done;
         finished = true;
       });
     } else if (s is DKGStatus_VersionMismatch) {
@@ -497,6 +497,10 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
 }
 
 class DKGSteps extends StatelessWidget {
+  /// One past the last step, for a DKG that produced the shared key: see
+  /// [FrostSteps.done].
+  static const done = 4;
+
   final int currentIndex;
 
   const DKGSteps({super.key, required this.currentIndex});
