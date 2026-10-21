@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:easy_stepper/easy_stepper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -466,11 +467,23 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
     } else if (s is DKGStatus_SharedAddress) {
       final sharedUA = s.field0;
       ref.invalidate(getAccountsProvider);
+      final first = !finished;
       setState(() {
         message = "The shared address is: $sharedUA";
         index = DKGSteps.done;
         finished = true;
       });
+      // The end is easy to miss in a status line that has been changing
+      // for a while: say it once, in a popup. The address stays on the
+      // page, where it can be read and copied.
+      if (first) {
+        unawaited(showMessage(
+          context,
+          "The group's key is ready. Its shared address is on this page, and the group's account has been created.",
+          title: "DKG completed",
+          type: DialogType.success,
+        ));
+      }
     } else if (s is DKGStatus_VersionMismatch) {
       // Terminal: the group cannot agree on one address across builds.
       // The cancel button stays so the user can abandon this DKG.

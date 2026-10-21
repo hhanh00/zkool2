@@ -129,7 +129,10 @@ void main() {
       expect(find.textContaining('Round 1 packages'), findsNothing, reason: 'the wait is over with its phase');
 
       await report(tester, const ProtocolStatus.dkg(DKGStatus.sharedAddress('uregtest1abc')));
+      await tester.pump(const Duration(seconds: 1)); // the popup's slide-in
       expect(find.text('The shared address is: uregtest1abc'), findsOneWidget);
+      expect(find.textContaining("The group's key is ready"), findsOneWidget, reason: 'the popup');
+      expect(find.textContaining('uregtest1abc'), findsOneWidget, reason: 'the address is on the page only');
       expect(find.textContaining('waiting for'), findsNothing);
       expect(find.byIcon(Icons.close), findsOneWidget, reason: 'finished');
       expect(find.byIcon(Icons.cancel), findsNothing);
@@ -139,6 +142,7 @@ void main() {
     testWidgets('a finished DKG offers Dismiss, which leaves the page', (tester) async {
       await open(tester, '/dkg3', const DKGPage3());
       await report(tester, const ProtocolStatus.dkg(DKGStatus.sharedAddress('uregtest1abc')));
+      await closePopup(tester);
       expect(find.widgetWithText(ElevatedButton, 'Dismiss'), findsOneWidget);
 
       await tester.tap(find.widgetWithText(ElevatedButton, 'Dismiss'));
