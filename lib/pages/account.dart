@@ -612,7 +612,15 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
   }
 
   void onSend() async {
-    await GoRouter.of(context).push(accountRoute("/send", widget.account));
+    // A group account whose signing session is running has nothing else to
+    // send: the button goes back into the session instead, which is also
+    // the only way to it once the transaction page is left.
+    final isGroup = ref.read(fullAccountPageDataProvider(widget.account)).value?.currentAccount?.frostParams != null;
+    if (isGroup && await signingAccount(c: c) == widget.account) {
+      if (mounted) await GoRouter.of(context).push(accountRoute("/frost2", widget.account));
+      return;
+    }
+    if (mounted) await GoRouter.of(context).push(accountRoute("/send", widget.account));
   }
 
   void onUpdateAllTxPrices() async {

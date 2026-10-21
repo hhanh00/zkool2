@@ -134,6 +134,11 @@ Future<void> initSign(
 Future<bool> isSigningInProgress({required Coin c}) =>
     RustLib.instance.api.crateApiFrostIsSigningInProgress(c: c);
 
+/// The group account whose signing session is in progress, if any: the
+/// session is one per wallet, so a page asks which account it belongs to.
+Future<int?> signingAccount({required Coin c}) =>
+    RustLib.instance.api.crateApiFrostSigningAccount(c: c);
+
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<ProtocolDriver>>
 abstract class ProtocolDriver implements RustOpaqueInterface {
   /// Stop after the pass in flight, if any; no further pass runs.

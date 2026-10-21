@@ -326,6 +326,14 @@ pub async fn is_signing_in_progress(c: &Coin) -> Result<bool> {
     crate::frost::sign::is_signing_in_progress(&mut *connection).await
 }
 
+/// The group account whose signing session is in progress, if any: the
+/// session is one per wallet, so a page asks which account it belongs to.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn signing_account(c: &Coin) -> Result<Option<u32>> {
+    let mut connection = c.get_connection().await?;
+    crate::frost::sign::signing_account(&mut *connection).await
+}
+
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
