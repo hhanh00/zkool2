@@ -172,12 +172,50 @@ pub async fn do_sign_impl(
 ) -> Result<()> {
     info!("sign: starting at height {}", height);
 
+    // The transaction being signed carries an expiry height; past it the
+    // network drops it, so the session is worthless. Say so, once, instead
+    // of letting the final broadcast fail.
+    let expiry = match session_expiry(connection).await? {
+        Some(expiry) => expiry,
+        None => {
+            info!("sign: no signing session in progress");
+            return Ok(());
+        }
+    };
+    if expiry != 0 && height >= expiry {
+        info!("sign: the transaction expired at {expiry}, tip is {height}; ending the session");
+        delete_frost_state(&mut *connection).await?;
+        status.send(SigningStatus::Expired).await;
+        return Ok(());
+    }
+
     let Some(outcome) = sign_step(network, connection, client, height).await? else {
         info!("sign: no signing session in progress");
         return Ok(());
     };
     report_outcome(&outcome, &status).await;
+    if expiry != 0 && outcome.txid.is_none() && expiry - height <= EXPIRY_WARNING_BLOCKS {
+        status
+            .send(SigningStatus::ExpiringSoon {
+                blocks_left: expiry - height,
+            })
+            .await;
+    }
     Ok(())
+}
+
+/// Warn when the transaction being signed has this many blocks left.
+pub const EXPIRY_WARNING_BLOCKS: u32 = 10;
+
+/// The expiry height of the transaction being signed, 0 when it has none,
+/// None when no session is in progress.
+async fn session_expiry(connection: &mut SqliteConnection) -> Result<Option<u32>> {
+    if !is_signing_in_progress(&mut *connection).await? {
+        return Ok(None);
+    }
+    let pkg = state::load_pczt_pkg(&mut *connection).await?;
+    let parsed = Pczt::parse(&pkg.pczt).map_err(|e| anyhow!("invalid transaction: {e:?}"))?;
+    Ok(Some(*parsed.global().expiry_height()))
 }
 
 /// Tell the status sink what a pass did, in order.

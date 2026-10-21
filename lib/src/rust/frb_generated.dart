@@ -8391,10 +8391,16 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           of: dco_decode_u_8(raw[3]),
         );
       case 12:
-        return SigningStatus_PreparingTransaction();
+        return SigningStatus_ExpiringSoon(
+          blocksLeft: dco_decode_u_32(raw[1]),
+        );
       case 13:
-        return SigningStatus_SendingTransaction();
+        return SigningStatus_Expired();
       case 14:
+        return SigningStatus_PreparingTransaction();
+      case 15:
+        return SigningStatus_SendingTransaction();
+      case 16:
         return SigningStatus_TransactionSent(
           dco_decode_String(raw[1]),
         );
@@ -10764,10 +10770,15 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         return SigningStatus_WaitProgress(
             what: var_what, have: var_have, of: var_of);
       case 12:
-        return SigningStatus_PreparingTransaction();
+        var var_blocksLeft = sse_decode_u_32(deserializer);
+        return SigningStatus_ExpiringSoon(blocksLeft: var_blocksLeft);
       case 13:
-        return SigningStatus_SendingTransaction();
+        return SigningStatus_Expired();
       case 14:
+        return SigningStatus_PreparingTransaction();
+      case 15:
+        return SigningStatus_SendingTransaction();
+      case 16:
         var var_field0 = sse_decode_String(deserializer);
         return SigningStatus_TransactionSent(var_field0);
       default:
@@ -12954,12 +12965,17 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_String(what, serializer);
         sse_encode_u_8(have, serializer);
         sse_encode_u_8(of, serializer);
-      case SigningStatus_PreparingTransaction():
+      case SigningStatus_ExpiringSoon(blocksLeft: final blocksLeft):
         sse_encode_i_32(12, serializer);
-      case SigningStatus_SendingTransaction():
+        sse_encode_u_32(blocksLeft, serializer);
+      case SigningStatus_Expired():
         sse_encode_i_32(13, serializer);
-      case SigningStatus_TransactionSent(field0: final field0):
+      case SigningStatus_PreparingTransaction():
         sse_encode_i_32(14, serializer);
+      case SigningStatus_SendingTransaction():
+        sse_encode_i_32(15, serializer);
+      case SigningStatus_TransactionSent(field0: final field0):
+        sse_encode_i_32(16, serializer);
         sse_encode_String(field0, serializer);
     }
   }

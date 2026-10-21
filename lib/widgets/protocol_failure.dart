@@ -19,6 +19,14 @@ class ProtocolFailure {
 
   static ProtocolFailure first(String message) => ProtocolFailure(message, last: DateTime.now());
 
+  /// The transaction being signed is about to expire.
+  static ProtocolFailure expiringSoon(int blocksLeft) => ProtocolFailure(
+        "The network drops a transaction past its expiry height. If the group cannot finish in "
+        "time, prepare a new transaction and sign it again.",
+        last: DateTime.now(),
+        headline: "This transaction expires in $blocksLeft block${blocksLeft == 1 ? "" : "s"}.",
+      );
+
   /// The funding account cannot pay for the next protocol message.
   static ProtocolFailure shortFunds(String balance, String cost) => ProtocolFailure(
         "The funding account holds $balance ZEC; a protocol message costs about $cost ZEC. "

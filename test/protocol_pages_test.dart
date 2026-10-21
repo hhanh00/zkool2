@@ -228,6 +228,18 @@ void main() {
       expect(find.textContaining('The funding account holds'), findsNothing);
     });
 
+    testWidgets('warns when the transaction is about to expire, ends when it has', (tester) async {
+      await open(tester, '/frost2', const FrostPage2(account: 1));
+      await report(tester, const ProtocolStatus.sign(SigningStatus.waitingForSigningPackage()));
+      await report(tester, const ProtocolStatus.sign(SigningStatus.expiringSoon(blocksLeft: 4)));
+      expect(find.textContaining('expires in 4 blocks'), findsOneWidget);
+      expect(find.text('Dismiss'), findsNothing, reason: 'still running');
+
+      await report(tester, const ProtocolStatus.sign(SigningStatus.expired()));
+      expect(find.textContaining('expired before the group finished'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Dismiss'), findsOneWidget, reason: 'the session is over');
+    });
+
     testWidgets('a failed pass stays on the page until one succeeds', (tester) async {
       await open(tester, '/frost2', const FrostPage2(account: 1));
       await report(tester, const ProtocolStatus.warning('publish commitments'));

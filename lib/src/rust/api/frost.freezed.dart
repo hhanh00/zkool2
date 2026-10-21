@@ -2365,6 +2365,8 @@ extension SigningStatusPatterns on SigningStatus {
     TResult Function(SigningStatus_WaitingForFunds value)? waitingForFunds,
     TResult Function(SigningStatus_WaitOwnPublish value)? waitOwnPublish,
     TResult Function(SigningStatus_WaitProgress value)? waitProgress,
+    TResult Function(SigningStatus_ExpiringSoon value)? expiringSoon,
+    TResult Function(SigningStatus_Expired value)? expired,
     TResult Function(SigningStatus_PreparingTransaction value)?
         preparingTransaction,
     TResult Function(SigningStatus_SendingTransaction value)?
@@ -2405,6 +2407,10 @@ extension SigningStatusPatterns on SigningStatus {
         return waitOwnPublish(_that);
       case SigningStatus_WaitProgress() when waitProgress != null:
         return waitProgress(_that);
+      case SigningStatus_ExpiringSoon() when expiringSoon != null:
+        return expiringSoon(_that);
+      case SigningStatus_Expired() when expired != null:
+        return expired(_that);
       case SigningStatus_PreparingTransaction()
           when preparingTransaction != null:
         return preparingTransaction(_that);
@@ -2455,6 +2461,8 @@ extension SigningStatusPatterns on SigningStatus {
     required TResult Function(SigningStatus_WaitOwnPublish value)
         waitOwnPublish,
     required TResult Function(SigningStatus_WaitProgress value) waitProgress,
+    required TResult Function(SigningStatus_ExpiringSoon value) expiringSoon,
+    required TResult Function(SigningStatus_Expired value) expired,
     required TResult Function(SigningStatus_PreparingTransaction value)
         preparingTransaction,
     required TResult Function(SigningStatus_SendingTransaction value)
@@ -2488,6 +2496,10 @@ extension SigningStatusPatterns on SigningStatus {
         return waitOwnPublish(_that);
       case SigningStatus_WaitProgress():
         return waitProgress(_that);
+      case SigningStatus_ExpiringSoon():
+        return expiringSoon(_that);
+      case SigningStatus_Expired():
+        return expired(_that);
       case SigningStatus_PreparingTransaction():
         return preparingTransaction(_that);
       case SigningStatus_SendingTransaction():
@@ -2530,6 +2542,8 @@ extension SigningStatusPatterns on SigningStatus {
     TResult? Function(SigningStatus_WaitingForFunds value)? waitingForFunds,
     TResult? Function(SigningStatus_WaitOwnPublish value)? waitOwnPublish,
     TResult? Function(SigningStatus_WaitProgress value)? waitProgress,
+    TResult? Function(SigningStatus_ExpiringSoon value)? expiringSoon,
+    TResult? Function(SigningStatus_Expired value)? expired,
     TResult? Function(SigningStatus_PreparingTransaction value)?
         preparingTransaction,
     TResult? Function(SigningStatus_SendingTransaction value)?
@@ -2569,6 +2583,10 @@ extension SigningStatusPatterns on SigningStatus {
         return waitOwnPublish(_that);
       case SigningStatus_WaitProgress() when waitProgress != null:
         return waitProgress(_that);
+      case SigningStatus_ExpiringSoon() when expiringSoon != null:
+        return expiringSoon(_that);
+      case SigningStatus_Expired() when expired != null:
+        return expired(_that);
       case SigningStatus_PreparingTransaction()
           when preparingTransaction != null:
         return preparingTransaction(_that);
@@ -2607,6 +2625,8 @@ extension SigningStatusPatterns on SigningStatus {
     TResult Function()? waitingForFunds,
     TResult Function()? waitOwnPublish,
     TResult Function(String what, int have, int of)? waitProgress,
+    TResult Function(int blocksLeft)? expiringSoon,
+    TResult Function()? expired,
     TResult Function()? preparingTransaction,
     TResult Function()? sendingTransaction,
     TResult Function(String field0)? transactionSent,
@@ -2645,6 +2665,10 @@ extension SigningStatusPatterns on SigningStatus {
         return waitOwnPublish();
       case SigningStatus_WaitProgress() when waitProgress != null:
         return waitProgress(_that.what, _that.have, _that.of);
+      case SigningStatus_ExpiringSoon() when expiringSoon != null:
+        return expiringSoon(_that.blocksLeft);
+      case SigningStatus_Expired() when expired != null:
+        return expired();
       case SigningStatus_PreparingTransaction()
           when preparingTransaction != null:
         return preparingTransaction();
@@ -2684,6 +2708,8 @@ extension SigningStatusPatterns on SigningStatus {
     required TResult Function() waitingForFunds,
     required TResult Function() waitOwnPublish,
     required TResult Function(String what, int have, int of) waitProgress,
+    required TResult Function(int blocksLeft) expiringSoon,
+    required TResult Function() expired,
     required TResult Function() preparingTransaction,
     required TResult Function() sendingTransaction,
     required TResult Function(String field0) transactionSent,
@@ -2714,6 +2740,10 @@ extension SigningStatusPatterns on SigningStatus {
         return waitOwnPublish();
       case SigningStatus_WaitProgress():
         return waitProgress(_that.what, _that.have, _that.of);
+      case SigningStatus_ExpiringSoon():
+        return expiringSoon(_that.blocksLeft);
+      case SigningStatus_Expired():
+        return expired();
       case SigningStatus_PreparingTransaction():
         return preparingTransaction();
       case SigningStatus_SendingTransaction():
@@ -2749,6 +2779,8 @@ extension SigningStatusPatterns on SigningStatus {
     TResult? Function()? waitingForFunds,
     TResult? Function()? waitOwnPublish,
     TResult? Function(String what, int have, int of)? waitProgress,
+    TResult? Function(int blocksLeft)? expiringSoon,
+    TResult? Function()? expired,
     TResult? Function()? preparingTransaction,
     TResult? Function()? sendingTransaction,
     TResult? Function(String field0)? transactionSent,
@@ -2786,6 +2818,10 @@ extension SigningStatusPatterns on SigningStatus {
         return waitOwnPublish();
       case SigningStatus_WaitProgress() when waitProgress != null:
         return waitProgress(_that.what, _that.have, _that.of);
+      case SigningStatus_ExpiringSoon() when expiringSoon != null:
+        return expiringSoon(_that.blocksLeft);
+      case SigningStatus_Expired() when expired != null:
+        return expired();
       case SigningStatus_PreparingTransaction()
           when preparingTransaction != null:
         return preparingTransaction();
@@ -3109,6 +3145,93 @@ class _$SigningStatus_WaitProgressCopyWithImpl<$Res>
           : of // ignore: cast_nullable_to_non_nullable
               as int,
     ));
+  }
+}
+
+/// @nodoc
+
+class SigningStatus_ExpiringSoon extends SigningStatus {
+  const SigningStatus_ExpiringSoon({required this.blocksLeft}) : super._();
+
+  final int blocksLeft;
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $SigningStatus_ExpiringSoonCopyWith<SigningStatus_ExpiringSoon>
+      get copyWith =>
+          _$SigningStatus_ExpiringSoonCopyWithImpl<SigningStatus_ExpiringSoon>(
+              this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is SigningStatus_ExpiringSoon &&
+            (identical(other.blocksLeft, blocksLeft) ||
+                other.blocksLeft == blocksLeft));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, blocksLeft);
+
+  @override
+  String toString() {
+    return 'SigningStatus.expiringSoon(blocksLeft: $blocksLeft)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $SigningStatus_ExpiringSoonCopyWith<$Res>
+    implements $SigningStatusCopyWith<$Res> {
+  factory $SigningStatus_ExpiringSoonCopyWith(SigningStatus_ExpiringSoon value,
+          $Res Function(SigningStatus_ExpiringSoon) _then) =
+      _$SigningStatus_ExpiringSoonCopyWithImpl;
+  @useResult
+  $Res call({int blocksLeft});
+}
+
+/// @nodoc
+class _$SigningStatus_ExpiringSoonCopyWithImpl<$Res>
+    implements $SigningStatus_ExpiringSoonCopyWith<$Res> {
+  _$SigningStatus_ExpiringSoonCopyWithImpl(this._self, this._then);
+
+  final SigningStatus_ExpiringSoon _self;
+  final $Res Function(SigningStatus_ExpiringSoon) _then;
+
+  /// Create a copy of SigningStatus
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? blocksLeft = null,
+  }) {
+    return _then(SigningStatus_ExpiringSoon(
+      blocksLeft: null == blocksLeft
+          ? _self.blocksLeft
+          : blocksLeft // ignore: cast_nullable_to_non_nullable
+              as int,
+    ));
+  }
+}
+
+/// @nodoc
+
+class SigningStatus_Expired extends SigningStatus {
+  const SigningStatus_Expired() : super._();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType && other is SigningStatus_Expired);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'SigningStatus.expired()';
   }
 }
 

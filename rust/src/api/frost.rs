@@ -421,6 +421,12 @@ pub enum SigningStatus {
     /// How far a wait on the others has got: [have] of [of] [what] are in.
     /// Sent after the wait status of the pass that stopped there.
     WaitProgress { what: String, have: u8, of: u8 },
+    /// The transaction being signed expires in [blocks_left] blocks: the
+    /// group has to finish before then, or prepare a new one.
+    ExpiringSoon { blocks_left: u32 },
+    /// Terminal: the transaction expired before the group finished. The
+    /// session is gone; a new transaction has to be prepared and signed.
+    Expired,
     PreparingTransaction,
     SendingTransaction,
     TransactionSent(String),

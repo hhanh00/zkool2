@@ -187,7 +187,7 @@ const _signingStatuses = [
 ];
 
 bool _isSigningStatus(String s) =>
-    _signingStatuses.contains(s) || s.startsWith("TX ID: ");
+    _signingStatuses.contains(s) || s.startsWith("TX ID: ") || s.startsWith("This transaction expired");
 
 List<int> _hexToBytes(String hex) => [
       for (var i = 0; i < hex.length; i += 2)

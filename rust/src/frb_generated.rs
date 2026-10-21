@@ -12840,12 +12840,21 @@ impl SseDecode for crate::api::frost::SigningStatus {
                 };
             }
             12 => {
-                return crate::api::frost::SigningStatus::PreparingTransaction;
+                let mut var_blocksLeft = <u32>::sse_decode(deserializer);
+                return crate::api::frost::SigningStatus::ExpiringSoon {
+                    blocks_left: var_blocksLeft,
+                };
             }
             13 => {
-                return crate::api::frost::SigningStatus::SendingTransaction;
+                return crate::api::frost::SigningStatus::Expired;
             }
             14 => {
+                return crate::api::frost::SigningStatus::PreparingTransaction;
+            }
+            15 => {
+                return crate::api::frost::SigningStatus::SendingTransaction;
+            }
+            16 => {
                 let mut var_field0 = <String>::sse_decode(deserializer);
                 return crate::api::frost::SigningStatus::TransactionSent(var_field0);
             }
@@ -15144,10 +15153,14 @@ impl flutter_rust_bridge::IntoDart for crate::api::frost::SigningStatus {
                 of.into_into_dart().into_dart(),
             ]
             .into_dart(),
-            crate::api::frost::SigningStatus::PreparingTransaction => [12.into_dart()].into_dart(),
-            crate::api::frost::SigningStatus::SendingTransaction => [13.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::ExpiringSoon { blocks_left } => {
+                [12.into_dart(), blocks_left.into_into_dart().into_dart()].into_dart()
+            }
+            crate::api::frost::SigningStatus::Expired => [13.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::PreparingTransaction => [14.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::SendingTransaction => [15.into_dart()].into_dart(),
             crate::api::frost::SigningStatus::TransactionSent(field0) => {
-                [14.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+                [16.into_dart(), field0.into_into_dart().into_dart()].into_dart()
             }
             _ => {
                 unimplemented!("");
@@ -17256,14 +17269,21 @@ impl SseEncode for crate::api::frost::SigningStatus {
                 <u8>::sse_encode(have, serializer);
                 <u8>::sse_encode(of, serializer);
             }
-            crate::api::frost::SigningStatus::PreparingTransaction => {
+            crate::api::frost::SigningStatus::ExpiringSoon { blocks_left } => {
                 <i32>::sse_encode(12, serializer);
+                <u32>::sse_encode(blocks_left, serializer);
             }
-            crate::api::frost::SigningStatus::SendingTransaction => {
+            crate::api::frost::SigningStatus::Expired => {
                 <i32>::sse_encode(13, serializer);
             }
-            crate::api::frost::SigningStatus::TransactionSent(field0) => {
+            crate::api::frost::SigningStatus::PreparingTransaction => {
                 <i32>::sse_encode(14, serializer);
+            }
+            crate::api::frost::SigningStatus::SendingTransaction => {
+                <i32>::sse_encode(15, serializer);
+            }
+            crate::api::frost::SigningStatus::TransactionSent(field0) => {
+                <i32>::sse_encode(16, serializer);
                 <String>::sse_encode(field0, serializer);
             }
             _ => {

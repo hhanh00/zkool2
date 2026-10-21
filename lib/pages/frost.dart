@@ -349,6 +349,15 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
       });
     } else if (s is SigningStatus_WaitProgress) {
       setState(() => progress = "${s.what}: ${s.have} of ${s.of}");
+    } else if (s is SigningStatus_ExpiringSoon) {
+      setState(() => failure = ProtocolFailure.expiringSoon(s.blocksLeft));
+    } else if (s is SigningStatus_Expired) {
+      setState(() {
+        message = "This transaction expired before the group finished signing. "
+            "Prepare a new one and sign it again.";
+        progress = null;
+        finished = true;
+      });
     } else if (s is SigningStatus_WaitOwnPublish) {
       setState(() => message = "Waiting for our last message to be mined");
     } else if (s is SigningStatus_WaitingForFunds) {

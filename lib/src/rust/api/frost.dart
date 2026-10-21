@@ -305,6 +305,16 @@ sealed class SigningStatus with _$SigningStatus {
     required int have,
     required int of,
   }) = SigningStatus_WaitProgress;
+
+  /// The transaction being signed expires in [blocks_left] blocks: the
+  /// group has to finish before then, or prepare a new one.
+  const factory SigningStatus.expiringSoon({
+    required int blocksLeft,
+  }) = SigningStatus_ExpiringSoon;
+
+  /// Terminal: the transaction expired before the group finished. The
+  /// session is gone; a new transaction has to be prepared and signed.
+  const factory SigningStatus.expired() = SigningStatus_Expired;
   const factory SigningStatus.preparingTransaction() =
       SigningStatus_PreparingTransaction;
   const factory SigningStatus.sendingTransaction() =
