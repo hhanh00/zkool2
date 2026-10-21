@@ -60,6 +60,22 @@ Widget buildFrostPage(
         ),
       ],
     ),
+    // Once this member is done, signer or coordinator, a clear way back to
+    // the group's account, as on the DKG and transaction pages.
+    bottomNavigationBar: finished
+        ? SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => GoRouter.of(context).go(accountRoute("/", account)),
+                  child: const Text("Dismiss"),
+                ),
+              ),
+            ),
+          )
+        : null,
   );
 }
 

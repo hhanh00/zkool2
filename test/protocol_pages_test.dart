@@ -171,6 +171,24 @@ void main() {
       expect(find.byIcon(Icons.close), findsOneWidget);
     });
 
+    testWidgets('a finished signer or coordinator gets Dismiss, back to the account', (tester) async {
+      for (final last in [
+        const ProtocolStatus.sign(SigningStatus.signingCompleted()),
+        const ProtocolStatus.sign(SigningStatus.transactionSent('ab12')),
+      ]) {
+        api.driver = _FakeDriver();
+        await open(tester, '/frost2', const FrostPage2(account: 1));
+        await report(tester, const ProtocolStatus.sign(SigningStatus.sendingCommitment()));
+        expect(find.text('Dismiss'), findsNothing, reason: 'not finished yet');
+
+        await report(tester, last);
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Dismiss'));
+        await tester.pumpAndSettle();
+        expect(find.text('Home'), findsOneWidget, reason: "the account's page, at / in this router");
+        expect(api.driver.cancels, 1, reason: 'leaving stops the protocol driver');
+      }
+    });
+
     testWidgets('ignores DKG statuses and cancels the driver on leave', (tester) async {
       final router = await open(tester, '/frost2', const FrostPage2(account: 1));
 
