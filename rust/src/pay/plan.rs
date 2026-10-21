@@ -27,7 +27,7 @@ use zcash_address::{unified::Receiver, ConversionError, TryFromAddress, ZcashAdd
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_note_encryption::Domain;
 use zcash_primitives::transaction::{
-    builder::{BuildConfig, Builder, BundlePadding},
+    builder::{BuildConfig, Builder, BundlePadding, DEFAULT_TX_EXPIRY_DELTA},
     fees::zip317::FeeRule,
     TxVersion,
 };
@@ -251,6 +251,18 @@ pub struct PaymentRequest {
     /// Budget category to record on the transaction.
     pub category: Option<u32>,
 }
+
+/// How many blocks past the planning height a FROST group's transaction stays
+/// valid. An ordinary spend keeps the builder's [`DEFAULT_TX_EXPIRY_DELTA`]
+/// (40 blocks): it is signed and sent at once. A group transaction waits on
+/// people: commitments, the signing package and the signature shares each
+/// take a mined memo, and the members sit on separate devices between rounds.
+/// 3456 blocks is a day at NU7's 25-second blocks (three days at 75 seconds),
+/// well inside the 10,000-block lookback the session accounts scan with.
+/// Neither consensus nor zebra's mempool caps how far ahead an expiry may be
+/// (only `nExpiryHeight < 500000000`), and zebra drops a transaction once the
+/// tip reaches its expiry height.
+pub const FROST_TX_EXPIRY_DELTA: u32 = 3456;
 
 /// How a transaction is planned. The modes are exclusive, so the
 /// combinations that cannot happen cannot be written.
@@ -791,12 +803,18 @@ pub async fn plan_transaction(
         SpendMaterial::load(network, connection, account, &plan.spend_selection(), &edges)
             .await?;
 
-    assemble_pczt(network, height, plan, &material, issuance, category)
+    let expiry_delta = if crate::frost::is_group_account(connection, account).await? {
+        FROST_TX_EXPIRY_DELTA
+    } else {
+        DEFAULT_TX_EXPIRY_DELTA
+    };
+    assemble_pczt(network, height, plan, &material, issuance, category, expiry_delta)
 }
 
 /// Build the unsigned PCZT for `plan` out of `material`, targeting
-/// `target_height`. Touches neither the database nor the network: everything
-/// a spend or an output needs was loaded ahead of time.
+/// `target_height` and expiring `expiry_delta` blocks after it. Touches
+/// neither the database nor the network: everything a spend or an output
+/// needs was loaded ahead of time.
 pub(crate) fn assemble_pczt(
     network: &Network,
     target_height: u32,
@@ -804,6 +822,7 @@ pub(crate) fn assemble_pczt(
     material: &SpendMaterial,
     issuance: Option<&IssuanceInfo>,
     category: Option<u32>,
+    expiry_delta: u32,
 ) -> Result<PcztPackage> {
     let PlanOutputs {
         mut recipient_states,
@@ -855,7 +874,8 @@ pub(crate) fn assemble_pczt(
         orchard_padding: BundlePadding::DEFAULT,
         ironwood_padding: BundlePadding::DEFAULT,
     };
-    let mut builder = Builder::new(network, BlockHeight::from_u32(target_height), build_config);
+    let mut builder = Builder::new(network, BlockHeight::from_u32(target_height), build_config)
+        .with_expiry_height(BlockHeight::from_u32(target_height.saturating_add(expiry_delta)));
 
     // Hardware (Ledger) wallets only support v5 (ZIP-244) transaction signing.
     // The Zondax "Zcash Shielded" app predates NU6.3 and cannot sign v6/Ironwood
@@ -1654,7 +1674,8 @@ mod tests {
             let plan = transparent_plan(&n, 300);
             let change = plan.change;
             let m = material(&n, true, HwKind::Software as u8);
-            let package = assemble_pczt(&n, 300, plan, &m, None, Some(4)).unwrap();
+            let package =
+                assemble_pczt(&n, 300, plan, &m, None, Some(4), DEFAULT_TX_EXPIRY_DELTA).unwrap();
 
             assert_eq!(package.n_spends, [1, 0, 0, 0]);
             assert!(package.sapling_indices.is_empty());
@@ -1696,7 +1717,8 @@ mod tests {
             let n = regtest();
             let plan = transparent_plan(&n, 300);
             let m = material(&n, false, HwKind::Software as u8);
-            let package = assemble_pczt(&n, 300, plan, &m, None, None).unwrap();
+            let package =
+                assemble_pczt(&n, 300, plan, &m, None, None, DEFAULT_TX_EXPIRY_DELTA).unwrap();
             assert!(!package.can_sign);
         }
 
@@ -1705,13 +1727,34 @@ mod tests {
             let n = regtest();
             let version = |hw: u8| {
                 let plan = transparent_plan(&n, 300);
-                let package = assemble_pczt(&n, 300, plan, &material(&n, true, hw), None, None)
-                    .unwrap();
+                let package = assemble_pczt(
+                    &n,
+                    300,
+                    plan,
+                    &material(&n, true, hw),
+                    None,
+                    None,
+                    DEFAULT_TX_EXPIRY_DELTA,
+                )
+                .unwrap();
                 *Pczt::parse(&package.pczt).unwrap().global().tx_version()
             };
             assert_eq!(version(HwKind::Software as u8), 6);
             assert_eq!(version(HwKind::Official as u8), 6);
             assert_eq!(version(HwKind::Zondax as u8), 5);
+        }
+
+        #[test]
+        fn the_expiry_sits_the_requested_delta_past_the_target_height() {
+            let n = regtest();
+            let expiry = |delta: u32| {
+                let plan = transparent_plan(&n, 300);
+                let m = material(&n, true, HwKind::Software as u8);
+                let package = assemble_pczt(&n, 300, plan, &m, None, None, delta).unwrap();
+                *Pczt::parse(&package.pczt).unwrap().global().expiry_height()
+            };
+            assert_eq!(expiry(DEFAULT_TX_EXPIRY_DELTA), 340);
+            assert_eq!(expiry(FROST_TX_EXPIRY_DELTA), 300 + FROST_TX_EXPIRY_DELTA);
         }
     }
 
