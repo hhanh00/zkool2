@@ -472,23 +472,48 @@ pub async fn aggregate_and_send(
     let pczt = SpendFinalizer::new(pczt).finalize_spends().unwrap();
     let sapling_prover = get_sapling_prover().await?;
     let (svk, ovk) = sapling_prover.verifying_keys();
-    let tx_bytes = TransactionExtractor::new(pczt)
+    let tx = TransactionExtractor::new(pczt)
         .with_sapling(&svk, &ovk)
         .extract(rand_core::UnwrapErr(rand::rngs::SysRng))
-        .map_err(|e| anyhow::anyhow!("{:?}", e))
-        .and_then(|tx| {
-            let mut buf = vec![];
-            tx.write(&mut buf).unwrap();
-            Ok(buf)
-        })?;
+        .map_err(|e| anyhow::anyhow!("{:?}", e))?;
+    let txid = tx.txid();
+    let mut tx_bytes = vec![];
+    tx.write(&mut tx_bytes).unwrap();
 
-    // Clean up sign state before broadcasting — we don't retry on send failure.
-    delete_frost_state(&mut *connection).await?;
-
+    // The session stays until the transaction is out: a broadcast that
+    // fails (the server unreachable, say) is retried by the next pass with
+    // the same signatures, instead of ending the session with nothing sent.
+    // A retry after a broadcast that did go through, but whose answer was
+    // lost, would be refused as a duplicate; the scan has recorded the
+    // transaction by then, so finish without sending again.
+    if transaction_recorded(connection, state.account, txid.as_ref()).await? {
+        info!("Transaction already recorded: {txid}");
+        delete_frost_state(&mut *connection).await?;
+        return Ok(txid.to_string());
+    }
     let txid =
         crate::pay::broadcast_bytes(connection, client, state.account, &tx_bytes, None).await?;
     info!("Transaction sent: {txid}");
+    delete_frost_state(&mut *connection).await?;
     Ok(txid)
+}
+
+/// Whether the account's scan has recorded [txid], in either byte order.
+async fn transaction_recorded(
+    connection: &mut SqliteConnection,
+    account: u32,
+    txid: &[u8],
+) -> Result<bool> {
+    let reversed: Vec<u8> = txid.iter().rev().copied().collect();
+    let (known,): (bool,) = sqlx::query_as(
+        "SELECT EXISTS(SELECT 1 FROM transactions WHERE account = ? AND (txid = ? OR txid = ?))",
+    )
+    .bind(account)
+    .bind(txid)
+    .bind(&reversed)
+    .fetch_one(&mut *connection)
+    .await?;
+    Ok(known)
 }
 
 // ── DB helpers ────────────────────────────────────────────────────────────────
