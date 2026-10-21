@@ -169,12 +169,25 @@ pub async fn sign_step(
                 }));
             }
 
+            SignTask::Done => {
+                // The signer's part is over: without this, the session rows
+                // would outlive the page, and the account's send button would
+                // keep leading back into a finished session.
+                delete_frost_state(connection).await?;
+                executed.push(task);
+                return Ok(Some(SignStepOutcome {
+                    executed,
+                    waiting_for_funds: false,
+                    txid: None,
+                    progress: None,
+                }));
+            }
+
             SignTask::WaitCoordinator
             | SignTask::WaitOwnPublish
             | SignTask::WaitCommitments
             | SignTask::WaitSigpackages
-            | SignTask::WaitSigshares
-            | SignTask::Done => {
+            | SignTask::WaitSigshares => {
                 unreachable!("non-effect task handled above")
             }
         }

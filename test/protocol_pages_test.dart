@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:rive/rive.dart' show RiveFile;
 import 'package:zkool/pages/dkg.dart';
 import 'package:zkool/pages/frost.dart';
 import 'package:zkool/router.dart' show navigatorKey;
@@ -66,6 +67,11 @@ void main() {
   setUpAll(() {
     api = _Api();
     RustLib.initMock(api: api);
+    // The finished pages pop up an AwesomeDialog, whose header is a Rive
+    // animation. Rive's text engine loads a native library the test VM does
+    // not have: take its one initialisation failure here, in a guarded zone,
+    // as error_dialog_test.dart does.
+    runZonedGuarded(() => unawaited(RiveFile.initialize()), (_, __) {});
   });
   setUp(() {
     api.driver = _FakeDriver(); // one driver per page, like the app
@@ -95,6 +101,15 @@ void main() {
   }
 
   int activeStep(WidgetTester tester) => tester.widget<EasyStepper>(find.byType(EasyStepper)).activeStep;
+
+  /// Closes the popup a finished page shows, if one is up.
+  Future<void> closePopup(WidgetTester tester) async {
+    await tester.pump(const Duration(seconds: 1));
+    final ok = find.text('Ok');
+    if (ok.evaluate().isEmpty) return;
+    await tester.tap(ok);
+    await tester.pumpAndSettle();
+  }
 
   group('DKG page', () {
     testWidgets('shows each round as the driver reports it, then the shared address', (tester) async {
@@ -210,13 +225,22 @@ void main() {
       expect(find.text('Waiting for our last message to be mined'), findsOneWidget);
     });
 
-    testWidgets('a participant is finished on SigningCompleted', (tester) async {
+    testWidgets('a participant is finished on SigningCompleted, and told so once', (tester) async {
       await open(tester, '/frost2', const FrostPage2(account: 1));
 
       await report(tester, const ProtocolStatus.sign(SigningStatus.signingCompleted()));
-      expect(find.text('Signing completed'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 1)); // the popup's slide-in
+      expect(find.text('Signing completed'), findsWidgets, reason: 'the status line and the popup');
+      expect(find.textContaining('signature share is on chain'), findsOneWidget, reason: 'the popup');
       expect(find.byIcon(Icons.close), findsOneWidget);
       expect(activeStep(tester), FrostSteps.done);
+
+      // The driver may report the end again; the popup does not come back.
+      await closePopup(tester);
+      expect(find.textContaining('signature share is on chain'), findsNothing);
+      await report(tester, const ProtocolStatus.sign(SigningStatus.signingCompleted()));
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.textContaining('signature share is on chain'), findsNothing);
     });
 
     testWidgets('a finished signer or coordinator gets Dismiss, back to the account', (tester) async {
@@ -230,6 +254,7 @@ void main() {
         expect(find.text('Dismiss'), findsNothing, reason: 'not finished yet');
 
         await report(tester, last);
+        await closePopup(tester);
         await tester.tap(find.widgetWithText(ElevatedButton, 'Dismiss'));
         await tester.pumpAndSettle();
         expect(find.text('Home'), findsOneWidget, reason: "the account's page, at / in this router");

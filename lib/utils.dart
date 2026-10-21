@@ -260,10 +260,11 @@ Future<String> getFullDatabasePath(String dbName) async {
   return dbFilepath;
 }
 
-Future<AwesomeDialog> showMessage(BuildContext context, String message, {String? title, bool dismissable = true}) async {
+Future<AwesomeDialog> showMessage(BuildContext context, String message,
+    {String? title, bool dismissable = true, DialogType type = DialogType.info}) async {
   final dialog = AwesomeDialog(
     context: context,
-    dialogType: DialogType.info,
+    dialogType: type,
     animType: AnimType.rightSlide,
     title: title,
     desc: message,

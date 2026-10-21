@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:awesome_dialog/awesome_dialog.dart';
 import 'package:easy_stepper/easy_stepper.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -329,11 +330,22 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
         currentIndex = 3; // other
       });
     } else if (s is SigningStatus_SigningCompleted) {
+      final first = !finished;
       setState(() {
         message = "Signing completed";
         currentIndex = FrostSteps.done; // other
         finished = true;
       });
+      // The end is easy to miss in a status line that has been changing
+      // for a while: say it once, in a popup.
+      if (first) {
+        unawaited(showMessage(
+          context,
+          "Your signature share is on chain. The coordinator assembles the transaction and broadcasts it.",
+          title: "Signing completed",
+          type: DialogType.success,
+        ));
+      }
     } else if (s is SigningStatus_WaitingForSignatureShares) {
       setState(() {
         message = "Waiting for the signature share from the other participants";

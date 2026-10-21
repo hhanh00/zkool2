@@ -146,6 +146,7 @@ coordinates, so the app is a plain signer:
 Sending our commitments to the coordinator
 Waiting for the signing package from the coordinator
 Sending our signature share to the coordinator
+Waiting for our last message to be mined
 Signing completed
 ```
 

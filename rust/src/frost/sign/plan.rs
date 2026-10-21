@@ -69,8 +69,10 @@ pub fn next_sign_task(s: &SignState) -> Result<SignTask> {
     }
 
     // ── Phase 4: aggregation (coordinator only) ────────────────────────────────
+    // A signer is done once its share is mined: the coordinator can read it,
+    // and the session has nothing left to show or to send.
     if !s.is_coordinator() {
-        return Ok(SignTask::Done);
+        return Ok(send(SignTask::Done));
     }
 
     if s.sigshare_counts.iter().any(|&c| c < s.t as usize) {
@@ -206,11 +208,14 @@ mod tests {
     }
 
     #[test]
-    fn non_coordinator_done_after_sigshares() {
+    fn non_coordinator_done_once_its_sigshares_are_mined() {
         let mut s = state(false);
         s.own_commitments_stored = true;
         s.sigpackages_count = 2;
         s.own_sigshares_stored = true;
+        s.publish_unmined = true;
+        assert_eq!(next_sign_task(&s).unwrap(), SignTask::WaitOwnPublish);
+        s.publish_unmined = false;
         assert_eq!(next_sign_task(&s).unwrap(), SignTask::Done);
     }
 

@@ -194,7 +194,8 @@ pub async fn do_sign_impl(
         return Ok(());
     };
     report_outcome(&outcome, &status).await;
-    if expiry != 0 && outcome.txid.is_none() && expiry - height <= EXPIRY_WARNING_BLOCKS {
+    let ended = outcome.txid.is_some() || outcome.executed.last() == Some(&SignTask::Done);
+    if expiry != 0 && !ended && expiry - height <= EXPIRY_WARNING_BLOCKS {
         status
             .send(SigningStatus::ExpiringSoon {
                 blocks_left: expiry - height,
@@ -255,10 +256,7 @@ fn sign_statuses_for(task: &SignTask) -> Vec<SigningStatus> {
         SignTask::WaitCommitments => vec![SigningStatus::WaitingForCommitments],
         SignTask::MakeSigpackages => vec![SigningStatus::SendingSigningPackage],
         SignTask::WaitSigpackages => vec![SigningStatus::WaitingForSigningPackage],
-        SignTask::SendSigshares => vec![
-            SigningStatus::SendingSignatureShare,
-            SigningStatus::SigningCompleted,
-        ],
+        SignTask::SendSigshares => vec![SigningStatus::SendingSignatureShare],
         SignTask::WaitSigshares => vec![SigningStatus::WaitingForSignatureShares],
         SignTask::Aggregate => vec![
             SigningStatus::PreparingTransaction,
@@ -312,11 +310,12 @@ mod tests {
         .await;
         assert_eq!(e, ["SendingCommitment", "WaitingForSigningPackage"]);
 
-        let e = events(outcome(vec![SignTask::SendSigshares, SignTask::Done])).await;
-        assert_eq!(
-            e,
-            ["SendingSignatureShare", "SigningCompleted", "SigningCompleted"]
-        );
+        // The share goes out in one pass; the session ends, and the signer
+        // is told so, in the pass that finds it mined.
+        let e = events(outcome(vec![SignTask::SendSigshares])).await;
+        assert_eq!(e, ["SendingSignatureShare"]);
+        let e = events(outcome(vec![SignTask::Done])).await;
+        assert_eq!(e, ["SigningCompleted"]);
     }
 
     #[tokio::test]

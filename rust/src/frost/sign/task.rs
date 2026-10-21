@@ -35,7 +35,8 @@ pub enum SignTask {
     WaitSigshares,
     /// Coordinator: aggregate shares and broadcast the final transaction (Phase 4).
     Aggregate,
-    /// Non-coordinator: all work done, waiting for the coordinator to broadcast.
+    /// Non-coordinator: its signature share is mined, so the coordinator can
+    /// read it; nothing is left to do here. Ends the session.
     Done,
 }
 
@@ -46,14 +47,14 @@ impl SignTask {
             | SignTask::WaitOwnPublish
             | SignTask::WaitCommitments
             | SignTask::WaitSigpackages
-            | SignTask::WaitSigshares
-            | SignTask::Done => TaskKind::Time,
+            | SignTask::WaitSigshares => TaskKind::Time,
             SignTask::EnsureMailbox
             | SignTask::AnnounceCoordinator
             | SignTask::SendCommitments
             | SignTask::MakeSigpackages
             | SignTask::SendSigshares
-            | SignTask::Aggregate => TaskKind::Effect,
+            | SignTask::Aggregate
+            | SignTask::Done => TaskKind::Effect,
         }
     }
 
@@ -64,8 +65,8 @@ impl SignTask {
             | SignTask::WaitOwnPublish
             | SignTask::WaitCommitments
             | SignTask::WaitSigpackages
-            | SignTask::WaitSigshares
-            | SignTask::Done => true,
+            | SignTask::WaitSigshares => true,
+            SignTask::Done => !s.is_coordinator() && s.own_sigshares_stored && !s.publish_unmined,
             SignTask::EnsureMailbox => s.mailbox.is_none() || s.broadcast.is_none(),
             SignTask::AnnounceCoordinator => s.is_coordinator() && s.coordinator_address.is_none(),
             SignTask::SendCommitments => !s.own_commitments_stored,
