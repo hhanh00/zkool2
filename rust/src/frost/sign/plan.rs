@@ -32,8 +32,11 @@ pub fn next_sign_task(s: &SignState) -> Result<SignTask> {
     }
 
     // ── Phase 1: commitments ──────────────────────────────────────────────────
+    // Every send below spends the funding note; the previous message's
+    // change must be mined first, or the send cannot be funded.
+    let send = |task: SignTask| if s.publish_unmined { SignTask::WaitOwnPublish } else { task };
     if !s.own_commitments_stored {
-        return Ok(SignTask::SendCommitments);
+        return Ok(send(SignTask::SendCommitments));
     }
 
     // ── Phase 2: signing packages ─────────────────────────────────────────────
@@ -53,7 +56,7 @@ pub fn next_sign_task(s: &SignState) -> Result<SignTask> {
             return if s.commitment_counts.iter().any(|&c| c < s.t as usize) {
                 Ok(SignTask::WaitCommitments)
             } else {
-                Ok(SignTask::MakeSigpackages)
+                Ok(send(SignTask::MakeSigpackages))
             };
         } else {
             return Ok(SignTask::WaitSigpackages);
@@ -62,7 +65,7 @@ pub fn next_sign_task(s: &SignState) -> Result<SignTask> {
 
     // ── Phase 3: signature shares ─────────────────────────────────────────────
     if !s.own_sigshares_stored {
-        return Ok(SignTask::SendSigshares);
+        return Ok(send(SignTask::SendSigshares));
     }
 
     // ── Phase 4: aggregation (coordinator only) ────────────────────────────────
@@ -96,12 +99,24 @@ mod tests {
             coordinator_address: Some("addr1".into()),
             broadcast: Some(11),
             broadcast_address: Some("addr2".into()),
+            publish_unmined: false,
             own_commitments_stored: false,
             commitment_counts: vec![0, 0],
             sigpackages_count: 0,
             own_sigshares_stored: false,
             sigshare_counts: vec![0, 0],
         }
+    }
+
+    /// A message is sent only once our previous one is mined: it would
+    /// spend that message's change.
+    #[test]
+    fn a_send_waits_for_our_last_publish_to_be_mined() {
+        let mut s = state(false);
+        s.publish_unmined = true;
+        assert_eq!(next_sign_task(&s).unwrap(), SignTask::WaitOwnPublish);
+        s.publish_unmined = false;
+        assert_eq!(next_sign_task(&s).unwrap(), SignTask::SendCommitments);
     }
 
     #[test]

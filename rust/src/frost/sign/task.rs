@@ -18,6 +18,9 @@ pub enum SignTask {
     /// Non-coordinator: the coordinator's address for this session has not
     /// arrived yet.
     WaitCoordinator,
+    /// Our previous message is not mined yet: the next one would need its
+    /// change, so it waits for the block that mines it.
+    WaitOwnPublish,
     /// Generate and send commitments to the coordinator (Phase 1).
     SendCommitments,
     /// Coordinator: not enough commitments have arrived yet.
@@ -40,6 +43,7 @@ impl SignTask {
     pub fn kind(&self) -> TaskKind {
         match self {
             SignTask::WaitCoordinator
+            | SignTask::WaitOwnPublish
             | SignTask::WaitCommitments
             | SignTask::WaitSigpackages
             | SignTask::WaitSigshares
@@ -57,6 +61,7 @@ impl SignTask {
     pub fn is_satisfied_by(&self, s: &SignState) -> bool {
         match self {
             SignTask::WaitCoordinator
+            | SignTask::WaitOwnPublish
             | SignTask::WaitCommitments
             | SignTask::WaitSigpackages
             | SignTask::WaitSigshares

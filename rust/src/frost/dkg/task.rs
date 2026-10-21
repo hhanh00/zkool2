@@ -32,6 +32,9 @@ pub enum DkgTask {
     /// Publish our outgoing package for `round` (0..3): produce it if our
     /// secret is not stored yet, then send whatever bytes are staged.
     PublishRound { round: u8 },
+    /// Our previous package is not mined yet: the next one would need its
+    /// change, so it waits for the block that mines it.
+    WaitOwnPublish,
     /// Peer packages for `round` are still incoming. The all-n discipline:
     /// every participant's package must arrive before the round advances, so
     /// each wallet materializes the same complete key set.
@@ -54,7 +57,9 @@ pub enum DkgTask {
 impl DkgTask {
     pub fn kind(&self) -> TaskKind {
         match self {
-            DkgTask::WaitAddresses | DkgTask::WaitRound { .. } => TaskKind::Time,
+            DkgTask::WaitAddresses | DkgTask::WaitRound { .. } | DkgTask::WaitOwnPublish => {
+                TaskKind::Time
+            }
             DkgTask::EnsureAccounts
             | DkgTask::PublishRound { .. }
             | DkgTask::FinalizeKey
@@ -75,6 +80,7 @@ impl DkgTask {
         match self {
             DkgTask::WaitAddresses
             | DkgTask::WaitRound { .. }
+            | DkgTask::WaitOwnPublish
             | DkgTask::VersionMismatch { .. }
             | DkgTask::Done => true,
             DkgTask::EnsureAccounts => s.mailbox.is_none() || s.broadcast.is_none(),

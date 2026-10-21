@@ -146,6 +146,7 @@ pub async fn sign_step(
             }
 
             SignTask::WaitCoordinator
+            | SignTask::WaitOwnPublish
             | SignTask::WaitCommitments
             | SignTask::WaitSigpackages
             | SignTask::WaitSigshares

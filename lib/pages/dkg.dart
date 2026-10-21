@@ -417,6 +417,8 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
       showWarningSnackbar(
         "Waiting for the previous round's change to be confirmed…",
       );
+    } else if (s is DKGStatus_WaitOwnPublish) {
+      setState(() => message = "Waiting for our last message to be mined");
     } else if (s is DKGStatus_Finalize) {
       setState(() {
         message = "Deriving the shared key";

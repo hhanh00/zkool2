@@ -43,7 +43,7 @@ use crate::{
         dkg::{delete_frost_state, publish},
         protocol::{
             ensure_broadcast_account_from_sk, ensure_mailbox_from_seed, group_sk,
-            session_broadcast_sk,
+            record_publish, session_broadcast_sk, SIGN_LAST_TXID_PROP,
         },
         FrostSigMessage, P,
     },
@@ -124,7 +124,7 @@ pub async fn announce_coordinator(
     put_prop(&mut *tx, COORDINATOR_ADDRESS_PROP, address).await?;
     let recipients = [(broadcast_address, msg.encode_with_prefix(COORDINATOR_PREFIX)?)];
     match publish(network, &mut tx, state.funding_account, client, &recipients).await {
-        Ok(_) => {}
+        Ok(txid) => record_publish(&mut tx, SIGN_LAST_TXID_PROP, &txid).await?,
         Err(e) if crate::pay::plan::is_no_feasible_selection(&e) => {
             return Ok(SendResult::WaitingForFunds);
         }
@@ -203,7 +203,7 @@ pub async fn send_commitments(
         let refs: Vec<(&str, Vec<u8>)> =
             recipients.iter().map(|(a, d)| (a.as_str(), d.clone())).collect();
         match publish(network, &mut tx, state.funding_account, client, &refs).await {
-            Ok(_) => {}
+            Ok(txid) => record_publish(&mut tx, SIGN_LAST_TXID_PROP, &txid).await?,
             Err(e) if crate::pay::plan::is_no_feasible_selection(&e) => {
                 return Ok(SendResult::WaitingForFunds);
             }
@@ -313,7 +313,7 @@ pub async fn make_sigpackages(
     let refs: Vec<(&str, Vec<u8>)> =
         recipients.iter().map(|(a, d)| (a.as_str(), d.clone())).collect();
     match publish(network, &mut tx, state.funding_account, client, &refs).await {
-        Ok(_) => {}
+        Ok(txid) => record_publish(&mut tx, SIGN_LAST_TXID_PROP, &txid).await?,
         Err(e) if crate::pay::plan::is_no_feasible_selection(&e) => {
             return Ok(SendResult::WaitingForFunds);
         }
@@ -380,7 +380,7 @@ pub async fn send_sigshares(
         let refs: Vec<(&str, Vec<u8>)> =
             recipients.iter().map(|(a, d)| (a.as_str(), d.clone())).collect();
         match publish(network, &mut tx, state.funding_account, client, &refs).await {
-            Ok(_) => {}
+            Ok(txid) => record_publish(&mut tx, SIGN_LAST_TXID_PROP, &txid).await?,
             Err(e) if crate::pay::plan::is_no_feasible_selection(&e) => {
                 return Ok(SendResult::WaitingForFunds);
             }

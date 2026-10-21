@@ -11339,13 +11339,16 @@ impl SseDecode for crate::api::frost::DKGStatus {
                 return crate::api::frost::DKGStatus::WaitingForFunds;
             }
             9 => {
-                return crate::api::frost::DKGStatus::Finalize;
+                return crate::api::frost::DKGStatus::WaitOwnPublish;
             }
             10 => {
+                return crate::api::frost::DKGStatus::Finalize;
+            }
+            11 => {
                 let mut var_field0 = <String>::sse_decode(deserializer);
                 return crate::api::frost::DKGStatus::SharedAddress(var_field0);
             }
-            11 => {
+            12 => {
                 let mut var_peer = <u8>::sse_decode(deserializer);
                 let mut var_ours = <u8>::sse_decode(deserializer);
                 let mut var_theirs = <u8>::sse_decode(deserializer);
@@ -12735,12 +12738,15 @@ impl SseDecode for crate::api::frost::SigningStatus {
                 return crate::api::frost::SigningStatus::WaitingForFunds;
             }
             10 => {
-                return crate::api::frost::SigningStatus::PreparingTransaction;
+                return crate::api::frost::SigningStatus::WaitOwnPublish;
             }
             11 => {
-                return crate::api::frost::SigningStatus::SendingTransaction;
+                return crate::api::frost::SigningStatus::PreparingTransaction;
             }
             12 => {
+                return crate::api::frost::SigningStatus::SendingTransaction;
+            }
+            13 => {
                 let mut var_field0 = <String>::sse_decode(deserializer);
                 return crate::api::frost::SigningStatus::TransactionSent(var_field0);
             }
@@ -14180,12 +14186,13 @@ impl flutter_rust_bridge::IntoDart for crate::api::frost::DKGStatus {
             crate::api::frost::DKGStatus::PublishRound2Pkg => [6.into_dart()].into_dart(),
             crate::api::frost::DKGStatus::WaitRound2Pkg => [7.into_dart()].into_dart(),
             crate::api::frost::DKGStatus::WaitingForFunds => [8.into_dart()].into_dart(),
-            crate::api::frost::DKGStatus::Finalize => [9.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::WaitOwnPublish => [9.into_dart()].into_dart(),
+            crate::api::frost::DKGStatus::Finalize => [10.into_dart()].into_dart(),
             crate::api::frost::DKGStatus::SharedAddress(field0) => {
-                [10.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+                [11.into_dart(), field0.into_into_dart().into_dart()].into_dart()
             }
             crate::api::frost::DKGStatus::VersionMismatch { peer, ours, theirs } => [
-                11.into_dart(),
+                12.into_dart(),
                 peer.into_into_dart().into_dart(),
                 ours.into_into_dart().into_dart(),
                 theirs.into_into_dart().into_dart(),
@@ -15000,10 +15007,11 @@ impl flutter_rust_bridge::IntoDart for crate::api::frost::SigningStatus {
                 [8.into_dart()].into_dart()
             }
             crate::api::frost::SigningStatus::WaitingForFunds => [9.into_dart()].into_dart(),
-            crate::api::frost::SigningStatus::PreparingTransaction => [10.into_dart()].into_dart(),
-            crate::api::frost::SigningStatus::SendingTransaction => [11.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::WaitOwnPublish => [10.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::PreparingTransaction => [11.into_dart()].into_dart(),
+            crate::api::frost::SigningStatus::SendingTransaction => [12.into_dart()].into_dart(),
             crate::api::frost::SigningStatus::TransactionSent(field0) => {
-                [12.into_dart(), field0.into_into_dart().into_dart()].into_dart()
+                [13.into_dart(), field0.into_into_dart().into_dart()].into_dart()
             }
             _ => {
                 unimplemented!("");
@@ -16011,15 +16019,18 @@ impl SseEncode for crate::api::frost::DKGStatus {
             crate::api::frost::DKGStatus::WaitingForFunds => {
                 <i32>::sse_encode(8, serializer);
             }
-            crate::api::frost::DKGStatus::Finalize => {
+            crate::api::frost::DKGStatus::WaitOwnPublish => {
                 <i32>::sse_encode(9, serializer);
             }
-            crate::api::frost::DKGStatus::SharedAddress(field0) => {
+            crate::api::frost::DKGStatus::Finalize => {
                 <i32>::sse_encode(10, serializer);
+            }
+            crate::api::frost::DKGStatus::SharedAddress(field0) => {
+                <i32>::sse_encode(11, serializer);
                 <String>::sse_encode(field0, serializer);
             }
             crate::api::frost::DKGStatus::VersionMismatch { peer, ours, theirs } => {
-                <i32>::sse_encode(11, serializer);
+                <i32>::sse_encode(12, serializer);
                 <u8>::sse_encode(peer, serializer);
                 <u8>::sse_encode(ours, serializer);
                 <u8>::sse_encode(theirs, serializer);
@@ -17075,14 +17086,17 @@ impl SseEncode for crate::api::frost::SigningStatus {
             crate::api::frost::SigningStatus::WaitingForFunds => {
                 <i32>::sse_encode(9, serializer);
             }
-            crate::api::frost::SigningStatus::PreparingTransaction => {
+            crate::api::frost::SigningStatus::WaitOwnPublish => {
                 <i32>::sse_encode(10, serializer);
             }
-            crate::api::frost::SigningStatus::SendingTransaction => {
+            crate::api::frost::SigningStatus::PreparingTransaction => {
                 <i32>::sse_encode(11, serializer);
             }
-            crate::api::frost::SigningStatus::TransactionSent(field0) => {
+            crate::api::frost::SigningStatus::SendingTransaction => {
                 <i32>::sse_encode(12, serializer);
+            }
+            crate::api::frost::SigningStatus::TransactionSent(field0) => {
+                <i32>::sse_encode(13, serializer);
                 <String>::sse_encode(field0, serializer);
             }
             _ => {

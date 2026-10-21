@@ -194,6 +194,7 @@ fn sign_statuses_for(task: &SignTask) -> Vec<SigningStatus> {
         SignTask::EnsureMailbox => vec![],
         SignTask::AnnounceCoordinator => vec![SigningStatus::AnnouncingCoordinator],
         SignTask::WaitCoordinator => vec![SigningStatus::WaitingForCoordinator],
+        SignTask::WaitOwnPublish => vec![SigningStatus::WaitOwnPublish],
         SignTask::SendCommitments => vec![SigningStatus::SendingCommitment],
         SignTask::WaitCommitments => vec![SigningStatus::WaitingForCommitments],
         SignTask::MakeSigpackages => vec![SigningStatus::SendingSigningPackage],

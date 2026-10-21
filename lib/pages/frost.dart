@@ -316,6 +316,8 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
         currentIndex = 3; // coordinator
         finished = true;
       });
+    } else if (s is SigningStatus_WaitOwnPublish) {
+      setState(() => message = "Waiting for our last message to be mined");
     } else if (s is SigningStatus_WaitingForFunds) {
       // The previous message's change is not mined yet, so this one has
       // nothing to spend. The next block retries; surface it as a warning

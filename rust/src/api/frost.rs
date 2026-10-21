@@ -218,6 +218,9 @@ pub enum DKGStatus {
     /// previous round is locked and its change is not mined. Transient — the
     /// next block retries. Shown as an info/warning, not an error.
     WaitingForFunds,
+    /// Our last package is not mined yet; the next round waits for it so
+    /// the two never compete for the funding note.
+    WaitOwnPublish,
     Finalize,
     SharedAddress(String),
     /// Terminal: participant `peer` runs DKG version `theirs` while this
@@ -368,6 +371,9 @@ pub enum SigningStatus {
     /// A signing message could not be funded yet (previous broadcast's change
     /// not mined). Transient — the next block retries. Info/warning, not error.
     WaitingForFunds,
+    /// Our last message is not mined yet; the next one waits for it so the
+    /// two never compete for the funding note.
+    WaitOwnPublish,
     PreparingTransaction,
     SendingTransaction,
     TransactionSent(String),

@@ -59,6 +59,7 @@ extension DKGStatusPatterns on DKGStatus {
     TResult Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult Function(DKGStatus_WaitingForFunds value)? waitingForFunds,
+    TResult Function(DKGStatus_WaitOwnPublish value)? waitOwnPublish,
     TResult Function(DKGStatus_Finalize value)? finalize,
     TResult Function(DKGStatus_SharedAddress value)? sharedAddress,
     TResult Function(DKGStatus_VersionMismatch value)? versionMismatch,
@@ -84,6 +85,8 @@ extension DKGStatusPatterns on DKGStatus {
         return waitRound2Pkg(_that);
       case DKGStatus_WaitingForFunds() when waitingForFunds != null:
         return waitingForFunds(_that);
+      case DKGStatus_WaitOwnPublish() when waitOwnPublish != null:
+        return waitOwnPublish(_that);
       case DKGStatus_Finalize() when finalize != null:
         return finalize(_that);
       case DKGStatus_SharedAddress() when sharedAddress != null:
@@ -122,6 +125,7 @@ extension DKGStatusPatterns on DKGStatus {
         publishRound2Pkg,
     required TResult Function(DKGStatus_WaitRound2Pkg value) waitRound2Pkg,
     required TResult Function(DKGStatus_WaitingForFunds value) waitingForFunds,
+    required TResult Function(DKGStatus_WaitOwnPublish value) waitOwnPublish,
     required TResult Function(DKGStatus_Finalize value) finalize,
     required TResult Function(DKGStatus_SharedAddress value) sharedAddress,
     required TResult Function(DKGStatus_VersionMismatch value) versionMismatch,
@@ -146,6 +150,8 @@ extension DKGStatusPatterns on DKGStatus {
         return waitRound2Pkg(_that);
       case DKGStatus_WaitingForFunds():
         return waitingForFunds(_that);
+      case DKGStatus_WaitOwnPublish():
+        return waitOwnPublish(_that);
       case DKGStatus_Finalize():
         return finalize(_that);
       case DKGStatus_SharedAddress():
@@ -178,6 +184,7 @@ extension DKGStatusPatterns on DKGStatus {
     TResult? Function(DKGStatus_PublishRound2Pkg value)? publishRound2Pkg,
     TResult? Function(DKGStatus_WaitRound2Pkg value)? waitRound2Pkg,
     TResult? Function(DKGStatus_WaitingForFunds value)? waitingForFunds,
+    TResult? Function(DKGStatus_WaitOwnPublish value)? waitOwnPublish,
     TResult? Function(DKGStatus_Finalize value)? finalize,
     TResult? Function(DKGStatus_SharedAddress value)? sharedAddress,
     TResult? Function(DKGStatus_VersionMismatch value)? versionMismatch,
@@ -202,6 +209,8 @@ extension DKGStatusPatterns on DKGStatus {
         return waitRound2Pkg(_that);
       case DKGStatus_WaitingForFunds() when waitingForFunds != null:
         return waitingForFunds(_that);
+      case DKGStatus_WaitOwnPublish() when waitOwnPublish != null:
+        return waitOwnPublish(_that);
       case DKGStatus_Finalize() when finalize != null:
         return finalize(_that);
       case DKGStatus_SharedAddress() when sharedAddress != null:
@@ -236,6 +245,7 @@ extension DKGStatusPatterns on DKGStatus {
     TResult Function()? publishRound2Pkg,
     TResult Function()? waitRound2Pkg,
     TResult Function()? waitingForFunds,
+    TResult Function()? waitOwnPublish,
     TResult Function()? finalize,
     TResult Function(String field0)? sharedAddress,
     TResult Function(int peer, int ours, int theirs)? versionMismatch,
@@ -261,6 +271,8 @@ extension DKGStatusPatterns on DKGStatus {
         return waitRound2Pkg();
       case DKGStatus_WaitingForFunds() when waitingForFunds != null:
         return waitingForFunds();
+      case DKGStatus_WaitOwnPublish() when waitOwnPublish != null:
+        return waitOwnPublish();
       case DKGStatus_Finalize() when finalize != null:
         return finalize();
       case DKGStatus_SharedAddress() when sharedAddress != null:
@@ -296,6 +308,7 @@ extension DKGStatusPatterns on DKGStatus {
     required TResult Function() publishRound2Pkg,
     required TResult Function() waitRound2Pkg,
     required TResult Function() waitingForFunds,
+    required TResult Function() waitOwnPublish,
     required TResult Function() finalize,
     required TResult Function(String field0) sharedAddress,
     required TResult Function(int peer, int ours, int theirs) versionMismatch,
@@ -320,6 +333,8 @@ extension DKGStatusPatterns on DKGStatus {
         return waitRound2Pkg();
       case DKGStatus_WaitingForFunds():
         return waitingForFunds();
+      case DKGStatus_WaitOwnPublish():
+        return waitOwnPublish();
       case DKGStatus_Finalize():
         return finalize();
       case DKGStatus_SharedAddress():
@@ -352,6 +367,7 @@ extension DKGStatusPatterns on DKGStatus {
     TResult? Function()? publishRound2Pkg,
     TResult? Function()? waitRound2Pkg,
     TResult? Function()? waitingForFunds,
+    TResult? Function()? waitOwnPublish,
     TResult? Function()? finalize,
     TResult? Function(String field0)? sharedAddress,
     TResult? Function(int peer, int ours, int theirs)? versionMismatch,
@@ -376,6 +392,8 @@ extension DKGStatusPatterns on DKGStatus {
         return waitRound2Pkg();
       case DKGStatus_WaitingForFunds() when waitingForFunds != null:
         return waitingForFunds();
+      case DKGStatus_WaitOwnPublish() when waitOwnPublish != null:
+        return waitOwnPublish();
       case DKGStatus_Finalize() when finalize != null:
         return finalize();
       case DKGStatus_SharedAddress() when sharedAddress != null:
@@ -622,6 +640,26 @@ class DKGStatus_WaitingForFunds extends DKGStatus {
   @override
   String toString() {
     return 'DKGStatus.waitingForFunds()';
+  }
+}
+
+/// @nodoc
+
+class DKGStatus_WaitOwnPublish extends DKGStatus {
+  const DKGStatus_WaitOwnPublish() : super._();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType && other is DKGStatus_WaitOwnPublish);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'DKGStatus.waitOwnPublish()';
   }
 }
 
@@ -1906,6 +1944,7 @@ extension SigningStatusPatterns on SigningStatus {
     TResult Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult Function(SigningStatus_WaitingForFunds value)? waitingForFunds,
+    TResult Function(SigningStatus_WaitOwnPublish value)? waitOwnPublish,
     TResult Function(SigningStatus_PreparingTransaction value)?
         preparingTransaction,
     TResult Function(SigningStatus_SendingTransaction value)?
@@ -1942,6 +1981,8 @@ extension SigningStatusPatterns on SigningStatus {
         return waitingForSignatureShares(_that);
       case SigningStatus_WaitingForFunds() when waitingForFunds != null:
         return waitingForFunds(_that);
+      case SigningStatus_WaitOwnPublish() when waitOwnPublish != null:
+        return waitOwnPublish(_that);
       case SigningStatus_PreparingTransaction()
           when preparingTransaction != null:
         return preparingTransaction(_that);
@@ -1989,6 +2030,8 @@ extension SigningStatusPatterns on SigningStatus {
         waitingForSignatureShares,
     required TResult Function(SigningStatus_WaitingForFunds value)
         waitingForFunds,
+    required TResult Function(SigningStatus_WaitOwnPublish value)
+        waitOwnPublish,
     required TResult Function(SigningStatus_PreparingTransaction value)
         preparingTransaction,
     required TResult Function(SigningStatus_SendingTransaction value)
@@ -2018,6 +2061,8 @@ extension SigningStatusPatterns on SigningStatus {
         return waitingForSignatureShares(_that);
       case SigningStatus_WaitingForFunds():
         return waitingForFunds(_that);
+      case SigningStatus_WaitOwnPublish():
+        return waitOwnPublish(_that);
       case SigningStatus_PreparingTransaction():
         return preparingTransaction(_that);
       case SigningStatus_SendingTransaction():
@@ -2058,6 +2103,7 @@ extension SigningStatusPatterns on SigningStatus {
     TResult? Function(SigningStatus_WaitingForSignatureShares value)?
         waitingForSignatureShares,
     TResult? Function(SigningStatus_WaitingForFunds value)? waitingForFunds,
+    TResult? Function(SigningStatus_WaitOwnPublish value)? waitOwnPublish,
     TResult? Function(SigningStatus_PreparingTransaction value)?
         preparingTransaction,
     TResult? Function(SigningStatus_SendingTransaction value)?
@@ -2093,6 +2139,8 @@ extension SigningStatusPatterns on SigningStatus {
         return waitingForSignatureShares(_that);
       case SigningStatus_WaitingForFunds() when waitingForFunds != null:
         return waitingForFunds(_that);
+      case SigningStatus_WaitOwnPublish() when waitOwnPublish != null:
+        return waitOwnPublish(_that);
       case SigningStatus_PreparingTransaction()
           when preparingTransaction != null:
         return preparingTransaction(_that);
@@ -2129,6 +2177,7 @@ extension SigningStatusPatterns on SigningStatus {
     TResult Function()? signingCompleted,
     TResult Function()? waitingForSignatureShares,
     TResult Function()? waitingForFunds,
+    TResult Function()? waitOwnPublish,
     TResult Function()? preparingTransaction,
     TResult Function()? sendingTransaction,
     TResult Function(String field0)? transactionSent,
@@ -2163,6 +2212,8 @@ extension SigningStatusPatterns on SigningStatus {
         return waitingForSignatureShares();
       case SigningStatus_WaitingForFunds() when waitingForFunds != null:
         return waitingForFunds();
+      case SigningStatus_WaitOwnPublish() when waitOwnPublish != null:
+        return waitOwnPublish();
       case SigningStatus_PreparingTransaction()
           when preparingTransaction != null:
         return preparingTransaction();
@@ -2200,6 +2251,7 @@ extension SigningStatusPatterns on SigningStatus {
     required TResult Function() signingCompleted,
     required TResult Function() waitingForSignatureShares,
     required TResult Function() waitingForFunds,
+    required TResult Function() waitOwnPublish,
     required TResult Function() preparingTransaction,
     required TResult Function() sendingTransaction,
     required TResult Function(String field0) transactionSent,
@@ -2226,6 +2278,8 @@ extension SigningStatusPatterns on SigningStatus {
         return waitingForSignatureShares();
       case SigningStatus_WaitingForFunds():
         return waitingForFunds();
+      case SigningStatus_WaitOwnPublish():
+        return waitOwnPublish();
       case SigningStatus_PreparingTransaction():
         return preparingTransaction();
       case SigningStatus_SendingTransaction():
@@ -2259,6 +2313,7 @@ extension SigningStatusPatterns on SigningStatus {
     TResult? Function()? signingCompleted,
     TResult? Function()? waitingForSignatureShares,
     TResult? Function()? waitingForFunds,
+    TResult? Function()? waitOwnPublish,
     TResult? Function()? preparingTransaction,
     TResult? Function()? sendingTransaction,
     TResult? Function(String field0)? transactionSent,
@@ -2292,6 +2347,8 @@ extension SigningStatusPatterns on SigningStatus {
         return waitingForSignatureShares();
       case SigningStatus_WaitingForFunds() when waitingForFunds != null:
         return waitingForFunds();
+      case SigningStatus_WaitOwnPublish() when waitOwnPublish != null:
+        return waitOwnPublish();
       case SigningStatus_PreparingTransaction()
           when preparingTransaction != null:
         return preparingTransaction();
@@ -2512,6 +2569,27 @@ class SigningStatus_WaitingForFunds extends SigningStatus {
   @override
   String toString() {
     return 'SigningStatus.waitingForFunds()';
+  }
+}
+
+/// @nodoc
+
+class SigningStatus_WaitOwnPublish extends SigningStatus {
+  const SigningStatus_WaitOwnPublish() : super._();
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is SigningStatus_WaitOwnPublish);
+  }
+
+  @override
+  int get hashCode => runtimeType.hashCode;
+
+  @override
+  String toString() {
+    return 'SigningStatus.waitOwnPublish()';
   }
 }
 

@@ -132,8 +132,8 @@ Future<void> initSign(
         c: c);
 
 /// Fails with a clear message when [pczt] was not prepared for the group
-/// [account]; see `frost::sign::check_group_pczt`. For a page to refuse a
-/// loaded file before offering to sign it.
+/// [account]; see `frost::sign::check_group_pczt`. The signing setup checks
+/// too; this lets a page refuse a loaded file before offering to sign it.
 Future<void> checkGroupPczt(
         {required int account, required PcztPackage pczt, required Coin c}) =>
     RustLib.instance.api
@@ -182,6 +182,10 @@ sealed class DKGStatus with _$DKGStatus {
   /// previous round is locked and its change is not mined. Transient — the
   /// next block retries. Shown as an info/warning, not an error.
   const factory DKGStatus.waitingForFunds() = DKGStatus_WaitingForFunds;
+
+  /// Our last package is not mined yet; the next round waits for it so
+  /// the two never compete for the funding note.
+  const factory DKGStatus.waitOwnPublish() = DKGStatus_WaitOwnPublish;
   const factory DKGStatus.finalize() = DKGStatus_Finalize;
   const factory DKGStatus.sharedAddress(
     String field0,
@@ -265,6 +269,10 @@ sealed class SigningStatus with _$SigningStatus {
   /// A signing message could not be funded yet (previous broadcast's change
   /// not mined). Transient — the next block retries. Info/warning, not error.
   const factory SigningStatus.waitingForFunds() = SigningStatus_WaitingForFunds;
+
+  /// Our last message is not mined yet; the next one waits for it so the
+  /// two never compete for the funding note.
+  const factory SigningStatus.waitOwnPublish() = SigningStatus_WaitOwnPublish;
   const factory SigningStatus.preparingTransaction() =
       SigningStatus_PreparingTransaction;
   const factory SigningStatus.sendingTransaction() =

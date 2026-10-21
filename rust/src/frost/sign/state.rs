@@ -62,6 +62,9 @@ pub struct SignState {
     pub broadcast_address: Option<String>,
 
     // Phase 1: commitments
+    /// Our last published message is not mined yet: the next one waits for
+    /// it, so that it never competes with it for the funding note.
+    pub publish_unmined: bool,
     /// True when our own commitment row exists in frost_commitments.
     pub own_commitments_stored: bool,
     /// commitment_counts[idx] = how many distinct participants have a commitment row for input idx.
@@ -200,6 +203,13 @@ pub async fn observe_sign(
     // The coordinator's address, after the ingest that may have just stored it.
     let coordinator_address = coordinator_address_opt(&mut *connection).await?;
 
+    let publish_unmined = crate::frost::protocol::publish_unmined(
+        &mut *connection,
+        crate::frost::protocol::SIGN_LAST_TXID_PROP,
+        params.funding_account,
+    )
+    .await?;
+
     // Phase 1: own commitment.
     let own_commitments_stored = sqlx::query(
         "SELECT 1 FROM frost_commitments
@@ -279,6 +289,7 @@ pub async fn observe_sign(
         coordinator_address,
         broadcast,
         broadcast_address,
+        publish_unmined,
         own_commitments_stored,
         commitment_counts,
         sigpackages_count,

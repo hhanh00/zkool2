@@ -75,6 +75,9 @@ pub struct DkgState {
     /// Set when a peer's round-0 package names another generation: the DKG
     /// cannot complete with one address on every device.
     pub version_mismatch: Option<DkgVersionMismatch>,
+    /// Our last published package is not mined yet: the next round waits
+    /// for it, so that it never competes with it for the funding note.
+    pub publish_unmined: bool,
     // Reconstructed round inputs (pure `collect` chains), consumed by exec.
     pub state0: Option<DkgState0>,
     pub state1: Option<DkgState1>,
@@ -252,6 +255,13 @@ pub async fn observe(
         None
     };
 
+    let publish_unmined = crate::frost::protocol::publish_unmined(
+        &mut *connection,
+        crate::frost::protocol::DKG_LAST_TXID_PROP,
+        params_account,
+    )
+    .await?;
+
     Ok(DkgState {
         funding_account,
         params,
@@ -265,6 +275,7 @@ pub async fn observe(
         rekeyed,
         dkg_version,
         version_mismatch,
+        publish_unmined,
         state0,
         state1,
         state2,

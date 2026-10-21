@@ -53,6 +53,7 @@ impl DkgStepOutcome {
                 DkgTask::WaitRound { round: 0 } => Some(DKGStatus::WaitRound0Pkg),
                 DkgTask::WaitRound { round: 1 } => Some(DKGStatus::WaitRound1Pkg),
                 DkgTask::WaitRound { round: 2 } => Some(DKGStatus::WaitRound2Pkg),
+                DkgTask::WaitOwnPublish => Some(DKGStatus::WaitOwnPublish),
                 DkgTask::FinalizeKey | DkgTask::CreateFrostAccount | DkgTask::CompleteFinalize => {
                     Some(DKGStatus::Finalize)
                 }
@@ -180,6 +181,7 @@ pub async fn dkg_step(
             }
             DkgTask::WaitAddresses
             | DkgTask::WaitRound { .. }
+            | DkgTask::WaitOwnPublish
             | DkgTask::VersionMismatch { .. }
             | DkgTask::Done => {
                 unreachable!("non-effect task handled above")

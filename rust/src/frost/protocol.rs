@@ -779,6 +779,49 @@ pub fn to_arb_memo(data: &[u8]) -> Vec<u8> {
 
 /// Send a Zcash transaction carrying the given `(address, memo)` recipients,
 /// funded from `account`. Returns the transaction ID hex string.
+/// Props key under which the DKG records the txid of its last published
+/// message, and the one the signing session uses.
+pub const DKG_LAST_TXID_PROP: &str = "dkg_last_txid";
+pub const SIGN_LAST_TXID_PROP: &str = "frost_last_txid";
+
+/// Remembers the txid of a message we just published, under [key].
+pub async fn record_publish(
+    connection: &mut SqliteConnection,
+    key: &str,
+    txid_hex: &str,
+) -> Result<()> {
+    crate::db::put_prop(connection, key, txid_hex).await
+}
+
+/// Whether the message recorded under [key] is still unmined: the funding
+/// account's scan has not recorded its transaction yet. A protocol publishes
+/// its next message only once the last one is mined, so that two messages
+/// never compete for the same note and a funds wait means short funds.
+pub async fn publish_unmined(
+    connection: &mut SqliteConnection,
+    key: &str,
+    funding_account: u32,
+) -> Result<bool> {
+    let Some(txid_hex) = crate::db::get_prop(connection, key).await? else {
+        return Ok(false);
+    };
+    let Ok(txid) = hex::decode(&txid_hex) else {
+        return Ok(false);
+    };
+    // The server reports a txid in display order, the scan stores it in
+    // internal order; accept either.
+    let reversed: Vec<u8> = txid.iter().rev().copied().collect();
+    let (mined,): (bool,) = sqlx::query_as(
+        "SELECT EXISTS(SELECT 1 FROM transactions WHERE account = ? AND (txid = ? OR txid = ?))",
+    )
+    .bind(funding_account)
+    .bind(&txid)
+    .bind(&reversed)
+    .fetch_one(&mut *connection)
+    .await?;
+    Ok(!mined)
+}
+
 pub async fn publish(
     network: &Network,
     connection: &mut SqliteConnection,

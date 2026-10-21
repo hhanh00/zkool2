@@ -37,6 +37,11 @@ pub fn next_task(s: &DkgState) -> DkgTask {
     for round in 0..3u8 {
         let rs = &s.rounds[round as usize];
         if !rs.secret_present {
+            // A new package spends the funding note; the previous one's
+            // change must be mined first, or this publish cannot be funded.
+            if s.publish_unmined {
+                return DkgTask::WaitOwnPublish;
+            }
             return DkgTask::PublishRound { round };
         }
         if rs.others < s.params.n.saturating_sub(1) {
@@ -90,10 +95,27 @@ mod tests {
             rekeyed: false,
             dkg_version: 2,
             version_mismatch: None,
+            publish_unmined: false,
             state0: None,
             state1: None,
             state2: None,
         }
+    }
+
+    /// A member behind the others has every round-0 package in hand as
+    /// soon as it has published its own; the next round still waits for
+    /// that publish to be mined, since it would spend its change.
+    #[test]
+    fn the_next_round_waits_for_our_last_publish_to_be_mined() {
+        let mut s = state(3, [round(true, 2), round(false, 0), round(false, 0)]);
+        s.publish_unmined = true;
+        assert_eq!(next_task(&s), DkgTask::WaitOwnPublish);
+        s.publish_unmined = false;
+        assert_eq!(next_task(&s), DkgTask::PublishRound { round: 1 });
+        // A staged resend is the same message, not a second one.
+        s.publish_unmined = true;
+        s.rounds[1].pending = Some(1);
+        assert_eq!(next_task(&s), DkgTask::PublishRound { round: 1 });
     }
 
     /// A peer on another generation stops the DKG before round 1, even

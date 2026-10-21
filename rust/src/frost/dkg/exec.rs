@@ -197,9 +197,15 @@ async fn publish_staged(
             Ok((addr.as_str(), msg.encode_with_prefix(&prefix)?))
         })
         .collect::<Result<_>>()?;
-    publish(network, connection, account, client, &refs)
+    let txid = publish(network, connection, account, client, &refs)
         .await
         .context("publish DKG package")?;
+    crate::frost::protocol::record_publish(
+        connection,
+        crate::frost::protocol::DKG_LAST_TXID_PROP,
+        &txid,
+    )
+    .await?;
     sqlx::query("UPDATE dkg_state SET pending_publish = NULL WHERE account = ?")
         .bind(account)
         .execute(&mut *connection)
