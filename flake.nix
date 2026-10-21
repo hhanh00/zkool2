@@ -265,10 +265,15 @@
             # and RustLib.init() fails with "Failed to load dynamic library
             # 'librlz.so'". path_provider_linux also shells out to xdg-user-dir,
             # which must be on PATH or main() throws
-            # MissingPlatformDirectoryException.
+            # MissingPlatformDirectoryException. GTK's file chooser reads its
+            # settings through GSettings, whose schema ships in gtk3 and is
+            # found only through XDG_DATA_DIRS; without it GLib aborts the
+            # app ("No GSettings schemas are installed on the system") the
+            # first time a file dialog opens.
             makeWrapper "$out/libexec/zkool/zkool" "$out/bin/zkool" \
               --prefix LD_LIBRARY_PATH : "$out/libexec/zkool/lib" \
-              --prefix PATH : "${lib.makeBinPath [ pkgs.xdg-user-dirs ]}"
+              --prefix PATH : "${lib.makeBinPath [ pkgs.xdg-user-dirs ]}" \
+              --prefix XDG_DATA_DIRS : "${pkgs.gtk3}/share/gsettings-schemas/${pkgs.gtk3.name}"
           '';
           meta.mainProgram = "zkool";
         };
