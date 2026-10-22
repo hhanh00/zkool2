@@ -96,14 +96,21 @@ class SavedPrefs {
   /// Expert mode is toggled by the extended test; a run that failed in
   /// between leaves it on for the next, which expects it off.
   final bool? expertMode;
+  /// The theme, forced to the app's defaults by the docs screenshot runs.
+  final String? paletteName;
+  final bool? darkMode;
 
-  SavedPrefs(this.pinLock, this.offline, this.vault, this.getFx, this.expertMode);
+  SavedPrefs(this.pinLock, this.offline, this.vault, this.getFx, this.expertMode, this.paletteName, this.darkMode);
 
   /// [getFx] turns on the market price fetch at startup; the wallet test
   /// points it at a mock through the `coingecko_url` prop.
+  /// [defaultTheme] puts the app in its default theme (the blue palette,
+  /// dark mode), whatever this machine's wallet has chosen: the docs
+  /// screenshots show what a new user sees.
   static Future<SavedPrefs> forceTestValues(
     SharedPreferencesAsync prefs, {
     bool getFx = false,
+    bool defaultTheme = false,
   }) async {
     final saved = SavedPrefs(
       await prefs.getBool("pin_lock"),
@@ -111,12 +118,18 @@ class SavedPrefs {
       await prefs.getBool("vault"),
       await prefs.getBool("get_fx"),
       await prefs.getBool("expert_mode"),
+      await prefs.getString("palette_name"),
+      await prefs.getBool("dark_mode"),
     );
     await prefs.setBool("pin_lock", false);
     await prefs.setBool("offline", false);
     await prefs.setBool("vault", false);
     await prefs.setBool("get_fx", getFx);
     await prefs.setBool("expert_mode", false);
+    if (defaultTheme) {
+      await prefs.setString("palette_name", "blue");
+      await prefs.setBool("dark_mode", true);
+    }
     return saved;
   }
 
@@ -126,6 +139,12 @@ class SavedPrefs {
     await _restore(prefs, "vault", vault);
     await _restore(prefs, "get_fx", getFx);
     await _restore(prefs, "expert_mode", expertMode);
+    if (paletteName == null) {
+      await prefs.remove("palette_name");
+    } else {
+      await prefs.setString("palette_name", paletteName!);
+    }
+    await _restore(prefs, "dark_mode", darkMode);
   }
 
   static Future<void> _restore(
@@ -143,18 +162,21 @@ class SavedPrefs {
 
 /// Opens a fresh test database with no accounts, pointed at [lwd]. Extra
 /// [props] are written to the wallet's props table (e.g. `coingecko_url`).
+/// With [fresh] false, an existing database is opened as it is, e.g. one an
+/// orchestrator prepared with `zkool_graphql`.
 /// Must run inside `tester.runAsync` — it is all real async I/O.
 Future<void> openTestWallet({
   required String dbPath,
   required String lwd,
   required String docsDir,
   Map<String, String> props = const {},
+  bool fresh = true,
 }) async {
   await RustLib.init();
   await initDatadir(directory: docsDir);
 
   final dbFile = File(dbPath);
-  if (dbFile.existsSync()) dbFile.deleteSync();
+  if (fresh && dbFile.existsSync()) dbFile.deleteSync();
 
   var c = await Coin().openDatabase(dbFilepath: dbPath, password: null);
   await putProp(key: "lwd", value: lwd, c: c);
