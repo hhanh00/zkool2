@@ -38,7 +38,6 @@ const _amount = "0.05";
 const _memo = "Signed offline";
 const _newAccountHint = "Create a new wallet or restore an existing one";
 const _sendTooltip = "Send funds to one or many addresses";
-const _confirmTooltip = "Confirm, broadcast transaction";
 const _scanTooltip =
     "Find other transparent addresses. If you restored from a wallet that has address rotation (such as Ledger, Exodus, etc), Tap, then Reset and Sync";
 // Long enough for a toast, such as the synchronizer's, to have gone.
@@ -369,7 +368,7 @@ void main() {
       await tapTooltip(tester, "Send (Summary and Confirmation)");
       await waitForTxPage(Icons.save, what: "the transaction plan with its save button");
       await shots.take("recipe/images/07.save", annots: () => [shots.box(find.byIcon(Icons.save))]);
-      await tapTooltip(tester, _confirmTooltip);
+      await tapTooltip(tester, "Save the unsigned transaction");
       await pumpUntil(tester, () => files.saved.isNotEmpty, timeout: shortTimeout, what: "the unsigned transaction file");
 
       // ── Signed offline on the account with the keys ──────────────────────
@@ -383,7 +382,7 @@ void main() {
       await tapTooltip(tester, "Load an unsigned transaction");
       await waitForTxPage(Icons.draw, what: "the loaded transaction with its sign button");
       await shots.take("recipe/images/09.sign", annots: () => [shots.box(find.byIcon(Icons.draw))]);
-      await tapTooltip(tester, _confirmTooltip);
+      await tapTooltip(tester, "Sign and save the transaction");
       await pumpUntil(tester, () => files.saved.length >= 2, timeout: const Duration(minutes: 3), what: "the signed transaction file");
       await setOffline(container, false);
 

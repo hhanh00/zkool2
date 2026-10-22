@@ -38,6 +38,7 @@ import 'support.dart';
 
 const _accountA = "Alice";
 const _accountB = "Bob";
+const _accountW = "Alice (watch)";
 
 // Values no setting has by default, so a saved change is told from the original.
 const _proxy = "socks5h://127.0.0.1:19050";
@@ -651,6 +652,86 @@ void main() {
       await _back(tester);
       await waitForAccountView(tester, _accountA);
 
+      // ── Cold wallet ──────────────────────────────────────────────────────
+      // A watch-only copy of A plans a payment it cannot sign, A signs the
+      // file offline, and the copy loads the signed file. The transaction
+      // page's one button names its job in each of the three states, and a
+      // save that fails ends in the error dialog, not on the console.
+      phase("cold");
+      step("watch-only copy of A");
+      final ufvkAll = (await tester.runAsync(() => getAccountUfvk(account: a, pools: 7, c: coinContext.coin)))!;
+      final w = (await tester.runAsync(() => newAccount(
+            na: NewAccount(
+              name: _accountW,
+              restore: true,
+              key: ufvkAll,
+              aindex: 0,
+              birth: 1,
+              folder: "",
+              useInternal: false,
+              internal: false,
+              hw: 0,
+            ),
+            c: coinContext.coin,
+          )))!;
+      container.invalidate(getAccountsProvider);
+      appRouter.go(accountRoute("/", w));
+      await waitForAccountView(tester, _accountW);
+      await waitForBalance(tester, w,
+          atLeast: zecToZat(fundTaddr) + zecToZat(fundSaddr) + zecToZat(fundOaddr) + zecToZat(fundDust),
+          what: "the watch-only copy to see A's notes",);
+      await waitForSync(tester, w);
+
+      step("plan a payment the copy cannot sign");
+      await tapTooltip(tester, "Send funds to one or many addresses");
+      await pumpUntil(tester, () => fieldNamed("address").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the send page of the copy",);
+      await enterRecipient(tester, bAddresses.ua!, "0.01");
+      await tapTooltip(tester, "Send transaction (including queued recipients)");
+      await pumpUntil(tester, () => find.text("Extra Options").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the send options page",);
+      await tapTooltip(tester, "Send (Summary and Confirmation)");
+      await pumpUntil(tester, () => find.byTooltip("Save the unsigned transaction").evaluate().isNotEmpty,
+          timeout: const Duration(minutes: 2), what: "the plan with its save button",);
+      expect(find.byIcon(Icons.save), findsOneWidget);
+
+      step("save the unsigned transaction");
+      await tapTooltip(tester, "Save the unsigned transaction");
+      await _savedFile(tester, picker, "unsigned-tx.bin");
+
+      step("A signs it offline");
+      await _setOffline(container, true);
+      appRouter.go(accountRoute("/", a));
+      await waitForAccountView(tester, _accountA);
+      await tapTooltip(tester, "Send funds to one or many addresses");
+      await pumpUntil(tester, () => find.byTooltip("Load an unsigned transaction").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the send page of A",);
+      picker.picks.add(picker.saved.lastWhere((f) => f.endsWith("/unsigned-tx.bin")));
+      await tapTooltip(tester, "Load an unsigned transaction");
+      await pumpUntil(tester, () => find.byTooltip("Sign and save the transaction").evaluate().isNotEmpty,
+          timeout: const Duration(minutes: 2), what: "the loaded plan with its sign button",);
+      expect(find.byIcon(Icons.draw), findsOneWidget);
+      await tapTooltip(tester, "Sign and save the transaction");
+      await _savedFile(tester, picker, "signed-tx.bin");
+      await _setOffline(container, false);
+
+      step("the copy loads the signed file");
+      appRouter.go(accountRoute("/", w));
+      await waitForAccountView(tester, _accountW);
+      await tapTooltip(tester, "Send funds to one or many addresses");
+      await pumpUntil(tester, () => find.byTooltip("Load an unsigned transaction").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the send page of the copy again",);
+      picker.picks.add(picker.saved.lastWhere((f) => f.endsWith("/signed-tx.bin")));
+      await tapTooltip(tester, "Load an unsigned transaction");
+      await pumpUntil(tester, () => find.byTooltip("Confirm, broadcast transaction").evaluate().isNotEmpty,
+          timeout: const Duration(minutes: 2), what: "the signed transaction with its send button",);
+      expect(find.byIcon(Icons.send), findsOneWidget);
+      // Not sent: B's balance is checked later as it is.
+      await tapTooltip(tester, "Cancel, do NOT send");
+      await waitForAccountView(tester, _accountW);
+      appRouter.go(accountRoute("/", a));
+      await waitForAccountView(tester, _accountA);
+
       // ── Errors ───────────────────────────────────────────────────────────
       // Two failing calls on the send page: an unknown contact name, which
       // the page rejects, and a payment above the balance, which the summary
@@ -851,6 +932,13 @@ Future<void> _waitForSettings(WidgetTester tester) => pumpUntil(
 
 /// Taps the back arrow and lets the route transition finish: a tap during
 /// the transition lands on the page that is leaving.
+/// Puts the wallet offline or back online, as the settings page's switch
+/// does, so the transaction page cannot broadcast.
+Future<void> _setOffline(ProviderContainer container, bool offline) async {
+  final settings = container.read(appSettingsProvider).requireValue;
+  await container.read(appSettingsProvider.notifier).save(settings.copyWith(offline: offline));
+}
+
 Future<void> _back(WidgetTester tester) async {
   await tester.pageBack();
   await pumpFor(tester, const Duration(seconds: 1));

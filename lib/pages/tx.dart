@@ -88,7 +88,14 @@ class TxPageState extends ConsumerState<TxPage> {
             else
               IconButton(
                 onPressed: _sending ? null : (canSend ? onSend : onSave),
-                tooltip: "Confirm, broadcast transaction",
+                // One button, three jobs: name the one it has now.
+                tooltip: canSend
+                    ? "Confirm, broadcast transaction"
+                    : txPlan.canSign
+                        ? "Sign and save the transaction"
+                        : hasFrost
+                            ? "Save the transaction for the group signers"
+                            : "Save the unsigned transaction",
                 icon: Icon(
                   canSend
                       ? Icons.send
@@ -294,7 +301,7 @@ class TxPageState extends ConsumerState<TxPage> {
       final pcztData = await packTransaction(pczt: pczt);
       final prefix = txPlan.canSign ? "signed" : "unsigned";
       final path = await saveFile(
-        title: "Please select an output file for the unsigned transaction",
+        title: "Please select an output file for the $prefix transaction",
         fileName: "$prefix-tx.bin",
         data: pcztData,
       );
