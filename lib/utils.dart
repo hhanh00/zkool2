@@ -426,13 +426,22 @@ void showWarningSnackbar(String message) {
   );
 }
 
-Future<bool> confirmDialog(BuildContext context, {required String title, required String message, Widget? body}) async {
+Future<bool> confirmDialog(
+  BuildContext context, {
+  required String title,
+  required String message,
+  Widget? body,
+  String? btnOkText,
+  String? btnCancelText,
+}) async {
   final confirmed = await AwesomeDialog(
         context: context,
         dialogType: DialogType.question,
         animType: AnimType.rightSlide,
         title: title,
         body: body ?? Text(message),
+        btnOkText: btnOkText,
+        btnCancelText: btnCancelText,
         btnCancelOnPress: () {},
         btnOkOnPress: () {},
         onDismissCallback: (type) {

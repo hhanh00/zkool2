@@ -184,7 +184,7 @@ class TxPageState extends ConsumerState<TxPage> {
     );
   }
 
-  void onFrost() async {
+  Future<void> onFrost() async {
     // A file made for another account would start a session that can never
     // sign: refuse it here, where the message makes sense.
     try {
@@ -307,6 +307,20 @@ class TxPageState extends ConsumerState<TxPage> {
       );
       final appSettings = await ref.read(appSettingsProvider.future);
       if (mounted && path != null && appSettings.qrSettings.enabled) await showAnimatedQR(context, ref, path);
+      // A group's planned transaction is saved for the other signers; the
+      // one who planned it is often the coordinator, and loading the file
+      // back just to start is a detour.
+      if (mounted && path != null && account!.frost && !txPlan.canSign) {
+        final start = await confirmDialog(
+          context,
+          title: "Coordinate the signing?",
+          message: "The transaction is saved. Share the file with the other signers. "
+              "Start the signing session now, as the coordinator?",
+          btnOkText: "Start",
+          btnCancelText: "Not now",
+        );
+        if (start && mounted) await onFrost();
+      }
     } on AnyhowException catch (e) {
       if (!mounted) return;
       await showException(context, e.message);
