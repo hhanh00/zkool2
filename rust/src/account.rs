@@ -64,7 +64,7 @@ use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
 use zcash_keys::{
     address::UnifiedAddress, encoding::AddressCodec as _, keys::UnifiedAddressRequest,
 };
-use zcash_protocol::consensus::{NetworkConstants, Parameters};
+use zcash_protocol::consensus::Parameters;
 use zcash_transparent::keys::{
     AccountPrivKey, AccountPubKey, ExternalIvk, IncomingViewingKey as _, NonHardenedChildIndex,
     TransparentKeyScope,
@@ -290,12 +290,12 @@ fn classify_key(network: &Network, hw: HwKind, key: &str) -> Result<KeySource> {
         }
     } else if is_valid_sapling_key(network, key) {
         if let Ok(xsk) = zcash_keys::encoding::decode_extended_spending_key(
-            network.hrp_sapling_extended_spending_key(),
+            zcash_keys::constants::hrp_sapling_extended_spending_key(network.network_type()),
             key,
         ) {
             Ok(KeySource::SaplingSk(Box::new(xsk)))
         } else if let Ok(xvk) = zcash_keys::encoding::decode_extended_full_viewing_key(
-            network.hrp_sapling_extended_full_viewing_key(),
+            zcash_keys::constants::hrp_sapling_extended_full_viewing_key(network.network_type()),
             key,
         ) {
             Ok(KeySource::SaplingVk(Box::new(xvk)))
@@ -832,6 +832,7 @@ async fn store_account_keys(
 #[cfg(test)]
 mod new_account_tests {
     use super::*;
+    use zcash_protocol::consensus::NetworkConstants;
     use crate::pay::pool::{ALL_POOLS, POOL_IRONWOOD, POOL_ORCHARD, POOL_SAPLING, POOL_TRANSPARENT};
     use bip32::Prefix;
 
@@ -946,11 +947,11 @@ mod new_account_tests {
         let usk = usk();
         let sxsk = usk.sapling();
         let sxsk_str = zcash_keys::encoding::encode_extended_spending_key(
-            NETWORK.hrp_sapling_extended_spending_key(),
+            zcash_keys::constants::hrp_sapling_extended_spending_key(NETWORK.network_type()),
             sxsk,
         );
         let sxvk_str = zcash_keys::encoding::encode_extended_full_viewing_key(
-            NETWORK.hrp_sapling_extended_full_viewing_key(),
+            zcash_keys::constants::hrp_sapling_extended_full_viewing_key(NETWORK.network_type()),
             &sxsk.to_extended_full_viewing_key(),
         );
         assert!(matches!(
@@ -1374,14 +1375,14 @@ mod new_account_tests {
         println!(
             "SAPLING_SK = {:?}",
             zcash_keys::encoding::encode_extended_spending_key(
-                network.hrp_sapling_extended_spending_key(),
+                zcash_keys::constants::hrp_sapling_extended_spending_key(network.network_type()),
                 sxsk,
             )
         );
         println!(
             "SAPLING_VK = {:?}",
             zcash_keys::encoding::encode_extended_full_viewing_key(
-                network.hrp_sapling_extended_full_viewing_key(),
+                zcash_keys::constants::hrp_sapling_extended_full_viewing_key(network.network_type()),
                 &sxsk.to_extended_full_viewing_key(),
             )
         );
@@ -1391,7 +1392,7 @@ mod new_account_tests {
         println!(
             "SAPLING_SK_MAINNET = {:?}",
             zcash_keys::encoding::encode_extended_spending_key(
-                Network::Main.hrp_sapling_extended_spending_key(),
+                zcash_keys::constants::hrp_sapling_extended_spending_key(Network::Main.network_type()),
                 sxsk,
             )
         );

@@ -12,14 +12,14 @@ path = "src/graphql-cli.rs"
 required-features = ["graphql"]
 
 [dependencies]
-zcash-trees = { git = "https://github.com/hhanh00/zcash-trees.git", rev = "01437822dff817763bac32d3b407895ef3499744" }
+zcash-trees = { git = "https://github.com/hhanh00/zcash-trees.git", rev = "dbae0a20aac5c88105c920da9fc4dcece35b58f0" }
 # Fork of upstream 67edd7eb (branch sidecar-valar-v5.1.0): the zakura-wallet-lib
 # facade is dropped and the ZSA Orchard adaptations live there. Kept in the
 # build although zkool's voting modules are cut out, so dependency breakage
 # surfaces now rather than at re-enable time.
-zcash_voting = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "d0e711a93742ad099daacaab08b89bd2bf7af90b", default-features = false, features = ["lrz"] }
+zcash_voting = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "f9927db71ca4b53bd041fbfdb9c7a491d5ce158d", default-features = false, features = ["lrz"] }
 # Tree-sync HTTP transport from the same pinned revision as zcash_voting.
-vote-commitment-tree-client = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "d0e711a93742ad099daacaab08b89bd2bf7af90b", default-features = false }
+vote-commitment-tree-client = { git = "https://github.com/hhanh00/zcash_voting.git", rev = "f9927db71ca4b53bd041fbfdb9c7a491d5ce158d", default-features = false }
 # Round binding hotkey secrets are zeroized on drop.
 zeroize = "1"
 flutter_rust_bridge = { version = "=2.12.0", optional = true }
@@ -89,17 +89,17 @@ qrcode = "0.14.1"
 raptorq = "=2.0.0"
 
 orchard = {version = "0.16", features = ["unstable-frost"]}
-pczt = {version = "=0.10.0-pre.1", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard", "zip-233", "zsa"]}
-zcash_address = "=0.14.0-pre.1"
+pczt = {version = "0.10", features = ["zcp-builder", "io-finalizer", "prover", "signer", "spend-finalizer", "tx-extractor", "transparent", "sapling", "orchard", "zip-233", "zsa"]}
+zcash_address = "0.14"
 zcash_encoding = "0.5"
-zcash_keys = {version = "=0.17.0-pre.1", features = ["sapling", "orchard", "transparent-inputs"]}
+zcash_keys = {version = "0.17", features = ["sapling", "orchard", "transparent-inputs"]}
 zcash_note_encryption = "0.5.1"
-zcash_primitives = {version = "=0.31.0-pre.1", features = ["transparent-inputs", "zsa"]}
-zcash_proofs = {version = "=0.31.0-pre.1", features = ["download-params"]}
-zcash_protocol = {version = "=0.11.0-pre.0", features = ["local-consensus"]}
+zcash_primitives = {version = "0.31", features = ["transparent-inputs", "zsa"]}
+zcash_proofs = {version = "0.31", features = ["download-params"]}
+zcash_protocol = {version = "0.11", features = ["local-consensus"]}
 zcash_script = "0.6"
-zcash_transparent = {version = "=0.11.0-pre.1", features = ["transparent-inputs"]}
-zip321 = "=0.10.0-pre.1"
+zcash_transparent = {version = "0.11", features = ["transparent-inputs"]}
+zip321 = "0.10"
 
 frost-rerandomized = "2.1.0"
 incrementalmerkletree = "0.9"

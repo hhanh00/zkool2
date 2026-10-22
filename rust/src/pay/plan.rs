@@ -27,7 +27,7 @@ use zcash_address::{unified::Receiver, ConversionError, TryFromAddress, ZcashAdd
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_note_encryption::Domain;
 use zcash_primitives::transaction::{
-    builder::{BuildConfig, Builder, BundlePadding, DEFAULT_TX_EXPIRY_DELTA},
+    builder::{BuildConfig, Builder, BundlePadding, default_tx_expiry_delta},
     fees::zip317::FeeRule,
     TxVersion,
 };
@@ -253,10 +253,11 @@ pub struct PaymentRequest {
 }
 
 /// How many blocks past the planning height a FROST group's transaction stays
-/// valid. An ordinary spend keeps the builder's [`DEFAULT_TX_EXPIRY_DELTA`]
-/// (40 blocks): it is signed and sent at once. A group transaction waits on
-/// people: commitments, the signing package and the signature shares each
-/// take a mined memo, and the members sit on separate devices between rounds.
+/// valid. An ordinary spend keeps the builder's [`default_tx_expiry_delta`]
+/// (40 blocks, or 120 from NU7 under ZIP 218): it is signed and sent at once.
+/// A group transaction waits on people: commitments, the signing package and
+/// the signature shares each take a mined memo, and the members sit on
+/// separate devices between rounds.
 /// 3456 blocks is a day at NU7's 25-second blocks (three days at 75 seconds),
 /// well inside the 10,000-block lookback the session accounts scan with.
 /// Neither consensus nor zebra's mempool caps how far ahead an expiry may be
@@ -806,7 +807,7 @@ pub async fn plan_transaction(
     let expiry_delta = if crate::frost::is_group_account(connection, account).await? {
         FROST_TX_EXPIRY_DELTA
     } else {
-        DEFAULT_TX_EXPIRY_DELTA
+        default_tx_expiry_delta(BranchId::for_height(network, BlockHeight::from_u32(height)))
     };
     assemble_pczt(network, height, plan, &material, issuance, category, expiry_delta)
 }
@@ -1569,6 +1570,7 @@ mod tests {
     // ------------------------------------------------------------------
     mod assembly {
         use super::super::*;
+        use zcash_primitives::transaction::builder::BLOSSOM_DEFAULT_TX_EXPIRY_DELTA;
         use crate::pay::material::{Anchors, SpendMaterial, Utxo};
         use crate::pay::pool::ALL_POOLS;
         use secp256k1::{PublicKey, SecretKey};
@@ -1674,8 +1676,16 @@ mod tests {
             let plan = transparent_plan(&n, 300);
             let change = plan.change;
             let m = material(&n, true, HwKind::Software as u8);
-            let package =
-                assemble_pczt(&n, 300, plan, &m, None, Some(4), DEFAULT_TX_EXPIRY_DELTA).unwrap();
+            let package = assemble_pczt(
+                &n,
+                300,
+                plan,
+                &m,
+                None,
+                Some(4),
+                BLOSSOM_DEFAULT_TX_EXPIRY_DELTA,
+            )
+            .unwrap();
 
             assert_eq!(package.n_spends, [1, 0, 0, 0]);
             assert!(package.sapling_indices.is_empty());
@@ -1717,8 +1727,16 @@ mod tests {
             let n = regtest();
             let plan = transparent_plan(&n, 300);
             let m = material(&n, false, HwKind::Software as u8);
-            let package =
-                assemble_pczt(&n, 300, plan, &m, None, None, DEFAULT_TX_EXPIRY_DELTA).unwrap();
+            let package = assemble_pczt(
+                &n,
+                300,
+                plan,
+                &m,
+                None,
+                None,
+                BLOSSOM_DEFAULT_TX_EXPIRY_DELTA,
+            )
+            .unwrap();
             assert!(!package.can_sign);
         }
 
@@ -1734,7 +1752,7 @@ mod tests {
                     &material(&n, true, hw),
                     None,
                     None,
-                    DEFAULT_TX_EXPIRY_DELTA,
+                    BLOSSOM_DEFAULT_TX_EXPIRY_DELTA,
                 )
                 .unwrap();
                 *Pczt::parse(&package.pczt).unwrap().global().tx_version()
@@ -1753,7 +1771,7 @@ mod tests {
                 let package = assemble_pczt(&n, 300, plan, &m, None, None, delta).unwrap();
                 *Pczt::parse(&package.pczt).unwrap().global().expiry_height()
             };
-            assert_eq!(expiry(DEFAULT_TX_EXPIRY_DELTA), 340);
+            assert_eq!(expiry(BLOSSOM_DEFAULT_TX_EXPIRY_DELTA), 340);
             assert_eq!(expiry(FROST_TX_EXPIRY_DELTA), 300 + FROST_TX_EXPIRY_DELTA);
         }
     }

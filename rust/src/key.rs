@@ -12,7 +12,7 @@ use zcash_keys::{
     encoding::{decode_extended_full_viewing_key, decode_extended_spending_key, AddressCodec as _},
     keys::{UnifiedFullViewingKey, UnifiedIncomingViewingKey},
 };
-use zcash_protocol::consensus::NetworkConstants as _;
+use zcash_protocol::consensus::Parameters as _;
 use zcash_transparent::{
     address::TransparentAddress,
     keys::{AccountPubKey, IncomingViewingKey as _},
@@ -184,12 +184,21 @@ pub fn is_valid_transparent_key(key: &str) -> bool {
 }
 
 pub fn is_valid_sapling_key(network: &Network, key: &str) -> bool {
-    if decode_extended_spending_key(network.hrp_sapling_extended_spending_key(), key).is_ok() {
+    let net = network.network_type();
+    if decode_extended_spending_key(
+        zcash_keys::constants::hrp_sapling_extended_spending_key(net),
+        key,
+    )
+    .is_ok()
+    {
         return true;
     }
 
-    if decode_extended_full_viewing_key(network.hrp_sapling_extended_full_viewing_key(), key)
-        .is_ok()
+    if decode_extended_full_viewing_key(
+        zcash_keys::constants::hrp_sapling_extended_full_viewing_key(net),
+        key,
+    )
+    .is_ok()
     {
         return true;
     }

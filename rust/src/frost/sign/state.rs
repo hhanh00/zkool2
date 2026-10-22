@@ -317,17 +317,15 @@ pub(super) async fn load_pczt_pkg(connection: &mut SqliteConnection) -> Result<P
 }
 
 pub(super) fn get_sighash(pczt: pczt::Pczt) -> Vec<u8> {
-    use zcash_primitives::transaction::{
-        sighash::SignableInput, sighash_v5::v5_signature_hash, sighash_v6::v6_signature_hash,
-        txid::TxIdDigester, TxVersion,
-    };
+    use zcash_primitives::transaction::sighash::{PrecomputedSighashData, SignableInput};
     let tx = pczt.into_effects().unwrap();
-    let txid_parts = tx.digest(TxIdDigester);
-    let hash = match tx.version() {
-        TxVersion::V6 => v6_signature_hash(&tx, &SignableInput::Shielded, &txid_parts),
-        _ => v5_signature_hash(&tx, &SignableInput::Shielded, &txid_parts),
-    };
-    hash.as_bytes().to_vec()
+    // Selects the v5, v6 or ZSA signature hash from the transaction itself.
+    let sighash_data =
+        PrecomputedSighashData::new_zip244(tx).expect("a PCZT holds a v5 or later transaction");
+    sighash_data
+        .signature_hash(&SignableInput::Shielded)
+        .as_ref()
+        .to_vec()
 }
 
 async fn mailbox_account_id(
