@@ -27,7 +27,7 @@ import 'support.dart';
 /// The pixel ratio of the frames: a 450x800 window gives 900x1600 PNGs.
 const shotRatio = 2;
 
-enum Mark { box, round, badge }
+enum Mark { box, round, badge, blank }
 
 /// One annotation on a shot, in logical pixels of the app window.
 class Annot {
@@ -69,7 +69,10 @@ class Shots {
   // The boundary covers the whole window, so a widget's global rect is its
   // rect in the frame. Each takes the first match of its finder.
 
-  Rect rectOf(Finder finder) => tester.getRect(finder.first);
+  Rect rectOf(Finder finder) {
+    if (finder.evaluate().isEmpty) fail("nothing on screen matches $finder; visible: ${visibleTexts().join(" | ")}");
+    return tester.getRect(finder.first);
+  }
 
   Rect unionOf(Iterable<Finder> finders) =>
       finders.map(rectOf).reduce((a, b) => a.expandToInclude(b));
@@ -77,14 +80,18 @@ class Shots {
   /// A box around the widget [finder] matches.
   Annot box(Finder finder, {String color = "red"}) => Annot(Mark.box, rectOf(finder), color);
 
-  /// A box around the glyphs of the text [finder] matches: a text laid out
-  /// full width in its column has a box far wider than what it shows.
-  Annot textBox(Finder finder, {String color = "red"}) {
+  /// The rectangle of the glyphs of the text [finder] matches: a text laid
+  /// out full width in its row has a box far wider than what it shows.
+  Rect glyphsOf(Finder finder) {
     final paragraph = tester.renderObject<RenderParagraph>(
       find.descendant(of: finder.first, matching: find.byType(RichText)).first,
     );
-    return Annot(Mark.box, paragraph.localToGlobal(Offset.zero) & paragraph.textSize, color);
+    final width = paragraph.getMaxIntrinsicWidth(double.infinity).clamp(0.0, paragraph.size.width);
+    return paragraph.localToGlobal(Offset.zero) & Size(width, paragraph.size.height);
   }
+
+  /// A box around the glyphs of the text [finder] matches.
+  Annot textBox(Finder finder, {String color = "red"}) => Annot(Mark.box, glyphsOf(finder), color);
 
   /// A box around everything [finders] match.
   Annot boxAround(Iterable<Finder> finders, {String color = "red"}) =>
@@ -107,6 +114,25 @@ class Shots {
   /// Badge [n] at [at].
   Annot badgeAt(Offset at, int n, {String color = "red"}) =>
       Annot(Mark.badge, Rect.fromCenter(center: at, width: 0, height: 0), color, n: n, at: at);
+
+  /// Badge [n] just after the glyphs of the text [finder] matches: a text
+  /// that fills its row has its box far wider than what it shows.
+  Annot badgeAfterText(Finder finder, int n, {String color = "red"}) =>
+      badgeAt(glyphsOf(finder).centerRight + const Offset(26, 0), n, color: color);
+
+  /// Blanks out the widgets [finder] matches, for text the docs must not
+  /// show, such as a path on this machine. A widget scrolled out of the
+  /// window is left alone, and the blanks are clipped to [within] when
+  /// given: a list's rows half under its app bar would blank the bar too.
+  List<Annot> blank(Finder finder, {Finder? within}) {
+    final window = Offset.zero & (boundary.currentContext!.findRenderObject() as RenderBox).size;
+    final clip = within == null ? window : rectOf(within).intersect(window);
+    return [
+      for (final e in finder.evaluate())
+        if (tester.getRect(find.byWidget(e.widget)).overlaps(clip))
+          Annot(Mark.blank, tester.getRect(find.byWidget(e.widget)).intersect(clip), "none"),
+    ];
+  }
 
   // ── Shots ─────────────────────────────────────────────────────────────────
 

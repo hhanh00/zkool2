@@ -31,7 +31,6 @@ from dkg import (
     Rendezvous,
     app_documents_dir,
     demand_miner,
-    get_raw_mempool,
     launch_flutter_test,
 )
 from gql import GraphQLRequest
@@ -68,15 +67,6 @@ async def wait_mined(rpc_url: str, txid: str):
             return
         await asyncio.sleep(2)
     pytest.fail(f"{txid} was not mined")
-
-
-async def wait_mempool_empty(rpc_url: str):
-    """The demand miner mines whatever waits; this waits for it to have done so."""
-    for _ in range(60):
-        if not await get_raw_mempool(rpc_url):
-            return
-        await asyncio.sleep(2)
-    pytest.fail("the mempool did not drain")
 
 
 @pytest.mark.dkg_ui
@@ -144,13 +134,13 @@ async def test_docs_guide_flutter_ui(rpc_url, seed, zkool_binary):
             recipient = {"address": a_ua, "amount": amount}
             if memo:
                 recipient["memo"] = memo
-            await wallet.execute(
+            paid = await wallet.execute(
                 GraphQLRequest(PAY, variable_values={"account": main, "recipients": [recipient]})
             )
             print(f"Paid {amount} to {a_ua[:20]}…")
             # Each payment is mined before the next, so they never contend
             # for the same notes.
-            await wait_mempool_empty(rpc_url)
+            await wait_mined(rpc_url, paid["pay"])
             await wallet.execute(GraphQLRequest(SYNC, variable_values={"account": main}))
 
         print("\n=== Step 4: The app pays back ===")

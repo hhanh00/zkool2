@@ -7,8 +7,9 @@ the docs site.
 every shot names its image, its pixel ratio and the annotations the docs text
 refers to, as logical rectangles of the widgets they point at. Three kinds:
 `box` (a rectangle around a control), `round` (a rounded outline around a
-region) and `badge` (a numbered disc at a point). Each has a color, red
-unless the page separates regions by color. The annotated image lands at
+region), `badge` (a numbered disc at a point) and `blank` (the area painted
+over with the surrounding background, for text the docs must not show).
+Each has a color, red unless the page separates regions by color. The annotated image lands at
 `<docs dir>/<shot name>.png`, e.g. `guide/images/02.new_account.png`.
 """
 
@@ -37,10 +38,25 @@ def badge_font(size: int) -> ImageFont.ImageFont:
     return ImageFont.load_default(size)
 
 
-def draw_annot(draw: ImageDraw.ImageDraw, annot: dict, ratio: float, font: ImageFont.ImageFont):
-    color = COLORS[annot.get("color", "red")]
+def draw_annot(
+    image: Image.Image,
+    draw: ImageDraw.ImageDraw,
+    annot: dict,
+    ratio: float,
+    font: ImageFont.ImageFont,
+):
     left, top, width, height = (v * ratio for v in annot["rect"])
     mark = annot["mark"]
+    if mark == "blank":
+        # The background at the area's own lower left corner: a row or a
+        # line of text does not paint its corners.
+        x = min(max(int(left) + 1, 0), image.width - 1)
+        y = min(max(int(top + height) - 2, 0), image.height - 1)
+        background = image.getpixel((x, y))
+        area = [left - PAD, top - PAD, left + width + PAD, top + height + PAD]
+        draw.rectangle(area, fill=background)
+        return
+    color = COLORS[annot.get("color", "red")]
     if mark in ("box", "round"):
         radius = RADIUS if mark == "box" else ROUND_RADIUS
         # A full-width widget would put the sides of its box past the edges
@@ -74,7 +90,7 @@ def main():
         image = Image.open(os.path.join(args.frames_dir, shot["file"])).convert("RGB")
         draw = ImageDraw.Draw(image)
         for annot in shot["annots"]:
-            draw_annot(draw, annot, shot["ratio"], font)
+            draw_annot(image, draw, annot, shot["ratio"], font)
         out = os.path.join(args.out, shot["file"])
         os.makedirs(os.path.dirname(out), exist_ok=True)
         image.save(out)
