@@ -727,7 +727,27 @@ class SystemFileDialogs implements FileDialogs {
   }
 }
 
-Future<Uint8List?> openFile({String? title}) => fileDialogs.open(title: title);
+/// Opens a file through the dialogs. A failure to read it comes back as the
+/// bridge's exception, which every caller already shows.
+Future<Uint8List?> openFile({String? title}) async {
+  try {
+    return await fileDialogs.open(title: title);
+  } on AnyhowException {
+    rethrow;
+  } catch (e) {
+    throw AnyhowException("Cannot read the file: ${describeFileError(e)}");
+  }
+}
+
+/// What went wrong with a file, for the user: the path and the system's
+/// message for a file system error, the platform's message for a picker
+/// plugin's, the error itself otherwise.
+String describeFileError(Object e) => switch (e) {
+      FileSystemException(:final path, :final osError, :final message) =>
+        [if (path != null && path.isNotEmpty) path, osError?.message ?? message].join(": "),
+      PlatformException(:final message, :final code) => message ?? code,
+      _ => e.toString(),
+    };
 
 Future<XFile?> pickImage() async {
   final picker = ImagePicker();
@@ -735,8 +755,18 @@ Future<XFile?> pickImage() async {
   return icon;
 }
 
-Future<String?> saveFile({String? title, String? fileName, required Uint8List data}) =>
-    fileDialogs.save(title: title, fileName: fileName, data: data);
+/// Saves [data] through the dialogs. A failure to write it, such as a
+/// read-only folder, comes back as the bridge's exception, which every
+/// caller already shows.
+Future<String?> saveFile({String? title, String? fileName, required Uint8List data}) async {
+  try {
+    return await fileDialogs.save(title: title, fileName: fileName, data: data);
+  } on AnyhowException {
+    rethrow;
+  } catch (e) {
+    throw AnyhowException("Cannot save ${fileName ?? "the file"}: ${describeFileError(e)}");
+  }
+}
 
 extension ScopeFunctions<T> on T {
   R let<R>(R Function(T) block) => block(this);

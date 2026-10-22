@@ -483,6 +483,10 @@ class FakeFileDialogs implements FileDialogs {
   final List<String> picks = [];
   final List<String> saved = [];
 
+  /// When set, the next saves throw it instead of writing, as a read-only
+  /// folder would.
+  Object? failWith;
+
   FakeFileDialogs(this.dir);
 
   @override
@@ -493,6 +497,7 @@ class FakeFileDialogs implements FileDialogs {
 
   @override
   Future<String?> save({String? title, String? fileName, required Uint8List data}) async {
+    if (failWith != null) throw failWith!;
     final path = "${dir.path}/${fileName ?? "file-${saved.length}"}";
     File(path).writeAsBytesSync(data);
     saved.add(path);

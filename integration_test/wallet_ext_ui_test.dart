@@ -695,6 +695,12 @@ void main() {
           timeout: const Duration(minutes: 2), what: "the plan with its save button",);
       expect(find.byIcon(Icons.save), findsOneWidget);
 
+      step("a save that fails shows the error");
+      picker.failWith = const FileSystemException("Read-only file system", "/readonly/unsigned-tx.bin");
+      await tapTooltip(tester, "Save the unsigned transaction");
+      await _expectErrorDialog(tester, "Read-only file system");
+      picker.failWith = null;
+
       step("save the unsigned transaction");
       await tapTooltip(tester, "Save the unsigned transaction");
       await _savedFile(tester, picker, "unsigned-tx.bin");
