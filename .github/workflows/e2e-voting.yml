@@ -61,7 +61,7 @@ jobs:
         uses: actions/cache/restore@v5
         with:
           path: tools/voting
-          key: ${{ runner.os }}-voting-services-${{ env.SVOTED_VERSION }}-${{ env.NF_SERVER_REPOSITORY }}-${{ env.NF_SERVER_COMMIT }}-serve-grpcurl-v4
+          key: ${{ runner.os }}-voting-services-${{ env.SVOTED_VERSION }}-${{ env.NF_SERVER_REPOSITORY }}-${{ env.NF_SERVER_COMMIT }}-serve-grpcurl-voting-config-v5
 
       - name: Download svoted and build nf-server
         if: steps.voting-services-cache.outputs.cache-hit != 'true'
@@ -90,6 +90,12 @@ jobs:
           GOBIN="$GITHUB_WORKSPACE/tools/voting" \
             go install github.com/fullstorydev/grpcurl/cmd/grpcurl@v1.9.3
 
+          # voting-config pulls the cosmos-sdk module from proxy.golang.org, so
+          # build it here, where the result is cached, instead of on every run.
+          git clone --quiet --depth 1 --branch "$SVOTED_VERSION" \
+            https://github.com/valargroup/vote-sdk.git /tmp/vote-sdk
+          go build -C /tmp/vote-sdk -o "$GITHUB_WORKSPACE/tools/voting/voting-config" ./cmd/voting-config
+
       - name: Save svoted and nf-server
         if: steps.voting-services-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v5
@@ -104,6 +110,7 @@ jobs:
             "$GITHUB_WORKSPACE/tools/voting/svoted" --version
           "$GITHUB_WORKSPACE/tools/voting/nf-server" --version
           "$GITHUB_WORKSPACE/tools/voting/grpcurl" -version
+          test -x "$GITHUB_WORKSPACE/tools/voting/voting-config"
 
       - name: Initialize local svoted chain
         run: |
@@ -116,7 +123,6 @@ jobs:
           export VM_PRIVKEYS="$(openssl rand -hex 32)"
           export SVOTE_USE_DEFAULT_GENESIS_VOTE_MANAGERS=false
           bash tools/vote-sdk/scripts/init.sh
-          go build -C tools/vote-sdk -o "$GITHUB_WORKSPACE/tools/voting/voting-config" ./cmd/voting-config
 
       - name: Start local svoted chain
         run: |
