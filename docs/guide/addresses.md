@@ -11,7 +11,9 @@ They are shown on the receive page.
 From the account page, tap on the receive button on the appbar (it looks like a
 download icon).
 
-![Addresses](./images/10.addresses.png)
+![Addresses =450x](./images/10.addresses.png)
+
+Tap on an address to copy it, or on the QR button next to it to show it as a QR code.
 
 Funds sent to any of these addresses
 will be available to spend.
@@ -25,18 +27,22 @@ address makes the amount and receiver (ie. you) fully public[^1]. However,
 transparent addresses are supported by every Zcash wallet, including the multi
 currency wallets and the crypto exchanges.
 
-The Sapling address and "Orchard Only" address are shielded addresses. Using
+The Sapling address and the "Orchard / Ironwood" address are shielded addresses. Using
 them will hide the details of the transaction. The address and the amount
 received are fully hidden from others[^2].
 
 **Sapling** is the "older" shielded technology. It has been superseded by
 **Orchard**. However, some older wallet apps may not support Orchard[^3] yet.
+Ironwood is the next version of Orchard. It uses the same address.
 
 And finally, there is the "Unified Address". It is a container of addresses
 (called receivers in this context)
 which can have any combination of Transparent, Sapling and Orchard (except for
 transparent alone). Using this address essentially means: "Here are my wallet
 addresses, please pick one".
+
+The selector at the top of the page chooses which
+receivers the Unified Address contains.
 
 Generally, you expect the sender app to choose the "best" address it can use, ie
 Orchard, but fall back to another type.
@@ -55,7 +61,7 @@ has more than Orchard:
 - if the sender cannot use Orchard nor Sapling, it likely cannot use UA either.
 
 ::: tip
-Use the "Orchard Only" if possible. Use Transparent otherwise.
+Use the "Orchard / Ironwood" address if possible. Use Transparent otherwise.
 :::
 
 This is sufficient for most users. However, if you want more privacy, you may
@@ -78,6 +84,9 @@ etc[^4].
 ::: tip
 To generate a new set. Press the button that looks like a "play next" (in the red box).
 :::
+
+The "eye" button on the appbar lists the addresses of the account,
+with filters for used/unused and external/change addresses.
 
 The next part is about how the diversified addresses work. You can skip
 it if you are not interested in the details but I recommend reading it because
@@ -128,9 +137,10 @@ This takes time and it is not done by default.
 If you recover an account from a
 transparent Zcash wallet that uses address diversification (ie rotation) and
 cannot find your funds, it is likely because they are not at the expected index.
-Use the scan button on the appbar to initiate a scan. After a while it will
+Use the search button on the appbar to initiate a scan. After a while it will
 report the number of new addresses found and will add them to the monitoring
-pool. Then you need to resynchronize from the birth height.
+pool. Then you need to reset the account (in the account edit page)
+and synchronize again from the birth height.
 :::
 
 You do not need to do that when you create new diversified addresses in Zkool

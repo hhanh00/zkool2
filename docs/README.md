@@ -49,7 +49,7 @@ or better.
 ## Features
 
 - supports most [zcash keys](recipe/restore)[^1]
-- works with transparent, sapling and orchard pools[^2],
+- works with transparent, sapling, orchard and ironwood pools[^2],
 - generates [diversified shielded addresses](guide/addresses) and rotates transparent address,
 - manages [multiple accounts](guide/accounts), [folders](recipe/folder) and [wallets](recipe/database)[^3],
 - supports multi signature shielded accounts by leveraging the [FROST](frost/guide) threshold
@@ -58,9 +58,9 @@ or better.
   servers[^5]
 - wallets and accounts are [interoperable](recipe/database) between mobile and desktop versions
 - syncs faster than any other wallet app[^6] with Warp Sync 2
-- [encrypts communication](recipe/tor) over TOR[^7]
-- interfaces with the [Shielded Zcash Ledger](recipe/ledger) app (for Nano S+,
-  NanoX, etc) and can be setup as a [Cold Wallet](recipe/cold)
+- [encrypts communication](recipe/tor) over TOR[^7], the Nym mixnet, or an external proxy
+- interfaces with the [Ledger](recipe/ledger) apps for Zcash, the official app
+  and the Zondax app (for Nano S+, NanoX, etc), and can be setup as a [Cold Wallet](recipe/cold)
 - helps you [organize your finances](report/overview) by categories, and generates reports and charts
 - integrates [Trading View charts](guide/other)
 

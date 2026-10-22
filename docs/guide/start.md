@@ -23,6 +23,10 @@ The latest version is on the Github release page.
 
 [Releases](https://github.com/hhanh00/zkool2/releases)
 
+The release page has builds for Windows (installer and zip),
+MacOS, Linux (Flatpak, AppImage and Deb package), Android (APK)
+and iOS.
+
 # First Run
 
 ## Disclaimer
@@ -46,40 +50,36 @@ seed phrase **before** you send funds to the account.
 Scroll to the bottom of the page, check the "I Agree"
 switch and click on the "Continue" button.
 
-## Device Pin
+## Device Authentication
 
-Next, Zkool will ask for your device authentication.
+Zkool does not ask for your device authentication when
+it starts. It asks for it when you do something
+sensitive:
 
-This is the method you used to protect your device, i.e
-a pin, password or fingerprint.
+- show or hide the hidden accounts,
+- show the seed phrase or the backup string of an account,
+- unlock the app when the "Pin Lock" option is on.
+
+The device authentication is the method you use to protect your
+device, i.e. a pin, password, fingerprint or face lock.
 
 On Windows, a password is *not* sufficient. You need
 to set a PIN, a fingerprint or face lock.
 
-::: important
-You can turn off the pin lock check in the settings
-but there are some parts of the app that require
-authentication nonetheless. Therefore the device has to have
-a lock screen.
+::: tip
+"Pin Lock" is off by default. When it is on and you come back
+to Zkool after it spent more than 30 seconds in the background,
+it shows a locked screen. Tap on the logo to authenticate and unlock it.
+The option is in the Settings page.
 :::
-
-You should see the account manager screen now.
 
 ## Tooltips
 
-Zkool has a series of tutorial tooltips built in.
-The first time you navigate to a screen, you will
-see highlighted showcase items. Navigate to the next
-item by tapping "Next" or skip the whole tutorial page
-by tapping "Skip".
+Most buttons and fields have a tooltip that explains
+what they do. Hover over them with the mouse on desktop,
+or long press on mobile.
 
-::: tip
-You can reenable the tutorial tips in the Settings page.
-:::
+You should see the account manager screen now.
+It is empty.
 
-Once you finish with the tutorial, you will have an empty
-account manager list.
-
-![Account Manager](images/01.account_mgr.png)
-
-
+![Account Manager =450x](images/01.account_mgr.png)

@@ -4,9 +4,16 @@ title: Other features
 
 ## Market Chart
 
-![Market Chart](./images/15.other.png)
+![Market Chart =450x](./images/15.other.png)
 
-TBD
+The market chart shows the ZEC price. It is an embedded
+TradingView chart and needs an internet connection.
+
+Open it from the "Market Price" option of the account page menu.
+
+## Reports
+
+[See Categories / Reports](../report/overview.md)
 
 ## Cold Wallet
 
@@ -27,3 +34,7 @@ TBD
 ## Mempool Viewer
 
 [See Mempool](../recipe/mempool.md)
+
+## Voting
+
+[See Coin Weighted Voting](../vote/howto.md)

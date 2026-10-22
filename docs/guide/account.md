@@ -2,37 +2,35 @@
 title: Account
 ---
 
-![Account](./images/08.account.png)
+![Account =450x](./images/08.account.png)
 
-The account page has three tabs:
+The account page has four tabs:
 - Transactions
 - Memos
 - Notes
+- ZSA Holdings
+
+The appbar has the sync, receive and send buttons.
+The menu (three dots) has the rest: Account Manager,
+Settings, Edit Account, Backup, Market Price,
+Fetch Tx Prices, Export, View as List/Table,
+Charts and Voting.
 
 ## Transactions
 
 The main tab is the transaction tab. It shows
 the summary of the account, and the transaction history.
 
-### Height
-
-In the red box, you have the curent account height.
-It is the height at which the account is currently synchronized to.
-If it is behind the tip of the blockchain (i.e the latest
-block), it will also say something like "tip-XYZ" to
-indicate that it is XYZ blocks behind.
-
-During synchronization, the height indicator has
-a progress bar.
-
-::: note
-If you haven't refreshed the current block height[^1], Zkool will not show "tip-XYZ" because it does not know the current height.
-:::
-
 ### Balances
 
-In the green box, you have the current balance in the
-various pools and the total.
+In the red box, you have the total balance of the account
+and its value in your currency.
+
+Below, in the green box, you have the balance
+of each pool. Tap on it to collapse or expand the pool balances.
+
+If the mempool has transactions for this account,
+the unconfirmed amount is shown under the balance.
 
 ::: warning
 All funds are made available immediately. Zkool
@@ -42,25 +40,47 @@ does not have a note maturity requirement.
 But if you want to exclude some notes from spending,
 you can do so in the note tab.
 
+### Synchronization Progress
+
+During synchronization, a progress bar appears above
+the balance. It shows the current account height
+and how many blocks it is behind the tip of the blockchain
+(i.e. the latest block), as "tip-XYZ".
+
+::: note
+If you haven't refreshed the current block height[^1], Zkool will not show "tip-XYZ" because it does not know the current height.
+:::
+
 ### Transaction History
 In the blue box, you have the transaction history.
-These accounts have no transactions but for illustration
+This account has no transactions but for illustration
 purposes, here's a screenshot of another account that has some.
 
-![Transaction History](./images/09.tx_history.png)
+![Transaction History =450x](./images/09.tx_history.png)
 
-Each transaction has three columns
-1. The height
-2. The type and timestamp
+Each transaction row has
+1. The type and the contact name (if the address is in your contacts)
+2. The date and how long ago it was
 3. The amount (in Green when funds are incoming)
 
 The type can be one of:
-- Received: Incoming funds
+- Receive: Incoming funds
 - Sent: Outgoing funds
-- Shielding: An internal transfer between the transparent pool and shielded pool
-- Unshielding: The reverse of the previous type
-- Self Tx: A fully shielded internal transfer
-- T Self Tx: A transparent internal transfer
+- Shield: An internal transfer from the transparent pool to a shielded pool
+- Unshield: The reverse of the previous type
+- Self Transfer: A fully shielded internal transfer
+- T. Self Transfer: A transparent internal transfer
+- Migration: A transfer of notes from Orchard to Ironwood
+
+::: tip
+The search box filters the history by memo, contact name or
+transaction id.
+:::
+
+The history is a list by default. The menu option "View: Table"
+switches it to a table with more columns (category, memo, asset).
+
+Tap on a transaction to see its details.
 
 ### Memos
 
@@ -72,25 +92,34 @@ hex string.
 You can search *text* memos using the search bar.
 :::
 
-Tapping on the memo title sends you to the transaction page
-for that memo but tapping on the memo text copies it to
-the clipboard. *Make sure you tap on the right portion
-of the memo.*
+Tap on a memo to go to its transaction page.
+Long press on it to edit the memo text. The edit is only
+stored in your wallet: the memo on the blockchain cannot change.
 
 ### Notes
 
 The notes tab shows the current unspent output notes.
 
 ::: tip
-By selecting and deselecting notes, you include or
-exclude them from spending.
+Tap on a note to lock or unlock it. Locked notes are
+excluded from spending.
 :::
 
+The appbar of this tab has shortcuts to lock the recently
+mined notes, toggle every note, unlock every note,
+show or hide the dust notes, and group the notes by pool.
+
 The account balance does not change even if notes
-are excluded[^2].
+are locked[^2]. The send page warns you that
+"Some notes are disabled".
+
+### ZSA Holdings
+
+The last tab lists the Zcash Shielded Assets (ZSA) of the account,
+if any.
 
 [^1]: By tapping on the height on the account manager,
 or automatically with auto-sync.
-[^2]: If you exclude some notes and choose
+[^2]: If you lock some notes and choose
 the spend MAX option, the transaction will not have
 enough funds.
