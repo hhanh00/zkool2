@@ -1,5 +1,21 @@
 # Changelog
 
+## [6.35.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.35.0-rc.4...zkool-v6.35.0-rc.5) (2026-10-22)
+
+
+### Features
+
+* **frost:** hide FROST accounts from the DKG and signing funding lists ([#1385](https://github.com/hhanh00/zkool2/issues/1385)) ([e367f98](https://github.com/hhanh00/zkool2/commit/e367f983187a257341b93cbd3e2fb36b34f2d5cb))
+* **frost:** offer to coordinate after saving a group transaction ([bc17858](https://github.com/hhanh00/zkool2/commit/bc178584b33e4542633eda4d3c020ea9be41f9e8))
+
+
+### Bug Fixes
+
+* **frost:** the offer to coordinate proposes this member as the coordinator ([64105aa](https://github.com/hhanh00/zkool2/commit/64105aa26f119640d640c7028f4ba2447aa3c578))
+* **frost:** the viewing keys page shows only the full key with a group's backup string ([0026d65](https://github.com/hhanh00/zkool2/commit/0026d65eeb88a0b92d42c578c5df21e4485debd1))
+* **pay:** name the transaction page's action by what it does ([14e1abc](https://github.com/hhanh00/zkool2/commit/14e1abca0eeb27fece0e8be50f69dac4d0c8fc3e))
+* **ui:** show file read and write failures ([d47efa1](https://github.com/hhanh00/zkool2/commit/d47efa113de4418bed12d1c959f5ebc3cff20cc9))
+
 ## [6.35.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.35.0-rc.3...zkool-v6.35.0-rc.4) (2026-10-21)
 
 
