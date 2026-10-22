@@ -1567,7 +1567,7 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
                     leading: Icon(Icons.warning_amber),
                     title: Text("Backup String"),
                     subtitle: Text("Treat this string like a seed phrase: anyone holding it has your share of the group. "
-                        "Restore it with the group's viewing key below."),
+                        "To restore, you also need the group's FULL viewing key shown below. Save both."),
                   ),
                   CopyableText(frostBackup!),
                   Gap(16),
@@ -1585,7 +1585,10 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
               ),
             ),
           ],
-          if (!incomingOnly)
+          // Next to the backup string, only the full key: it is what a
+          // restore from the string needs. Until then a group account
+          // offers both keys like any other.
+          if (!incomingOnly && frostBackup == null)
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -1612,6 +1615,13 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
             ),
           ),
           SliverToBoxAdapter(child: Gap(32)),
+          if (uvk != null && frostBackup != null)
+            SliverToBoxAdapter(
+              child: ListTile(
+                leading: Icon(Icons.key),
+                title: Text("Group Full Viewing Key, needed to restore"),
+              ),
+            ),
           if (uvk != null)
             SliverToBoxAdapter(
               child: Padding(
@@ -1692,6 +1702,8 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
     try {
       final backup = await exportFrostBackup(account: widget.account, c: c);
       setState(() => frostBackup = backup);
+      // The string restores with the full key: show that one with it.
+      if (incoming) await loadKey(pools, false);
     } on AnyhowException catch (e) {
       if (mounted) await showException(context, e.message);
     }

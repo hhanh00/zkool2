@@ -8,6 +8,9 @@
 /// verifies that the receiver is actually paid.
 library;
 
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,6 +21,7 @@ import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/utils.dart';
 
 import 'support.dart';
 
@@ -80,6 +84,56 @@ void main() {
       appRouter.go("/accounts");
       await pumpFor(tester, const Duration(seconds: 2));
 
+      // DKGPage3 invalidates the account list when it finishes, but make sure
+      // we read it after the FROST account was created.
+      container.invalidate(getAccountsProvider);
+      final frostAccountId = (await tester.runAsync(() async {
+        final accounts = await container.read(getAccountsProvider.future);
+        return accounts
+            .firstWhere(
+              (a) => a.name == config["name"] as String,
+              orElse: () => throw StateError("no FROST account named ${config["name"]} after the DKG"),
+            )
+            .id;
+      }))!;
+      debugPrint("[dkg-ui] FROST account $frostAccountId");
+
+      // ── The group's viewing keys page ─────────────────────────────────────
+      // Both keys on offer like any account, until the backup string shows:
+      // a restore from it needs the full key, so the page then shows that
+      // one only and says so. The backup string sits behind the device
+      // authentication, which prompts on macOS.
+      unawaited(appRouter.push("/viewing_keys", extra: frostAccountId));
+      await pumpUntil(
+        tester,
+        () => find.byTooltip("Show Backup String").evaluate().isNotEmpty && find.text("Incoming").evaluate().isNotEmpty,
+        timeout: const Duration(minutes: 1),
+        what: "the group's viewing keys page with both keys on offer",
+      );
+      expect(find.text("Group Full Viewing Key, needed to restore"), findsNothing,
+          reason: "the full-key-only view waits for the backup string",);
+      if (!Platform.isMacOS) {
+        // Pick the incoming key first: the backup string must bring the
+        // page back to the full one.
+        await tester.tap(find.text("Incoming"));
+        await pumpFor(tester, const Duration(seconds: 1));
+        await tester.tap(find.byTooltip("Show Backup String"));
+        await pumpUntil(
+          tester,
+          () => find.textContaining("FULL viewing key").evaluate().isNotEmpty &&
+              find.text("Group Full Viewing Key, needed to restore").evaluate().isNotEmpty,
+          timeout: const Duration(minutes: 1),
+          what: "the backup string with the full key",
+        );
+        expect(find.text("Incoming"), findsNothing, reason: "only the full key next to the backup string");
+        // A full key encodes as "uview...", an incoming one as "uivk...".
+        expect(find.byWidgetPredicate((w) => w is CopyableText && w.text.startsWith("uview")), findsOneWidget,
+            reason: "the key shown is the full one",);
+        expect(find.byWidgetPredicate((w) => w is CopyableText && w.text.startsWith("uivk")), findsNothing);
+      }
+      await tester.pageBack();
+      await pumpFor(tester, const Duration(seconds: 1));
+
       // ── Phase 2: wait for the orchestrator to fund the shared address and
       // hand us the PCZT the coordinator prepared ───────────────────────────
       Map<String, dynamic>? fromOrchestrator;
@@ -97,25 +151,9 @@ void main() {
 
       // The signing pages are opened for the FROST account: FrostPage1 reads
       // `frostParams` off the account it was routed to.
-      // DKGPage3 invalidates the account list when it finishes, but make sure
-      // we read it after the FROST account was created.
-      container.invalidate(getAccountsProvider);
-      late final PcztPackage pczt;
-      late final int frostAccountId;
-      await tester.runAsync(() async {
-        final accounts = await container.read(getAccountsProvider.future);
-        final frostAccount = accounts.firstWhere(
-          (a) => a.name == config["name"] as String,
-          orElse: () => throw StateError(
-            "no FROST account named ${config["name"]} after the DKG",
-          ),
-        );
-        debugPrint("[dkg-ui] FROST account ${frostAccount.id}");
-        frostAccountId = frostAccount.id;
-        // Interchangeable with zkool_graphql now that both use bincode
-        // standard() — see rust/src/api/pay.rs.
-        pczt = await unpackTransaction(bytes: _hexToBytes(pcztHex));
-      });
+      // Interchangeable with zkool_graphql now that both use bincode
+      // standard() — see rust/src/api/pay.rs.
+      final pczt = (await tester.runAsync(() => unpackTransaction(bytes: _hexToBytes(pcztHex))))!;
       await pumpFor(tester, const Duration(seconds: 2));
 
       // ── Phase 3: the signing pages ────────────────────────────────────────
