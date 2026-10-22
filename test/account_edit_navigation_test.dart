@@ -96,6 +96,7 @@ Account _account() => Account(
       height: 100,
       time: 0,
       balance: BigInt.zero,
+      frost: false,
     );
 
 void main() {

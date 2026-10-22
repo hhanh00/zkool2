@@ -11207,6 +11207,7 @@ impl SseDecode for crate::api::account::Account {
         let mut var_time = <u32>::sse_decode(deserializer);
         let mut var_balance = <u64>::sse_decode(deserializer);
         let mut var_incomingOnly = <bool>::sse_decode(deserializer);
+        let mut var_frost = <bool>::sse_decode(deserializer);
         return crate::api::account::Account {
             coin: var_coin,
             id: var_id,
@@ -11229,6 +11230,7 @@ impl SseDecode for crate::api::account::Account {
             time: var_time,
             balance: var_balance,
             incoming_only: var_incomingOnly,
+            frost: var_frost,
         };
     }
 }
@@ -14113,6 +14115,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Account {
             self.time.into_into_dart().into_dart(),
             self.balance.into_into_dart().into_dart(),
             self.incoming_only.into_into_dart().into_dart(),
+            self.frost.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -16047,6 +16050,7 @@ impl SseEncode for crate::api::account::Account {
         <u32>::sse_encode(self.time, serializer);
         <u64>::sse_encode(self.balance, serializer);
         <bool>::sse_encode(self.incoming_only, serializer);
+        <bool>::sse_encode(self.frost, serializer);
     }
 }
 

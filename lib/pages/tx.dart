@@ -38,7 +38,6 @@ class TxPageState extends ConsumerState<TxPage> {
   late final TxPlan txPlan = toPlan(package: widget.pczt, c: c);
   bool canBroadcast = false;
   Account? account;
-  AccountData? details;
   bool _sending = false;
   String _sendStep = "";
 
@@ -48,11 +47,10 @@ class TxPageState extends ConsumerState<TxPage> {
     Future(() async {
       final settings = ref.read(appSettingsProvider).requireValue;
       final canBroadcast = !settings.offline;
-      final details = await ref.read(accountProvider(widget.account).future);
-      final account = details.account;
+      final accounts = await ref.read(getAccountsProvider.future);
+      final account = accounts.firstWhere((a) => a.id == widget.account);
       setState(() {
         this.account = account;
-        this.details = details;
         this.canBroadcast = canBroadcast;
       });
     });
@@ -67,7 +65,7 @@ class TxPageState extends ConsumerState<TxPage> {
     final t = Theme.of(context).textTheme;
 
     final canSend = (txPlan.canSign || account!.hw != 0) && canBroadcast;
-    final hasFrost = details!.frostParams != null;
+    final hasFrost = account!.frost;
 
     final success = txId != null;
 
