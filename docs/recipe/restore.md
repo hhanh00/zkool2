@@ -129,9 +129,14 @@ contain one instance of a viewing key for one of the active pools[^7].
 
 Zkool supports any type of UFVK[^8].
 
+Zkool also supports Unified *Incoming* Viewing Keys (`uivk`). An account
+restored from one only sees the payments it receives: it cannot see its
+spends or its change, and cannot spend. The Viewing Keys page of an account
+exports either kind (see [Edit an Account](./account.md#show-keys)).
+
 ::: important
-There are more types of keys such as incoming viewing keys, outgoing viewing
-keys, unified secret keys, etc. At the moment, there are not used much in
+There are more types of keys such as outgoing viewing keys,
+unified secret keys, etc. At the moment, there are not used much in
 production and Zkool does not support them.
 :::
 

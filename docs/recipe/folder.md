@@ -5,9 +5,9 @@ title: Folders
 Folders are groups of accounts. By default, accounts are not assigned to any
 folder.
 
-The folder menu option from the account manager will send you the the Folder UI.
+The "Folders" option of the account manager menu will send you to the Folder UI.
 
-![Folder](./images/26.folders.png)
+![Folder =450x](./images/26.folders.png)
 
 ## Folder Management
 
@@ -37,4 +37,3 @@ Edit the account and select the folder in the dropdown list.
 Folders are an easy way to move accounts from the main page. By default,
 accounts that are put in a folder do not show up.
 :::
-

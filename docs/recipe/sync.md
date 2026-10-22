@@ -11,26 +11,29 @@ It may be _disabled_. Edit the account properties and reenable it.
 > An account disappeared from the list
 
 It may be from a different database. Check that you are using the right one.
-Also, it could be _hidden_. Tap the "Show hidden button".
+It could be in a different _folder_: select the folder, or "No Folder", in the
+Folders page.
+It could also be _hidden_. Choose "Show All" in the menu of the account manager.
 
 ## No Synchronization
 
 > Synchronization does not start
 
-- The Autosynchronization (autosync) checks every ~15-30 seconds. You may just need to wait a bit longer.
+- The Autosynchronization (autosync) checks the block height every ~15 seconds. You may just need to wait a bit longer.
 - Autosync starts when at least one account is behind by a number of blocks greater than the autosync interval.
 
-![AutoSync interval](./images/11.autosync.png)
+![AutoSync interval =450x](./images/11.autosync.png)
 
 This is so the app saves on bandwidth. The interval can be set to a lower value to sync more often. When set to 0, autosync is _disabled_.
 
 - When you have multiple accounts, you will see that autosync starts with them and progressively include more accounts. For example, if A is synchronized to height 2m and B to 2.5m, sync starts with A between 2 and 2.5m. Then after 2.5m, both A and B are processed concurrently.
 
 You can _manually_ start a sync by tapping the sync button. On the account list
-page, the sync button triggers the sync of every account _enabled_. You can
+page, the sync button triggers the sync of every account _enabled_
+(or of the selected accounts, if any). You can
 disable and reenable account by editing the account properties.
 
-![Sync](./images/12.sync.png)
+![Sync =450x](./images/12.sync.png)
 
 You can also sync a single account by tapping the sync button on the account
 page.
@@ -71,24 +74,25 @@ Manually Synchronize if the account height is behind.
 
 Zkool starts scanning block from the birth height. If it is too high, it will
 miss the transactions that happened earlier. To solve it, edit the account birth
-height, reset the synchronization data and finally resync.
+height and save. Zkool resets the synchronization data and you resync.
 
-![Edit](./images/13.edit.png)
+![Edit =450x](./images/13.edit.png)
 
 > You may have transparent addresses that are not known by the app.
 
 If you restore from a seed phrase a wallet that uses address rotation, it would
 have generated additional transparent addresses. In this case, you need to scan
-for these transparent addresses too. On the address page, tap the "Scan
-Transparent Addresses" button and wait for the scan to finish. Then go to the
+for these transparent addresses too. On the receive page, tap the "search"
+button. Zkool asks for the gap limit: the number of consecutive unused
+addresses after which it stops. Tap "Run" and wait for the scan to finish. Then go to the
 account edit page to reset the synchronization data and resync.
 
-![Scan Transparent Addresses](./images/14.scan.png)
+![Scan Transparent Addresses =450x](./images/14.scan.png)
 
 ::: tip
-Scanning takes a while. Please wait until a message says it is completed. It
-will also report how many new addresses were found. You can also inspect which
-transparent addresses are used by tapping on the "eye" icon.
+Scanning takes a while. Please wait until the message says it is completed.
+You can inspect which
+transparent addresses are known by tapping on the "eye" icon.
 :::
 
 ## Double Spend
@@ -109,11 +113,11 @@ likely made by the same person. If your tx involves transparent inputs/outputs
 it could be an issue.
 
 If you don't want to wait or do a multi recipient transaction, you can manually
-exclude the notes from further spending in the note tab. That's rather tedious.
+lock the notes in the note tab. That's rather tedious.
 
-![Notes](./images/15.notes.png)
+![Notes =450x](./images/15.notes.png)
 
-Notes in gray are excluded. Tap to toggle on and off.
+Notes in gray are locked. Tap to toggle on and off.
 
 ## Duplicate Tx
 
@@ -143,7 +147,7 @@ identified because of its rarity but it seems to affect all wallet software.
 Fortunately, you can fix the issue by rewinding the account to an earlier
 checkpoint in the Edit page.
 
-![Rewind Checkpoint](./images/16.rewind.png)
+![Rewind Checkpoint =450x](./images/16.rewind.png)
 
 ## Too Slow
 

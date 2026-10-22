@@ -42,11 +42,17 @@ transparent addresses**. If you don't need the transparent address, you should
 remove the transparent pool from the account, then Zkool will not request them.
 :::
 
+# Transports
+
+The "Transport" selector of the Settings page chooses how Zkool
+connects to the server: directly, through TOR, through the Nym
+mixnet, or via an external proxy.
+
+![TOR =450x](./images/19.tor.png)
+
 # With TOR
 
-![TOR](./images/19.tor.png)
-
-With TOR enabled, Zkool builds a circuit: It picks 3 random Tor relays from its global network.
+With TOR selected, Zkool builds a circuit with its embedded Tor client (Arti): It picks 3 random Tor relays from its global network.
 
 - Entry (Guard) node, first hop, sees your IP address but not your destination server.
 - Middle node, just passes encrypted data, doesn't know you or the server.
@@ -77,3 +83,21 @@ service’s public key, ensuring authenticity.
 If you have a lightwallet server that has a onion service address, it provides
 better privacy because the TOR circuit won't use an exit node.
 :::
+
+# With Nym
+
+The Nym mixnet is another anonymity network. Unlike TOR, it mixes the
+packets of many users and adds cover traffic, which defeats the
+timing analysis of the traffic.
+
+Select "Nym" to tunnel the connection to a regular server through the mixnet.
+
+If the server itself is reachable as a Nym service, pick it from the
+server list ("Zcash over Nym mixnet"). Zkool then talks to it natively
+through the mixnet and the transport selector is disabled.
+
+# With a Proxy
+
+Select "Proxy" and enter the address of an HTTP or SOCKS5 proxy
+to route the connection through it. For example, a local Tor daemon
+or a VPN provider's proxy.
