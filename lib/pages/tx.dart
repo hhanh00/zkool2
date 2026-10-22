@@ -184,7 +184,9 @@ class TxPageState extends ConsumerState<TxPage> {
     );
   }
 
-  Future<void> onFrost() async {
+  /// Opens the signing pages; [coordinate] when this member is to
+  /// coordinate, which the first page then proposes.
+  Future<void> onFrost({bool coordinate = false}) async {
     // A file made for another account would start a session that can never
     // sign: refuse it here, where the message makes sense.
     try {
@@ -194,7 +196,11 @@ class TxPageState extends ConsumerState<TxPage> {
       return;
     }
     if (!mounted) return;
-    await GoRouter.of(context).push(accountRoute("/frost1", widget.account), extra: widget.pczt);
+    final route = Uri(path: "/frost1", queryParameters: {
+      "account": widget.account.toString(),
+      if (coordinate) "coordinate": "1",
+    }).toString();
+    await GoRouter.of(context).push(route, extra: widget.pczt);
   }
 
   Future<void> _confirmAndSend() async {
@@ -319,7 +325,7 @@ class TxPageState extends ConsumerState<TxPage> {
           btnOkText: "Start",
           btnCancelText: "Not now",
         );
-        if (start && mounted) await onFrost();
+        if (start && mounted) await onFrost(coordinate: true);
       }
     } on AnyhowException catch (e) {
       if (!mounted) return;

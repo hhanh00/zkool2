@@ -180,7 +180,14 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
         GoRoute(path: '/dkg1', builder: (context, state) => DKGPage1()),
         GoRoute(path: '/dkg2', builder: (context, state) => DKGPage2()),
         GoRoute(path: '/dkg3', builder: (context, state) => DKGPage3()),
-        GoRoute(path: '/frost1', builder: (context, state) => FrostPage1(state.extra as PcztPackage, account: state.accountId)),
+        GoRoute(
+          path: '/frost1',
+          builder: (context, state) => FrostPage1(
+            state.extra as PcztPackage,
+            account: state.accountId,
+            coordinate: state.uri.queryParameters["coordinate"] == "1",
+          ),
+        ),
         GoRoute(path: '/frost2', builder: (context, state) => FrostPage2(account: state.accountId)),
         GoRoute(
             path: '/settings',

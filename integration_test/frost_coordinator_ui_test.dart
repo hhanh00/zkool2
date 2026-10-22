@@ -10,6 +10,7 @@ library;
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -140,7 +141,10 @@ void main() {
         timeout: const Duration(minutes: 2),
         what: "FROST page 1",
       );
-      await selectDropdown(tester, "ID of the coordinator", "$myId");
+      // Opened from the offer, the page proposes this member as the
+      // coordinator.
+      final coordinatorField = (dropdownNamed("coordinator").evaluate().single as StatefulElement).state as FormBuilderFieldState;
+      expect(coordinatorField.value, myId, reason: "the coordinator defaults to this member");
       await selectDropdown(tester, "Funding Account for the FROST messages", "DKG-Fund");
       await tapNext(tester);
       await pumpUntil(

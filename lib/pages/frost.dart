@@ -22,7 +22,10 @@ import 'package:zkool/router.dart';
 class FrostPage1 extends ConsumerStatefulWidget {
   final PcztPackage pczt;
   final int account;
-  const FrostPage1(this.pczt, {super.key, required this.account});
+
+  /// Opened to coordinate: this member is the coordinator by default.
+  final bool coordinate;
+  const FrostPage1(this.pczt, {super.key, required this.account, this.coordinate = false});
 
   @override
   ConsumerState<FrostPage1> createState() => FrostPage1State();
@@ -142,7 +145,7 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
                       decoration: const InputDecoration(
                         labelText: "ID of the coordinator",
                       ),
-                      initialValue: 1,
+                      initialValue: widget.coordinate ? frostParams!.id : 1,
                       items: List.generate(
                         5,
                         (i) => DropdownMenuItem(
