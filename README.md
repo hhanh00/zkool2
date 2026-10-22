@@ -10,12 +10,12 @@ Zkool is a multi-account wallet for Zcash.
 
 | Feature         |                                        |
 |-----------------|----------------------------------------|
-| Pools           | Transparent, Sapling, Orchard          |
+| Pools           | Transparent, Sapling, Orchard, Ironwood |
 | Accounts        | Multiple, Hidden (Protected)           |
 | Database        | Encrypted on disk                      |
 | Synchronization | Improved Warp, Per-account state       |
 | Mempool         | Monitor incoming/outgoing transactions |
-| Market Price    | ZEC/USD                                |
+| Market Price    | ZEC in the currency of your choice     |
 | Servers         | Full Nodes & Light Nodes               |
 
 ### Account
@@ -86,18 +86,9 @@ Zkool is a multi-account wallet for Zcash.
 
 - UI is basic. There are only a few screens and nothing flashy.
 On the flipside, the UI is relatively simple to understand.
-- Some nice to have features are missing
-    - No *address book*. Mainly because Zcash has diversified addresses
-    that make address books useless if used[^3]
 - No keytool
-- No customization of reference currency (always USD)
-- No pool transfer tool
-- No third party swap integration
-- No spending tracking
 - No auto shielding of any sort
 
 [^1]: Ywallet can only save and restore *all* the accounts.
 [^2]: Obviously, not as good as shielding but offers *some* level
 of privacy.
-[^3]: The diversified address cannot be matched against the *one* address
-recorded in the address book.
