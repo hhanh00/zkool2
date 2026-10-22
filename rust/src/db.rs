@@ -1507,7 +1507,8 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
             WHERE k.account = a.id_account AND k.xvk IS NULL AND k.ivk IS NOT NULL)
         OR EXISTS(SELECT 1 FROM orchard_accounts k
             WHERE k.account = a.id_account AND k.xvk IS NULL AND k.ivk IS NOT NULL)
-        AS incoming_only
+        AS incoming_only,
+        EXISTS(SELECT 1 FROM dkg_params d WHERE d.account = a.id_account) AS frost
         FROM accounts a
         JOIN sh ON a.id_account = sh.account
         LEFT JOIN headers hdr ON sh.height = hdr.height AND sh.account = hdr.account
@@ -1543,6 +1544,7 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
             folder,
             hw: row.get::<u8, _>(19),
             incoming_only: row.get::<bool, _>(20),
+            frost: row.get::<bool, _>(21),
         }
     })
     .fetch(&mut *connection);

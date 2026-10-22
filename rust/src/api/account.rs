@@ -318,6 +318,8 @@ pub struct Account {
     /// nothing else. `balance` is then the total received, since spends of
     /// shielded notes are invisible to it, and it cannot spend.
     pub incoming_only: bool,
+    /// True when the account is a FROST (threshold) account produced by a DKG.
+    pub frost: bool,
 }
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
