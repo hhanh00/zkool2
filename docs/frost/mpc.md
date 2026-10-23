@@ -4,71 +4,86 @@ title: Signing a Transaction
 
 ## Receiving Funds
 
-The MultiSig Account works like a standard Orchard account for receiving funds.
-The address is on the "Address" page. You can get more addresses[^1] by tapping
-on the "next" button.
+The MultiSig Account works like a standard account for receiving funds.
+The address is on the "Receive Funds" page. You can get more addresses[^1] by
+tapping on the "next" button.
 
-![](./images/08.addresses.png)
+![Addresses =450x](./images/08.addresses.png)
 
 ## Requirements
 
 Like with DKG, you need to have a funding account to pay for the transaction
 fees of the FROST SIGN protocol. You should to have ~0.01 ZEC in it.
 
-![Requirements](./images/09.multisig.png)
+The snowflake icon next to the account name marks the MultiSig Account.
 
-## Starting a payment
+![Requirements =450x](./images/09.multisig.png)
 
-Spending from the MultiSig Account differs from a standard account. It begins
-the same way, with the specification of the recipients with addresses and memos.
+## Roles
+
+Spending from the MultiSig Account takes a number of participants equal to
+the signature threshold defined at the creation of the account: the M in "M
+out of N". In our example, we need two signers out of Alice, Bob and Charlie.
+
+Every signing session has two roles:
+
+- The **coordinator** proposes the transaction, sends the unsigned
+  transaction file to the other signers, collects their signature shares,
+  assembles the transaction and broadcasts it. The coordinator is one of the
+  signers: their own share counts.
+- The other **signers** receive the file, check it, and sign it. They do not
+  need to talk to each other, only to the coordinator through the chain.
+
+The participants must agree on who coordinates before they start: every
+signer enters the coordinator's ID in the signing form, and the session
+cannot complete if they do not match.
+
+Since this is a 2 out 3 MultiSig Account, Alice coordinates and needs one
+other signer, say Bob. Charlie does nothing.
+
+## Coordinator: Starting a payment
+
+Spending from the MultiSig Account begins like a standard payment, with the
+specification of the recipients with addresses and memos.
 A multisig transaction can be exactly like a standard transaction: It is usually
 input manually or by copy pasting, but it can also have multiple recipients, use
 a payment URI, or be loaded from a file.
 
-![Payment](./images/10.send.png)
+Since the MultiSig Account has no spending key, the transaction page cannot
+send the transaction. Its button saves the *unsigned* transaction to a file
+instead.
 
-- Save the transaction by tapping on the "SAVE" button and choosing an output file. This *unsigned* transaction will need to be sent to the other signers.
-- Start the SIGN process by tapping on the "MPC" button.
+![Payment =450x](./images/10.send.png)
 
-## MPC SIGN
-
-The Signing process requires a number of participants equal to the signature
-threshold defined at the creation of the MultiSig Account: The M in "M out of
-N". In out example, we need two signers.
-
-The Signing process needs one participant to be the *coordinator* of the Multi Party
-Ceremony (MPC). The coordinator is implicitly one of the signer. Typically, they
-are also the participant who proposes the transaction.
-
-Since this is a 2 out 3 MultiSig Account, we just need another signer.
-
-![Send](./images/11.send.png)
-
-1. Enter the ID of the coordinator. Every participant **must** enter the same
-   coordinator ID.
-2. Select the *funding account*.
-
-Tap the NEXT button to start the MPC SIGN.
-
-### Coordinator
-
-![Commitments](./images/12.commitments.png)
-
-The coordinator waits for commitment messages from the other participants.
-
-### Other Participant
-
-The coordinator must send the unsigned transaction file to the other
-participants.
+Save the transaction by tapping on the save button and choosing an output file.
+Send this file to the other signers.
 It can be done out of band, by email, by USB, by posting on the shared drive,
 etc. The transaction file has the details of the transaction but does not
 contain any signature.
 
-The other participants should open the transaction file:
-- Start a transaction,
-- Tap on the "Load Tx" button and pick the transaction file.
+::: warning
+The file holds no key, so nobody can spend with it. But it reveals the amount,
+the recipient, the memo and the group's viewing key. Send it only to the
+other signers, over a private channel.
+:::
 
-![Load Tx](./images/13.load.png)
+Once the file is saved, Zkool offers to start the signing session as the
+coordinator.
+
+![Offer =450x](./images/18.offer.png)
+
+- "Start" opens the [signing form](#signing-form) with your ID as the
+  coordinator.
+- "Not now" lets you start later: load the file back like the other signers
+  do, then pick your own ID as the coordinator.
+
+## Signer: Loading the transaction
+
+The other signers should open the transaction file:
+- Start a transaction from the MultiSig Account,
+- Tap on the "Load an unsigned transaction" button and pick the transaction file.
+
+![Load Tx =450x](./images/13.load.png)
 
 ::: important
 Every participant should **CHECK** the transaction before signing it.
@@ -77,32 +92,70 @@ Every participant should **CHECK** the transaction before signing it.
 You sign the transaction you load, and your signature (share) cannot be
 tampered. You are safe as long as you make sure to **CHECK** the transaction.
 
-Then tap on the MPC button to start the SIGN process on the participant side.
+Then tap on the "Sign with the group and send" button to open the signing
+form.
 
-> The MPC completes on a participant with the message "Signing Completed". They
-> can close the page. The coordinator will send the signed transaction once all
-> the signature shares are received.
+![Loaded Tx =450x](./images/19.loaded.png)
 
-### Finishing up
+## Signing Form
 
-The coordinator collects the signature shares from the other participant and
-adds their own share to form the complete signature. Then it builds the full
-transaction and broadcasts it to the network.
+Both roles go through the same form.
 
-Once it finishes, you will see the transaction ID.
+![Send =450x](./images/11.send.png)
 
-> The MPC completes on the coordinator with the Transaction ID.
+1. Enter the ID of the coordinator. Every participant **must** enter the same
+   coordinator ID. For the coordinator, it is their own ID.
+2. Select the *funding account*.
 
-![Tx](./images/14.tx.png)
+Tap the NEXT button to start the MPC SIGN.
 
-Once it is mined. It will appear in the account transaction history[^2].
+## The session
 
-![History](./images/15.history.png)
+The steps at the top of the page show where the signing is, and the status
+line says what Zkool is doing or waiting for, with how many participants
+have answered.
+
+### Coordinator
+
+![Commitments =450x](./images/12.commitments.png)
+
+The coordinator announces its address, then waits for the commitments of the
+other signers. When the threshold is reached, it broadcasts the signing
+package, collects the signature shares, adds its own share to form the
+complete signature, builds the full transaction and broadcasts it to the
+network.
+
+Once it finishes, a popup announces that the transaction was sent, and the page
+shows the transaction ID.
+
+![Tx =450x](./images/14.tx.png)
+
+### Signer
+
+The signer waits for the coordinator's announcement, sends its commitments,
+waits for the signing package, and sends its signature share.
+
+> The session completes on a signer with the message "Signing completed".
+> They can close the page. The coordinator sends the signed transaction once
+> all the signature shares are received.
+
+## Finishing up
+
+Once the transaction is mined, it will appear in the account transaction
+history of every participant[^2].
+
+![History =450x](./images/15.history.png)
 
 ::: tip
 As with DKG, the SIGN is automatic as long as Zkool is opened on the multisig
-page. If you close it, you can resume the process by loading the transaction and
-tapping on the MPC button.
+page. If you close it, the "Send" button of the MultiSig Account brings you
+back to the session in progress.
+:::
+
+::: warning
+A group transaction expires about a day after it was prepared. If the
+participants have not finished signing by then, the page says so: prepare a
+new transaction and sign it again.
 :::
 
 [^1]: Diversified addresses.

@@ -4,12 +4,13 @@ title: Key Generation
 
 ## Requirements
 
-- A funding account with some ZEC to pay for transaction fees. A minimum of 0.0001 ZEC but 0.01 ZEC is safer.
-- Between two and five participants[^1]. Everyone must be present for the DKG.
+- A funding account with some ZEC to pay for transaction fees. A minimum of 0.001 ZEC but 0.01 ZEC is safer.
+- Between two and seven participants. Everyone must be present for the DKG.
+- The same version of Zkool on every device.
 
 ## Overview
 
-- There can only be one DKG in progress at any given time[^2].
+- There can only be one DKG in progress at any given time[^1].
 - The process is _distributed_. The participants do not have to be in the same
   place. They do not have to run the DKG concurrently. But the process needs
   their Zkool open to make progress. Otherwise, the DKG pauses until then.
@@ -27,23 +28,24 @@ In the beginning, you should have the funding account. You may have other
 accounts but for simplicity we'll assume that the funding account is the only
 one you have.
 
-![Setup](./images/01.dkg.png)
+![Setup =450x](./images/01.dkg.png)
 
-::: important Every participant should have their own funding account.
+::: important
+Every participant should have their own funding account.
 :::
 
 ## Form
 
 Tap on the "+" from the app bar.
 
-![New Account](./images/02.dkg.png)
+![New Account =450x](./images/02.dkg.png)
 
-Tap on the "DKG" icon. Do not tap on the save button, this would create a
-standard account.
+Tap on the "Start Distributed Key Generation" icon. Do not tap on the save
+button, this would create a standard account.
 
 Next, we need to fill the following form.
 
-![Form](./images/03.form.png)
+![Form =450x](./images/03.form.png)
 
 1. Name of the account. This is kept locally. You can choose any name you want
    and it does not have to be the same as the name the other participants
@@ -56,14 +58,15 @@ Next, we need to fill the following form.
    out of three. This must be between 2 and the number of participants.
 5. The name of the funding account. Select the account from the dropdown box.
 
-Once you finished filling the form, press the "Next" button.
+Once you finished filling the form, press the "Next" button. If the funding
+account holds less than 0.001 ZEC, Zkool warns you before going on.
 
 ## Participant Addresses
 
 Next, you have to fill the participant addresses. You start with a form that
 only has your address.
 
-![Addresses](./images/04.addresses.png)
+![Addresses =450x](./images/04.addresses.png)
 
 Ask the other participants to give their address. This address is used for the
 DKG and SIGN multi party ceremonies. The form must be filled correctly otherwise
@@ -79,16 +82,19 @@ close the app. Resume it by starting the DKG again. Zkool will not ask you to fi
 the form if a DKG is in progress.
 :::
 
-![Filled Addresses](./images/05.addresses_filled.png)
+![Filled Addresses =450x](./images/05.addresses_filled.png)
 
 Once we filled the addresses of the other participants, we can go to the next step.
 
-Zkool prepares and broadcasts the first round of messages. Each participant
-sends their message to a common address.
+Zkool prepares and broadcasts the first messages. The steps at the top of the
+page show where the DKG is: the participants exchange their keys, then two
+rounds of packages, and finally derive the shared key. The status line says
+what Zkool is doing or waiting for, and how many participants have sent their
+message so far.
 
-![DKG Round 1](./images/06.dkg_r1.png)
+![DKG Round 1 =450x](./images/06.dkg_r1.png)
 
-The DKG process continues when every participant has broadcast their round 1
+The DKG process continues when every participant has broadcast their
 message. Zkool will keep synchronizing automatically when the DKG page is
 opened.
 If you close the app, you can resume the DKG by restarting it, but do not cancel it.
@@ -101,15 +107,16 @@ their Zkool running. This is the easiest method but **still will take a few bloc
 The DKG takes about 5-10 minutes.
 :::
 
-![DKG End](./images/07.dkg_end.png)
+![DKG End =450x](./images/07.dkg_end.png)
 
-It ends with a page that shows the shared address. You don't need to copy this
-address because an account has been created.
+It ends with a popup, "DKG completed", and the page shows the shared address.
+You don't need to copy this address because an account has been created.
 
-Close the DKG page by tapping the X on the app bar.
+Close the DKG page by tapping the "Dismiss" button.
 
 ::: tip
-Now would be a good time to make a backup of your new MultiSig Account.
+Now would be a good time to save the [backup string](./overview.md#backup) of
+your new MultiSig Account.
 :::
 
 ## DKG Protocol
@@ -119,6 +126,9 @@ sequenceDiagram
 participant Alice
 participant Bob
 participant Charlie
+Alice->>Broadcast: Alice Key
+Bob->>Broadcast: Bob Key
+Charlie->>Broadcast: Charlie Key
 Alice->>Broadcast: Alice Round 1 Package
 Bob->>Broadcast: Bob Round 1 Package
 Charlie->>Broadcast: Charlie Round 1 Package
@@ -132,6 +142,7 @@ Charlie->>Bob: Charlie Round 2 Package
 
 - The Broadcast address is readable by every participant.
 - The Round 2 Package is sent as one transaction with multiple recipients.
+- A participant waits for its own message to be mined before sending the next
+  one, so the funding account never spends the same note twice.
 
-[^1]: The limit of five may be extended in a later version.
-[^2]: For a given database.
+[^1]: For a given database.
