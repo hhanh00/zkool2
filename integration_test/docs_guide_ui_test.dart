@@ -192,7 +192,7 @@ void main() {
       // ── Receive ──────────────────────────────────────────────────────────
       await tapTooltip(tester, "Show the account receiving addresses");
       final addresses = (await tester.runAsync(
-        () => getAddresses(uaPools: 7, account: a, c: coinContext.coin),
+        () => getAddresses(uaPools: 6, account: a, c: coinContext.coin),
       ))!;
       await pumpUntil(tester, () => find.text("Receive Funds").evaluate().isNotEmpty && copyableWith(addresses.ua!).evaluate().isNotEmpty,
           timeout: shortTimeout, what: "the receive page with the unified address",);
