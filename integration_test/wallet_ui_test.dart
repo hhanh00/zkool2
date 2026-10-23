@@ -113,7 +113,7 @@ void main() {
       // ── Receive ──────────────────────────────────────────────────────────
       phase("receive");
       final aAddresses = (await tester.runAsync(
-        () => getAddresses(uaPools: 7, account: a, c: coinContext.coin),
+        () => getAddresses(uaPools: 6, account: a, c: coinContext.coin),
       ))!;
       final bAddresses = (await tester.runAsync(
         () => getAddresses(uaPools: 7, account: b, c: coinContext.coin),
