@@ -101,6 +101,7 @@ Account _account(int id) => Account(
       enabled: true,
       internal: false,
       incomingOnly: false,
+      frost: false,
       hw: 0,
       height: 100,
       time: 0,
