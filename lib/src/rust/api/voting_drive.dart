@@ -9,9 +9,10 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'voting_drive.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `account_seed`, `delegation_identity`, `drive_round`, `ensure_nonempty`, `fetch_round_timing`, `gather_lwd_inputs`, `gather_round_inputs`, `gather_wallet_inputs`, `json_unix_seconds`, `prepare_bundles`, `resolve_round_config`
+// These functions are ignored because they are not marked as `pub`: `account_seed`, `delegation_identity`, `ensure_nonempty`, `fetch_round_timing`, `gather_lwd_inputs`, `gather_round_inputs`, `gather_wallet_inputs`, `json_unix_seconds`, `prepare_bundles`, `resolve_round_config`, `start_round_drive`, `start_with`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `GatheredRound`, `RoundConfig`, `StatusSink`, `WalletInputs`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `eq`, `fmt`, `fmt`, `from`
+// These functions are ignored (category: IgnoreBecauseExplicitAttribute): `start`
 // These functions are ignored (category: IgnoreBecauseOwnerTyShouldIgnore): `send_error`, `send`
 
 /// Prepares one round for submission: persists the bundle layout from the
@@ -34,61 +35,40 @@ Future<VotingEligibilityPreview> votingPrepareRound(
         account: account,
         c: c);
 
-/// Starts one round's run for a host that polls `voting_drive_status`.
-/// Returns false when a run is already live for this wallet and round.
-Future<bool> votingDriveStart(
-        {required String roundId,
-        required String lightwalletdUrl,
-        required String roundName,
-        required int account,
-        required Coin c}) =>
-    RustLib.instance.api.crateApiVotingDriveVotingDriveStart(
-        roundId: roundId,
-        lightwalletdUrl: lightwalletdUrl,
-        roundName: roundName,
-        account: account,
-        c: c);
-
-/// Starts one round's run and streams its status to `status` until the run
-/// stops (the last item has `running == false`). Returns false, and sends
-/// nothing, when a run is already live for this wallet and round: subscribe
-/// to that one with `voting_drive_status` instead.
-Stream<VotingDriveStatus> votingDriveRun(
-        {required String roundId,
-        required String lightwalletdUrl,
-        required String roundName,
-        required int account,
-        required Coin c}) =>
-    RustLib.instance.api.crateApiVotingDriveVotingDriveRun(
-        roundId: roundId,
-        lightwalletdUrl: lightwalletdUrl,
-        roundName: roundName,
-        account: account,
-        c: c);
-
-/// Polls one round's run; idle when nothing was started. A finished run
-/// keeps its last snapshot. Without a run, the share counts come from the
-/// durable sidecar so a round can show its standing before a resume.
+/// The round's durable standing without a run: phase idle, with the helper
+/// share counts from the sidecar, so a page can tell a round already voted
+/// in from a fresh one. A live run's status comes from its `VotingDrive`.
 Future<VotingDriveStatus> votingDriveStatus(
         {required String roundId, required int account, required Coin c}) =>
     RustLib.instance.api.crateApiVotingDriveVotingDriveStatus(
         roundId: roundId, account: account, c: c);
 
-/// Cancels one round's driver run, waking any in-flight retry wait.
-Future<bool> votingDriveCancel(
-        {required String roundId, required int account, required Coin c}) =>
-    RustLib.instance.api.crateApiVotingDriveVotingDriveCancel(
-        roundId: roundId, account: account, c: c);
+// Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<VotingDrive>>
+abstract class VotingDrive implements RustOpaqueInterface {
+  /// Cancels the run cooperatively, waking any in-flight retry wait. The
+  /// stream ends with the cancelled snapshot once the step in flight ends.
+  void cancel();
 
-/// Cancels every live driver run for the current wallet, leaving other
-/// wallets untouched. Wallet switch and backgrounding call this so no run
-/// outlives its wallet; durable effects stay resumable through a later start.
-Future<BigInt> votingDriveCancelAll({required int account, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiVotingDriveVotingDriveCancelAll(account: account, c: c);
+  bool isRunning();
 
-/// Snapshot of one round's run for the UI, streamed by `voting_drive_run`
-/// and polled by `voting_drive_status`.
+  factory VotingDrive() =>
+      RustLib.instance.api.crateApiVotingDriveVotingDriveNew();
+
+  /// Starts the run and streams its status to `status` until the run
+  /// stops: the last item has `running == false`.
+  Stream<VotingDriveStatus> run(
+      {required String roundId,
+      required String lightwalletdUrl,
+      required String roundName,
+      required int account,
+      required Coin c});
+
+  /// The latest snapshot of the run; idle before the first `run`.
+  VotingDriveStatus? status();
+}
+
+/// Snapshot of one round's run for the UI, streamed by `VotingDrive::run`;
+/// `voting_drive_status` gives the idle standing of a round with no run.
 @freezed
 sealed class VotingDriveStatus with _$VotingDriveStatus {
   const factory VotingDriveStatus({

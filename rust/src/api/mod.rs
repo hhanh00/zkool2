@@ -23,5 +23,4 @@ pub mod vault;
 #[path = "voting_list.rs"]
 pub mod voting;
 pub mod voting_drive;
-pub mod voting_share_tracking;
 pub mod zsa;

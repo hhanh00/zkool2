@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use juniper::{FieldError, FieldResult, GraphQLInputObject, GraphQLObject};
 
 use crate::api::voting::{Decision, VotingRoundListItem};
-use crate::api::voting_drive::VotingDriveStatus;
+use crate::api::voting_drive::{VotingDrive, VotingDriveStatus};
 use crate::graphql::{check_auth, Context};
 
 #[derive(Clone, GraphQLObject)]
@@ -132,11 +132,19 @@ pub async fn submission_status(
     context: &Context,
 ) -> FieldResult<VotingSubmissionStatus> {
     let account = authorized_account(id_account, context, false)?;
-    Ok(
-        crate::api::voting_drive::voting_drive_status(&round_id, account, &context.coin)
-            .await?
-            .into(),
-    )
+    let live = context
+        .voting_drives
+        .lock()
+        .await
+        .get(&round_id)
+        .and_then(VotingDrive::status);
+    let status = match live {
+        Some(status) => status,
+        None => {
+            crate::api::voting_drive::voting_drive_status(&round_id, account, &context.coin).await?
+        }
+    };
+    Ok(status.into())
 }
 
 pub async fn submit_vote(
@@ -203,11 +211,12 @@ pub async fn submit_vote(
     }
 
     // Bundle preparation is the explicit durable setup phase. The run
-    // itself is spawned and returns immediately: it casts the votes, then
-    // confirms the helper shares until the round is settled, and its progress
-    // is polled through votingSubmissionStatus. The shares and their
-    // confirmations live in the sidecar, so a server restart loses nothing;
-    // the next submission simply resumes where the run left off.
+    // itself casts the votes, then confirms the helper shares until the
+    // round is settled, and its progress is polled through
+    // votingSubmissionStatus. The shares and their confirmations live in the
+    // sidecar, so a server restart loses nothing: the next submission simply
+    // resumes where the run left off. A round whose run is still live keeps
+    // it.
     crate::api::voting_drive::voting_prepare_round(
         &round.round_id,
         &coin.url,
@@ -216,14 +225,17 @@ pub async fn submit_vote(
         coin,
     )
     .await?;
-    crate::api::voting_drive::voting_drive_start(
-        &round.round_id,
-        &coin.url,
-        &round.title,
-        account,
-        coin,
-    )
-    .await?;
+    {
+        let mut drives = context.voting_drives.lock().await;
+        let drive = drives
+            .entry(round.round_id.clone())
+            .or_insert_with(VotingDrive::new);
+        if !drive.is_running() {
+            drive
+                .start(&round.round_id, &coin.url, &round.title, account, coin)
+                .await?;
+        }
+    }
 
     submission_status(id_account, round.round_id, context).await
 }

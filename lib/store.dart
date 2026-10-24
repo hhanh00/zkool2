@@ -1131,10 +1131,9 @@ class LifecycleWatcher with WidgetsBindingObserver {
     if (state == AppLifecycleState.paused) {
       // Voting driver runs are wallet-scoped background work: stop them at
       // the boundary instead of letting them race the suspended process.
-      // Share tracking is deliberately left alone — it is durable and
-      // resumes on the next round open.
+      // The runs are durable and resume on the next round open.
       final scope = ProviderScope.containerOf(appKey.currentContext!);
-      unawaited(scope.read(votingDriveStopAllProvider.notifier).run());
+      scope.read(votingDriveStopAllProvider.notifier).run();
     }
   }
 }
@@ -1323,9 +1322,9 @@ class VaultNotifier extends _$VaultNotifier {
         "A voting submission is in progress. Wait for it to finish before signing out.",
       );
     }
-    // Wallet switch: stop this wallet's driver runs (none live past the
-    // guard above; this also clears any finished registry entries' wakeups).
-    unawaited(ref.read(votingDriveStopAllProvider.notifier).run());
+    // Wallet switch: stop this wallet's runs (none live past the guard
+    // above).
+    ref.read(votingDriveStopAllProvider.notifier).run();
     final vault = await future;
     await vault.signOut();
   }
@@ -1379,24 +1378,25 @@ class VotingSubmissionGuard extends _$VotingSubmissionGuard {
   }
 }
 
-/// Rounds whose driver run is live in this process; keeps the submission
-/// guard truthful across concurrent per-round jobs.
-final Set<String> _votingDriveRunningRounds = {};
+/// The runs live in this process, by round id. The keep-alive job of each
+/// round owns its handle; this index lets the wallet-level stop reach them
+/// and keeps the submission guard truthful across rounds.
+final Map<String, VotingDrive> _liveVotingDrives = {};
 
 void _syncVotingSubmissionGuard(Ref ref) {
   ref
       .read(votingSubmissionGuardProvider.notifier)
-      .setActive(_votingDriveRunningRounds.isNotEmpty);
+      .setActive(_liveVotingDrives.isNotEmpty);
 }
 
 /// State of the submission job for one round: an explicit prepare step
-/// (eligibility preview), then a driven run observed by polling.
+/// (eligibility preview), then a run observed through its status stream.
 @freezed
 sealed class VotingDriveJobState with _$VotingDriveJobState {
   const factory VotingDriveJobState({
-    required String stage, // idle|preparing|ready|driving|error
+    required String stage, // idle|preparing|ready|starting|driving|error
     VotingEligibilityPreview? eligibility,
-    /// Last polled driver status; null before the first poll.
+    /// Last streamed run status; null before the run sent one.
     VotingDriveStatus? status,
     String? error,
   }) = _VotingDriveJobState;
@@ -1404,23 +1404,27 @@ sealed class VotingDriveJobState with _$VotingDriveJobState {
 
 /// Submission job for one round. `prepare` persists the bundle layout and
 /// returns the eligibility preview the UI shows before the voter commits;
-/// `start` hands the round to the Rust driver, which runs to quiescence on
-/// its own task. Status polling is owned here, so it survives page
-/// navigation; a run already live in Rust is adopted on first read.
+/// `start` hands the round to the Rust run, which casts the votes and then
+/// confirms the helper shares on its own task. The job owns the run's handle
+/// and its status subscription, like the mempool listener owns the mempool
+/// stream, so both outlive the page: leaving the round page does not stop
+/// the run, and a page reopened mid-run finds the job still driving.
 @Riverpod(keepAlive: true)
 class VotingDriveJob extends _$VotingDriveJob {
   String _roundId = "";
   int _account = 0;
-  Timer? _poll;
+  final VotingDrive _drive = VotingDrive();
+  StreamSubscription<VotingDriveStatus>? _statuses;
 
   @override
   VotingDriveJobState build(String roundId, int account) {
     _roundId = roundId;
     _account = account;
-    ref.onDispose(_stopPolling);
-    // Runs are process-local in Rust; a page reopened mid-run adopts the
-    // live registry entry instead of showing a stale idle ballot.
-    unawaited(_adoptLiveRun());
+    ref.onDispose(() {
+      _statuses?.cancel();
+      _drive.cancel();
+      _liveVotingDrives.remove(_roundId);
+    });
     return const VotingDriveJobState(stage: "idle");
   }
 
@@ -1447,81 +1451,57 @@ class VotingDriveJob extends _$VotingDriveJob {
     }
   }
 
-  /// Starts the driver run after the ballot was confirmed. A run already
-  /// live for the round is adopted rather than duplicated.
+  /// Starts the run after the ballot was confirmed. A run already live for
+  /// the round is kept rather than duplicated.
   Future<void> start({required String lightwalletdUrl, required String roundName}) async {
     if (state.stage == "starting" || state.stage == "driving") return;
-    // The start call re-gathers every round input over the network before
-    // returning; reflect it immediately so the UI is not stuck on the
-    // ballot behind a closed dialog.
-    state = state.copyWith(stage: "starting", error: null);
-    try {
-      await votingDriveStart(
-        roundId: _roundId,
-        lightwalletdUrl: lightwalletdUrl,
-        roundName: roundName,
-        account: _account,
-        c: coinContext.coin,
-      );
-    } on Exception catch (e) {
-      state = state.copyWith(stage: "error", error: e.toString());
-      return;
-    }
-    state = state.copyWith(stage: "driving", error: null);
-    _votingDriveRunningRounds.add(_roundId);
+    // The run re-gathers every round input over the network before its
+    // first status; reflect the start immediately so the UI is not stuck on
+    // the ballot behind a closed dialog.
+    state = state.copyWith(stage: "starting", error: null, status: null);
+    _liveVotingDrives[_roundId] = _drive;
     _syncVotingSubmissionGuard(ref);
-    _startPolling();
+    await _statuses?.cancel();
+    _statuses = _drive
+        .run(
+          roundId: _roundId,
+          lightwalletdUrl: lightwalletdUrl,
+          roundName: roundName,
+          account: _account,
+          c: coinContext.coin,
+        )
+        .listen(_onStatus, onError: _onError, onDone: _onDone);
   }
 
   /// Cooperatively cancels the run; durable effects stay and a later start
-  /// re-plans from the sidecar. Polling continues until Rust reports the run
-  /// stopped.
-  Future<void> cancel() async {
-    try {
-      await votingDriveCancel(roundId: _roundId, account: _account, c: coinContext.coin);
-    } on Exception catch (e) {
-      state = state.copyWith(error: e.toString());
-    }
+  /// re-plans from the sidecar. The stream delivers the cancelled snapshot
+  /// once the step in flight ends.
+  void cancel() => _drive.cancel();
+
+  void _onStatus(VotingDriveStatus status) {
+    state = state.copyWith(stage: "driving", status: status);
+    if (!status.running) _stopped();
   }
 
-  Future<void> _adoptLiveRun() async {
-    try {
-      final status = await votingDriveStatus(roundId: _roundId, account: _account, c: coinContext.coin);
-      if (status.running && state.stage != "driving") {
-        state = state.copyWith(stage: "driving", status: status);
-        _votingDriveRunningRounds.add(_roundId);
-        _syncVotingSubmissionGuard(ref);
-        _startPolling();
+  void _onError(Object error) {
+    state = state.copyWith(stage: "error", error: error.toString());
+    _stopped();
+  }
+
+  void _onDone() {
+    // A stream that ends without a final snapshot (the Rust side went away)
+    // is not a live run either.
+    if (state.stage == "starting" || state.stage == "driving") {
+      if (state.status?.running ?? true) {
+        state = state.copyWith(stage: "error", error: "The submission run ended unexpectedly");
       }
-    } on Exception {
-      // No registry entry (or wallet not open yet); the idle ballot is right.
+      _stopped();
     }
   }
 
-  void _startPolling() {
-    _stopPolling();
-    unawaited(_pollOnce());
-    _poll = Timer.periodic(const Duration(seconds: 2), (_) => unawaited(_pollOnce()));
-  }
-
-  void _stopPolling() {
-    _poll?.cancel();
-    _poll = null;
-  }
-
-  Future<void> _pollOnce() async {
-    try {
-      final status = await votingDriveStatus(roundId: _roundId, account: _account, c: coinContext.coin);
-      state = state.copyWith(status: status);
-      if (!status.running) {
-        _stopPolling();
-        _votingDriveRunningRounds.remove(_roundId);
-        _syncVotingSubmissionGuard(ref);
-      }
-    } on Exception {
-      // Transient status errors keep the poll loop alive; the run outlives
-      // them and the next tick retries.
-    }
+  void _stopped() {
+    _liveVotingDrives.remove(_roundId);
+    _syncVotingSubmissionGuard(ref);
   }
 }
 
@@ -1549,25 +1529,22 @@ String votingQuiescenceLabel(String? quiescence) {
   return q.replaceAll('_', ' ');
 }
 
-/// Re-runnable trigger to stop every live driver run for the current wallet.
-/// Backgrounding and wallet switches invoke it so no run outlives its wallet;
-/// durable effects stay and a later start re-plans from the sidecar.
+/// Re-runnable trigger to stop every live run. Backgrounding and wallet
+/// switches invoke it so no run outlives its wallet; durable effects stay
+/// and a later start re-plans from the sidecar. Each run's job sees the
+/// cancelled snapshot on its stream and leaves the live index itself.
 @Riverpod(keepAlive: true)
 class VotingDriveStopAll extends _$VotingDriveStopAll {
   @override
   void build() {}
 
-  Future<void> run() async {
-    try {
-      // Wallet-level cleanup with no page behind it: the wallet id comes
-      // from the last opened account.
-      final cancelled = await votingDriveCancelAll(account: ref.read(selectedAccountIdProvider), c: coinContext.coin);
-      if (cancelled > BigInt.zero) {
-        logger.i("[Voting] stopped $cancelled driver run(s) for this wallet");
-      }
-    } on Exception catch (e) {
-      // Best-effort: backgrounding and sign-out never surface errors.
-      logger.i("[Voting] drive stop-all skipped: $e");
+  void run() {
+    final drives = List.of(_liveVotingDrives.values);
+    for (final drive in drives) {
+      drive.cancel();
+    }
+    if (drives.isNotEmpty) {
+      logger.i("[Voting] stopped ${drives.length} submission run(s)");
     }
   }
 }

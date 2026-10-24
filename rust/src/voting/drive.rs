@@ -5,13 +5,12 @@
 //! CastVote / AdvanceVote steps, proves, persists, and advances chain
 //! submission through the host's transport. zkool supplies only transports,
 //! keys, and per-dispatch context; this module builds those adapters and the
-//! process-local run registry that drives the executor to quiescence and then
+//! [`RoundDrive`] actor that drives the executor to quiescence and then
 //! carries the round through helper-share confirmation.
 
-use std::collections::HashMap;
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Arc, LazyLock, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::Arc;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tokio::sync::watch;
 
@@ -20,7 +19,10 @@ use halo2_proofs::pasta::group::ff::PrimeField as _;
 use rand::rngs::SysRng;
 use rand_core::UnwrapErr;
 use zcash_keys::keys::UnifiedSpendingKey;
-use zcash_voting::prelude::{VotingDb, VotingHotkey};
+use zcash_voting::prelude::{
+    track_pending_shares, ShareTimingPolicy, ShareTrackingParams, ShareTrackingReport, VotingDb,
+    VotingHotkey,
+};
 use zcash_voting::vote_work::{
     DelegationStepInputs, ProposalRosterEntry, RoundBinding, RoundExecutor, RoundHostContext,
 };
@@ -35,7 +37,6 @@ use zip32::AccountId;
 use crate::voting::chain::{
     ZkoolChainTransport, ZkoolHelperTransport, ZkoolPirTransport, ZkoolTreeTransport,
 };
-use crate::voting::share_tracking::{self, TrackingOutcome};
 use crate::Sink;
 
 /// Transports and endpoints one executor run needs.
@@ -252,14 +253,18 @@ impl ZkoolRoundHost {
     }
 }
 
+fn now_seconds() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs()
+}
+
 impl RoundHostSource for ZkoolRoundHost {
     fn host_context(&self) -> RoundHostContext {
         RoundHostContext {
             configured_helper_urls: self.helper_urls.clone(),
-            now_seconds: SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap_or_default()
-                .as_secs(),
+            now_seconds: now_seconds(),
             ceremony_start_seconds: self.ceremony_start,
             vote_end_time_seconds: self.vote_end,
             vote_tree_node_urls: self.vote_tree_node_urls.clone(),
@@ -325,7 +330,8 @@ impl DriveRunStatus {
         }
     }
 
-    fn idle(round_id: &str) -> Self {
+    /// The standing of a round with no run.
+    pub fn idle(round_id: &str) -> Self {
         Self::new(round_id, PHASE_IDLE, false)
     }
 
@@ -395,95 +401,92 @@ fn quiescence_label(quiescence: &zcash_voting::RoundQuiescence) -> String {
     }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
-struct DriveKey {
-    wallet_id: String,
-    round_id: String,
-}
-
-#[derive(Clone)]
-struct ActiveDrive {
-    control: zcash_voting::ChainSubmissionControl,
-    status: StatusSender,
-}
-
-/// Live runs are process-local: their durable queue is the voting sidecar,
-/// so a restart simply discovers unfinished work again. Keyed by wallet and
-/// round so a wallet switch cannot touch another wallet's run. A finished
-/// run stays registered with its final status until a new run replaces it.
-static ACTIVE_DRIVES: LazyLock<Mutex<HashMap<DriveKey, ActiveDrive>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
+/// Operation epochs for the SDK's round locks: a run queued behind a
+/// cancelled predecessor stops waiting instead of holding its place.
 static NEXT_DRIVE_GENERATION: AtomicU64 = AtomicU64::new(1);
 
-/// Starts one run for `binding`, or reports `Ok(false)` when a run is
-/// already live for the wallet and round.
+/// One run of one round: the task that casts the ballot (delegation,
+/// proving, chain submission) and then confirms the helper shares until
+/// every share is confirmed, the vote end passes, the rest cannot be
+/// recovered, or the run is cancelled.
 ///
-/// The run casts the ballot (delegation, proving, chain submission) and, once
-/// the votes are on the chain, keeps confirming the helper shares until every
-/// share is confirmed, the vote end passes, the rest cannot be recovered, or
-/// the run is cancelled. Every status change is sent to `sink`, ending with a
-/// snapshot whose `running` is false.
-///
-/// The executor is constructed and driven entirely on the spawned task; a
-/// cancelled predecessor's SDK admission guard makes a replacement wait for
-/// the departing run rather than double-dispatching.
-pub fn start_round_drive<S>(
-    db: Arc<VotingDb>,
-    binding: RoundBinding,
-    routes: ExecutorRoutes,
-    host: ZkoolRoundHost,
-    sink: S,
-) -> Result<bool>
-where
-    S: Sink<DriveRunStatus> + Send + Sync + 'static,
-{
-    let key = DriveKey {
-        wallet_id: db.wallet_id().to_owned(),
-        round_id: binding.round_id.clone(),
-    };
-    let generation = NEXT_DRIVE_GENERATION.fetch_add(1, Ordering::Relaxed);
-    let control = zcash_voting::ChainSubmissionControl::new(generation);
-    let (status, mut updates) =
-        watch::channel(DriveRunStatus::new(&binding.round_id, PHASE_CASTING, true));
-    let status: StatusSender = Arc::new(status);
+/// The host that starts the run owns it, like the mempool and FROST
+/// drivers: it holds the handle for as long as the run should live, cancels
+/// it on backgrounding or wallet switch, and is the one place that decides
+/// whether a round already has a run. Dropping the handle cancels the run.
+/// Its durable queue is the voting sidecar, so a run started later, in the
+/// same process or after a restart, simply discovers the unfinished work.
+pub struct RoundDrive {
+    control: zcash_voting::ChainSubmissionControl,
+    status: watch::Receiver<DriveRunStatus>,
+}
+
+impl RoundDrive {
+    /// Starts the run for `binding`. Every status change is sent to `sink`,
+    /// beginning with the casting snapshot and ending with one whose
+    /// `running` is false; `status()` always has the latest.
+    pub fn start<S>(
+        db: Arc<VotingDb>,
+        binding: RoundBinding,
+        routes: ExecutorRoutes,
+        host: ZkoolRoundHost,
+        sink: S,
+    ) -> Self
+    where
+        S: Sink<DriveRunStatus> + Send + Sync + 'static,
     {
-        let mut active = ACTIVE_DRIVES
-            .lock()
-            .unwrap_or_else(|error| error.into_inner());
-        if active
-            .get(&key)
-            .is_some_and(|drive| !drive.control.is_cancelled())
-        {
-            return Ok(false);
+        let generation = NEXT_DRIVE_GENERATION.fetch_add(1, Ordering::Relaxed);
+        let control = zcash_voting::ChainSubmissionControl::new(generation);
+        let (sender, receiver) =
+            watch::channel(DriveRunStatus::new(&binding.round_id, PHASE_CASTING, true));
+        let sender = Arc::new(sender);
+
+        // The forwarder turns the coalesced watch updates into sink sends and
+        // leaves once it has forwarded the final snapshot.
+        let mut updates = receiver.clone();
+        tokio::spawn(async move {
+            loop {
+                let snapshot = updates.borrow_and_update().clone();
+                let running = snapshot.running;
+                sink.send(snapshot).await;
+                if !running || updates.changed().await.is_err() {
+                    break;
+                }
+            }
+        });
+
+        let task_control = control.clone();
+        tokio::spawn(async move {
+            let outcome = run_round(db, binding, &routes, host, &task_control, &sender).await;
+            sender.send_modify(|current| current.stop(outcome));
+        });
+        Self {
+            control,
+            status: receiver,
         }
-        active.insert(
-            key,
-            ActiveDrive {
-                control: control.clone(),
-                status: Arc::clone(&status),
-            },
-        );
     }
 
-    // The forwarder turns the coalesced watch updates into sink sends, and
-    // leaves once it has forwarded the final snapshot: the sender stays in
-    // the registry for later pollers, so it never closes.
-    tokio::spawn(async move {
-        loop {
-            let snapshot = updates.borrow_and_update().clone();
-            let running = snapshot.running;
-            sink.send(snapshot).await;
-            if !running || updates.changed().await.is_err() {
-                break;
-            }
-        }
-    });
+    /// Cancels the run cooperatively: the SDK wakes retry waits rather than
+    /// leaving the task parked until its next pass, and the final snapshot
+    /// follows once the step in flight ends. Durable effects stay.
+    pub fn cancel(&self) {
+        self.control.cancel();
+    }
 
-    tokio::spawn(async move {
-        let outcome = run_round(db, binding, &routes, host, &control, &status).await;
-        status.send_modify(|current| current.stop(outcome));
-    });
-    Ok(true)
+    /// The latest snapshot.
+    pub fn status(&self) -> DriveRunStatus {
+        self.status.borrow().clone()
+    }
+
+    pub fn is_running(&self) -> bool {
+        self.status.borrow().running
+    }
+}
+
+impl Drop for RoundDrive {
+    fn drop(&mut self) {
+        self.control.cancel();
+    }
 }
 
 /// Casts the ballot, then confirms the helper shares. Returns the final
@@ -562,7 +565,7 @@ async fn run_round(
         HelperHealth::default(),
     );
     let cancelled = move || control.is_cancelled();
-    let outcome = share_tracking::track_shares_until_done(
+    let outcome = track_shares_until_done(
         Arc::clone(&db),
         &client,
         &round_id,
@@ -596,51 +599,160 @@ pub async fn share_counts(db: Arc<VotingDb>, round_id: &str) -> Result<(u32, u32
     .await?
 }
 
-/// Cancels one round's driver run. The SDK wakes retry waits rather than
-/// leaving the task parked until its next pass.
-pub fn cancel_round_drive(wallet_id: &str, round_id: &str) -> bool {
-    let key = DriveKey {
-        wallet_id: wallet_id.to_owned(),
-        round_id: round_id.to_owned(),
-    };
-    let active = ACTIVE_DRIVES
-        .lock()
-        .unwrap_or_else(|error| error.into_inner());
-    let Some(drive) = active.get(&key) else {
-        return false;
-    };
-    drive.control.cancel();
-    true
+// ---------------------------------------------------------------------------
+// Helper-share confirmation, one durable pass at a time.
+//
+// A pass walks the round's unconfirmed shares, asks the helpers that hold
+// them for confirmation, and resubmits the overdue ones; every pass is
+// planned from the durable sidecar, so a restart simply runs the next one.
+
+/// One pass walks every unconfirmed share, and a stalled helper can hold it
+/// for the per-share poll budget. The whole pass is bounded so a caller's
+/// loop is never wedged; a cancelled pass keeps whatever it confirmed.
+const PASS_BUDGET: Duration = Duration::from_secs(45);
+
+/// Wait after a failed pass, which carries no `next_delay_seconds`; doubled
+/// on every further failure in a row, up to `MAX_RETRY_DELAY`.
+const RETRY_DELAY: Duration = Duration::from_secs(30);
+const MAX_RETRY_DELAY: Duration = Duration::from_secs(5 * 60);
+
+/// Why [`track_shares_until_done`] stopped.
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum TrackingOutcome {
+    /// Every share is confirmed.
+    Done,
+    /// The round's vote end passed with shares still unconfirmed.
+    RoundClosed { unconfirmed: u32 },
+    /// Nothing is pending, but these shares cannot be repaired by retrying.
+    Unrecoverable { count: u32 },
+    /// The caller cancelled.
+    Cancelled,
 }
 
-/// Cancels all driver runs for this wallet, leaving other wallets untouched.
-pub fn cancel_all_round_drives(wallet_id: &str) -> usize {
-    let active = ACTIVE_DRIVES
-        .lock()
-        .unwrap_or_else(|error| error.into_inner());
-    let mut cancelled = 0;
-    for (key, drive) in active.iter() {
-        if key.wallet_id == wallet_id && !drive.control.is_cancelled() {
-            drive.control.cancel();
-            cancelled += 1;
-        }
+/// Runs exactly one helper-share tracking pass for a round against `db`.
+///
+/// The report's `next_delay_seconds` tells the caller when to run another
+/// pass, or that nothing is pending.
+async fn track_shares_pass(
+    db: &VotingDb,
+    client: &HelperClient,
+    round_id: &str,
+    helper_urls: &[String],
+    vote_end_time_seconds: Option<u64>,
+) -> Result<ShareTrackingReport> {
+    let params = ShareTrackingParams {
+        round_id,
+        configured_server_urls: helper_urls,
+        now_seconds: now_seconds(),
+        vote_end_time_seconds,
+        policy: ShareTimingPolicy::default(),
+    };
+    let cancelled = Arc::new(AtomicBool::new(false));
+    {
+        let cancelled = Arc::clone(&cancelled);
+        tokio::spawn(async move {
+            tokio::time::sleep(PASS_BUDGET).await;
+            cancelled.store(true, Ordering::Relaxed);
+        });
     }
-    cancelled
+    Ok(track_pending_shares(db, &params, client, &|| cancelled.load(Ordering::Relaxed)).await?)
 }
 
-/// Snapshots one round's run status; idle when nothing is registered.
-/// The last snapshot of a finished run stays readable until a new run.
-pub fn drive_status(wallet_id: &str, round_id: &str) -> DriveRunStatus {
-    let key = DriveKey {
-        wallet_id: wallet_id.to_owned(),
-        round_id: round_id.to_owned(),
-    };
-    let active = ACTIVE_DRIVES
-        .lock()
-        .unwrap_or_else(|error| error.into_inner());
-    match active.get(&key) {
-        Some(drive) => drive.status.borrow().clone(),
-        None => DriveRunStatus::idle(round_id),
+/// The shares of `round_id` not yet confirmed, read on a blocking thread.
+async fn unconfirmed_count(db: Arc<VotingDb>, round_id: &str) -> Result<u32> {
+    let round = round_id.to_owned();
+    let count = tokio::task::spawn_blocking(move || db.get_unconfirmed_delegations(&round))
+        .await??
+        .len();
+    Ok(u32::try_from(count).unwrap_or(u32::MAX))
+}
+
+/// Sleeps `delay` in one-second slices, returning early once `cancelled`.
+async fn sleep_unless_cancelled(delay: Duration, cancelled: &(dyn Fn() -> bool + Send + Sync)) {
+    let deadline = tokio::time::Instant::now() + delay;
+    while tokio::time::Instant::now() < deadline && !cancelled() {
+        let left = deadline.saturating_duration_since(tokio::time::Instant::now());
+        tokio::time::sleep(left.min(Duration::from_secs(1))).await;
+    }
+}
+
+/// Runs tracking passes for a round until every share is confirmed, the
+/// vote end passes, the remaining shares cannot be recovered, or `cancelled`.
+///
+/// A pass is run as soon as the SDK's timing says a share is due, and a
+/// failed pass (helpers unreachable) is retried with a growing delay for as
+/// long as the round is open: the host asked for the vote to be carried to
+/// confirmation, not for a report of a flaky network. `on_pass` runs after
+/// every pass with its report and the shares still unconfirmed, for the
+/// host's progress display.
+async fn track_shares_until_done(
+    db: Arc<VotingDb>,
+    client: &HelperClient,
+    round_id: &str,
+    helper_urls: &[String],
+    vote_end_time_seconds: Option<u64>,
+    cancelled: &(dyn Fn() -> bool + Send + Sync),
+    mut on_pass: impl FnMut(&ShareTrackingReport, u32),
+) -> TrackingOutcome {
+    let closed = |unconfirmed: u32| TrackingOutcome::RoundClosed { unconfirmed };
+    let mut retry_delay = RETRY_DELAY;
+    loop {
+        if cancelled() {
+            return TrackingOutcome::Cancelled;
+        }
+        if vote_end_time_seconds.is_some_and(|end| now_seconds() >= end) {
+            tracing::info!("voting share tracking for {round_id} stopped: vote end reached");
+            return closed(
+                unconfirmed_count(Arc::clone(&db), round_id)
+                    .await
+                    .unwrap_or(0),
+            );
+        }
+        let pass =
+            track_shares_pass(&db, client, round_id, helper_urls, vote_end_time_seconds).await;
+        let delay = match pass {
+            Ok(report) => {
+                retry_delay = RETRY_DELAY;
+                let unconfirmed = unconfirmed_count(Arc::clone(&db), round_id)
+                    .await
+                    .unwrap_or_else(|_| {
+                        report
+                            .unconfirmed_at_entry
+                            .unwrap_or(u32::MAX)
+                            .saturating_sub(u32::try_from(report.confirmed.len()).unwrap_or(0))
+                    });
+                on_pass(&report, unconfirmed);
+                if cancelled() {
+                    return TrackingOutcome::Cancelled;
+                }
+                if unconfirmed == 0 {
+                    return TrackingOutcome::Done;
+                }
+                match report.next_delay_seconds {
+                    Some(seconds) => Duration::from_secs(seconds.max(1)),
+                    None if !report.unrecoverable.is_empty() => {
+                        tracing::warn!(
+                            "voting share tracking for {round_id}: {} share(s) cannot be recovered",
+                            report.unrecoverable.len()
+                        );
+                        return TrackingOutcome::Unrecoverable {
+                            count: u32::try_from(report.unrecoverable.len()).unwrap_or(u32::MAX),
+                        };
+                    }
+                    None => return TrackingOutcome::Done,
+                }
+            }
+            Err(error) => {
+                tracing::warn!(
+                    "voting share tracking pass for {round_id} failed, next try in {}s: {error:#}",
+                    retry_delay.as_secs()
+                );
+                let delay = retry_delay;
+                retry_delay = (retry_delay * 2).min(MAX_RETRY_DELAY);
+                delay
+            }
+        };
+        sleep_unless_cancelled(delay, cancelled).await;
     }
 }
 

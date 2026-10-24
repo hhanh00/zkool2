@@ -5,7 +5,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/src/rust/api/voting_drive.dart';
-import 'package:zkool/src/rust/api/voting_share_tracking.dart';
 import 'package:zkool/store.dart'
     show
         VotingDriveJobState,
@@ -37,7 +36,6 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
   /// already-voted round to the status view and drives share confirmation.
   VotingDriveStatus? _shareStatus;
   Timer? _shareTimer;
-  bool _sharePassRunning = false;
 
   @override
   void initState() {
@@ -58,9 +56,9 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
         Timer.periodic(const Duration(seconds: 5), (_) => unawaited(_refreshShares()));
   }
 
-  /// Polls the round's durable state and, while shares are pending and no drive
-  /// run is live, runs one helper-share tracking pass so confirmation advances
-  /// without a resident background driver.
+  /// Polls the round's durable standing while this page is open: it routes
+  /// an already-voted round to the status view. The run itself confirms the
+  /// helper shares; nothing here touches them.
   Future<void> _refreshShares() async {
     try {
       final status = await votingDriveStatus(roundId: widget.round.roundId, account: widget.account, c: _coin);
@@ -69,36 +67,10 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
       if (!pending) {
         _shareTimer?.cancel();
         _shareTimer = null;
-      } else {
-        // The single share mechanism: one pass per poll while the page is open,
-        // whether or not a round driver run is on screen.
-        unawaited(_trackSharesOnce());
       }
       setState(() => _shareStatus = status);
     } on Exception {
       // Transient status errors: the next tick retries.
-    }
-  }
-
-  /// Runs one share tracking pass, overlapping with nothing.
-  ///
-  /// Guarded so a slow pass is not re-entered by the next 5s poll; a pass that
-  /// confirms nothing simply runs again on the next tick.
-  Future<void> _trackSharesOnce() async {
-    if (_sharePassRunning || widget.round.helperUrls.isEmpty) return;
-    _sharePassRunning = true;
-    try {
-      await votingTrackSharesOnce(
-        roundId: widget.round.roundId,
-        helperUrls: widget.round.helperUrls,
-        voteEndTimeSeconds: widget.round.voteEndTime,
-        account: widget.account,
-        c: _coin,
-      );
-    } on Exception {
-      // A pass that fails leaves the rows durable; the next tick retries.
-    } finally {
-      _sharePassRunning = false;
     }
   }
 
@@ -230,6 +202,8 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
     if (!confirmed || !mounted) return;
     await job.start(lightwalletdUrl: settings.lwd, roundName: widget.round.title);
     if (!mounted) return;
+    // The run creates the shares; poll for them again.
+    _startShareRefresh();
     final stage = ref.read(votingDriveJobProvider(widget.round.roundId, widget.account)).stage;
     if (stage == "error") {
       final error = ref.read(votingDriveJobProvider(widget.round.roundId, widget.account)).error;
@@ -410,8 +384,13 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
 
   /// Status shown by the page, synthesized for an already-voted round opened
   /// with no live in-process run (the driver registry is process-local).
+  ///
+  /// While a run is live, its own status leads: the durable poll may still
+  /// hold what it read before the run started, which would show a submission
+  /// as idle for as long as it runs.
   VotingDriveStatus? _effectiveStatus(VotingDriveJobState job) {
-    final status = _shareStatus ?? job.status;
+    final live = job.stage == "starting" || job.stage == "driving";
+    final status = live ? (job.status ?? _shareStatus) : (_shareStatus ?? job.status);
     if (status == null || status.running || status.quiescence != null) {
       return status;
     }
@@ -594,7 +573,9 @@ class _DriveStatusView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = this.status ?? job.status;
-    final running = status?.running ?? true;
+    // A run that is starting is not registered yet, so the durable poll reads
+    // it as idle: the start counts as running until the registry has it.
+    final running = job.stage == "starting" || (status?.running ?? true);
     final theme = Theme.of(context);
     final failures = status?.failures ?? const <String>[];
     final progress = switch (status) {

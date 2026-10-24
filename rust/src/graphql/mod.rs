@@ -1,9 +1,11 @@
+use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Duration;
 
 use crate::frost::driver::Driver;
 use crate::graphql::jwt::Claims;
 use crate::{
-    api::coin::Coin,
+    api::{coin::Coin, voting_drive::VotingDrive},
     graphql::query::{new_tx_loader, TxLoader},
 };
 use juniper::{FieldError, FieldResult};
@@ -24,6 +26,9 @@ pub struct Context {
     pub tx_loader: TxLoader,
     /// The one task that advances DKG and signing; see `frost::driver`.
     pub driver: Driver,
+    /// The submission runs this server started, by round id; a run stays
+    /// until the server stops, so `votingSubmissionStatus` can read it.
+    pub voting_drives: Arc<tokio::sync::Mutex<HashMap<String, VotingDrive>>>,
 }
 
 impl Context {
@@ -38,6 +43,7 @@ impl Context {
             tx_loader: new_tx_loader(pool),
             auth: None,
             driver,
+            voting_drives: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
         }
     }
 }

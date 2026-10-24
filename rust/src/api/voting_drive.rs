@@ -1,18 +1,18 @@
 //! FRB API to drive one voting round from ballot decisions to chain
 //! confirmation.
 //!
-//! `voting_drive_run` (Flutter) and `voting_drive_start` (headless) resolve
-//! the authenticated config, gather every round input, and hand the round to
-//! the voting crate's driver, which casts the votes and confirms the helper
-//! shares on a process-local task. The Flutter run streams its status; the
-//! headless one is polled. Cancellation is cooperative through the driver's
-//! control.
+//! [`VotingDrive`] is the host's handle on one round's run, like the mempool
+//! and FROST drivers: `run` resolves the authenticated config, gathers every
+//! round input, and hands the round to the voting crate's driver, which casts
+//! the votes and confirms the helper shares on its own task while streaming
+//! its status. The holder keeps the handle for as long as the run should
+//! live and cancels it cooperatively.
 
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, ensure, Result};
 use bip39::Mnemonic;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
@@ -108,8 +108,8 @@ async fn fetch_round_timing(
     Ok(None)
 }
 
-/// Snapshot of one round's run for the UI, streamed by `voting_drive_run`
-/// and polled by `voting_drive_status`.
+/// Snapshot of one round's run for the UI, streamed by `VotingDrive::run`;
+/// `voting_drive_status` gives the idle standing of a round with no run.
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VotingDriveStatus {
@@ -412,20 +412,15 @@ pub async fn voting_prepare_round(
     prepare_bundles(gathered, c).await
 }
 
-/// Starts one round's run: delegation (if still owed), vote casting, chain
-/// submission, then helper-share confirmation. Status goes to `sink`.
-///
-/// Returns false when a run is already live for this wallet and round. The
-/// run is idempotent and resumable: every step is planned from durable
-/// sidecar state, so restarting after a crash or cancel is always safe.
-async fn drive_round<S>(
+/// Gathers one round's inputs and starts its run, with status to `sink`.
+async fn start_round_drive<S>(
     round_id: &str,
     lightwalletd_url: &str,
     round_name: &str,
     account: u32,
     c: &Coin,
     sink: S,
-) -> Result<bool>
+) -> Result<drive::RoundDrive>
 where
     S: Sink<VotingDriveStatus> + Send + Sync + 'static,
 {
@@ -463,41 +458,112 @@ where
     let host =
         drive::ZkoolRoundHost::new(servers.clone(), servers, None, vote_end, Some(delegation));
     let binding = drive::build_binding(round_id, network, &roster, Some(&hotkey))?;
-    drive::start_round_drive(sidecar.db(), binding, routes, host, StatusSink(sink))
+    Ok(drive::RoundDrive::start(
+        sidecar.db(),
+        binding,
+        routes,
+        host,
+        StatusSink(sink),
+    ))
 }
 
-/// Starts one round's run for a host that polls `voting_drive_status`.
-/// Returns false when a run is already live for this wallet and round.
-pub async fn voting_drive_start(
-    round_id: &str,
-    lightwalletd_url: &str,
-    round_name: &str,
-    account: u32,
-    c: &Coin,
-) -> Result<bool> {
-    drive_round(round_id, lightwalletd_url, round_name, account, c, ()).await
+/// The host's handle on one round's submission run: delegation (if still
+/// owed), vote casting, chain submission, then helper-share confirmation.
+///
+/// The run is idempotent and resumable: every step is planned from durable
+/// sidecar state, so starting again after a crash or cancel is always safe.
+/// The holder decides whether a round already has a run; `run` refuses to
+/// start a second one while the first is live.
+#[cfg_attr(feature = "flutter", frb(opaque))]
+pub struct VotingDrive {
+    drive: Option<drive::RoundDrive>,
 }
 
-/// Starts one round's run and streams its status to `status` until the run
-/// stops (the last item has `running == false`). Returns false, and sends
-/// nothing, when a run is already live for this wallet and round: subscribe
-/// to that one with `voting_drive_status` instead.
-#[cfg(feature = "flutter")]
-#[frb]
-pub async fn voting_drive_run(
-    round_id: &str,
-    lightwalletd_url: &str,
-    round_name: &str,
-    account: u32,
-    c: &Coin,
-    status: StreamSink<VotingDriveStatus>,
-) -> Result<bool> {
-    drive_round(round_id, lightwalletd_url, round_name, account, c, status).await
+impl VotingDrive {
+    #[cfg_attr(feature = "flutter", frb(sync))]
+    #[allow(clippy::new_without_default)] // Default would surface in Dart
+    pub fn new() -> Self {
+        Self { drive: None }
+    }
+
+    /// Starts the run and streams its status to `status` until the run
+    /// stops: the last item has `running == false`.
+    #[cfg(feature = "flutter")]
+    pub async fn run(
+        &mut self,
+        round_id: &str,
+        lightwalletd_url: &str,
+        round_name: &str,
+        account: u32,
+        c: &Coin,
+        status: StreamSink<VotingDriveStatus>,
+    ) -> Result<()> {
+        self.start_with(round_id, lightwalletd_url, round_name, account, c, status)
+            .await
+    }
+
+    /// Starts the run for a host that polls `status()`.
+    #[cfg_attr(feature = "flutter", frb(ignore))]
+    pub async fn start(
+        &mut self,
+        round_id: &str,
+        lightwalletd_url: &str,
+        round_name: &str,
+        account: u32,
+        c: &Coin,
+    ) -> Result<()> {
+        self.start_with(round_id, lightwalletd_url, round_name, account, c, ())
+            .await
+    }
+
+    async fn start_with<S>(
+        &mut self,
+        round_id: &str,
+        lightwalletd_url: &str,
+        round_name: &str,
+        account: u32,
+        c: &Coin,
+        sink: S,
+    ) -> Result<()>
+    where
+        S: Sink<VotingDriveStatus> + Send + Sync + 'static,
+    {
+        ensure!(
+            !self.is_running(),
+            "a submission run is already live for round {round_id}"
+        );
+        let drive =
+            start_round_drive(round_id, lightwalletd_url, round_name, account, c, sink).await?;
+        self.drive = Some(drive);
+        Ok(())
+    }
+
+    /// Cancels the run cooperatively, waking any in-flight retry wait. The
+    /// stream ends with the cancelled snapshot once the step in flight ends.
+    #[cfg_attr(feature = "flutter", frb(sync))]
+    pub fn cancel(&self) {
+        if let Some(drive) = &self.drive {
+            drive.cancel();
+        }
+    }
+
+    /// The latest snapshot of the run; idle before the first `run`.
+    #[cfg_attr(feature = "flutter", frb(sync))]
+    pub fn status(&self) -> Option<VotingDriveStatus> {
+        self.drive.as_ref().map(|drive| drive.status().into())
+    }
+
+    #[cfg_attr(feature = "flutter", frb(sync))]
+    pub fn is_running(&self) -> bool {
+        self.drive
+            .as_ref()
+            .is_some_and(drive::RoundDrive::is_running)
+    }
 }
 
-/// Polls one round's run; idle when nothing was started. A finished run
-/// keeps its last snapshot. Without a run, the share counts come from the
-/// durable sidecar so a round can show its standing before a resume.
+/// The round's durable standing without a run: phase idle, with the helper
+/// share counts from the sidecar, so a page can tell a round already voted
+/// in from a fresh one. A live run's status comes from its `VotingDrive`.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn voting_drive_status(
     round_id: &str,
@@ -505,30 +571,13 @@ pub async fn voting_drive_status(
     c: &Coin,
 ) -> Result<VotingDriveStatus> {
     let wallet = wallet_id(account, c).await?;
-    let mut status: VotingDriveStatus = drive::drive_status(&wallet, round_id).into();
-    if status.phase == drive::PHASE_IDLE {
-        let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet).await?;
-        let (confirmed, total) = drive::share_counts(sidecar.db(), round_id).await?;
-        status.shares_confirmed = confirmed;
-        status.shares_total = total;
-    }
-    Ok(status)
-}
-
-/// Cancels one round's driver run, waking any in-flight retry wait.
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_drive_cancel(round_id: &str, account: u32, c: &Coin) -> Result<bool> {
-    let wallet = wallet_id(account, c).await?;
-    Ok(drive::cancel_round_drive(&wallet, round_id))
-}
-
-/// Cancels every live driver run for the current wallet, leaving other
-/// wallets untouched. Wallet switch and backgrounding call this so no run
-/// outlives its wallet; durable effects stay resumable through a later start.
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_drive_cancel_all(account: u32, c: &Coin) -> Result<usize> {
-    let wallet = wallet_id(account, c).await?;
-    Ok(drive::cancel_all_round_drives(&wallet))
+    let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet).await?;
+    let (shares_confirmed, shares_total) = drive::share_counts(sidecar.db(), round_id).await?;
+    Ok(VotingDriveStatus {
+        shares_confirmed,
+        shares_total,
+        ..drive::DriveRunStatus::idle(round_id).into()
+    })
 }
 
 fn ensure_nonempty(value: &str, name: &str) -> Result<()> {
