@@ -23,6 +23,7 @@ pub mod key;
 pub mod keys;
 pub mod ledger;
 pub mod lwd;
+pub mod market;
 pub mod memo;
 pub mod mempool;
 pub mod migrate;

@@ -115,6 +115,22 @@ pub async fn get_exchange_rate(
     })
 }
 
+/// The most recent `limit` candles of `interval` for the market chart,
+/// oldest first; see [`crate::market`]. `interval` is a Binance kline interval
+/// such as `1h`, `4h`, `1d` or `1w`; `limit` is 1..=1500.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn fetch_candles(interval: &str, limit: u32, c: &Coin) -> Result<Vec<Candle>> {
+    let base = {
+        let mut connection = c.get_connection().await?;
+        crate::market::klines_url(&mut connection).await?
+    };
+    let client = http::client(
+        http::proxy_url(c.transport, &c.proxy),
+        Duration::from_secs(15),
+    )?;
+    crate::market::get_klines(&base, interval, limit, &client).await
+}
+
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn get_network_name(c: &Coin) -> String {
     c.get_name().to_string()
@@ -140,6 +156,19 @@ pub struct ExchangeRate {
     pub to_price: f64,
     pub from_currency: String,
     pub to_currency: String,
+}
+
+/// One kline of the market chart. `time` is the open time in seconds since
+/// the epoch; prices are in the quote currency (USDC); `volume` is in ZEC.
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct Candle {
+    pub time: u32,
+    pub open: f64,
+    pub high: f64,
+    pub low: f64,
+    pub close: f64,
+    pub volume: f64,
 }
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]

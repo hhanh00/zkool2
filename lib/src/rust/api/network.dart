@@ -10,7 +10,7 @@ import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'network.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `coingecko_url`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `fmt`, `fmt`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`
 
 Future<void> initDatadir({required String directory}) =>
     RustLib.instance.api.crateApiNetworkInitDatadir(directory: directory);
@@ -42,6 +42,14 @@ Future<ExchangeRate> getExchangeRate(
     RustLib.instance.api.crateApiNetworkGetExchangeRate(
         api: api, fromCurrency: fromCurrency, toCurrency: toCurrency, c: c);
 
+/// The most recent `limit` candles of `interval` for the market chart,
+/// oldest first; see [`crate::market`]. `interval` is a Binance kline interval
+/// such as `1h`, `4h`, `1d` or `1w`; `limit` is 1..=1500.
+Future<List<Candle>> fetchCandles(
+        {required String interval, required int limit, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiNetworkFetchCandles(interval: interval, limit: limit, c: c);
+
 Future<String> getNetworkName({required Coin c}) =>
     RustLib.instance.api.crateApiNetworkGetNetworkName(c: c);
 
@@ -52,6 +60,20 @@ Future<List<LWDInfo>> queryLwdList({required int coin}) =>
 /// (`nym://<identity>.<encryption>@<gateway>`).
 bool isValidNymUrl({required String url}) =>
     RustLib.instance.api.crateApiNetworkIsValidNymUrl(url: url);
+
+/// One kline of the market chart. `time` is the open time in seconds since
+/// the epoch; prices are in the quote currency (USDC); `volume` is in ZEC.
+@freezed
+sealed class Candle with _$Candle {
+  const factory Candle({
+    required int time,
+    required double open,
+    required double high,
+    required double low,
+    required double close,
+    required double volume,
+  }) = _Candle;
+}
 
 @freezed
 sealed class ExchangeRate with _$ExchangeRate {
