@@ -373,6 +373,8 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final paletteName = await prefs.getString("palette_name") ?? 'blue';
     final darkMode = await prefs.getBool("dark_mode") ?? true;
     final txTableMode = await prefs.getBool("tx_table_mode") ?? false;
+    final marketInterval = await prefs.getString("market_interval") ?? "1d";
+    final marketStyle = await prefs.getString("market_style") ?? "candles";
     final collapsePoolBalances =
         (hasDb ? await getProp(key: "collapse_pool_balances", c: c) : null) == "true";
     final currency = (hasDb ? await getProp(key: "currency", c: c) : null) ?? "usd";
@@ -404,6 +406,8 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       transactionTableMode: txTableMode,
       collapsePoolBalances: collapsePoolBalances,
       currency: currency,
+      marketInterval: marketInterval,
+      marketStyle: marketStyle,
     );
   }
 
@@ -428,6 +432,18 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     await prefs.setBool("tx_table_mode", tableMode);
     state = state.whenData((s) => s.copyWith(
           transactionTableMode: tableMode,
+        ));
+  }
+
+  /// The market chart's interval (a Binance kline interval) and style (a
+  /// `MarketChartStyle` name), remembered across opens of the page.
+  Future<void> setMarketChart({required String interval, required String style}) async {
+    final prefs = SharedPreferencesAsync();
+    await prefs.setString("market_interval", interval);
+    await prefs.setString("market_style", style);
+    state = state.whenData((s) => s.copyWith(
+          marketInterval: interval,
+          marketStyle: style,
         ));
   }
 
@@ -471,6 +487,8 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     await prefs.setBool("expert_mode", settings.expertMode);
     await prefs.setString("palette_name", settings.paletteName);
     await prefs.setBool("dark_mode", settings.darkMode);
+    await prefs.setString("market_interval", settings.marketInterval);
+    await prefs.setString("market_style", settings.marketStyle);
     await putProp(key: "currency", value: settings.currency, c: c);
     await putProp(key: "collapse_pool_balances", value: settings.collapsePoolBalances.toString(), c: c);
     await putProp(key: "voting_config_url", value: settings.votingConfigUrl, c: c);
@@ -563,6 +581,8 @@ sealed class AppSettings with _$AppSettings {
     required bool collapsePoolBalances,
     required String currency,
     required String votingConfigUrl,
+    required String marketInterval,
+    required String marketStyle,
   }) = _AppSettings;
 }
 

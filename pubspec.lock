@@ -1577,6 +1577,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.1"
+  swm_chart:
+    dependency: "direct main"
+    description:
+      name: swm_chart
+      sha256: "9c11363172adb74d046b6bc43ff82b05f7ee8a9e3d71277c6014a1bb38afaa27"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.6.1"
   sync_http:
     dependency: transitive
     description:

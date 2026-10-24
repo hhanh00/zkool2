@@ -11,6 +11,7 @@ import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/network.dart' show isValidNymUrl;
@@ -436,6 +437,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     ],
                   ),
                 ),
+                Gap(8),
+                const MarketChartAttribution(),
               ],
             ),
           ),
@@ -1420,6 +1423,31 @@ class _SettingsThemePageState extends ConsumerState<SettingsThemePage> with Rout
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// The attribution the market chart's rendering code requires: it is
+/// derived from TradingView Lightweight Charts™ (Apache-2.0, see the NOTICE
+/// of swm_chart), whose terms ask for a visible credit with a link.
+class MarketChartAttribution extends StatelessWidget {
+  const MarketChartAttribution({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Center(
+      child: InkWell(
+        onTap: () => launchUrl(Uri.parse("https://www.tradingview.com/"), mode: LaunchMode.externalApplication),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          child: Text(
+            "Market chart derived from TradingView Lightweight Charts™",
+            style: t.bodySmall?.copyWith(color: Colors.grey, decoration: TextDecoration.underline),
+            textAlign: TextAlign.center,
+          ),
+        ),
       ),
     );
   }

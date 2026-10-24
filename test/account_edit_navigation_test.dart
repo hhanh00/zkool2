@@ -74,6 +74,8 @@ class _Settings extends AppSettingsNotifier {
         collapsePoolBalances: false,
         currency: '',
         votingConfigUrl: '',
+        marketInterval: "1d",
+        marketStyle: "candles",
       );
 }
 

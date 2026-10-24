@@ -566,7 +566,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'e3548830b1a59de27a421e8f53af26adbb0a2888';
+    r'f91232871b263e892c96119a48a7f1ef01cd5b37';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -850,7 +850,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'a85d2e5ae5469f6e08bb46271136d445b160c0d0';
+    r'a7b0c7dda4b292793e86b3eece48644c43ea3aa1';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();

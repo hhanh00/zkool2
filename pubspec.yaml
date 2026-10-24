@@ -59,6 +59,7 @@ dependencies:
   searchable_listview: ^2.17.3
   data_table_2: ^2.6.0
   flutter_inappwebview: ^6.1.5
+  swm_chart: 0.6.1
   url_launcher: ^6.3.2
 
   bubble: ^1.2.1

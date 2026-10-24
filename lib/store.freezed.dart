@@ -1381,6 +1381,8 @@ mixin _$AppSettings {
   bool get collapsePoolBalances;
   String get currency;
   String get votingConfigUrl;
+  String get marketInterval;
+  String get marketStyle;
 
   /// Create a copy of AppSettings
   /// with the given fields replaced by the non-null parameter values.
@@ -1433,7 +1435,11 @@ mixin _$AppSettings {
             (identical(other.currency, currency) ||
                 other.currency == currency) &&
             (identical(other.votingConfigUrl, votingConfigUrl) ||
-                other.votingConfigUrl == votingConfigUrl));
+                other.votingConfigUrl == votingConfigUrl) &&
+            (identical(other.marketInterval, marketInterval) ||
+                other.marketInterval == marketInterval) &&
+            (identical(other.marketStyle, marketStyle) ||
+                other.marketStyle == marketStyle));
   }
 
   @override
@@ -1462,12 +1468,14 @@ mixin _$AppSettings {
         transactionTableMode,
         collapsePoolBalances,
         currency,
-        votingConfigUrl
+        votingConfigUrl,
+        marketInterval,
+        marketStyle
       ]);
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, transport: $transport, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, transactionTableMode: $transactionTableMode, collapsePoolBalances: $collapsePoolBalances, currency: $currency, votingConfigUrl: $votingConfigUrl)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, transport: $transport, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, transactionTableMode: $transactionTableMode, collapsePoolBalances: $collapsePoolBalances, currency: $currency, votingConfigUrl: $votingConfigUrl, marketInterval: $marketInterval, marketStyle: $marketStyle)';
   }
 }
 
@@ -1501,7 +1509,9 @@ abstract mixin class $AppSettingsCopyWith<$Res> {
       bool transactionTableMode,
       bool collapsePoolBalances,
       String currency,
-      String votingConfigUrl});
+      String votingConfigUrl,
+      String marketInterval,
+      String marketStyle});
 
   $QRSettingsCopyWith<$Res> get qrSettings;
 }
@@ -1542,6 +1552,8 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
     Object? collapsePoolBalances = null,
     Object? currency = null,
     Object? votingConfigUrl = null,
+    Object? marketInterval = null,
+    Object? marketStyle = null,
   }) {
     return _then(_self.copyWith(
       dbName: null == dbName
@@ -1639,6 +1651,14 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
       votingConfigUrl: null == votingConfigUrl
           ? _self.votingConfigUrl
           : votingConfigUrl // ignore: cast_nullable_to_non_nullable
+              as String,
+      marketInterval: null == marketInterval
+          ? _self.marketInterval
+          : marketInterval // ignore: cast_nullable_to_non_nullable
+              as String,
+      marketStyle: null == marketStyle
+          ? _self.marketStyle
+          : marketStyle // ignore: cast_nullable_to_non_nullable
               as String,
     ));
   }
@@ -1769,7 +1789,9 @@ extension AppSettingsPatterns on AppSettings {
             bool transactionTableMode,
             bool collapsePoolBalances,
             String currency,
-            String votingConfigUrl)?
+            String votingConfigUrl,
+            String marketInterval,
+            String marketStyle)?
         $default, {
     required TResult orElse(),
   }) {
@@ -1800,7 +1822,9 @@ extension AppSettingsPatterns on AppSettings {
             _that.transactionTableMode,
             _that.collapsePoolBalances,
             _that.currency,
-            _that.votingConfigUrl);
+            _that.votingConfigUrl,
+            _that.marketInterval,
+            _that.marketStyle);
       case _:
         return orElse();
     }
@@ -1845,7 +1869,9 @@ extension AppSettingsPatterns on AppSettings {
             bool transactionTableMode,
             bool collapsePoolBalances,
             String currency,
-            String votingConfigUrl)
+            String votingConfigUrl,
+            String marketInterval,
+            String marketStyle)
         $default,
   ) {
     final _that = this;
@@ -1875,7 +1901,9 @@ extension AppSettingsPatterns on AppSettings {
             _that.transactionTableMode,
             _that.collapsePoolBalances,
             _that.currency,
-            _that.votingConfigUrl);
+            _that.votingConfigUrl,
+            _that.marketInterval,
+            _that.marketStyle);
     }
   }
 
@@ -1917,7 +1945,9 @@ extension AppSettingsPatterns on AppSettings {
             bool transactionTableMode,
             bool collapsePoolBalances,
             String currency,
-            String votingConfigUrl)?
+            String votingConfigUrl,
+            String marketInterval,
+            String marketStyle)?
         $default,
   ) {
     final _that = this;
@@ -1947,7 +1977,9 @@ extension AppSettingsPatterns on AppSettings {
             _that.transactionTableMode,
             _that.collapsePoolBalances,
             _that.currency,
-            _that.votingConfigUrl);
+            _that.votingConfigUrl,
+            _that.marketInterval,
+            _that.marketStyle);
       case _:
         return null;
     }
@@ -1981,7 +2013,9 @@ class _AppSettings implements AppSettings {
       required this.transactionTableMode,
       required this.collapsePoolBalances,
       required this.currency,
-      required this.votingConfigUrl});
+      required this.votingConfigUrl,
+      required this.marketInterval,
+      required this.marketStyle});
 
   @override
   final String dbName;
@@ -2032,6 +2066,10 @@ class _AppSettings implements AppSettings {
   final String currency;
   @override
   final String votingConfigUrl;
+  @override
+  final String marketInterval;
+  @override
+  final String marketStyle;
 
   /// Create a copy of AppSettings
   /// with the given fields replaced by the non-null parameter values.
@@ -2085,7 +2123,11 @@ class _AppSettings implements AppSettings {
             (identical(other.currency, currency) ||
                 other.currency == currency) &&
             (identical(other.votingConfigUrl, votingConfigUrl) ||
-                other.votingConfigUrl == votingConfigUrl));
+                other.votingConfigUrl == votingConfigUrl) &&
+            (identical(other.marketInterval, marketInterval) ||
+                other.marketInterval == marketInterval) &&
+            (identical(other.marketStyle, marketStyle) ||
+                other.marketStyle == marketStyle));
   }
 
   @override
@@ -2114,12 +2156,14 @@ class _AppSettings implements AppSettings {
         transactionTableMode,
         collapsePoolBalances,
         currency,
-        votingConfigUrl
+        votingConfigUrl,
+        marketInterval,
+        marketStyle
       ]);
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, transport: $transport, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, transactionTableMode: $transactionTableMode, collapsePoolBalances: $collapsePoolBalances, currency: $currency, votingConfigUrl: $votingConfigUrl)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, transport: $transport, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, transactionTableMode: $transactionTableMode, collapsePoolBalances: $collapsePoolBalances, currency: $currency, votingConfigUrl: $votingConfigUrl, marketInterval: $marketInterval, marketStyle: $marketStyle)';
   }
 }
 
@@ -2155,7 +2199,9 @@ abstract mixin class _$AppSettingsCopyWith<$Res>
       bool transactionTableMode,
       bool collapsePoolBalances,
       String currency,
-      String votingConfigUrl});
+      String votingConfigUrl,
+      String marketInterval,
+      String marketStyle});
 
   @override
   $QRSettingsCopyWith<$Res> get qrSettings;
@@ -2197,6 +2243,8 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
     Object? collapsePoolBalances = null,
     Object? currency = null,
     Object? votingConfigUrl = null,
+    Object? marketInterval = null,
+    Object? marketStyle = null,
   }) {
     return _then(_AppSettings(
       dbName: null == dbName
@@ -2294,6 +2342,14 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
       votingConfigUrl: null == votingConfigUrl
           ? _self.votingConfigUrl
           : votingConfigUrl // ignore: cast_nullable_to_non_nullable
+              as String,
+      marketInterval: null == marketInterval
+          ? _self.marketInterval
+          : marketInterval // ignore: cast_nullable_to_non_nullable
+              as String,
+      marketStyle: null == marketStyle
+          ? _self.marketStyle
+          : marketStyle // ignore: cast_nullable_to_non_nullable
               as String,
     ));
   }
