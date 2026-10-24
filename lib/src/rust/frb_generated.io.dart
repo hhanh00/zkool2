@@ -199,6 +199,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   RustStreamSink<SyncEvent> dco_decode_StreamSink_sync_event_Sse(dynamic raw);
 
   @protected
+  RustStreamSink<VotingDriveStatus>
+      dco_decode_StreamSink_voting_drive_status_Sse(dynamic raw);
+
+  @protected
   String dco_decode_String(dynamic raw);
 
   @protected
@@ -835,6 +839,11 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   RustStreamSink<SyncEvent> sse_decode_StreamSink_sync_event_Sse(
       SseDeserializer deserializer);
+
+  @protected
+  RustStreamSink<VotingDriveStatus>
+      sse_decode_StreamSink_voting_drive_status_Sse(
+          SseDeserializer deserializer);
 
   @protected
   String sse_decode_String(SseDeserializer deserializer);
@@ -1508,6 +1517,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_StreamSink_sync_event_Sse(
       RustStreamSink<SyncEvent> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_StreamSink_voting_drive_status_Sse(
+      RustStreamSink<VotingDriveStatus> self, SseSerializer serializer);
 
   @protected
   void sse_encode_String(String self, SseSerializer serializer);

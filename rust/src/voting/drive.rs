@@ -5,12 +5,15 @@
 //! CastVote / AdvanceVote steps, proves, persists, and advances chain
 //! submission through the host's transport. zkool supplies only transports,
 //! keys, and per-dispatch context; this module builds those adapters and the
-//! process-local run registry that drives the executor to quiescence.
+//! process-local run registry that drives the executor to quiescence and then
+//! carries the round through helper-share confirmation.
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use tokio::sync::watch;
 
 use anyhow::{ensure, Result};
 use halo2_proofs::pasta::group::ff::PrimeField as _;
@@ -32,6 +35,8 @@ use zip32::AccountId;
 use crate::voting::chain::{
     ZkoolChainTransport, ZkoolHelperTransport, ZkoolPirTransport, ZkoolTreeTransport,
 };
+use crate::voting::share_tracking::{self, TrackingOutcome};
+use crate::Sink;
 
 /// Transports and endpoints one executor run needs.
 #[derive(Clone, Debug)]
@@ -269,10 +274,21 @@ impl RoundHostSource for ZkoolRoundHost {
     }
 }
 
-/// A snapshot of one driver run for the FRB layer to poll.
+/// Where a run is in the round's lifecycle.
+pub const PHASE_IDLE: &str = "idle";
+/// Delegation, proving, chain submission: the ballot is being cast.
+pub const PHASE_CASTING: &str = "casting";
+/// The votes are on the chain; the helper shares are being confirmed.
+pub const PHASE_CONFIRMING_SHARES: &str = "confirming_shares";
+/// The run stopped; `quiescence` says why.
+pub const PHASE_STOPPED: &str = "stopped";
+
+/// A snapshot of one run, published on every change.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct DriveRunStatus {
     pub round_id: String,
+    /// One of the `PHASE_*` labels.
+    pub phase: String,
     /// False once the run reached quiescence or was cancelled.
     pub running: bool,
     /// Dispatched obligations so far, from the run report.
@@ -282,6 +298,10 @@ pub struct DriveRunStatus {
     pub total_proposals: u32,
     /// Remaining bundle obligations the run can still execute.
     pub remaining_obligations: u32,
+    /// Helper shares confirmed so far, and the total the round recorded.
+    /// `total == 0` until the cast created them.
+    pub shares_confirmed: u32,
+    pub shares_total: u32,
     /// Why the run stopped, formatted for display and logs.
     pub quiescence: Option<String>,
     /// Failure messages in dispatch order.
@@ -289,72 +309,62 @@ pub struct DriveRunStatus {
 }
 
 impl DriveRunStatus {
-    fn idle(round_id: &str) -> Self {
+    fn new(round_id: &str, phase: &str, running: bool) -> Self {
         Self {
             round_id: round_id.to_owned(),
-            running: false,
+            phase: phase.to_owned(),
+            running,
             dispatches: 0,
             completed_proposals: 0,
             total_proposals: 0,
             remaining_obligations: 0,
+            shares_confirmed: 0,
+            shares_total: 0,
             quiescence: None,
             failures: Vec::new(),
         }
     }
-}
 
-/// Mutable per-run state the reporter records and status reads.
-#[derive(Default)]
-struct DriveRunState {
-    running: bool,
-    dispatches: u64,
-    completed_proposals: u32,
-    total_proposals: u32,
-    remaining_obligations: u32,
-    quiescence: Option<String>,
-    failures: Vec<String>,
-}
+    fn idle(round_id: &str) -> Self {
+        Self::new(round_id, PHASE_IDLE, false)
+    }
 
-impl DriveRunState {
-    fn snapshot(&self, round_id: &str) -> DriveRunStatus {
-        DriveRunStatus {
-            round_id: round_id.to_owned(),
-            running: self.running,
-            dispatches: self.dispatches,
-            completed_proposals: self.completed_proposals,
-            total_proposals: self.total_proposals,
-            remaining_obligations: self.remaining_obligations,
-            quiescence: self.quiescence.clone(),
-            failures: self.failures.clone(),
-        }
+    fn stop(&mut self, quiescence: String) {
+        self.running = false;
+        self.phase = PHASE_STOPPED.to_owned();
+        self.quiescence = Some(quiescence);
     }
 }
 
-/// Records [`RoundDriveEvent`]s into the run state.
+/// The live status of one run: a watch channel whose sender the run's task
+/// and reporter update, and whose receivers the status forwarder and the
+/// pollers read.
+type StatusSender = Arc<watch::Sender<DriveRunStatus>>;
+
+/// Records [`RoundDriveEvent`]s into the run status.
 ///
-/// Called from several concurrent bundle tasks, so it is Mutex-guarded and
-/// never blocks on I/O.
+/// Called from several concurrent bundle tasks; `send_modify` serializes the
+/// updates and never blocks on I/O.
 struct DriveRunRecorder {
-    state: Arc<Mutex<DriveRunState>>,
+    status: StatusSender,
 }
 
 impl zcash_voting::RoundDriveReporter for DriveRunRecorder {
     fn report(&self, event: zcash_voting::RoundDriveEvent) {
-        let mut state = self.state.lock().unwrap_or_else(|error| error.into_inner());
-        match event {
+        self.status.send_modify(|status| match event {
             zcash_voting::RoundDriveEvent::PlanRefreshed { tally, .. } => {
-                state.completed_proposals = tally.completed_proposals;
-                state.total_proposals = tally.total_proposals;
-                state.remaining_obligations = tally.remaining_obligations;
+                status.completed_proposals = tally.completed_proposals;
+                status.total_proposals = tally.total_proposals;
+                status.remaining_obligations = tally.remaining_obligations;
             }
             zcash_voting::RoundDriveEvent::StepFinished { .. } => {
-                state.dispatches += 1;
+                status.dispatches += 1;
             }
             zcash_voting::RoundDriveEvent::StepFailed { kind, message, .. } => {
-                state.failures.push(format!("{kind:?}: {message}"));
+                status.failures.push(format!("{kind:?}: {message}"));
             }
             _ => {}
-        }
+        });
     }
 }
 
@@ -394,34 +404,48 @@ struct DriveKey {
 #[derive(Clone)]
 struct ActiveDrive {
     control: zcash_voting::ChainSubmissionControl,
-    state: Arc<Mutex<DriveRunState>>,
+    status: StatusSender,
 }
 
-/// Live driver runs are process-local: their durable queue is the voting
-/// sidecar, so a restart simply discovers unfinished work again. Keyed by
-/// wallet and round so a wallet switch cannot touch another wallet's run.
+/// Live runs are process-local: their durable queue is the voting sidecar,
+/// so a restart simply discovers unfinished work again. Keyed by wallet and
+/// round so a wallet switch cannot touch another wallet's run. A finished
+/// run stays registered with its final status until a new run replaces it.
 static ACTIVE_DRIVES: LazyLock<Mutex<HashMap<DriveKey, ActiveDrive>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 static NEXT_DRIVE_GENERATION: AtomicU64 = AtomicU64::new(1);
 
-/// Starts one driver run for `binding`, or reports `Ok(false)` when a run is
+/// Starts one run for `binding`, or reports `Ok(false)` when a run is
 /// already live for the wallet and round.
+///
+/// The run casts the ballot (delegation, proving, chain submission) and, once
+/// the votes are on the chain, keeps confirming the helper shares until every
+/// share is confirmed, the vote end passes, the rest cannot be recovered, or
+/// the run is cancelled. Every status change is sent to `sink`, ending with a
+/// snapshot whose `running` is false.
 ///
 /// The executor is constructed and driven entirely on the spawned task; a
 /// cancelled predecessor's SDK admission guard makes a replacement wait for
 /// the departing run rather than double-dispatching.
-pub fn start_round_drive(
+pub fn start_round_drive<S>(
     db: Arc<VotingDb>,
     binding: RoundBinding,
     routes: ExecutorRoutes,
     host: ZkoolRoundHost,
-) -> Result<bool> {
+    sink: S,
+) -> Result<bool>
+where
+    S: Sink<DriveRunStatus> + Send + Sync + 'static,
+{
     let key = DriveKey {
         wallet_id: db.wallet_id().to_owned(),
         round_id: binding.round_id.clone(),
     };
     let generation = NEXT_DRIVE_GENERATION.fetch_add(1, Ordering::Relaxed);
     let control = zcash_voting::ChainSubmissionControl::new(generation);
+    let (status, mut updates) =
+        watch::channel(DriveRunStatus::new(&binding.round_id, PHASE_CASTING, true));
+    let status: StatusSender = Arc::new(status);
     {
         let mut active = ACTIVE_DRIVES
             .lock()
@@ -433,67 +457,143 @@ pub fn start_round_drive(
             return Ok(false);
         }
         active.insert(
-            key.clone(),
+            key,
             ActiveDrive {
                 control: control.clone(),
-                state: Arc::new(Mutex::new(DriveRunState {
-                    running: true,
-                    ..Default::default()
-                })),
+                status: Arc::clone(&status),
             },
         );
     }
 
+    // The forwarder turns the coalesced watch updates into sink sends, and
+    // leaves once it has forwarded the final snapshot: the sender stays in
+    // the registry for later pollers, so it never closes.
     tokio::spawn(async move {
-        let executor = match build_executor(db, binding, &routes) {
-            Ok(executor) => executor,
-            Err(error) => {
-                let state = run_state(&key);
-                let mut state = state.lock().unwrap_or_else(|error| error.into_inner());
-                state.running = false;
-                state
+        loop {
+            let snapshot = updates.borrow_and_update().clone();
+            let running = snapshot.running;
+            sink.send(snapshot).await;
+            if !running || updates.changed().await.is_err() {
+                break;
+            }
+        }
+    });
+
+    tokio::spawn(async move {
+        let outcome = run_round(db, binding, &routes, host, &control, &status).await;
+        status.send_modify(|current| current.stop(outcome));
+    });
+    Ok(true)
+}
+
+/// Casts the ballot, then confirms the helper shares. Returns the final
+/// quiescence label.
+async fn run_round(
+    db: Arc<VotingDb>,
+    binding: RoundBinding,
+    routes: &ExecutorRoutes,
+    host: ZkoolRoundHost,
+    control: &zcash_voting::ChainSubmissionControl,
+    status: &StatusSender,
+) -> String {
+    let round_id = binding.round_id.clone();
+    let executor = match build_executor(Arc::clone(&db), binding, routes) {
+        Ok(executor) => executor,
+        Err(error) => {
+            status.send_modify(|status| {
+                status
                     .failures
                     .push(format!("executor construction failed: {error}"));
-                return;
-            }
-        };
-        let state = run_state(&key);
-        let recorder = DriveRunRecorder {
-            state: Arc::clone(&state),
-        };
-        let report = zcash_voting::RoundDriver::new(&executor)
-            .run(&host, &control, &recorder)
-            .await;
-        // Share confirmation is not driven here. Whoever watches the round —
-        // the round page while it is open, or the GraphQL submission task —
-        // runs `track_shares_pass` repeatedly, so there is exactly one share
-        // mechanism and no resident worker.
-        let mut state = state.lock().unwrap_or_else(|error| error.into_inner());
-        state.running = false;
-        state.quiescence = Some(quiescence_label(&report.quiescence));
-        state.completed_proposals = report.tally.completed_proposals;
-        state.total_proposals = report.tally.total_proposals;
-        state.remaining_obligations = report.tally.remaining_obligations;
+            });
+            return "failures".to_owned();
+        }
+    };
+    let recorder = DriveRunRecorder {
+        status: Arc::clone(status),
+    };
+    let report = zcash_voting::RoundDriver::new(&executor)
+        .run(&host, control, &recorder)
+        .await;
+    let label = quiescence_label(&report.quiescence);
+    status.send_modify(|status| {
+        status.completed_proposals = report.tally.completed_proposals;
+        status.total_proposals = report.tally.total_proposals;
+        status.remaining_obligations = report.tally.remaining_obligations;
         if matches!(report.quiescence, zcash_voting::RoundQuiescence::Failures) {
             for failure in &report.failures {
-                state.failures.push(format!(
+                status.failures.push(format!(
                     "{:?}: {}",
                     failure.failure.kind, failure.failure.message
                 ));
             }
         }
     });
-    Ok(true)
+    // The executor is done once the votes are cast; the remaining work is
+    // the helper shares it handed to the background.
+    let cast = matches!(
+        report.quiescence,
+        zcash_voting::RoundQuiescence::NoWorkLeft
+            | zcash_voting::RoundQuiescence::BackgroundShareWorkOnly { .. }
+    );
+    if !cast {
+        return label;
+    }
+    let (confirmed, total) = match share_counts(Arc::clone(&db), &round_id).await {
+        Ok(counts) => counts,
+        Err(error) => {
+            status.send_modify(|status| {
+                status
+                    .failures
+                    .push(format!("share lookup failed: {error}"));
+            });
+            return "failures".to_owned();
+        }
+    };
+    status.send_modify(|status| {
+        status.shares_confirmed = confirmed;
+        status.shares_total = total;
+        status.phase = PHASE_CONFIRMING_SHARES.to_owned();
+    });
+    if confirmed == total {
+        return "done".to_owned();
+    }
+    let client = HelperClient::new(
+        Arc::new(ZkoolHelperTransport::new(routes.transport, &routes.proxy)),
+        HelperHealth::default(),
+    );
+    let cancelled = move || control.is_cancelled();
+    let outcome = share_tracking::track_shares_until_done(
+        Arc::clone(&db),
+        &client,
+        &round_id,
+        &host.helper_urls,
+        host.vote_end,
+        &cancelled,
+        |_report, unconfirmed| {
+            status.send_modify(|status| {
+                status.shares_confirmed = total.saturating_sub(unconfirmed);
+            });
+        },
+    )
+    .await;
+    match outcome {
+        TrackingOutcome::Done => "done".to_owned(),
+        TrackingOutcome::RoundClosed { unconfirmed } => format!("round_closed({unconfirmed})"),
+        TrackingOutcome::Unrecoverable { count } => format!("unrecoverable({count})"),
+        TrackingOutcome::Cancelled => "cancelled".to_owned(),
+    }
 }
 
-fn run_state(key: &DriveKey) -> Arc<Mutex<DriveRunState>> {
-    let active = ACTIVE_DRIVES
-        .lock()
-        .unwrap_or_else(|error| error.into_inner());
-    active
-        .get(key)
-        .map(|drive| Arc::clone(&drive.state))
-        .unwrap_or_default()
+/// `(confirmed, total)` helper shares of a round, from the sidecar.
+pub async fn share_counts(db: Arc<VotingDb>, round_id: &str) -> Result<(u32, u32)> {
+    let round = round_id.to_owned();
+    tokio::task::spawn_blocking(move || -> Result<(u32, u32)> {
+        let total = u32::try_from(db.get_share_delegations(&round)?.len()).unwrap_or(u32::MAX);
+        let unconfirmed =
+            u32::try_from(db.get_unconfirmed_delegations(&round)?.len()).unwrap_or(u32::MAX);
+        Ok((total.saturating_sub(unconfirmed), total))
+    })
+    .await?
 }
 
 /// Cancels one round's driver run. The SDK wakes retry waits rather than
@@ -529,6 +629,7 @@ pub fn cancel_all_round_drives(wallet_id: &str) -> usize {
 }
 
 /// Snapshots one round's run status; idle when nothing is registered.
+/// The last snapshot of a finished run stays readable until a new run.
 pub fn drive_status(wallet_id: &str, round_id: &str) -> DriveRunStatus {
     let key = DriveKey {
         wallet_id: wallet_id.to_owned(),
@@ -538,11 +639,7 @@ pub fn drive_status(wallet_id: &str, round_id: &str) -> DriveRunStatus {
         .lock()
         .unwrap_or_else(|error| error.into_inner());
     match active.get(&key) {
-        Some(drive) => drive
-            .state
-            .lock()
-            .unwrap_or_else(|error| error.into_inner())
-            .snapshot(round_id),
+        Some(drive) => drive.status.borrow().clone(),
         None => DriveRunStatus::idle(round_id),
     }
 }

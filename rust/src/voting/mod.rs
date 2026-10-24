@@ -12,4 +12,5 @@ pub mod sidecar;
 pub mod summary;
 
 pub mod note_source;
+pub mod share_tracking;
 pub use note_source::ZkoolNoteSource;

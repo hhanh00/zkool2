@@ -10,8 +10,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 // These functions are ignored because they are not marked as `pub`: `track_shares_pass`
 
 /// Runs one helper-share tracking pass and returns how many shares it
-/// confirmed. The round page polls this while it is open, so confirmation
-/// advances without a long-lived in-process run.
+/// confirmed.
 Future<int> votingTrackSharesOnce(
         {required String roundId,
         required List<String> helperUrls,

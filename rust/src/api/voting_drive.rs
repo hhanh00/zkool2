@@ -1,10 +1,12 @@
 //! FRB API to drive one voting round from ballot decisions to chain
 //! confirmation.
 //!
-//! `voting_drive_start` resolves the authenticated config, gathers every
-//! round input, and hands the round to the voting crate's driver, which runs
-//! to quiescence on a process-local task. Status is polled; cancellation is
-//! cooperative through the driver's control.
+//! `voting_drive_run` (Flutter) and `voting_drive_start` (headless) resolve
+//! the authenticated config, gather every round input, and hand the round to
+//! the voting crate's driver, which casts the votes and confirms the helper
+//! shares on a process-local task. The Flutter run streams its status; the
+//! headless one is polled. Cancellation is cooperative through the driver's
+//! control.
 
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -21,7 +23,10 @@ use zcash_voting::prelude::BundlePolicy;
 
 use crate::api::coin::Coin;
 use crate::api::voting::{voting_network, wallet_id};
+#[cfg(feature = "flutter")]
+use crate::frb_generated::StreamSink;
 use crate::voting::{drive, hotkey, net as voting_net, note_source, sidecar::VotingSidecar};
+use crate::Sink;
 
 /// The ZIP-32 seed bytes for an account, derived from its stored mnemonic.
 async fn account_seed(connection: &mut SqliteConnection, account: u32) -> Result<Vec<u8>> {
@@ -103,11 +108,17 @@ async fn fetch_round_timing(
     Ok(None)
 }
 
-/// Snapshot of one round's driver run for the UI.
+/// Snapshot of one round's run for the UI, streamed by `voting_drive_run`
+/// and polled by `voting_drive_status`.
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VotingDriveStatus {
     pub round_id: String,
+    /// Where the run is: "idle" (no run), "casting" (delegation, proving,
+    /// chain submission), "confirming_shares" (the votes are on the chain
+    /// and the helper shares are being confirmed) or "stopped" (see
+    /// `quiescence`).
+    pub phase: String,
     pub running: bool,
     pub dispatches: u64,
     pub completed_proposals: u32,
@@ -116,14 +127,48 @@ pub struct VotingDriveStatus {
     /// the background tracker. Prefer `shares_*` for progress the user sees.
     pub remaining_obligations: u32,
     /// Helper shares already confirmed for the round, and the total recorded.
-    ///
-    /// Read from the durable sidecar on every poll, because confirmations land
-    /// after the foreground run stops. `total == 0` means the round has no
-    /// share work (not yet cast, or an imported capability).
+    /// `total == 0` means the round has no share work yet (not yet cast, or
+    /// an imported capability).
     pub shares_confirmed: u32,
     pub shares_total: u32,
+    /// Why the run stopped: "done" once every share is confirmed,
+    /// "round_closed(n)" when the vote end passed with n shares unconfirmed,
+    /// "unrecoverable(n)" when n shares cannot be repaired, "cancelled", or
+    /// one of the cast's own stop reasons.
     pub quiescence: Option<String>,
     pub failures: Vec<String>,
+}
+
+impl From<drive::DriveRunStatus> for VotingDriveStatus {
+    fn from(status: drive::DriveRunStatus) -> Self {
+        Self {
+            round_id: status.round_id,
+            phase: status.phase,
+            running: status.running,
+            dispatches: status.dispatches,
+            completed_proposals: status.completed_proposals,
+            total_proposals: status.total_proposals,
+            remaining_obligations: status.remaining_obligations,
+            shares_confirmed: status.shares_confirmed,
+            shares_total: status.shares_total,
+            quiescence: status.quiescence,
+            failures: status.failures,
+        }
+    }
+}
+
+/// Adapts a `VotingDriveStatus` sink to the run's `DriveRunStatus` sends.
+#[derive(Clone)]
+struct StatusSink<S>(S);
+
+impl<S: Sink<VotingDriveStatus> + Send + Sync> Sink<drive::DriveRunStatus> for StatusSink<S> {
+    async fn send(&self, value: drive::DriveRunStatus) {
+        self.0.send(value.into()).await;
+    }
+
+    async fn send_error(&self, error: anyhow::Error) {
+        self.0.send_error(error).await;
+    }
 }
 
 /// Authenticated config and round material resolved from the vote servers.
@@ -367,20 +412,23 @@ pub async fn voting_prepare_round(
     prepare_bundles(gathered, c).await
 }
 
-/// Starts driving one round: delegation (if still owed), vote casting, chain
-/// submission, and share handoff.
+/// Starts one round's run: delegation (if still owed), vote casting, chain
+/// submission, then helper-share confirmation. Status goes to `sink`.
 ///
 /// Returns false when a run is already live for this wallet and round. The
 /// run is idempotent and resumable: every step is planned from durable
 /// sidecar state, so restarting after a crash or cancel is always safe.
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn voting_drive_start(
+async fn drive_round<S>(
     round_id: &str,
     lightwalletd_url: &str,
     round_name: &str,
     account: u32,
     c: &Coin,
-) -> Result<bool> {
+    sink: S,
+) -> Result<bool>
+where
+    S: Sink<VotingDriveStatus> + Send + Sync + 'static,
+{
     ensure_nonempty(round_id, "round id")?;
     ensure_nonempty(lightwalletd_url, "lightwalletd URL")?;
     let gathered = gather_round_inputs(round_id, lightwalletd_url, round_name, account, c).await?;
@@ -415,10 +463,41 @@ pub async fn voting_drive_start(
     let host =
         drive::ZkoolRoundHost::new(servers.clone(), servers, None, vote_end, Some(delegation));
     let binding = drive::build_binding(round_id, network, &roster, Some(&hotkey))?;
-    drive::start_round_drive(sidecar.db(), binding, routes, host)
+    drive::start_round_drive(sidecar.db(), binding, routes, host, StatusSink(sink))
 }
 
-/// Polls one round's driver run; idle when nothing was started or it finished.
+/// Starts one round's run for a host that polls `voting_drive_status`.
+/// Returns false when a run is already live for this wallet and round.
+pub async fn voting_drive_start(
+    round_id: &str,
+    lightwalletd_url: &str,
+    round_name: &str,
+    account: u32,
+    c: &Coin,
+) -> Result<bool> {
+    drive_round(round_id, lightwalletd_url, round_name, account, c, ()).await
+}
+
+/// Starts one round's run and streams its status to `status` until the run
+/// stops (the last item has `running == false`). Returns false, and sends
+/// nothing, when a run is already live for this wallet and round: subscribe
+/// to that one with `voting_drive_status` instead.
+#[cfg(feature = "flutter")]
+#[frb]
+pub async fn voting_drive_run(
+    round_id: &str,
+    lightwalletd_url: &str,
+    round_name: &str,
+    account: u32,
+    c: &Coin,
+    status: StreamSink<VotingDriveStatus>,
+) -> Result<bool> {
+    drive_round(round_id, lightwalletd_url, round_name, account, c, status).await
+}
+
+/// Polls one round's run; idle when nothing was started. A finished run
+/// keeps its last snapshot. Without a run, the share counts come from the
+/// durable sidecar so a round can show its standing before a resume.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn voting_drive_status(
     round_id: &str,
@@ -426,35 +505,14 @@ pub async fn voting_drive_status(
     c: &Coin,
 ) -> Result<VotingDriveStatus> {
     let wallet = wallet_id(account, c).await?;
-    // Share confirmations are driven by the background tracker and land after
-    // the foreground run quiesces, so read the live counts from the sidecar
-    // rather than the run's stale tally.
-    let (shares_confirmed, shares_total) = {
-        let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet.clone()).await?;
-        let round = round_id.to_owned();
-        sidecar
-            .run(move |db| {
-                let total =
-                    u32::try_from(db.get_share_delegations(&round)?.len()).unwrap_or(u32::MAX);
-                let remaining = u32::try_from(db.get_unconfirmed_delegations(&round)?.len())
-                    .unwrap_or(u32::MAX);
-                Ok((total.saturating_sub(remaining), total))
-            })
-            .await?
-    };
-    let status = drive::drive_status(&wallet, round_id);
-    Ok(VotingDriveStatus {
-        round_id: status.round_id,
-        running: status.running,
-        dispatches: status.dispatches,
-        completed_proposals: status.completed_proposals,
-        total_proposals: status.total_proposals,
-        remaining_obligations: status.remaining_obligations,
-        shares_confirmed,
-        shares_total,
-        quiescence: status.quiescence,
-        failures: status.failures,
-    })
+    let mut status: VotingDriveStatus = drive::drive_status(&wallet, round_id).into();
+    if status.phase == drive::PHASE_IDLE {
+        let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet).await?;
+        let (confirmed, total) = drive::share_counts(sidecar.db(), round_id).await?;
+        status.shares_confirmed = confirmed;
+        status.shares_total = total;
+    }
+    Ok(status)
 }
 
 /// Cancels one round's driver run, waking any in-flight retry wait.

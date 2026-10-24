@@ -44,7 +44,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 181624654;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1971825885;
 
 // Section: executor
 
@@ -10541,6 +10541,74 @@ fn wire__crate__api__voting_drive__voting_drive_cancel_all_impl(
         },
     )
 }
+fn wire__crate__api__voting_drive__voting_drive_run_impl(
+    port_: flutter_rust_bridge::for_generated::MessagePort,
+    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
+    rust_vec_len_: i32,
+    data_len_: i32,
+) {
+    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
+        flutter_rust_bridge::for_generated::TaskInfo {
+            debug_name: "voting_drive_run",
+            port: Some(port_),
+            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
+        },
+        move || {
+            let message = unsafe {
+                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
+                    ptr_,
+                    rust_vec_len_,
+                    data_len_,
+                )
+            };
+            let mut deserializer =
+                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
+            let api_round_id = <String>::sse_decode(&mut deserializer);
+            let api_lightwalletd_url = <String>::sse_decode(&mut deserializer);
+            let api_round_name = <String>::sse_decode(&mut deserializer);
+            let api_account = <u32>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
+            let api_status = <StreamSink<
+                crate::api::voting_drive::VotingDriveStatus,
+                flutter_rust_bridge::for_generated::SseCodec,
+            >>::sse_decode(&mut deserializer);
+            deserializer.end();
+            move |context| async move {
+                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
+                    (move || async move {
+                        let mut api_c_guard = None;
+                        let decode_indices_ =
+                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
+                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                                    &api_c, 0, false,
+                                )],
+                            );
+                        for i in decode_indices_ {
+                            match i {
+                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
+                                _ => unreachable!(),
+                            }
+                        }
+                        let api_c_guard = api_c_guard.unwrap();
+                        let output_ok = crate::api::voting_drive::voting_drive_run(
+                            &api_round_id,
+                            &api_lightwalletd_url,
+                            &api_round_name,
+                            api_account,
+                            &*api_c_guard,
+                            api_status,
+                        )
+                        .await?;
+                        Ok(output_ok)
+                    })()
+                    .await,
+                )
+            }
+        },
+    )
+}
 fn wire__crate__api__voting_drive__voting_drive_start_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -11226,6 +11294,19 @@ impl SseDecode
 
 impl SseDecode
     for StreamSink<crate::api::sync::SyncEvent, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
+        let mut inner = <String>::sse_decode(deserializer);
+        return StreamSink::deserialize(inner);
+    }
+}
+
+impl SseDecode
+    for StreamSink<
+        crate::api::voting_drive::VotingDriveStatus,
+        flutter_rust_bridge::for_generated::SseCodec,
+    >
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
@@ -13461,6 +13542,7 @@ impl SseDecode for crate::api::voting_drive::VotingDriveStatus {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_roundId = <String>::sse_decode(deserializer);
+        let mut var_phase = <String>::sse_decode(deserializer);
         let mut var_running = <bool>::sse_decode(deserializer);
         let mut var_dispatches = <u64>::sse_decode(deserializer);
         let mut var_completedProposals = <u32>::sse_decode(deserializer);
@@ -13472,6 +13554,7 @@ impl SseDecode for crate::api::voting_drive::VotingDriveStatus {
         let mut var_failures = <Vec<String>>::sse_decode(deserializer);
         return crate::api::voting_drive::VotingDriveStatus {
             round_id: var_roundId,
+            phase: var_phase,
             running: var_running,
             dispatches: var_dispatches,
             completed_proposals: var_completedProposals,
@@ -13992,32 +14075,35 @@ fn pde_ffi_dispatcher_primary_impl(
             rust_vec_len,
             data_len,
         ),
-        205 => wire__crate__api__voting_drive__voting_drive_start_impl(
+        205 => {
+            wire__crate__api__voting_drive__voting_drive_run_impl(port, ptr, rust_vec_len, data_len)
+        }
+        206 => wire__crate__api__voting_drive__voting_drive_start_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        206 => wire__crate__api__voting_drive__voting_drive_status_impl(
+        207 => wire__crate__api__voting_drive__voting_drive_status_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        207 => {
+        208 => {
             wire__crate__api__voting__voting_load_selections_impl(port, ptr, rust_vec_len, data_len)
         }
-        208 => wire__crate__api__voting_drive__voting_prepare_round_impl(
+        209 => wire__crate__api__voting_drive__voting_prepare_round_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        209 => wire__crate__api__voting__voting_round_list_impl(port, ptr, rust_vec_len, data_len),
-        210 => {
+        210 => wire__crate__api__voting__voting_round_list_impl(port, ptr, rust_vec_len, data_len),
+        211 => {
             wire__crate__api__voting__voting_save_selection_impl(port, ptr, rust_vec_len, data_len)
         }
-        211 => wire__crate__api__voting_share_tracking__voting_track_shares_once_impl(
+        212 => wire__crate__api__voting_share_tracking__voting_track_shares_once_impl(
             port,
             ptr,
             rust_vec_len,
@@ -15798,6 +15884,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::voting_drive::VotingDriveStat
     fn into_dart(self) -> flutter_rust_bridge::for_generated::DartAbi {
         [
             self.round_id.into_into_dart().into_dart(),
+            self.phase.into_into_dart().into_dart(),
             self.running.into_into_dart().into_dart(),
             self.dispatches.into_into_dart().into_dart(),
             self.completed_proposals.into_into_dart().into_dart(),
@@ -16126,6 +16213,18 @@ impl SseEncode
 
 impl SseEncode
     for StreamSink<crate::api::sync::SyncEvent, flutter_rust_bridge::for_generated::SseCodec>
+{
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
+        unimplemented!("")
+    }
+}
+
+impl SseEncode
+    for StreamSink<
+        crate::api::voting_drive::VotingDriveStatus,
+        flutter_rust_bridge::for_generated::SseCodec,
+    >
 {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
@@ -17786,6 +17885,7 @@ impl SseEncode for crate::api::voting_drive::VotingDriveStatus {
     // Codec=Sse (Serialization based), see doc to use other codecs
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <String>::sse_encode(self.round_id, serializer);
+        <String>::sse_encode(self.phase, serializer);
         <bool>::sse_encode(self.running, serializer);
         <u64>::sse_encode(self.dispatches, serializer);
         <u32>::sse_encode(self.completed_proposals, serializer);

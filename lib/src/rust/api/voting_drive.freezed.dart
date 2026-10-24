@@ -15,6 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$VotingDriveStatus {
   String get roundId;
+  String get phase;
   bool get running;
   BigInt get dispatches;
   int get completedProposals;
@@ -39,6 +40,7 @@ mixin _$VotingDriveStatus {
         (other.runtimeType == runtimeType &&
             other is VotingDriveStatus &&
             (identical(other.roundId, roundId) || other.roundId == roundId) &&
+            (identical(other.phase, phase) || other.phase == phase) &&
             (identical(other.running, running) || other.running == running) &&
             (identical(other.dispatches, dispatches) ||
                 other.dispatches == dispatches) &&
@@ -61,6 +63,7 @@ mixin _$VotingDriveStatus {
   int get hashCode => Object.hash(
       runtimeType,
       roundId,
+      phase,
       running,
       dispatches,
       completedProposals,
@@ -73,7 +76,7 @@ mixin _$VotingDriveStatus {
 
   @override
   String toString() {
-    return 'VotingDriveStatus(roundId: $roundId, running: $running, dispatches: $dispatches, completedProposals: $completedProposals, totalProposals: $totalProposals, remainingObligations: $remainingObligations, sharesConfirmed: $sharesConfirmed, sharesTotal: $sharesTotal, quiescence: $quiescence, failures: $failures)';
+    return 'VotingDriveStatus(roundId: $roundId, phase: $phase, running: $running, dispatches: $dispatches, completedProposals: $completedProposals, totalProposals: $totalProposals, remainingObligations: $remainingObligations, sharesConfirmed: $sharesConfirmed, sharesTotal: $sharesTotal, quiescence: $quiescence, failures: $failures)';
   }
 }
 
@@ -85,6 +88,7 @@ abstract mixin class $VotingDriveStatusCopyWith<$Res> {
   @useResult
   $Res call(
       {String roundId,
+      String phase,
       bool running,
       BigInt dispatches,
       int completedProposals,
@@ -110,6 +114,7 @@ class _$VotingDriveStatusCopyWithImpl<$Res>
   @override
   $Res call({
     Object? roundId = null,
+    Object? phase = null,
     Object? running = null,
     Object? dispatches = null,
     Object? completedProposals = null,
@@ -124,6 +129,10 @@ class _$VotingDriveStatusCopyWithImpl<$Res>
       roundId: null == roundId
           ? _self.roundId
           : roundId // ignore: cast_nullable_to_non_nullable
+              as String,
+      phase: null == phase
+          ? _self.phase
+          : phase // ignore: cast_nullable_to_non_nullable
               as String,
       running: null == running
           ? _self.running
@@ -258,6 +267,7 @@ extension VotingDriveStatusPatterns on VotingDriveStatus {
   TResult maybeWhen<TResult extends Object?>(
     TResult Function(
             String roundId,
+            String phase,
             bool running,
             BigInt dispatches,
             int completedProposals,
@@ -275,6 +285,7 @@ extension VotingDriveStatusPatterns on VotingDriveStatus {
       case _VotingDriveStatus() when $default != null:
         return $default(
             _that.roundId,
+            _that.phase,
             _that.running,
             _that.dispatches,
             _that.completedProposals,
@@ -306,6 +317,7 @@ extension VotingDriveStatusPatterns on VotingDriveStatus {
   TResult when<TResult extends Object?>(
     TResult Function(
             String roundId,
+            String phase,
             bool running,
             BigInt dispatches,
             int completedProposals,
@@ -322,6 +334,7 @@ extension VotingDriveStatusPatterns on VotingDriveStatus {
       case _VotingDriveStatus():
         return $default(
             _that.roundId,
+            _that.phase,
             _that.running,
             _that.dispatches,
             _that.completedProposals,
@@ -350,6 +363,7 @@ extension VotingDriveStatusPatterns on VotingDriveStatus {
   TResult? whenOrNull<TResult extends Object?>(
     TResult? Function(
             String roundId,
+            String phase,
             bool running,
             BigInt dispatches,
             int completedProposals,
@@ -366,6 +380,7 @@ extension VotingDriveStatusPatterns on VotingDriveStatus {
       case _VotingDriveStatus() when $default != null:
         return $default(
             _that.roundId,
+            _that.phase,
             _that.running,
             _that.dispatches,
             _that.completedProposals,
@@ -386,6 +401,7 @@ extension VotingDriveStatusPatterns on VotingDriveStatus {
 class _VotingDriveStatus implements VotingDriveStatus {
   const _VotingDriveStatus(
       {required this.roundId,
+      required this.phase,
       required this.running,
       required this.dispatches,
       required this.completedProposals,
@@ -399,6 +415,8 @@ class _VotingDriveStatus implements VotingDriveStatus {
 
   @override
   final String roundId;
+  @override
+  final String phase;
   @override
   final bool running;
   @override
@@ -437,6 +455,7 @@ class _VotingDriveStatus implements VotingDriveStatus {
         (other.runtimeType == runtimeType &&
             other is _VotingDriveStatus &&
             (identical(other.roundId, roundId) || other.roundId == roundId) &&
+            (identical(other.phase, phase) || other.phase == phase) &&
             (identical(other.running, running) || other.running == running) &&
             (identical(other.dispatches, dispatches) ||
                 other.dispatches == dispatches) &&
@@ -459,6 +478,7 @@ class _VotingDriveStatus implements VotingDriveStatus {
   int get hashCode => Object.hash(
       runtimeType,
       roundId,
+      phase,
       running,
       dispatches,
       completedProposals,
@@ -471,7 +491,7 @@ class _VotingDriveStatus implements VotingDriveStatus {
 
   @override
   String toString() {
-    return 'VotingDriveStatus(roundId: $roundId, running: $running, dispatches: $dispatches, completedProposals: $completedProposals, totalProposals: $totalProposals, remainingObligations: $remainingObligations, sharesConfirmed: $sharesConfirmed, sharesTotal: $sharesTotal, quiescence: $quiescence, failures: $failures)';
+    return 'VotingDriveStatus(roundId: $roundId, phase: $phase, running: $running, dispatches: $dispatches, completedProposals: $completedProposals, totalProposals: $totalProposals, remainingObligations: $remainingObligations, sharesConfirmed: $sharesConfirmed, sharesTotal: $sharesTotal, quiescence: $quiescence, failures: $failures)';
   }
 }
 
@@ -485,6 +505,7 @@ abstract mixin class _$VotingDriveStatusCopyWith<$Res>
   @useResult
   $Res call(
       {String roundId,
+      String phase,
       bool running,
       BigInt dispatches,
       int completedProposals,
@@ -510,6 +531,7 @@ class __$VotingDriveStatusCopyWithImpl<$Res>
   @pragma('vm:prefer-inline')
   $Res call({
     Object? roundId = null,
+    Object? phase = null,
     Object? running = null,
     Object? dispatches = null,
     Object? completedProposals = null,
@@ -524,6 +546,10 @@ class __$VotingDriveStatusCopyWithImpl<$Res>
       roundId: null == roundId
           ? _self.roundId
           : roundId // ignore: cast_nullable_to_non_nullable
+              as String,
+      phase: null == phase
+          ? _self.phase
+          : phase // ignore: cast_nullable_to_non_nullable
               as String,
       running: null == running
           ? _self.running

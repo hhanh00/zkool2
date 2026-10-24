@@ -9,9 +9,10 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'voting_drive.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `account_seed`, `delegation_identity`, `ensure_nonempty`, `fetch_round_timing`, `gather_lwd_inputs`, `gather_round_inputs`, `gather_wallet_inputs`, `json_unix_seconds`, `prepare_bundles`, `resolve_round_config`
-// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `GatheredRound`, `RoundConfig`, `WalletInputs`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `eq`, `eq`, `fmt`, `fmt`
+// These functions are ignored because they are not marked as `pub`: `account_seed`, `delegation_identity`, `drive_round`, `ensure_nonempty`, `fetch_round_timing`, `gather_lwd_inputs`, `gather_round_inputs`, `gather_wallet_inputs`, `json_unix_seconds`, `prepare_bundles`, `resolve_round_config`
+// These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `GatheredRound`, `RoundConfig`, `StatusSink`, `WalletInputs`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `eq`, `fmt`, `fmt`, `from`
+// These functions are ignored (category: IgnoreBecauseOwnerTyShouldIgnore): `send_error`, `send`
 
 /// Prepares one round for submission: persists the bundle layout from the
 /// wallet's eligible notes and returns the eligibility preview.
@@ -33,12 +34,8 @@ Future<VotingEligibilityPreview> votingPrepareRound(
         account: account,
         c: c);
 
-/// Starts driving one round: delegation (if still owed), vote casting, chain
-/// submission, and share handoff.
-///
-/// Returns false when a run is already live for this wallet and round. The
-/// run is idempotent and resumable: every step is planned from durable
-/// sidecar state, so restarting after a crash or cancel is always safe.
+/// Starts one round's run for a host that polls `voting_drive_status`.
+/// Returns false when a run is already live for this wallet and round.
 Future<bool> votingDriveStart(
         {required String roundId,
         required String lightwalletdUrl,
@@ -52,7 +49,26 @@ Future<bool> votingDriveStart(
         account: account,
         c: c);
 
-/// Polls one round's driver run; idle when nothing was started or it finished.
+/// Starts one round's run and streams its status to `status` until the run
+/// stops (the last item has `running == false`). Returns false, and sends
+/// nothing, when a run is already live for this wallet and round: subscribe
+/// to that one with `voting_drive_status` instead.
+Stream<VotingDriveStatus> votingDriveRun(
+        {required String roundId,
+        required String lightwalletdUrl,
+        required String roundName,
+        required int account,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiVotingDriveVotingDriveRun(
+        roundId: roundId,
+        lightwalletdUrl: lightwalletdUrl,
+        roundName: roundName,
+        account: account,
+        c: c);
+
+/// Polls one round's run; idle when nothing was started. A finished run
+/// keeps its last snapshot. Without a run, the share counts come from the
+/// durable sidecar so a round can show its standing before a resume.
 Future<VotingDriveStatus> votingDriveStatus(
         {required String roundId, required int account, required Coin c}) =>
     RustLib.instance.api.crateApiVotingDriveVotingDriveStatus(
@@ -71,11 +87,13 @@ Future<BigInt> votingDriveCancelAll({required int account, required Coin c}) =>
     RustLib.instance.api
         .crateApiVotingDriveVotingDriveCancelAll(account: account, c: c);
 
-/// Snapshot of one round's driver run for the UI.
+/// Snapshot of one round's run for the UI, streamed by `voting_drive_run`
+/// and polled by `voting_drive_status`.
 @freezed
 sealed class VotingDriveStatus with _$VotingDriveStatus {
   const factory VotingDriveStatus({
     required String roundId,
+    required String phase,
     required bool running,
     required BigInt dispatches,
     required int completedProposals,

@@ -100,7 +100,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 181624654;
+  int get rustContentHash => -1971825885;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -755,6 +755,13 @@ abstract class RustLibApi extends BaseApi {
 
   Future<BigInt> crateApiVotingDriveVotingDriveCancelAll(
       {required int account, required Coin c});
+
+  Stream<VotingDriveStatus> crateApiVotingDriveVotingDriveRun(
+      {required String roundId,
+      required String lightwalletdUrl,
+      required String roundName,
+      required int account,
+      required Coin c});
 
   Future<bool> crateApiVotingDriveVotingDriveStart(
       {required String roundId,
@@ -6572,6 +6579,51 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
+  Stream<VotingDriveStatus> crateApiVotingDriveVotingDriveRun(
+      {required String roundId,
+      required String lightwalletdUrl,
+      required String roundName,
+      required int account,
+      required Coin c}) {
+    final status = RustStreamSink<VotingDriveStatus>();
+    unawaited(handler.executeNormal(NormalTask(
+      callFfi: (port_) {
+        final serializer = SseSerializer(generalizedFrbRustBinding);
+        sse_encode_String(roundId, serializer);
+        sse_encode_String(lightwalletdUrl, serializer);
+        sse_encode_String(roundName, serializer);
+        sse_encode_u_32(account, serializer);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
+            c, serializer);
+        sse_encode_StreamSink_voting_drive_status_Sse(status, serializer);
+        pdeCallFfi(generalizedFrbRustBinding, serializer,
+            funcId: 205, port: port_);
+      },
+      codec: SseCodec(
+        decodeSuccessData: sse_decode_bool,
+        decodeErrorData: sse_decode_AnyhowException,
+      ),
+      constMeta: kCrateApiVotingDriveVotingDriveRunConstMeta,
+      argValues: [roundId, lightwalletdUrl, roundName, account, c, status],
+      apiImpl: this,
+    )));
+    return status.stream;
+  }
+
+  TaskConstMeta get kCrateApiVotingDriveVotingDriveRunConstMeta =>
+      const TaskConstMeta(
+        debugName: "voting_drive_run",
+        argNames: [
+          "roundId",
+          "lightwalletdUrl",
+          "roundName",
+          "account",
+          "c",
+          "status"
+        ],
+      );
+
+  @override
   Future<bool> crateApiVotingDriveVotingDriveStart(
       {required String roundId,
       required String lightwalletdUrl,
@@ -6588,7 +6640,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
             c, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 205, port: port_);
+            funcId: 206, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_bool,
@@ -6617,7 +6669,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
             c, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 206, port: port_);
+            funcId: 207, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_voting_drive_status,
@@ -6646,7 +6698,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
             c, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 207, port: port_);
+            funcId: 208, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_voting_selection,
@@ -6681,7 +6733,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
             c, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 208, port: port_);
+            funcId: 209, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_voting_eligibility_preview,
@@ -6709,7 +6761,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
             c, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 209, port: port_);
+            funcId: 210, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_voting_round_list_item,
@@ -6746,7 +6798,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
             c, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 210, port: port_);
+            funcId: 211, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,
@@ -6788,7 +6840,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
             c, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 211, port: port_);
+            funcId: 212, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_u_32,
@@ -7107,6 +7159,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @protected
   RustStreamSink<SyncEvent> dco_decode_StreamSink_sync_event_Sse(dynamic raw) {
+    // Codec=Dco (DartCObject based), see doc to use other codecs
+    throw UnimplementedError();
+  }
+
+  @protected
+  RustStreamSink<VotingDriveStatus>
+      dco_decode_StreamSink_voting_drive_status_Sse(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     throw UnimplementedError();
   }
@@ -8853,19 +8912,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   VotingDriveStatus dco_decode_voting_drive_status(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 10)
-      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return VotingDriveStatus(
       roundId: dco_decode_String(arr[0]),
-      running: dco_decode_bool(arr[1]),
-      dispatches: dco_decode_u_64(arr[2]),
-      completedProposals: dco_decode_u_32(arr[3]),
-      totalProposals: dco_decode_u_32(arr[4]),
-      remainingObligations: dco_decode_u_32(arr[5]),
-      sharesConfirmed: dco_decode_u_32(arr[6]),
-      sharesTotal: dco_decode_u_32(arr[7]),
-      quiescence: dco_decode_opt_String(arr[8]),
-      failures: dco_decode_list_String(arr[9]),
+      phase: dco_decode_String(arr[1]),
+      running: dco_decode_bool(arr[2]),
+      dispatches: dco_decode_u_64(arr[3]),
+      completedProposals: dco_decode_u_32(arr[4]),
+      totalProposals: dco_decode_u_32(arr[5]),
+      remainingObligations: dco_decode_u_32(arr[6]),
+      sharesConfirmed: dco_decode_u_32(arr[7]),
+      sharesTotal: dco_decode_u_32(arr[8]),
+      quiescence: dco_decode_opt_String(arr[9]),
+      failures: dco_decode_list_String(arr[10]),
     );
   }
 
@@ -9178,6 +9238,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   @protected
   RustStreamSink<SyncEvent> sse_decode_StreamSink_sync_event_Sse(
       SseDeserializer deserializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    throw UnimplementedError('Unreachable ()');
+  }
+
+  @protected
+  RustStreamSink<VotingDriveStatus>
+      sse_decode_StreamSink_voting_drive_status_Sse(
+          SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     throw UnimplementedError('Unreachable ()');
   }
@@ -11311,6 +11379,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       SseDeserializer deserializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_roundId = sse_decode_String(deserializer);
+    var var_phase = sse_decode_String(deserializer);
     var var_running = sse_decode_bool(deserializer);
     var var_dispatches = sse_decode_u_64(deserializer);
     var var_completedProposals = sse_decode_u_32(deserializer);
@@ -11322,6 +11391,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_failures = sse_decode_list_String(deserializer);
     return VotingDriveStatus(
         roundId: var_roundId,
+        phase: var_phase,
         running: var_running,
         dispatches: var_dispatches,
         completedProposals: var_completedProposals,
@@ -11714,6 +11784,19 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         self.setupAndSerialize(
             codec: SseCodec(
           decodeSuccessData: sse_decode_sync_event,
+          decodeErrorData: sse_decode_AnyhowException,
+        )),
+        serializer);
+  }
+
+  @protected
+  void sse_encode_StreamSink_voting_drive_status_Sse(
+      RustStreamSink<VotingDriveStatus> self, SseSerializer serializer) {
+    // Codec=Sse (Serialization based), see doc to use other codecs
+    sse_encode_String(
+        self.setupAndSerialize(
+            codec: SseCodec(
+          decodeSuccessData: sse_decode_voting_drive_status,
           decodeErrorData: sse_decode_AnyhowException,
         )),
         serializer);
@@ -13383,6 +13466,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       VotingDriveStatus self, SseSerializer serializer) {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_String(self.roundId, serializer);
+    sse_encode_String(self.phase, serializer);
     sse_encode_bool(self.running, serializer);
     sse_encode_u_64(self.dispatches, serializer);
     sse_encode_u_32(self.completedProposals, serializer);
