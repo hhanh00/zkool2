@@ -2,12 +2,21 @@
 title: Examples
 ---
 
-## Income and Expenses grouped by categories
+## Income grouped by categories
 
-For the period of 01-Sep-2025 to 24-Sep-2025
+The salary, a bonus, a mining payout and a gift, each received in ZEC and
+filed under an income category.
 
-![Report =450x](./images/01.report.png)
+![Income =450x](./images/01.report.png)
 
-## Spending of Food and Groceries
+## Spending grouped by categories
 
-![Food =450x](./images/02.food.png)
+Two payments, filed under "Food & Groceries" and "Restaurants & Coffee".
+
+![Spending =450x](./images/12.spending.png)
+
+## Salary over time
+
+The cumulative total of the "Salary" category, one step per payment received.
+
+![Salary =450x](./images/13.category.png)

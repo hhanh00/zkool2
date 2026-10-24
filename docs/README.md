@@ -62,7 +62,7 @@ or better.
 - interfaces with the [Ledger](recipe/ledger) apps for Zcash, the official app
   and the Zondax app (for Nano S+, NanoX, etc), and can be setup as a [Cold Wallet](recipe/cold)
 - helps you [organize your finances](report/overview) by categories, and generates reports and charts
-- integrates [Trading View charts](guide/other)
+- shows the [market price chart](guide/other)
 
 It can probably handle any account from any other wallets as long as you have
 the secret key (unless it is Sprout)
