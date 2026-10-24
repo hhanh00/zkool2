@@ -35,8 +35,11 @@ button on the app bar.
 
 ![Add Category =450x](./images/07.categories.png)
 
-A category has a name and an "Income?" checkbox. Unchecked, it is an
-expense.
+A category has:
+1. a name,
+2. whether it is an income. Unchecked, it is an expense.
+
+![New Category =450x](./images/10.category_form.png)
 
 Edit and Delete categories by first selecting them and using the associated
 button on the app bar.
