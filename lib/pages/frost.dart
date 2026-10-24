@@ -146,8 +146,10 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
                         labelText: "ID of the coordinator",
                       ),
                       initialValue: widget.coordinate ? frostParams!.id : 1,
+                      // Every member of the group, and no one else: the
+                      // DKG form allows up to 7 participants.
                       items: List.generate(
-                        5,
+                        frostParams!.n,
                         (i) => DropdownMenuItem(
                           value: i + 1,
                           child: Text("${i + 1}"),
