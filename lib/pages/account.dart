@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:bubble/bubble.dart';
 import 'package:convert/convert.dart';
@@ -428,11 +427,10 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                 value: "toggle_tx_view",
                 child: Text((ref.read(appSettingsProvider).value?.transactionTableMode ?? false) ? "View: List" : "View: Table"),
               ),
-              if (!Platform.isLinux)
-                const PopupMenuItem<String>(
-                  value: "charts",
-                  child: Text("Charts"),
-                ),
+              const PopupMenuItem<String>(
+                value: "charts",
+                child: Text("Charts"),
+              ),
               // Show migration option when Ironwood is active and there are Orchard/IW notes
               if (hasOrchardBalance && ironwoodActive && !incomingOnly)
                 const PopupMenuItem<String>(

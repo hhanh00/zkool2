@@ -50,14 +50,14 @@ async def rpc(rpc_url: str, method: str, params: list):
 
 
 # Hand-written code this test is not meant to reach: features with their own
-# stacks or tests (voting, FROST and DKG, swaps, the cloud vault, ZSA), the
-# webview pages (market, charts), and note migration, which needs a chain
-# from before Ironwood activates.
+# stacks or tests (voting, FROST and DKG, swaps, the cloud vault, ZSA, the
+# market page and its test_market_ui.py), and note migration, which needs a
+# chain from before Ironwood activates.
 OUT_OF_SCOPE = (
     "lib/pages/voting", "lib/pages/dkg.dart", "lib/pages/frost.dart",
     "lib/widgets/frost_", "lib/pages/swap", "lib/services/swap_",
     "lib/vault.dart", "lib/widgets/vault_", "lib/pages/zsa.dart",
-    "lib/pages/market.dart", "lib/chart.dart", "lib/pages/migrate.dart",
+    "lib/pages/market.dart", "lib/widgets/market_chart.dart", "lib/pages/migrate.dart",
 )
 GENERATED = ("lib/src/rust/", ".g.dart", ".freezed.dart")
 

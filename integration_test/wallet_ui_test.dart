@@ -19,6 +19,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:zkool/chart.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/tx_view.dart';
@@ -331,6 +332,25 @@ void main() {
         expect(t.price, isNotNull, reason: "every transaction priced");
         expect(t.price!, closeTo(usdPrice, 1e-6), reason: "priced in USD");
       }
+      // ── Charts ───────────────────────────────────────────────────────────
+      // The budget charts, drawn natively: the donut of income or spending
+      // by category and the amounts of one category over time, cumulative
+      // or not. A's transactions carry no category, so both show their
+      // empty state; the page, its tabs and its controls are what is tested.
+      await openMenuItem(tester, "Charts");
+      await pumpUntil(tester, () => find.byType(ChartPage).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the charts page",);
+      await pumpUntil(tester, () => find.byType(CategoryDonut).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the income/expenses donut",);
+      await tapTab(tester, "Category");
+      await pumpUntil(tester, () => find.byType(CategoryTimeChart).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the category chart",);
+      await tester.tap(find.byType(Checkbox).first);
+      await pumpFor(tester, const Duration(seconds: 1));
+      expect(find.byType(CategoryTimeChart), findsOneWidget, reason: "the cumulative chart");
+      appRouter.pop();
+      await waitForAccountView(tester, _accountA);
+
       // Switch to EUR: the conversion dialog pre-fills eur/usd from the mock.
       unawaited(appRouter.push("/settings"));
       await pumpUntil(tester, () => find.text("Currency").evaluate().isNotEmpty,
