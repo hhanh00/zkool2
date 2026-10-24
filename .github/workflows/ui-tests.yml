@@ -15,7 +15,7 @@ on:
       tests:
         description: Comma-separated orchestrator files under tests/tests
         required: false
-        default: test_frost_ui.py, test_frost_coordinator_ui.py, test_frost_restore_ui.py, test_wallet_ui.py
+        default: test_frost_ui.py, test_frost_coordinator_ui.py, test_frost_restore_ui.py, test_wallet_ui.py, test_market_ui.py
 
 # Read-only: the jobs check out, restore and save caches, and upload a log
 # artifact. The called workflows declare nothing beyond this.
