@@ -247,7 +247,17 @@ class CategoryChartState extends ConsumerState<CategoryChart> with AutomaticKeep
       children: [
         Row(
           children: [
-            SizedBox(width: 250, child: DropdownButton<int>(items: categoriesMenu, value: category, onChanged: onCategoryChanged)),
+            SizedBox(
+              width: 250,
+              // Expanded, so a long category name is ellipsized instead of
+              // overflowing the box (it did on Linux, whose fonts are wider).
+              child: DropdownButton<int>(
+                isExpanded: true,
+                items: categoriesMenu,
+                value: category,
+                onChanged: onCategoryChanged,
+              ),
+            ),
             Gap(8),
             Text("Cumulative"),
             Checkbox(value: cumulative, onChanged: (v) => setState(() => cumulative = v!)),
