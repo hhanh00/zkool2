@@ -1,5 +1,23 @@
 # Changelog
 
+## [6.35.0-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.35.0-rc.5...zkool-v6.35.0-rc.6) (2026-10-24)
+
+
+### Features
+
+* **chart:** budget charts on fl_chart, no webview ([d066cf0](https://github.com/hhanh00/zkool2/commit/d066cf055ad0f316ef00da3c665e8974125e9567))
+* **market:** fetch ZECUSDC klines for the native market chart ([3e0b017](https://github.com/hhanh00/zkool2/commit/3e0b01742a0171e9e7bdda98cd1b5a669c36e0df))
+* **market:** native market chart on swm_chart ([ec05241](https://github.com/hhanh00/zkool2/commit/ec0524158770738049b206ef7bb6d92867beb900))
+* **voting:** opening a round resumes its unsettled submission ([d6784f4](https://github.com/hhanh00/zkool2/commit/d6784f4c27254cab0caac4acd1c5dc08ba5f510f)), closes [#1401](https://github.com/hhanh00/zkool2/issues/1401)
+* **voting:** the round page displays the submission and announces its end ([5d2c1ac](https://github.com/hhanh00/zkool2/commit/5d2c1ac43358b147f9fa94d3c964375a6b3c73e4)), closes [#1401](https://github.com/hhanh00/zkool2/issues/1401)
+* **voting:** the submission run confirms the helper shares and streams its status ([4ea3567](https://github.com/hhanh00/zkool2/commit/4ea3567cf2d865677127e6e2cc6dfcc1f1235602)), closes [#1401](https://github.com/hhanh00/zkool2/issues/1401)
+
+
+### Bug Fixes
+
+* **frost:** the coordinator dropdown lists every member of the group ([#1400](https://github.com/hhanh00/zkool2/issues/1400)) ([a8015e9](https://github.com/hhanh00/zkool2/commit/a8015e973a5215fa712fedf2d8169b418a633d43)), closes [#1393](https://github.com/hhanh00/zkool2/issues/1393)
+* **ui:** the category list lays out in debug builds ([#1399](https://github.com/hhanh00/zkool2/issues/1399)) ([35e51f0](https://github.com/hhanh00/zkool2/commit/35e51f046a1a58e22d7f7793dd0e0fbaa116ee35)), closes [#1392](https://github.com/hhanh00/zkool2/issues/1392)
+
 ## [6.35.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.35.0-rc.4...zkool-v6.35.0-rc.5) (2026-10-22)
 
 
