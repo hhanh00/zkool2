@@ -23,12 +23,6 @@ class CategoryPageState extends ConsumerState<CategoryPage> {
     Future(refresh);
   }
 
-  @override
-  void dispose() {
-    Future(refresh);
-    super.dispose();
-  }
-
   Future<void> refresh() async {
     final categoryList = await ref.read(getCategoriesProvider.future);
     categories = categoryList.map((f) => (f, false)).toList();
@@ -56,8 +50,11 @@ class CategoryPageState extends ConsumerState<CategoryPage> {
           );
         },
         itemCount: categories.length,
+        // A divider between the expense and the income groups, nothing
+        // between two rows of the same kind: a list gives its separators an
+        // unbounded height, which SizedBox.expand() cannot take.
         separatorBuilder: (BuildContext context, int index) =>
-            (index < categories.length - 1 && categories[index].$1.isIncome != categories[index + 1].$1.isIncome) ? Divider() : SizedBox.expand(),
+            (index < categories.length - 1 && categories[index].$1.isIncome != categories[index + 1].$1.isIncome) ? Divider() : SizedBox.shrink(),
       ),
     );
   }

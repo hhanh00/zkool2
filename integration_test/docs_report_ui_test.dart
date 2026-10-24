@@ -22,6 +22,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/chart.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/pages/category.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/tx_view.dart';
 import 'package:zkool/router.dart';
@@ -37,6 +38,7 @@ import 'support.dart';
 
 const _main = "Main Account";
 const _income = "Salary";
+const _newCategory = "Hardware";
 const _sendTooltip = "Send funds to one or many addresses";
 const _fetchPrompt = "Do you want to retrieve historical ZEC prices for your past transactions?";
 const _sendPrompt = "Are you sure you want to send this transaction?";
@@ -358,12 +360,33 @@ void main() {
       await waitForAccountList(tester);
       await openMenu();
       await shots.take("report/images/06.categories", annots: () => [shots.box(find.text("Categories"))]);
-      // The Categories page itself, its new category form and the actions on
-      // a selected category are not shot: its list separator is an unbounded
-      // SizedBox.expand(), which the debug build refuses to lay out (#1392),
-      // so the page shows its first row only. The docs keep their previous
-      // images 07 and 08; add the shots back once that is fixed.
-      debugPrint("[docs-shots] report/images/07.categories, 08.edit_category SKIPPED: #1392");
+      await tester.tap(find.text("Categories").last);
+      await pumpUntil(tester, () => find.byType(CategoryPage).evaluate().isNotEmpty && find.text(_income).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the category list",);
+      await shots.take("report/images/07.categories", annots: () => [shots.box(find.byIcon(Icons.add))]);
+
+      // ── New category ─────────────────────────────────────────────────────
+      await tester.tap(find.byIcon(Icons.add));
+      await pumpUntil(tester, () => find.text("New Category").evaluate().isNotEmpty && fieldNamed("name").evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the new category form",);
+      await tester.enterText(fieldNamed("name"), _newCategory);
+      await tester.pump();
+      await shots.take("report/images/10.category_form", annots: () => [
+        shots.badge(fieldNamed("name"), 1),
+        shots.badgeAfterText(find.text("Income?"), 2),
+      ]);
+      await answerDialog(tester, "New Category", "Ok");
+      await waitForText(_newCategory, what: "the new category in the list");
+
+      // ── A selected category: edit and delete ─────────────────────────────
+      final newRow = find.ancestor(of: find.text(_newCategory), matching: find.byType(ListTile)).first;
+      await tester.ensureVisible(newRow);
+      await tester.pump();
+      await tester.tap(find.descendant(of: newRow, matching: find.byType(Checkbox)));
+      await pumpUntil(tester, () => find.byIcon(Icons.edit).evaluate().isNotEmpty, timeout: shortTimeout, what: "the selection actions");
+      await shots.take("report/images/08.edit_category", annots: () => [
+        shots.boxAround([find.byIcon(Icons.edit), find.byIcon(Icons.delete)]),
+      ]);
 
       shots.finish();
       rendezvous.publish("done", "true");
