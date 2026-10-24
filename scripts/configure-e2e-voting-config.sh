@@ -12,6 +12,8 @@ VOTE_SDK_PROTO_ROOT=${VOTE_SDK_PROTO_ROOT:?VOTE_SDK_PROTO_ROOT must be set}
 PIR_DATA_DIR=${SVOTE_PIR_DATA_DIR:?SVOTE_PIR_DATA_DIR must be set}
 CONFIG_DIR=${CONFIG_DIR:-"$PWD/e2e-voting-config"}
 PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-https://localhost:8443}
+ROUND_COUNT=${ROUND_COUNT:-2}
+ROUND_TITLE_PREFIX=${ROUND_TITLE_PREFIX:-"E2E Round "}
 
 command -v curl >/dev/null
 command -v jq >/dev/null
@@ -20,15 +22,19 @@ mkdir -p "$CONFIG_DIR"
 rounds=$("$GRPCURL_BIN" -plaintext \
   -import-path "$VOTE_SDK_PROTO_ROOT" -proto svote/v1/query.proto \
   -d '{}' "$SVOTED_GRPC" svote.v1.Query/ListRounds)
-mapfile -t active_rounds < <(jq -r '
+# A read loop, not mapfile: macOS ships bash 3.
+active_rounds=()
+while IFS= read -r line; do
+  [[ -n "$line" ]] && active_rounds+=("$line")
+done < <(jq -r --arg prefix "$ROUND_TITLE_PREFIX" '
   .rounds[]
-  | select(.title | startswith("E2E Round "))
+  | select(.title | startswith($prefix))
   | select(.status == 1 or .status == "SESSION_STATUS_ACTIVE")
   | [.voteRoundId, .eaPk] | @tsv
 ' <<<"$rounds")
 
-[[ ${#active_rounds[@]} == 2 ]] || {
-  echo "expected exactly two active E2E rounds, found ${#active_rounds[@]}" >&2
+[[ ${#active_rounds[@]} == "$ROUND_COUNT" ]] || {
+  echo "expected exactly $ROUND_COUNT active rounds titled '$ROUND_TITLE_PREFIX…', found ${#active_rounds[@]}" >&2
   jq . <<<"$rounds" >&2
   exit 1
 }

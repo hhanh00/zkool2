@@ -1,0 +1,8 @@
+[
+  {"id": 1, "title": "Fund the wallet documentation refresh", "description": "Pay a technical writer to refresh the wallet documentation for the next release.",
+   "options": [{"index": 0, "label": "Yes", "description": "Fund it"}, {"index": 1, "label": "No", "description": "Do not fund it"}, {"index": 2, "label": "Abstain", "description": "No opinion"}]},
+  {"id": 2, "title": "Default block explorer", "description": "Which block explorer should the wallet open transactions in by default?",
+   "options": [{"index": 0, "label": "Zcash Explorer", "description": ""}, {"index": 1, "label": "Blockchair", "description": ""}, {"index": 2, "label": "Mainnet.zcash.org", "description": ""}]},
+  {"id": 3, "title": "Next community call", "description": "When should the next community call take place?",
+   "options": [{"index": 0, "label": "Weekday evening (UTC)", "description": ""}, {"index": 1, "label": "Weekend morning (UTC)", "description": ""}]}
+]

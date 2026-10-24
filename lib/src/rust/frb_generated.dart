@@ -99,7 +99,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.12.0';
 
   @override
-  int get rustContentHash => 1284388541;
+  int get rustContentHash => -1390666573;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -765,9 +765,6 @@ abstract class RustLibApi extends BaseApi {
       required int proposalId,
       required int account,
       required Coin c});
-
-  Future<VotingDriveStatus> crateApiVotingDriveVotingDriveStatus(
-      {required String roundId, required int account, required Coin c});
 
   Future<List<VotingSelection>> crateApiVotingVotingLoadSelections(
       {required String roundId, required int account, required Coin c});
@@ -6682,35 +6679,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  Future<VotingDriveStatus> crateApiVotingDriveVotingDriveStatus(
-      {required String roundId, required int account, required Coin c}) {
-    return handler.executeNormal(NormalTask(
-      callFfi: (port_) {
-        final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_String(roundId, serializer);
-        sse_encode_u_32(account, serializer);
-        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
-            c, serializer);
-        pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 208, port: port_);
-      },
-      codec: SseCodec(
-        decodeSuccessData: sse_decode_voting_drive_status,
-        decodeErrorData: sse_decode_AnyhowException,
-      ),
-      constMeta: kCrateApiVotingDriveVotingDriveStatusConstMeta,
-      argValues: [roundId, account, c],
-      apiImpl: this,
-    ));
-  }
-
-  TaskConstMeta get kCrateApiVotingDriveVotingDriveStatusConstMeta =>
-      const TaskConstMeta(
-        debugName: "voting_drive_status",
-        argNames: ["roundId", "account", "c"],
-      );
-
-  @override
   Future<List<VotingSelection>> crateApiVotingVotingLoadSelections(
       {required String roundId, required int account, required Coin c}) {
     return handler.executeNormal(NormalTask(
@@ -6721,7 +6689,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
             c, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 209, port: port_);
+            funcId: 208, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_voting_selection,
@@ -6756,7 +6724,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
             c, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 210, port: port_);
+            funcId: 209, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_voting_eligibility_preview,
@@ -6784,7 +6752,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
             c, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 211, port: port_);
+            funcId: 210, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_list_voting_round_list_item,
@@ -6817,7 +6785,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
             c, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 212, port: port_);
+            funcId: 211, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_voting_round_standing,
@@ -6854,7 +6822,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
             c, serializer);
         pdeCallFfi(generalizedFrbRustBinding, serializer,
-            funcId: 213, port: port_);
+            funcId: 212, port: port_);
       },
       codec: SseCodec(
         decodeSuccessData: sse_decode_unit,

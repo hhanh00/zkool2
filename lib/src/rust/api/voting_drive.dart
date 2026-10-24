@@ -12,7 +12,7 @@ part 'voting_drive.freezed.dart';
 // These functions are ignored because they are not marked as `pub`: `account_seed`, `delegation_identity`, `ensure_nonempty`, `fetch_round_timing`, `gather_lwd_inputs`, `gather_round_inputs`, `gather_wallet_inputs`, `json_unix_seconds`, `prepare_bundles`, `resolve_round_config`, `start_round_drive`, `start_with`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `GatheredRound`, `RoundConfig`, `StatusSink`, `WalletInputs`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `from`
-// These functions are ignored (category: IgnoreBecauseExplicitAttribute): `start`
+// These functions are ignored (category: IgnoreBecauseExplicitAttribute): `start`, `voting_drive_status`
 // These functions are ignored (category: IgnoreBecauseOwnerTyShouldIgnore): `send_error`, `send`
 
 /// Prepares one round for submission: persists the bundle layout from the
@@ -34,14 +34,6 @@ Future<VotingEligibilityPreview> votingPrepareRound(
         roundName: roundName,
         account: account,
         c: c);
-
-/// The round's durable standing without a run: phase idle, with the helper
-/// share counts from the sidecar, so a page can tell a round already voted
-/// in from a fresh one. A live run's status comes from its `VotingDrive`.
-Future<VotingDriveStatus> votingDriveStatus(
-        {required String roundId, required int account, required Coin c}) =>
-    RustLib.instance.api.crateApiVotingDriveVotingDriveStatus(
-        roundId: roundId, account: account, c: c);
 
 /// Reads the round's standing from the sidecar. `proposal_ids` is the
 /// authenticated roster, which the plan needs to tell a complete ballot.

@@ -562,10 +562,11 @@ impl VotingDrive {
     }
 }
 
-/// The round's durable standing without a run: phase idle, with the helper
-/// share counts from the sidecar, so a page can tell a round already voted
-/// in from a fresh one. A live run's status comes from its `VotingDrive`.
-#[cfg_attr(feature = "flutter", frb)]
+/// The round's standing without a run as a status snapshot: phase idle,
+/// with the helper share counts from the sidecar. The GraphQL server
+/// answers a status poll with it when it holds no run for the round; the
+/// app reads `voting_round_standing` instead.
+#[cfg_attr(feature = "flutter", frb(ignore))]
 pub async fn voting_drive_status(
     round_id: &str,
     account: u32,

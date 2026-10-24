@@ -16,6 +16,14 @@ PIR_URL=${PIR_URL:-http://127.0.0.1:3000}
 PIR_DATA_DIR=${SVOTE_PIR_DATA_DIR:?SVOTE_PIR_DATA_DIR must be set}
 SNAPSHOT_HEIGHT=${SVOTE_PIR_FORCE_SNAPSHOT_HEIGHT:?SVOTE_PIR_FORCE_SNAPSHOT_HEIGHT must be set}
 VOTE_DURATION_SECONDS=${VOTE_DURATION_SECONDS:-120}
+# What the rounds say. CI keeps the defaults; a docs or local run names its
+# own round and hands a proposals JSON file (the array the session takes).
+ROUND_COUNT=${ROUND_COUNT:-2}
+ROUND_TITLE_PREFIX=${ROUND_TITLE_PREFIX:-"E2E Round "}
+# An exact title, for a single round that should not carry a number.
+ROUND_TITLE=${ROUND_TITLE:-}
+ROUND_DESCRIPTION_PREFIX=${ROUND_DESCRIPTION_PREFIX:-"Real regtest voting session "}
+PROPOSALS_JSON=${PROPOSALS_JSON:-}
 
 rpc() {
   curl -fsS -H 'Content-Type: application/json' \
@@ -52,20 +60,29 @@ nc_root=$(jq -er '
 [[ "$nullifier_root" =~ ^[0-9a-fA-F]{64}$ ]]
 [[ "$nc_root" =~ ^[0-9a-fA-F]{64}$ ]]
 
-proposals=$(jq -cn '[range(1; 4) | {
-  id: .,
-  title: ("Proposal " + tostring),
-  description: ("E2E proposal " + tostring),
-  options: [range(0; 3) | {
-    index: ., label: ("Choice " + (. + 1 | tostring)),
-    description: ("E2E choice " + (. + 1 | tostring))
-  }]
-}]')
+if [[ -n "$PROPOSALS_JSON" ]]; then
+  proposals=$(jq -c . "$PROPOSALS_JSON")
+else
+  proposals=$(jq -cn '[range(1; 4) | {
+    id: .,
+    title: ("Proposal " + tostring),
+    description: ("E2E proposal " + tostring),
+    options: [range(0; 3) | {
+      index: ., label: ("Choice " + (. + 1 | tostring)),
+      description: ("E2E choice " + (. + 1 | tostring))
+    }]
+  }]')
+fi
+# The option count of each proposal, to recognize the round once listed.
+expected_options=$(jq -c '[.[] | (.options | length)]' <<<"$proposals")
 proposals_hash=$(printf '%s' "$proposals" | openssl dgst -sha256 -binary | xxd -p -c 256)
 
+round_title() {
+  if [[ -n "$ROUND_TITLE" ]]; then printf '%s' "$ROUND_TITLE"; else printf '%s%s' "$ROUND_TITLE_PREFIX" "$1"; fi
+}
 create_round() {
   local number=$1 session_json result expected_nullifier_root
-  session_json=$(mktemp "${RUNNER_TEMP:-/tmp}/e2e-voting-session.XXXXXX.json")
+  session_json=$(mktemp "${RUNNER_TEMP:-/tmp}/e2e-voting-session.XXXXXX")
   jq -n \
     --argjson snapshot_height "$SNAPSHOT_HEIGHT" \
     --arg snapshot_blockhash "$snapshot_blockhash" \
@@ -73,8 +90,8 @@ create_round() {
     --argjson vote_end_time "$(( $(date +%s) + VOTE_DURATION_SECONDS ))" \
     --arg nullifier_imt_root "$nullifier_root" \
     --arg nc_root "$nc_root" \
-    --arg title "E2E Round $number" \
-    --arg description "Real regtest voting session $number" \
+    --arg title "$(round_title "$number")" \
+    --arg description "$ROUND_DESCRIPTION_PREFIX$number" \
     --argjson proposals "$proposals" \
     '{snapshot_height: $snapshot_height, snapshot_blockhash: $snapshot_blockhash,
       proposals_hash: $proposals_hash, vote_end_time: $vote_end_time,
@@ -91,16 +108,17 @@ create_round() {
       -import-path "$VOTE_SDK_PROTO_ROOT" -proto svote/v1/query.proto \
       -d '{}' "$SVOTED_GRPC" svote.v1.Query/ListRounds)
     expected_nullifier_root=$(printf '%s' "$nullifier_root" | xxd -r -p | base64 | tr -d '\n')
-    if jq -e --arg title "E2E Round $number" --arg root "$expected_nullifier_root" \
+    if jq -e --arg title "$(round_title "$number")" --arg root "$expected_nullifier_root" \
+      --argjson expected "$expected_options" \
       '[.rounds[]? | select(.title == $title and .nullifierImtRoot == $root)
-        | .proposals[] | select(.options | length == 3)] | length == 3' \
+        | .proposals[] | (.options | length)] == $expected' \
       <<<"$rounds" >/dev/null; then
-      echo "created E2E Round $number with PIR circuit root $nullifier_root"
+      echo "created $(round_title "$number") with PIR circuit root $nullifier_root"
       return
     fi
     sleep 1
   done
-  echo "E2E Round $number was not visible through svoted gRPC" >&2
+  echo "$(round_title "$number") was not visible through svoted gRPC" >&2
   exit 1
 }
 
@@ -110,19 +128,19 @@ wait_for_active_round() {
     rounds=$("$GRPCURL_BIN" -plaintext \
       -import-path "$VOTE_SDK_PROTO_ROOT" -proto svote/v1/query.proto \
       -d '{}' "$SVOTED_GRPC" svote.v1.Query/ListRounds)
-    if jq -e --arg title "E2E Round $number" \
+    if jq -e --arg title "$(round_title "$number")" \
       '.rounds[]? | select(.title == $title) | .status == "SESSION_STATUS_ACTIVE"' \
       <<<"$rounds" >/dev/null; then
-      echo "E2E Round $number is active"
+      echo "$(round_title "$number") is active"
       return
     fi
     sleep 1
   done
-  echo "E2E Round $number did not become active" >&2
+  echo "$(round_title "$number") did not become active" >&2
   exit 1
 }
 
-create_round 1
-wait_for_active_round 1
-create_round 2
-wait_for_active_round 2
+for number in $(seq 1 "$ROUND_COUNT"); do
+  create_round "$number"
+  wait_for_active_round "$number"
+done

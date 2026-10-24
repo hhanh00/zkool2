@@ -45,7 +45,7 @@ flutter_rust_bridge::frb_generated_boilerplate!(
     default_rust_auto_opaque = RustAutoOpaqueMoi,
 );
 pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_VERSION: &str = "2.12.0";
-pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = 1284388541;
+pub(crate) const FLUTTER_RUST_BRIDGE_CODEGEN_CONTENT_HASH: i32 = -1390666573;
 
 // Section: executor
 
@@ -10682,65 +10682,6 @@ fn wire__crate__api__voting__voting_clear_selection_impl(
         },
     )
 }
-fn wire__crate__api__voting_drive__voting_drive_status_impl(
-    port_: flutter_rust_bridge::for_generated::MessagePort,
-    ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
-    rust_vec_len_: i32,
-    data_len_: i32,
-) {
-    FLUTTER_RUST_BRIDGE_HANDLER.wrap_async::<flutter_rust_bridge::for_generated::SseCodec, _, _, _>(
-        flutter_rust_bridge::for_generated::TaskInfo {
-            debug_name: "voting_drive_status",
-            port: Some(port_),
-            mode: flutter_rust_bridge::for_generated::FfiCallMode::Normal,
-        },
-        move || {
-            let message = unsafe {
-                flutter_rust_bridge::for_generated::Dart2RustMessageSse::from_wire(
-                    ptr_,
-                    rust_vec_len_,
-                    data_len_,
-                )
-            };
-            let mut deserializer =
-                flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_round_id = <String>::sse_decode(&mut deserializer);
-            let api_account = <u32>::sse_decode(&mut deserializer);
-            let api_c = <RustOpaqueMoi<
-                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
-            >>::sse_decode(&mut deserializer);
-            deserializer.end();
-            move |context| async move {
-                transform_result_sse::<_, flutter_rust_bridge::for_generated::anyhow::Error>(
-                    (move || async move {
-                        let mut api_c_guard = None;
-                        let decode_indices_ =
-                            flutter_rust_bridge::for_generated::lockable_compute_decode_order(
-                                vec![flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                    &api_c, 0, false,
-                                )],
-                            );
-                        for i in decode_indices_ {
-                            match i {
-                                0 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
-                                _ => unreachable!(),
-                            }
-                        }
-                        let api_c_guard = api_c_guard.unwrap();
-                        let output_ok = crate::api::voting_drive::voting_drive_status(
-                            &api_round_id,
-                            api_account,
-                            &*api_c_guard,
-                        )
-                        .await?;
-                        Ok(output_ok)
-                    })()
-                    .await,
-                )
-            }
-        },
-    )
-}
 fn wire__crate__api__voting__voting_load_selections_impl(
     port_: flutter_rust_bridge::for_generated::MessagePort,
     ptr_: flutter_rust_bridge::for_generated::PlatformGeneralizedUint8ListPtr,
@@ -14127,29 +14068,23 @@ fn pde_ffi_dispatcher_primary_impl(
         207 => {
             wire__crate__api__voting__voting_clear_selection_impl(port, ptr, rust_vec_len, data_len)
         }
-        208 => wire__crate__api__voting_drive__voting_drive_status_impl(
-            port,
-            ptr,
-            rust_vec_len,
-            data_len,
-        ),
-        209 => {
+        208 => {
             wire__crate__api__voting__voting_load_selections_impl(port, ptr, rust_vec_len, data_len)
         }
-        210 => wire__crate__api__voting_drive__voting_prepare_round_impl(
+        209 => wire__crate__api__voting_drive__voting_prepare_round_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        211 => wire__crate__api__voting__voting_round_list_impl(port, ptr, rust_vec_len, data_len),
-        212 => wire__crate__api__voting_drive__voting_round_standing_impl(
+        210 => wire__crate__api__voting__voting_round_list_impl(port, ptr, rust_vec_len, data_len),
+        211 => wire__crate__api__voting_drive__voting_round_standing_impl(
             port,
             ptr,
             rust_vec_len,
             data_len,
         ),
-        213 => {
+        212 => {
             wire__crate__api__voting__voting_save_selection_impl(port, ptr, rust_vec_len, data_len)
         }
         _ => unreachable!(),
