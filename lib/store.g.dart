@@ -1352,7 +1352,7 @@ final class VaultNotifierProvider
   VaultNotifier create() => VaultNotifier();
 }
 
-String _$vaultNotifierHash() => r'b2840c7cbc6b39a9eaea18ab703eaddc59d00259';
+String _$vaultNotifierHash() => r'd03519cc36e3593ab5db748ca6a1217fbb26fa50';
 
 abstract class _$VaultNotifier extends $AsyncNotifier<Vault> {
   FutureOr<Vault> build();
@@ -1566,25 +1566,31 @@ abstract class _$VotingSubmissionGuard extends $Notifier<bool> {
 
 /// Submission job for one round. `prepare` persists the bundle layout and
 /// returns the eligibility preview the UI shows before the voter commits;
-/// `start` hands the round to the Rust driver, which runs to quiescence on
-/// its own task. Status polling is owned here, so it survives page
-/// navigation; a run already live in Rust is adopted on first read.
+/// `start` hands the round to the Rust run, which casts the votes and then
+/// confirms the helper shares on its own task. The job owns the run's handle
+/// and its status subscription, like the mempool listener owns the mempool
+/// stream, so both outlive the page: leaving the round page does not stop
+/// the run, and a page reopened mid-run finds the job still driving.
 
 @ProviderFor(VotingDriveJob)
 const votingDriveJobProvider = VotingDriveJobFamily._();
 
 /// Submission job for one round. `prepare` persists the bundle layout and
 /// returns the eligibility preview the UI shows before the voter commits;
-/// `start` hands the round to the Rust driver, which runs to quiescence on
-/// its own task. Status polling is owned here, so it survives page
-/// navigation; a run already live in Rust is adopted on first read.
+/// `start` hands the round to the Rust run, which casts the votes and then
+/// confirms the helper shares on its own task. The job owns the run's handle
+/// and its status subscription, like the mempool listener owns the mempool
+/// stream, so both outlive the page: leaving the round page does not stop
+/// the run, and a page reopened mid-run finds the job still driving.
 final class VotingDriveJobProvider
     extends $NotifierProvider<VotingDriveJob, VotingDriveJobState> {
   /// Submission job for one round. `prepare` persists the bundle layout and
   /// returns the eligibility preview the UI shows before the voter commits;
-  /// `start` hands the round to the Rust driver, which runs to quiescence on
-  /// its own task. Status polling is owned here, so it survives page
-  /// navigation; a run already live in Rust is adopted on first read.
+  /// `start` hands the round to the Rust run, which casts the votes and then
+  /// confirms the helper shares on its own task. The job owns the run's handle
+  /// and its status subscription, like the mempool listener owns the mempool
+  /// stream, so both outlive the page: leaving the round page does not stop
+  /// the run, and a page reopened mid-run finds the job still driving.
   const VotingDriveJobProvider._(
       {required VotingDriveJobFamily super.from,
       required (
@@ -1633,13 +1639,15 @@ final class VotingDriveJobProvider
   }
 }
 
-String _$votingDriveJobHash() => r'dcd077904c83d81eb8351ee05c9a7e01c49e24ca';
+String _$votingDriveJobHash() => r'f3b57afde19c1c8ad458f61f9398b098ea8c544d';
 
 /// Submission job for one round. `prepare` persists the bundle layout and
 /// returns the eligibility preview the UI shows before the voter commits;
-/// `start` hands the round to the Rust driver, which runs to quiescence on
-/// its own task. Status polling is owned here, so it survives page
-/// navigation; a run already live in Rust is adopted on first read.
+/// `start` hands the round to the Rust run, which casts the votes and then
+/// confirms the helper shares on its own task. The job owns the run's handle
+/// and its status subscription, like the mempool listener owns the mempool
+/// stream, so both outlive the page: leaving the round page does not stop
+/// the run, and a page reopened mid-run finds the job still driving.
 
 final class VotingDriveJobFamily extends $Family
     with
@@ -1663,9 +1671,11 @@ final class VotingDriveJobFamily extends $Family
 
   /// Submission job for one round. `prepare` persists the bundle layout and
   /// returns the eligibility preview the UI shows before the voter commits;
-  /// `start` hands the round to the Rust driver, which runs to quiescence on
-  /// its own task. Status polling is owned here, so it survives page
-  /// navigation; a run already live in Rust is adopted on first read.
+  /// `start` hands the round to the Rust run, which casts the votes and then
+  /// confirms the helper shares on its own task. The job owns the run's handle
+  /// and its status subscription, like the mempool listener owns the mempool
+  /// stream, so both outlive the page: leaving the round page does not stop
+  /// the run, and a page reopened mid-run finds the job still driving.
 
   VotingDriveJobProvider call(
     String roundId,
@@ -1682,9 +1692,11 @@ final class VotingDriveJobFamily extends $Family
 
 /// Submission job for one round. `prepare` persists the bundle layout and
 /// returns the eligibility preview the UI shows before the voter commits;
-/// `start` hands the round to the Rust driver, which runs to quiescence on
-/// its own task. Status polling is owned here, so it survives page
-/// navigation; a run already live in Rust is adopted on first read.
+/// `start` hands the round to the Rust run, which casts the votes and then
+/// confirms the helper shares on its own task. The job owns the run's handle
+/// and its status subscription, like the mempool listener owns the mempool
+/// stream, so both outlive the page: leaving the round page does not stop
+/// the run, and a page reopened mid-run finds the job still driving.
 
 abstract class _$VotingDriveJob extends $Notifier<VotingDriveJobState> {
   late final _$args = ref.$arg as (
@@ -1715,21 +1727,24 @@ abstract class _$VotingDriveJob extends $Notifier<VotingDriveJobState> {
   }
 }
 
-/// Re-runnable trigger to stop every live driver run for the current wallet.
-/// Backgrounding and wallet switches invoke it so no run outlives its wallet;
-/// durable effects stay and a later start re-plans from the sidecar.
+/// Re-runnable trigger to stop every live run. Backgrounding and wallet
+/// switches invoke it so no run outlives its wallet; durable effects stay
+/// and a later start re-plans from the sidecar. Each run's job sees the
+/// cancelled snapshot on its stream and leaves the live index itself.
 
 @ProviderFor(VotingDriveStopAll)
 const votingDriveStopAllProvider = VotingDriveStopAllProvider._();
 
-/// Re-runnable trigger to stop every live driver run for the current wallet.
-/// Backgrounding and wallet switches invoke it so no run outlives its wallet;
-/// durable effects stay and a later start re-plans from the sidecar.
+/// Re-runnable trigger to stop every live run. Backgrounding and wallet
+/// switches invoke it so no run outlives its wallet; durable effects stay
+/// and a later start re-plans from the sidecar. Each run's job sees the
+/// cancelled snapshot on its stream and leaves the live index itself.
 final class VotingDriveStopAllProvider
     extends $NotifierProvider<VotingDriveStopAll, void> {
-  /// Re-runnable trigger to stop every live driver run for the current wallet.
-  /// Backgrounding and wallet switches invoke it so no run outlives its wallet;
-  /// durable effects stay and a later start re-plans from the sidecar.
+  /// Re-runnable trigger to stop every live run. Backgrounding and wallet
+  /// switches invoke it so no run outlives its wallet; durable effects stay
+  /// and a later start re-plans from the sidecar. Each run's job sees the
+  /// cancelled snapshot on its stream and leaves the live index itself.
   const VotingDriveStopAllProvider._()
       : super(
           from: null,
@@ -1758,11 +1773,12 @@ final class VotingDriveStopAllProvider
 }
 
 String _$votingDriveStopAllHash() =>
-    r'1a6879dc0f9cd20551afa0ab28b54df794430f5d';
+    r'c780396697a6bd180706666e1ae62b95f09286bc';
 
-/// Re-runnable trigger to stop every live driver run for the current wallet.
-/// Backgrounding and wallet switches invoke it so no run outlives its wallet;
-/// durable effects stay and a later start re-plans from the sidecar.
+/// Re-runnable trigger to stop every live run. Backgrounding and wallet
+/// switches invoke it so no run outlives its wallet; durable effects stay
+/// and a later start re-plans from the sidecar. Each run's job sees the
+/// cancelled snapshot on its stream and leaves the live index itself.
 
 abstract class _$VotingDriveStopAll extends $Notifier<void> {
   void build();

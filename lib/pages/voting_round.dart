@@ -32,59 +32,26 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
   String? _loadError;
   final Map<int, int> _selections = {};
   final Set<int> _skipped = {};
-  /// Durable round state polled while this page is open: it routes an
-  /// already-voted round to the status view and drives share confirmation.
-  VotingDriveStatus? _shareStatus;
-  Timer? _shareTimer;
 
   @override
   void initState() {
     super.initState();
     unawaited(_loadSelections());
-    _startShareRefresh();
     unawaited(_resumeSubmission());
   }
 
-  /// A submission started earlier and not settled resumes as soon as the
-  /// round is opened: the run is idempotent, so no question is asked.
+  /// Reads where the round stands and resumes a submission started earlier
+  /// and not settled: the run is idempotent, so no question is asked. The
+  /// standing also routes an already-voted round to the status view.
   Future<void> _resumeSubmission() async {
     final settings = await ref.read(appSettingsProvider.future);
-    if (settings.offline || !mounted) return;
+    if (!mounted) return;
     await ref.read(votingDriveJobProvider(widget.round.roundId, widget.account).notifier).resume(
           lightwalletdUrl: settings.lwd,
           roundName: widget.round.title,
           proposalIds: [for (final p in widget.round.proposals) p.proposalId],
+          offline: settings.offline,
         );
-  }
-
-  @override
-  void dispose() {
-    _shareTimer?.cancel();
-    super.dispose();
-  }
-
-  void _startShareRefresh() {
-    unawaited(_refreshShares());
-    _shareTimer ??=
-        Timer.periodic(const Duration(seconds: 5), (_) => unawaited(_refreshShares()));
-  }
-
-  /// Polls the round's durable standing while this page is open: it routes
-  /// an already-voted round to the status view. The run itself confirms the
-  /// helper shares; nothing here touches them.
-  Future<void> _refreshShares() async {
-    try {
-      final status = await votingDriveStatus(roundId: widget.round.roundId, account: widget.account, c: _coin);
-      if (!mounted) return;
-      final pending = status.sharesTotal > status.sharesConfirmed;
-      if (!pending) {
-        _shareTimer?.cancel();
-        _shareTimer = null;
-      }
-      setState(() => _shareStatus = status);
-    } on Exception {
-      // Transient status errors: the next tick retries.
-    }
   }
 
   Future<void> _loadSelections() async {
@@ -175,8 +142,8 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
   }
 
   /// Ballot complete → explicit prepare (eligibility preview) → confirm
-  /// dialog → start the driver run. The durable work happens in Rust; this
-  /// page only observes the polled status afterwards.
+  /// dialog → start the run. The durable work happens in Rust; this page
+  /// only displays the streamed status afterwards.
   Future<void> _onBallotComplete() async {
     final settings = await ref.read(appSettingsProvider.future);
     if (settings.offline) {
@@ -215,8 +182,6 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
     if (!confirmed || !mounted) return;
     await job.start(lightwalletdUrl: settings.lwd, roundName: widget.round.title);
     if (!mounted) return;
-    // The run creates the shares; poll for them again.
-    _startShareRefresh();
     final stage = ref.read(votingDriveJobProvider(widget.round.roundId, widget.account)).stage;
     if (stage == "error") {
       final error = ref.read(votingDriveJobProvider(widget.round.roundId, widget.account)).error;
@@ -293,25 +258,24 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
   @override
   Widget build(BuildContext context) {
     final job = ref.watch(votingDriveJobProvider(widget.round.roundId, widget.account));
-    final status = _effectiveStatus(job);
+    final notifier = ref.read(votingDriveJobProvider(widget.round.roundId, widget.account).notifier);
+    // The status view shows a run of this process, or a submission the
+    // sidecar knows about: started earlier, settled or not.
     final showStatus = job.stage == "starting" ||
         job.stage == "driving" ||
-        (status != null && status.sharesTotal > 0);
+        (job.stage == "error" && job.status != null) ||
+        (job.standing?.submissionStarted ?? false);
     Widget body;
     if (job.stage == "preparing") {
       body = const _PreparingView();
     } else if (showStatus) {
       body = _DriveStatusView(
         job: job,
-        status: status,
         onDone: () => context.pop(),
-        onCancel: () =>
-            ref.read(votingDriveJobProvider(widget.round.roundId, widget.account).notifier).cancel(),
+        onCancel: notifier.cancel,
         onResume: () async {
           final lwd = await _lwdUrl();
-          await ref
-              .read(votingDriveJobProvider(widget.round.roundId, widget.account).notifier)
-              .start(lightwalletdUrl: lwd, roundName: widget.round.title);
+          await notifier.start(lightwalletdUrl: lwd, roundName: widget.round.title);
         },
       );
     } else {
@@ -392,26 +356,6 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
           ),
         ],
       ),
-    );
-  }
-
-  /// Status shown by the page, synthesized for an already-voted round opened
-  /// with no live in-process run (the driver registry is process-local).
-  ///
-  /// While a run is live, its own status leads: the durable poll may still
-  /// hold what it read before the run started, which would show a submission
-  /// as idle for as long as it runs.
-  VotingDriveStatus? _effectiveStatus(VotingDriveJobState job) {
-    final live = job.stage == "starting" || job.stage == "driving";
-    final status = live ? (job.status ?? _shareStatus) : (_shareStatus ?? job.status);
-    if (status == null || status.running || status.quiescence != null) {
-      return status;
-    }
-    if (status.sharesTotal == 0) return status;
-    return status.copyWith(
-      quiescence: status.sharesConfirmed >= status.sharesTotal
-          ? 'done'
-          : 'background_shares(${status.sharesTotal - status.sharesConfirmed})',
     );
   }
 
@@ -562,22 +506,18 @@ class _PreparingView extends StatelessWidget {
   }
 }
 
-/// Live view of one round's driver run: progress while running, the
-/// quiescence outcome (and failures) once stopped, and resume/cancel/leave
-/// actions derived from the polled status.
+/// Display of one round's submission: what the run streams while it is
+/// live, its outcome once it stopped, or the sidecar's standing for a round
+/// opened with no run in this process. The only actions are cancel while
+/// casting, resume after a stop, and leaving the page.
 class _DriveStatusView extends StatelessWidget {
   final VotingDriveJobState job;
-  /// Effective status for this page. Prefers the durable poll over the job's
-  /// process-local snapshot, so an already-voted round reopened with no live
-  /// run still reads correctly.
-  final VotingDriveStatus? status;
   final VoidCallback onDone;
   final VoidCallback onCancel;
   final Future<void> Function() onResume;
 
   const _DriveStatusView({
     required this.job,
-    required this.status,
     required this.onDone,
     required this.onCancel,
     required this.onResume,
@@ -585,17 +525,82 @@ class _DriveStatusView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = this.status ?? job.status;
-    // A run that is starting is not registered yet, so the durable poll reads
-    // it as idle: the start counts as running until the registry has it.
-    final running = job.stage == "starting" || (status?.running ?? true);
     final theme = Theme.of(context);
+    final status = job.status;
+    final standing = job.standing;
+    final starting = job.stage == "starting";
+    final running = starting || (status?.running ?? false);
+    final confirming = running && status?.phase == "confirming_shares";
+    final sharesTotal = status?.sharesTotal ?? standing?.sharesTotal ?? 0;
+    final sharesConfirmed = status?.sharesConfirmed ?? standing?.sharesConfirmed ?? 0;
     final failures = status?.failures ?? const <String>[];
+
+    // The headline and the exits follow the run's phase; a round with no run
+    // in this process reads from its standing.
+    final String headline;
+    final Widget? action;
+    final List<Widget> exits;
+    if (starting || (running && !confirming)) {
+      headline = "Submitting votes";
+      action = OutlinedButton.icon(
+        onPressed: onCancel,
+        icon: const Icon(Icons.close),
+        label: const Text('Cancel submission'),
+      );
+      exits = const [];
+    } else if (confirming) {
+      headline = "Votes cast, confirming helper shares";
+      action = null;
+      exits = [FilledButton(onPressed: onDone, child: const Text('Close'))];
+    } else if (status != null) {
+      headline = votingQuiescenceLabel(status.quiescence);
+      action = null;
+      exits = [
+        if (status.quiescence case 'cancelled' || 'chain_recovery_stalled' || 'pass_budget_exhausted')
+          FilledButton.icon(
+            onPressed: () => onResume(),
+            icon: const Icon(Icons.play_arrow),
+            label: const Text('Resume submission'),
+          ),
+        FilledButton(onPressed: onDone, child: Text(status.quiescence == 'done' ? 'Done' : 'Close')),
+      ];
+    } else if (job.stage == "error") {
+      headline = "Submission failed";
+      action = null;
+      exits = [
+        FilledButton.icon(
+          onPressed: () => onResume(),
+          icon: const Icon(Icons.play_arrow),
+          label: const Text('Try again'),
+        ),
+        FilledButton(onPressed: onDone, child: const Text('Close')),
+      ];
+    } else if (standing?.workPending ?? false) {
+      headline = "Submission interrupted";
+      action = null;
+      exits = [
+        FilledButton.icon(
+          onPressed: () => onResume(),
+          icon: const Icon(Icons.play_arrow),
+          label: const Text('Resume submission'),
+        ),
+        FilledButton(onPressed: onDone, child: const Text('Close')),
+      ];
+    } else {
+      headline = "Votes submitted";
+      action = null;
+      exits = [FilledButton(onPressed: onDone, child: const Text('Done'))];
+    }
+    final done = headline == "Votes submitted";
+    final failed = !running && !done && (job.error != null || failures.isNotEmpty || status?.quiescence == 'chain_terminal');
+
     final progress = switch (status) {
       null => null,
-      final s when s.totalProposals > 0 => s.completedProposals / s.totalProposals,
-      final s when s.sharesTotal > 0 => s.sharesConfirmed / s.sharesTotal,
-      _ => null,
+      final s when s.running && s.phase == "confirming_shares" && s.sharesTotal > 0 =>
+        s.sharesConfirmed / s.sharesTotal,
+      final s when s.running && s.totalProposals > 0 => s.completedProposals / s.totalProposals,
+      final s when s.running => null,
+      _ => 1.0,
     };
     return Center(
       child: SingleChildScrollView(
@@ -607,63 +612,54 @@ class _DriveStatusView extends StatelessWidget {
             Icon(
               running
                   ? Icons.how_to_vote_outlined
-                  : switch (status?.quiescence) {
-                      'done' => Icons.check_circle,
-                      'cancelled' => Icons.cancel_outlined,
-                      'failures' || 'chain_terminal' => Icons.error_outline,
-                      _ => Icons.info_outline,
-                    },
+                  : done
+                      ? Icons.check_circle
+                      : failed
+                          ? Icons.error_outline
+                          : Icons.info_outline,
               size: 48,
               color: running
                   ? theme.colorScheme.secondary
-                  : switch (status?.quiescence) {
-                      'done' => Colors.green,
-                      'failures' || 'chain_terminal' => theme.colorScheme.error,
-                      _ => null,
-                    },
+                  : done
+                      ? Colors.green
+                      : failed
+                          ? theme.colorScheme.error
+                          : null,
             ),
             const SizedBox(height: 12),
-            Text(
-              job.stage == "starting"
-                  ? "Starting submission"
-                  : votingQuiescenceLabel(running ? null : status?.quiescence),
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium,
-            ),
+            Text(headline, textAlign: TextAlign.center, style: theme.textTheme.titleMedium),
             const SizedBox(height: 16),
-            LinearProgressIndicator(value: progress, minHeight: 8),
-            const SizedBox(height: 8),
-            if (status != null) ...[
-              if (status.totalProposals > 0)
-                Text(
-                  '${status.completedProposals} of ${status.totalProposals} proposals',
-                  textAlign: TextAlign.center,
-                ),
-              if (status.sharesTotal > 0 &&
-                  status.sharesConfirmed < status.sharesTotal) ...[
-                const SizedBox(height: 4),
-                Text(
-                  '${status.sharesTotal - status.sharesConfirmed} of '
-                  '${status.sharesTotal} helper shares left to confirm',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'The wallet confirms shares as helpers reveal them. Keep the '
-                  'app open to make progress.',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall,
-                ),
-              ] else if (running) ...[
-                const SizedBox(height: 4),
-                Text(
-                  '${status.dispatches} dispatches • '
-                  '${status.remainingObligations} obligations left',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
+            if (running || done) ...[
+              LinearProgressIndicator(value: progress, minHeight: 8),
+              const SizedBox(height: 8),
+            ],
+            if (running && !confirming && status != null && status.totalProposals > 0)
+              Text(
+                '${status.completedProposals} of ${status.totalProposals} proposals',
+                textAlign: TextAlign.center,
+              ),
+            if (running && !confirming) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Proving may take a few minutes per note. Please keep the app open and stay on this page if possible.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
+            if (confirming || (!running && sharesTotal > 0)) ...[
+              Text(
+                '$sharesConfirmed of $sharesTotal helper shares confirmed',
+                textAlign: TextAlign.center,
+              ),
+            ],
+            if (confirming) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Stay on this page if possible. The submission continues in the background if you leave it; '
+                'if the app is closed, open this round again to resume.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall,
+              ),
             ],
             if (job.error != null) ...[
               const SizedBox(height: 12),
@@ -678,25 +674,8 @@ class _DriveStatusView extends StatelessWidget {
                 ),
             ],
             const SizedBox(height: 20),
-            if (running)
-              OutlinedButton.icon(
-                onPressed: onCancel,
-                icon: const Icon(Icons.close),
-                label: const Text('Cancel submission'),
-              )
-            else ...[
-              switch (status?.quiescence) {
-                'cancelled' || 'pass_budget_exhausted' => FilledButton.icon(
-                    onPressed: () => onResume(),
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Resume submission'),
-                  ),
-                'done' => FilledButton(onPressed: onDone, child: const Text('Done')),
-                // Anything else (including share delivery still in progress) is
-                // not done: label the exit honestly.
-                _ => FilledButton(onPressed: onDone, child: const Text('Close')),
-              },
-            ],
+            if (action != null) action,
+            for (final exit in exits) ...[exit, const SizedBox(height: 8)],
           ],
         ),
       ),

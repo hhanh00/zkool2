@@ -1398,6 +1398,8 @@ sealed class VotingDriveJobState with _$VotingDriveJobState {
     VotingEligibilityPreview? eligibility,
     /// Last streamed run status; null before the run sent one.
     VotingDriveStatus? status,
+    /// Where the round stands in the sidecar, read when the page opened.
+    VotingRoundStanding? standing,
     String? error,
   }) = _VotingDriveJobState;
 }
@@ -1412,12 +1414,16 @@ sealed class VotingDriveJobState with _$VotingDriveJobState {
 @Riverpod(keepAlive: true)
 class VotingDriveJob extends _$VotingDriveJob {
   String _roundId = "";
+  String _roundName = "";
   int _account = 0;
   final VotingDrive _drive = VotingDrive();
   StreamSubscription<VotingDriveStatus>? _statuses;
   /// The voter stopped the run from the page; a reopen then offers "Resume"
   /// instead of resuming by itself. A wallet-level stop does not set it.
   bool _cancelledByUser = false;
+  /// A cancel asked while the run was still gathering its inputs, applied
+  /// on its first status.
+  bool _cancelPending = false;
 
   @override
   VotingDriveJobState build(String roundId, int account) {
@@ -1462,7 +1468,9 @@ class VotingDriveJob extends _$VotingDriveJob {
     // first status; reflect the start immediately so the UI is not stuck on
     // the ballot behind a closed dialog.
     state = state.copyWith(stage: "starting", error: null, status: null);
+    _roundName = roundName;
     _cancelledByUser = false;
+    _cancelPending = false;
     _liveVotingDrives[_roundId] = _drive;
     _syncVotingSubmissionGuard(ref);
     await _statuses?.cancel();
@@ -1482,7 +1490,11 @@ class VotingDriveJob extends _$VotingDriveJob {
   /// once the step in flight ends.
   void cancel() {
     _cancelledByUser = true;
-    _drive.cancel();
+    if (state.stage == "starting") {
+      _cancelPending = true;
+    } else {
+      _drive.cancel();
+    }
   }
 
   /// Resumes the round's submission when the sidecar says one was started
@@ -1493,10 +1505,10 @@ class VotingDriveJob extends _$VotingDriveJob {
     required String lightwalletdUrl,
     required String roundName,
     required List<int> proposalIds,
+    bool offline = false,
   }) async {
     if (state.stage == "starting" || state.stage == "preparing") return;
     if (state.stage == "driving" && (state.status?.running ?? true)) return;
-    if (_cancelledByUser) return;
     final VotingRoundStanding standing;
     try {
       standing = await votingRoundStanding(
@@ -1509,19 +1521,35 @@ class VotingDriveJob extends _$VotingDriveJob {
       logger.i("[Voting] standing of $_roundId unavailable: $e");
       return;
     }
-    if (!standing.workPending) return;
+    state = state.copyWith(standing: standing);
+    if (!standing.workPending || offline || _cancelledByUser) return;
     logger.i("[Voting] resuming the submission of $_roundId");
     await start(lightwalletdUrl: lightwalletdUrl, roundName: roundName);
   }
 
   void _onStatus(VotingDriveStatus status) {
     state = state.copyWith(stage: "driving", status: status);
-    if (!status.running) _stopped();
+    if (_cancelPending) {
+      _cancelPending = false;
+      _drive.cancel();
+    }
+    if (!status.running) {
+      _stopped();
+      // Announced wherever the voter is, like a sent transaction: the run
+      // may well have finished while they were on another page.
+      final q = status.quiescence;
+      if (q == "done") {
+        showSnackbar("Votes submitted: $_roundName");
+      } else if (q != "cancelled") {
+        showSnackbar("Voting $_roundName: ${votingQuiescenceLabel(q)}");
+      }
+    }
   }
 
   void _onError(Object error) {
     state = state.copyWith(stage: "error", error: error.toString());
     _stopped();
+    showSnackbar("Voting $_roundName failed: $error");
   }
 
   void _onDone() {
@@ -1541,16 +1569,34 @@ class VotingDriveJob extends _$VotingDriveJob {
   }
 }
 
-/// Friendly headline for a driver quiescence label, as formatted by
-/// `quiescence_label` in `rust/src/voting/drive.rs`.
+/// Headline for a live run's status: its phase while it runs, its stop
+/// reason once it stopped.
+String votingStatusHeadline(VotingDriveStatus status) {
+  if (!status.running) return votingQuiescenceLabel(status.quiescence);
+  if (status.phase == "confirming_shares") {
+    return "Votes cast, confirming helper shares (${status.sharesConfirmed} of ${status.sharesTotal})";
+  }
+  return "Submitting votes";
+}
+
+/// Friendly headline for a run's stop reason, as formatted in
+/// `rust/src/voting/drive.rs`.
 String votingQuiescenceLabel(String? quiescence) {
   final q = quiescence;
   if (q == null) return "Submitting votes";
   if (q == "done") return "Votes submitted";
   if (q.startsWith("background_shares")) {
-    return "Votes confirmed — delivering helper shares";
+    return "Votes cast, confirming helper shares";
   }
-  if (q == "cancelled") return "Cancelled — resume to continue";
+  final closed = RegExp(r'^round_closed\((\d+)\)$').firstMatch(q);
+  if (closed != null) {
+    return "The round closed with ${closed.group(1)} helper shares unconfirmed";
+  }
+  final unrecoverable = RegExp(r'^unrecoverable\((\d+)\)$').firstMatch(q);
+  if (unrecoverable != null) {
+    return "${unrecoverable.group(1)} helper shares could not be delivered";
+  }
+  if (q == "cancelled") return "Submission cancelled";
   if (q.startsWith("needs_ballot")) return "Ballot incomplete";
   if (q.startsWith("needs_delegation_signatures")) {
     return "Delegation signatures needed";

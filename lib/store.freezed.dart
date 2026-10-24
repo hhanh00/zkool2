@@ -4735,11 +4735,14 @@ class __$QRSettingsCopyWithImpl<$Res> implements _$QRSettingsCopyWith<$Res> {
 
 /// @nodoc
 mixin _$VotingDriveJobState {
-  String get stage; // idle|preparing|ready|driving|error
+  String get stage; // idle|preparing|ready|starting|driving|error
   VotingEligibilityPreview? get eligibility;
 
-  /// Last polled driver status; null before the first poll.
+  /// Last streamed run status; null before the run sent one.
   VotingDriveStatus? get status;
+
+  /// Where the round stands in the sidecar, read when the page opened.
+  VotingRoundStanding? get standing;
   String? get error;
 
   /// Create a copy of VotingDriveJobState
@@ -4759,16 +4762,18 @@ mixin _$VotingDriveJobState {
             (identical(other.eligibility, eligibility) ||
                 other.eligibility == eligibility) &&
             (identical(other.status, status) || other.status == status) &&
+            (identical(other.standing, standing) ||
+                other.standing == standing) &&
             (identical(other.error, error) || other.error == error));
   }
 
   @override
   int get hashCode =>
-      Object.hash(runtimeType, stage, eligibility, status, error);
+      Object.hash(runtimeType, stage, eligibility, status, standing, error);
 
   @override
   String toString() {
-    return 'VotingDriveJobState(stage: $stage, eligibility: $eligibility, status: $status, error: $error)';
+    return 'VotingDriveJobState(stage: $stage, eligibility: $eligibility, status: $status, standing: $standing, error: $error)';
   }
 }
 
@@ -4782,10 +4787,12 @@ abstract mixin class $VotingDriveJobStateCopyWith<$Res> {
       {String stage,
       VotingEligibilityPreview? eligibility,
       VotingDriveStatus? status,
+      VotingRoundStanding? standing,
       String? error});
 
   $VotingEligibilityPreviewCopyWith<$Res>? get eligibility;
   $VotingDriveStatusCopyWith<$Res>? get status;
+  $VotingRoundStandingCopyWith<$Res>? get standing;
 }
 
 /// @nodoc
@@ -4804,6 +4811,7 @@ class _$VotingDriveJobStateCopyWithImpl<$Res>
     Object? stage = null,
     Object? eligibility = freezed,
     Object? status = freezed,
+    Object? standing = freezed,
     Object? error = freezed,
   }) {
     return _then(_self.copyWith(
@@ -4819,6 +4827,10 @@ class _$VotingDriveJobStateCopyWithImpl<$Res>
           ? _self.status
           : status // ignore: cast_nullable_to_non_nullable
               as VotingDriveStatus?,
+      standing: freezed == standing
+          ? _self.standing
+          : standing // ignore: cast_nullable_to_non_nullable
+              as VotingRoundStanding?,
       error: freezed == error
           ? _self.error
           : error // ignore: cast_nullable_to_non_nullable
@@ -4851,6 +4863,20 @@ class _$VotingDriveJobStateCopyWithImpl<$Res>
 
     return $VotingDriveStatusCopyWith<$Res>(_self.status!, (value) {
       return _then(_self.copyWith(status: value));
+    });
+  }
+
+  /// Create a copy of VotingDriveJobState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingRoundStandingCopyWith<$Res>? get standing {
+    if (_self.standing == null) {
+      return null;
+    }
+
+    return $VotingRoundStandingCopyWith<$Res>(_self.standing!, (value) {
+      return _then(_self.copyWith(standing: value));
     });
   }
 }
@@ -4946,16 +4972,20 @@ extension VotingDriveJobStatePatterns on VotingDriveJobState {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(String stage, VotingEligibilityPreview? eligibility,
-            VotingDriveStatus? status, String? error)?
+    TResult Function(
+            String stage,
+            VotingEligibilityPreview? eligibility,
+            VotingDriveStatus? status,
+            VotingRoundStanding? standing,
+            String? error)?
         $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _VotingDriveJobState() when $default != null:
-        return $default(
-            _that.stage, _that.eligibility, _that.status, _that.error);
+        return $default(_that.stage, _that.eligibility, _that.status,
+            _that.standing, _that.error);
       case _:
         return orElse();
     }
@@ -4976,15 +5006,19 @@ extension VotingDriveJobStatePatterns on VotingDriveJobState {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(String stage, VotingEligibilityPreview? eligibility,
-            VotingDriveStatus? status, String? error)
+    TResult Function(
+            String stage,
+            VotingEligibilityPreview? eligibility,
+            VotingDriveStatus? status,
+            VotingRoundStanding? standing,
+            String? error)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _VotingDriveJobState():
-        return $default(
-            _that.stage, _that.eligibility, _that.status, _that.error);
+        return $default(_that.stage, _that.eligibility, _that.status,
+            _that.standing, _that.error);
     }
   }
 
@@ -5002,15 +5036,19 @@ extension VotingDriveJobStatePatterns on VotingDriveJobState {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(String stage, VotingEligibilityPreview? eligibility,
-            VotingDriveStatus? status, String? error)?
+    TResult? Function(
+            String stage,
+            VotingEligibilityPreview? eligibility,
+            VotingDriveStatus? status,
+            VotingRoundStanding? standing,
+            String? error)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _VotingDriveJobState() when $default != null:
-        return $default(
-            _that.stage, _that.eligibility, _that.status, _that.error);
+        return $default(_that.stage, _that.eligibility, _that.status,
+            _that.standing, _that.error);
       case _:
         return null;
     }
@@ -5021,17 +5059,25 @@ extension VotingDriveJobStatePatterns on VotingDriveJobState {
 
 class _VotingDriveJobState implements VotingDriveJobState {
   const _VotingDriveJobState(
-      {required this.stage, this.eligibility, this.status, this.error});
+      {required this.stage,
+      this.eligibility,
+      this.status,
+      this.standing,
+      this.error});
 
   @override
   final String stage;
-// idle|preparing|ready|driving|error
+// idle|preparing|ready|starting|driving|error
   @override
   final VotingEligibilityPreview? eligibility;
 
-  /// Last polled driver status; null before the first poll.
+  /// Last streamed run status; null before the run sent one.
   @override
   final VotingDriveStatus? status;
+
+  /// Where the round stands in the sidecar, read when the page opened.
+  @override
+  final VotingRoundStanding? standing;
   @override
   final String? error;
 
@@ -5053,16 +5099,18 @@ class _VotingDriveJobState implements VotingDriveJobState {
             (identical(other.eligibility, eligibility) ||
                 other.eligibility == eligibility) &&
             (identical(other.status, status) || other.status == status) &&
+            (identical(other.standing, standing) ||
+                other.standing == standing) &&
             (identical(other.error, error) || other.error == error));
   }
 
   @override
   int get hashCode =>
-      Object.hash(runtimeType, stage, eligibility, status, error);
+      Object.hash(runtimeType, stage, eligibility, status, standing, error);
 
   @override
   String toString() {
-    return 'VotingDriveJobState(stage: $stage, eligibility: $eligibility, status: $status, error: $error)';
+    return 'VotingDriveJobState(stage: $stage, eligibility: $eligibility, status: $status, standing: $standing, error: $error)';
   }
 }
 
@@ -5078,12 +5126,15 @@ abstract mixin class _$VotingDriveJobStateCopyWith<$Res>
       {String stage,
       VotingEligibilityPreview? eligibility,
       VotingDriveStatus? status,
+      VotingRoundStanding? standing,
       String? error});
 
   @override
   $VotingEligibilityPreviewCopyWith<$Res>? get eligibility;
   @override
   $VotingDriveStatusCopyWith<$Res>? get status;
+  @override
+  $VotingRoundStandingCopyWith<$Res>? get standing;
 }
 
 /// @nodoc
@@ -5102,6 +5153,7 @@ class __$VotingDriveJobStateCopyWithImpl<$Res>
     Object? stage = null,
     Object? eligibility = freezed,
     Object? status = freezed,
+    Object? standing = freezed,
     Object? error = freezed,
   }) {
     return _then(_VotingDriveJobState(
@@ -5117,6 +5169,10 @@ class __$VotingDriveJobStateCopyWithImpl<$Res>
           ? _self.status
           : status // ignore: cast_nullable_to_non_nullable
               as VotingDriveStatus?,
+      standing: freezed == standing
+          ? _self.standing
+          : standing // ignore: cast_nullable_to_non_nullable
+              as VotingRoundStanding?,
       error: freezed == error
           ? _self.error
           : error // ignore: cast_nullable_to_non_nullable
@@ -5149,6 +5205,20 @@ class __$VotingDriveJobStateCopyWithImpl<$Res>
 
     return $VotingDriveStatusCopyWith<$Res>(_self.status!, (value) {
       return _then(_self.copyWith(status: value));
+    });
+  }
+
+  /// Create a copy of VotingDriveJobState
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $VotingRoundStandingCopyWith<$Res>? get standing {
+    if (_self.standing == null) {
+      return null;
+    }
+
+    return $VotingRoundStandingCopyWith<$Res>(_self.standing!, (value) {
+      return _then(_self.copyWith(standing: value));
     });
   }
 }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/router.dart';
-import 'package:zkool/store.dart' show coinContext, votingDriveJobProvider, votingQuiescenceLabel;
+import 'package:zkool/store.dart' show coinContext, votingDriveJobProvider, votingStatusHeadline;
 import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/widgets/loading_steps.dart';
@@ -124,11 +124,12 @@ class _VotingRoundTile extends ConsumerWidget {
       if (round.snapshotHeight case final height) 'Snapshot height $height',
       '${round.bundleCount} bundle${round.bundleCount == 1 ? '' : 's'}',
     ];
-    // Submission truth comes from the drive registry, not the round list:
-    // a live run (or its last outcome) overrides the tile's default action.
+    // A run of this process (or its last outcome) overrides the tile's
+    // default action, which comes from the sidecar through the round list.
     final job = ref.watch(votingDriveJobProvider(round.roundId, account));
-    final driving = job.stage == "driving";
-    final running = driving && (job.status?.running ?? true);
+    final status = job.status;
+    final driving = job.stage == "starting" || (job.stage == "driving" && status != null);
+    final running = job.stage == "starting" || (status?.running ?? false);
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -144,7 +145,7 @@ class _VotingRoundTile extends ConsumerWidget {
             Text(details.join(' • ')),
             if (driving)
               _VotingDriveChip(
-                label: votingQuiescenceLabel(running ? null : job.status?.quiescence),
+                label: status == null || job.stage == "starting" ? "Submitting votes" : votingStatusHeadline(status),
                 running: running,
               ),
           ],
@@ -160,8 +161,8 @@ class _VotingRoundTile extends ConsumerWidget {
   }
 }
 
-/// Live submission state on a round tile: spinner while the driver runs,
-/// the quiescence outcome once it stops.
+/// Live submission state on a round tile: spinner while the run is live,
+/// its outcome once it stopped.
 class _VotingDriveChip extends StatelessWidget {
   final String label;
   final bool running;
