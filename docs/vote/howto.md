@@ -1,126 +1,130 @@
 ---
-title: How to Vote
+title: How to vote
 ---
 
+See the [Overview](./overview.md) for what a coin weighted poll is and what
+you need before you vote.
+
 ## Summary
-- Download & Run Zkool
-- Import your wallet
-- Synchronize
-- Connect to the Election
-- Fill your Ballot
-- Submit
-- Receipt
-- Close
+- Enter the organizer's voting config URL in the Settings
+- Open "Voting" from the account page menu and pick the round
+- Fill the ballot, one proposal at a time
+- Submit, and stay on the page while the votes are cast and confirmed
 
-## Download Zkool
+## Voting Config
 
-Find Zkool on the mobile stores (Google Play Store and
-Apple AppStore) under the name *zkool*.
+The organizer of the poll gives you a **voting config URL**. It points to
+a signed configuration that lists the rounds, the voting servers and the
+keys that sign them. Enter it in the "Voting Config URL" field of the
+Settings page.
 
-Or, for a desktop version, on Github: [Releases](https://github.com/hhanh00/zkool2/releases/tag/zkool-v6.14.1)
+![Settings =450x](./images/01.settings.png)
 
-## Import your Wallet
-
-Open Zkool, and create a new account. From the accout manager page,
-add a new account, choose a name and *check the Use Internal Change*
-option if your wallet was created in ZODL/Zashi. Leave unchecked, if
-it is from YWallet.
-
-Check Restore Account, enter a seed phrase[^1] and a *birth height*.
-The birth height saves you from having to synchronize from the activation
-of the Orchard pool.
-
-It should look like this:
-
-![Import](images/2026-04-23_01-41-50.png)
-
-Then click on the save icon on the app bar to continue.
-
-Skip the scanning of additional transparent addresses, since voting
-uses only Orchard funds (tap on Close)
-
-The app should show your account on the main page. Tap on its name
-and continue to the Account page.
-
-## Synchronize
-
-At this point, your account is restored but isn't synchronized yet.
-Therefore the balance shows as 0.000 ZEC and the transaction history
-is empty.
-
-Let's synchronize by tapping on the sync button.
-
-![Sync](images/2026-04-23_01-47-40.png)
-
-> Synchronization may take a while if there are a lot of blocks to
-process.
-
-![Sync Progress](images/2026-04-23_01-49-02.png)
-
-At the end, you should see your current wallet balance and your
-transaction history.
-
-## Connect to the Election
-
-To start voting, choose the Vote option in the App Menu (...)
-
-![Vote Menu](images/2026-04-23_01-51-57.png)
-
-You will be asked for a URL. This is given by the organization
-that sets up the election/poll.
-
-For example, the test election is hosted on **https://vote.methyl.cc**
-
-![Vote URL](images/2026-04-23_01-56-13.png)
-
-Then tap "Next".
-
-After a short wait, you will see the Ballot Page.
-
-## Fill your Ballot
-
-On the ballot page, choose the amount of ZEC that you want to vote with.
-By default, it is the total amount of ZEC that you have in your Orchard
-pool at the *snapshot height*. This may not be your current balance
-if you have made transactions after that time.
-
-Fill the rest of the ballot, and then press the Submit button.
-
-![Ballot](images/2026-04-23_02-00-54.png)
-
-## Ballot Submission
-
-Once you confirm your submission, the app will compute a digital
-ballot and send it to the server.
-
-On success, you receive a ballot ID and your voting balance gets
-updated.
-
-:::important
-Computing a ballot may take a few minutes. Please leave the app
-running and unlocked.
+::: tip
+The URL carries a checksum of the configuration. A new configuration means
+a new URL: enter the one the organizer sends you for the round.
 :::
 
-![Submit](images/2026-04-23_02-04-01.png)
+## Rounds
+
+Open the "Voting" option of the account page menu.
+
+![Menu =450x](./images/02.menu.png)
+
+Zkool fetches and verifies the configuration, then lists the rounds with
+their status, their snapshot height and their number of bundles. Tap on an
+"Active" round, or on its "Start voting" button.
+
+![Rounds =450x](./images/03.rounds.png)
+
+A round you already voted in says so, and its button becomes "Review".
+
+## Ballot
+
+The ballot shows the proposals one at a time. Pick an option, then tap
+"Next". "Skip" leaves a proposal unanswered; it is not the same as choosing
+an abstention option when the proposal has one. "Clear selection" undoes a
+choice, and "Back" returns to the previous proposal.
+
+![Ballot =450x](./images/04.ballot.png)
+
+Your choices are saved as you go: you can close the ballot and come back to
+it later. The last proposal has the "Submit" button.
+
+## Submission
+
+Zkool first checks which of your notes are eligible and shows the result:
+the number of notes, the voting weight in ZEC, and, when the round has one,
+whether you meet its minimum voting rule. Some rounds withhold a few small
+notes for privacy; the preview says how much.
+
+![Submit =450x](./images/05.submit.png)
+
+::: important
+Votes are final once the submission starts. There is no way to change them
+after confirmation.
+:::
+
+Tap "Submit votes". The page reads "Submitting votes" while Zkool proves
+your notes and sends the ballot to the voting servers.
+
+![Progress =450x](./images/06.progress.png)
+
+::: important
+Proving may take a few minutes per note. Please keep the app open and stay
+on this page if possible. If you leave the page, the submission continues in
+the background. If you close the app, open the round again: the submission
+resumes by itself where it left off.
+:::
+
+Once the votes are cast, the page reads "Votes cast, confirming helper
+shares": a part of each vote goes to *helper servers*, which reveal them
+when the round ends. The page counts the shares as the helpers confirm them.
+This takes a few seconds per share.
+
+![Shares =450x](./images/07.shares.png)
+
+The page ends with "Votes submitted" once every share is confirmed, and a
+message says so wherever you are in the app.
+
+![Done =450x](./images/08.done.png)
+
+Other states the page can show:
+
+- **Submission cancelled**: you cancelled the submission. Tap "Resume
+  submission".
+- **Submission interrupted**: the submission stopped and did not resume by
+  itself, for example because the app is offline. Tap "Resume submission".
+- **The round closed with N helper shares unconfirmed**: the round ended
+  before every share was confirmed. A share that was not confirmed cannot be
+  revealed, so the vote it belongs to may not count.
+- **N helper shares could not be delivered**: the helper servers refused
+  these shares, and trying again cannot help.
+- **Ballot incomplete**: a proposal has no answer. Go back to the ballot.
+- **Delegation signatures needed**: the round delegates votes, and a
+  signature is missing. Follow the round's instructions.
+- **Bundle setup needed, prepare again**: the preview is stale. Submit
+  again.
+- **Chain rejected the submission**: the voting servers refused the ballot,
+  for example because the notes already voted. The reason is shown on the
+  page.
+- **Submission recovery stalled, try again later**: the servers could not be
+  reached for a while. Tap "Resume submission" later.
 
 ## Receipt
 
-![Receipt](images/2026-04-23_02-04-59.png)
+The "Vote report" button on the app bar lists the choice you made on every
+proposal of the round.
+
+![Report =450x](./images/09.report.png)
+
+Back on the rounds page, the round shows "Votes submitted".
+
+![Voted =450x](./images/10.voted.png)
 
 > Thanks for voting!
 
-## Close
-
-When you are finished voting, you can delete
-all of its data from the app with the Close button.
-
-![Close](images/2026-04-23_02-07-53.png)
-
-:::important
-You can only vote from one account at a time. If you have multiple
-wallets you want to vote with, you need to repeat this process
-and *close the election between each wallet*.
+::: important
+A note can vote only once in a round. If you hold voting funds in several
+accounts, vote from each account in turn.
 :::
-
-[^1]: Optionally an account derivation index and passphrase if you have
-one.
