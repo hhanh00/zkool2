@@ -736,6 +736,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   VotingRoundListItem dco_decode_voting_round_list_item(dynamic raw);
 
   @protected
+  VotingRoundStanding dco_decode_voting_round_standing(dynamic raw);
+
+  @protected
   VotingSelection dco_decode_voting_selection(dynamic raw);
 
   @protected
@@ -1433,6 +1436,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   VotingRoundListItem sse_decode_voting_round_list_item(
+      SseDeserializer deserializer);
+
+  @protected
+  VotingRoundStanding sse_decode_voting_round_standing(
       SseDeserializer deserializer);
 
   @protected
@@ -2176,6 +2183,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_voting_round_list_item(
       VotingRoundListItem self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_voting_round_standing(
+      VotingRoundStanding self, SseSerializer serializer);
 
   @protected
   void sse_encode_voting_selection(

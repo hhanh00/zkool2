@@ -1415,6 +1415,9 @@ class VotingDriveJob extends _$VotingDriveJob {
   int _account = 0;
   final VotingDrive _drive = VotingDrive();
   StreamSubscription<VotingDriveStatus>? _statuses;
+  /// The voter stopped the run from the page; a reopen then offers "Resume"
+  /// instead of resuming by itself. A wallet-level stop does not set it.
+  bool _cancelledByUser = false;
 
   @override
   VotingDriveJobState build(String roundId, int account) {
@@ -1459,6 +1462,7 @@ class VotingDriveJob extends _$VotingDriveJob {
     // first status; reflect the start immediately so the UI is not stuck on
     // the ballot behind a closed dialog.
     state = state.copyWith(stage: "starting", error: null, status: null);
+    _cancelledByUser = false;
     _liveVotingDrives[_roundId] = _drive;
     _syncVotingSubmissionGuard(ref);
     await _statuses?.cancel();
@@ -1476,7 +1480,39 @@ class VotingDriveJob extends _$VotingDriveJob {
   /// Cooperatively cancels the run; durable effects stay and a later start
   /// re-plans from the sidecar. The stream delivers the cancelled snapshot
   /// once the step in flight ends.
-  void cancel() => _drive.cancel();
+  void cancel() {
+    _cancelledByUser = true;
+    _drive.cancel();
+  }
+
+  /// Resumes the round's submission when the sidecar says one was started
+  /// and is not settled, so a page opened after the app was closed or the
+  /// run was stopped at a pause picks the submission up where it left off.
+  /// A run that is live, or that the voter cancelled, is left alone.
+  Future<void> resume({
+    required String lightwalletdUrl,
+    required String roundName,
+    required List<int> proposalIds,
+  }) async {
+    if (state.stage == "starting" || state.stage == "preparing") return;
+    if (state.stage == "driving" && (state.status?.running ?? true)) return;
+    if (_cancelledByUser) return;
+    final VotingRoundStanding standing;
+    try {
+      standing = await votingRoundStanding(
+        roundId: _roundId,
+        proposalIds: proposalIds,
+        account: _account,
+        c: coinContext.coin,
+      );
+    } on Exception catch (e) {
+      logger.i("[Voting] standing of $_roundId unavailable: $e");
+      return;
+    }
+    if (!standing.workPending) return;
+    logger.i("[Voting] resuming the submission of $_roundId");
+    await start(lightwalletdUrl: lightwalletdUrl, roundName: roundName);
+  }
 
   void _onStatus(VotingDriveStatus status) {
     state = state.copyWith(stage: "driving", status: status);

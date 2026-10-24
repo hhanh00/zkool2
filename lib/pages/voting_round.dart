@@ -42,6 +42,19 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
     super.initState();
     unawaited(_loadSelections());
     _startShareRefresh();
+    unawaited(_resumeSubmission());
+  }
+
+  /// A submission started earlier and not settled resumes as soon as the
+  /// round is opened: the run is idempotent, so no question is asked.
+  Future<void> _resumeSubmission() async {
+    final settings = await ref.read(appSettingsProvider.future);
+    if (settings.offline || !mounted) return;
+    await ref.read(votingDriveJobProvider(widget.round.roundId, widget.account).notifier).resume(
+          lightwalletdUrl: settings.lwd,
+          roundName: widget.round.title,
+          proposalIds: [for (final p in widget.round.proposals) p.proposalId],
+        );
   }
 
   @override

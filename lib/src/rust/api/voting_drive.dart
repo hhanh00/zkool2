@@ -11,7 +11,7 @@ part 'voting_drive.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `account_seed`, `delegation_identity`, `ensure_nonempty`, `fetch_round_timing`, `gather_lwd_inputs`, `gather_round_inputs`, `gather_wallet_inputs`, `json_unix_seconds`, `prepare_bundles`, `resolve_round_config`, `start_round_drive`, `start_with`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `GatheredRound`, `RoundConfig`, `StatusSink`, `WalletInputs`
-// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `eq`, `eq`, `fmt`, `fmt`, `from`
+// These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `assert_fields_are_eq`, `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `eq`, `eq`, `fmt`, `fmt`, `fmt`, `from`
 // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `start`
 // These functions are ignored (category: IgnoreBecauseOwnerTyShouldIgnore): `send_error`, `send`
 
@@ -42,6 +42,16 @@ Future<VotingDriveStatus> votingDriveStatus(
         {required String roundId, required int account, required Coin c}) =>
     RustLib.instance.api.crateApiVotingDriveVotingDriveStatus(
         roundId: roundId, account: account, c: c);
+
+/// Reads the round's standing from the sidecar. `proposal_ids` is the
+/// authenticated roster, which the plan needs to tell a complete ballot.
+Future<VotingRoundStanding> votingRoundStanding(
+        {required String roundId,
+        required List<int> proposalIds,
+        required int account,
+        required Coin c}) =>
+    RustLib.instance.api.crateApiVotingDriveVotingRoundStanding(
+        roundId: roundId, proposalIds: proposalIds, account: account, c: c);
 
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<VotingDrive>>
 abstract class VotingDrive implements RustOpaqueInterface {
@@ -98,4 +108,19 @@ sealed class VotingEligibilityPreview with _$VotingEligibilityPreview {
     required int skippedSuffixNotes,
     required BigInt skippedSuffixValueZatoshi,
   }) = _VotingEligibilityPreview;
+}
+
+/// Where a round stands in the sidecar, for a page that opens it: whether a
+/// submission was started and whether it still has work, so the page can
+/// resume the run without asking (the run is idempotent) or show the vote
+/// as settled.
+@freezed
+sealed class VotingRoundStanding with _$VotingRoundStanding {
+  const factory VotingRoundStanding({
+    required bool submissionStarted,
+    required bool votesCast,
+    required int sharesConfirmed,
+    required int sharesTotal,
+    required bool workPending,
+  }) = _VotingRoundStanding;
 }

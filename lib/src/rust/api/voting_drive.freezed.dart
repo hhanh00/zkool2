@@ -1067,4 +1067,384 @@ class __$VotingEligibilityPreviewCopyWithImpl<$Res>
   }
 }
 
+/// @nodoc
+mixin _$VotingRoundStanding {
+  bool get submissionStarted;
+  bool get votesCast;
+  int get sharesConfirmed;
+  int get sharesTotal;
+  bool get workPending;
+
+  /// Create a copy of VotingRoundStanding
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $VotingRoundStandingCopyWith<VotingRoundStanding> get copyWith =>
+      _$VotingRoundStandingCopyWithImpl<VotingRoundStanding>(
+          this as VotingRoundStanding, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is VotingRoundStanding &&
+            (identical(other.submissionStarted, submissionStarted) ||
+                other.submissionStarted == submissionStarted) &&
+            (identical(other.votesCast, votesCast) ||
+                other.votesCast == votesCast) &&
+            (identical(other.sharesConfirmed, sharesConfirmed) ||
+                other.sharesConfirmed == sharesConfirmed) &&
+            (identical(other.sharesTotal, sharesTotal) ||
+                other.sharesTotal == sharesTotal) &&
+            (identical(other.workPending, workPending) ||
+                other.workPending == workPending));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, submissionStarted, votesCast,
+      sharesConfirmed, sharesTotal, workPending);
+
+  @override
+  String toString() {
+    return 'VotingRoundStanding(submissionStarted: $submissionStarted, votesCast: $votesCast, sharesConfirmed: $sharesConfirmed, sharesTotal: $sharesTotal, workPending: $workPending)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $VotingRoundStandingCopyWith<$Res> {
+  factory $VotingRoundStandingCopyWith(
+          VotingRoundStanding value, $Res Function(VotingRoundStanding) _then) =
+      _$VotingRoundStandingCopyWithImpl;
+  @useResult
+  $Res call(
+      {bool submissionStarted,
+      bool votesCast,
+      int sharesConfirmed,
+      int sharesTotal,
+      bool workPending});
+}
+
+/// @nodoc
+class _$VotingRoundStandingCopyWithImpl<$Res>
+    implements $VotingRoundStandingCopyWith<$Res> {
+  _$VotingRoundStandingCopyWithImpl(this._self, this._then);
+
+  final VotingRoundStanding _self;
+  final $Res Function(VotingRoundStanding) _then;
+
+  /// Create a copy of VotingRoundStanding
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? submissionStarted = null,
+    Object? votesCast = null,
+    Object? sharesConfirmed = null,
+    Object? sharesTotal = null,
+    Object? workPending = null,
+  }) {
+    return _then(_self.copyWith(
+      submissionStarted: null == submissionStarted
+          ? _self.submissionStarted
+          : submissionStarted // ignore: cast_nullable_to_non_nullable
+              as bool,
+      votesCast: null == votesCast
+          ? _self.votesCast
+          : votesCast // ignore: cast_nullable_to_non_nullable
+              as bool,
+      sharesConfirmed: null == sharesConfirmed
+          ? _self.sharesConfirmed
+          : sharesConfirmed // ignore: cast_nullable_to_non_nullable
+              as int,
+      sharesTotal: null == sharesTotal
+          ? _self.sharesTotal
+          : sharesTotal // ignore: cast_nullable_to_non_nullable
+              as int,
+      workPending: null == workPending
+          ? _self.workPending
+          : workPending // ignore: cast_nullable_to_non_nullable
+              as bool,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [VotingRoundStanding].
+extension VotingRoundStandingPatterns on VotingRoundStanding {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_VotingRoundStanding value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundStanding() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_VotingRoundStanding value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundStanding():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_VotingRoundStanding value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundStanding() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(bool submissionStarted, bool votesCast,
+            int sharesConfirmed, int sharesTotal, bool workPending)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundStanding() when $default != null:
+        return $default(_that.submissionStarted, _that.votesCast,
+            _that.sharesConfirmed, _that.sharesTotal, _that.workPending);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(bool submissionStarted, bool votesCast,
+            int sharesConfirmed, int sharesTotal, bool workPending)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundStanding():
+        return $default(_that.submissionStarted, _that.votesCast,
+            _that.sharesConfirmed, _that.sharesTotal, _that.workPending);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(bool submissionStarted, bool votesCast,
+            int sharesConfirmed, int sharesTotal, bool workPending)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _VotingRoundStanding() when $default != null:
+        return $default(_that.submissionStarted, _that.votesCast,
+            _that.sharesConfirmed, _that.sharesTotal, _that.workPending);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _VotingRoundStanding implements VotingRoundStanding {
+  const _VotingRoundStanding(
+      {required this.submissionStarted,
+      required this.votesCast,
+      required this.sharesConfirmed,
+      required this.sharesTotal,
+      required this.workPending});
+
+  @override
+  final bool submissionStarted;
+  @override
+  final bool votesCast;
+  @override
+  final int sharesConfirmed;
+  @override
+  final int sharesTotal;
+  @override
+  final bool workPending;
+
+  /// Create a copy of VotingRoundStanding
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$VotingRoundStandingCopyWith<_VotingRoundStanding> get copyWith =>
+      __$VotingRoundStandingCopyWithImpl<_VotingRoundStanding>(
+          this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _VotingRoundStanding &&
+            (identical(other.submissionStarted, submissionStarted) ||
+                other.submissionStarted == submissionStarted) &&
+            (identical(other.votesCast, votesCast) ||
+                other.votesCast == votesCast) &&
+            (identical(other.sharesConfirmed, sharesConfirmed) ||
+                other.sharesConfirmed == sharesConfirmed) &&
+            (identical(other.sharesTotal, sharesTotal) ||
+                other.sharesTotal == sharesTotal) &&
+            (identical(other.workPending, workPending) ||
+                other.workPending == workPending));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, submissionStarted, votesCast,
+      sharesConfirmed, sharesTotal, workPending);
+
+  @override
+  String toString() {
+    return 'VotingRoundStanding(submissionStarted: $submissionStarted, votesCast: $votesCast, sharesConfirmed: $sharesConfirmed, sharesTotal: $sharesTotal, workPending: $workPending)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$VotingRoundStandingCopyWith<$Res>
+    implements $VotingRoundStandingCopyWith<$Res> {
+  factory _$VotingRoundStandingCopyWith(_VotingRoundStanding value,
+          $Res Function(_VotingRoundStanding) _then) =
+      __$VotingRoundStandingCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {bool submissionStarted,
+      bool votesCast,
+      int sharesConfirmed,
+      int sharesTotal,
+      bool workPending});
+}
+
+/// @nodoc
+class __$VotingRoundStandingCopyWithImpl<$Res>
+    implements _$VotingRoundStandingCopyWith<$Res> {
+  __$VotingRoundStandingCopyWithImpl(this._self, this._then);
+
+  final _VotingRoundStanding _self;
+  final $Res Function(_VotingRoundStanding) _then;
+
+  /// Create a copy of VotingRoundStanding
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? submissionStarted = null,
+    Object? votesCast = null,
+    Object? sharesConfirmed = null,
+    Object? sharesTotal = null,
+    Object? workPending = null,
+  }) {
+    return _then(_VotingRoundStanding(
+      submissionStarted: null == submissionStarted
+          ? _self.submissionStarted
+          : submissionStarted // ignore: cast_nullable_to_non_nullable
+              as bool,
+      votesCast: null == votesCast
+          ? _self.votesCast
+          : votesCast // ignore: cast_nullable_to_non_nullable
+              as bool,
+      sharesConfirmed: null == sharesConfirmed
+          ? _self.sharesConfirmed
+          : sharesConfirmed // ignore: cast_nullable_to_non_nullable
+              as int,
+      sharesTotal: null == sharesTotal
+          ? _self.sharesTotal
+          : sharesTotal // ignore: cast_nullable_to_non_nullable
+              as int,
+      workPending: null == workPending
+          ? _self.workPending
+          : workPending // ignore: cast_nullable_to_non_nullable
+              as bool,
+    ));
+  }
+}
+
 // dart format on

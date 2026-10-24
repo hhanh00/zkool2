@@ -20,6 +20,7 @@ use sqlx::SqliteConnection;
 use zcash_voting::delegate::{DelegationLwdInputs, ResolveDelegationLwdParams};
 use zcash_voting::delegation_pipeline::DelegationAccountIdentity;
 use zcash_voting::prelude::BundlePolicy;
+use zcash_voting::session::resume_plan;
 
 use crate::api::coin::Coin;
 use crate::api::voting::{voting_network, wallet_id};
@@ -577,6 +578,52 @@ pub async fn voting_drive_status(
         shares_confirmed,
         shares_total,
         ..drive::DriveRunStatus::idle(round_id).into()
+    })
+}
+
+/// Where a round stands in the sidecar, for a page that opens it: whether a
+/// submission was started and whether it still has work, so the page can
+/// resume the run without asking (the run is idempotent) or show the vote
+/// as settled.
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct VotingRoundStanding {
+    /// The submission was started: a bundle moved past preparation, or a
+    /// vote or a helper share exists. Preparing the bundles for the
+    /// eligibility preview does not count.
+    pub submission_started: bool,
+    /// A vote artifact exists for the ballot.
+    pub votes_cast: bool,
+    pub shares_confirmed: u32,
+    pub shares_total: u32,
+    /// The submission was started and is not settled: casting, chain
+    /// recovery or share confirmation remains, so a run should be started.
+    pub work_pending: bool,
+}
+
+/// Reads the round's standing from the sidecar. `proposal_ids` is the
+/// authenticated roster, which the plan needs to tell a complete ballot.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn voting_round_standing(
+    round_id: &str,
+    proposal_ids: Vec<u32>,
+    account: u32,
+    c: &Coin,
+) -> Result<VotingRoundStanding> {
+    let wallet = wallet_id(account, c).await?;
+    let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet).await?;
+    let (shares_confirmed, shares_total) = drive::share_counts(sidecar.db(), round_id).await?;
+    let round = round_id.to_owned();
+    let plan = sidecar
+        .run(move |db| resume_plan(db, &round, &proposal_ids))
+        .await?;
+    let settled = plan.completed_for_display && !plan.has_unconfirmed_shares;
+    Ok(VotingRoundStanding {
+        submission_started: plan.hotkey_bound,
+        votes_cast: plan.completed_vote_artifact,
+        shares_confirmed,
+        shares_total,
+        work_pending: plan.hotkey_bound && !settled,
     })
 }
 
