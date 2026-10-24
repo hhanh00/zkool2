@@ -145,6 +145,9 @@ void main() {
       // coordinator.
       final coordinatorField = (dropdownNamed("coordinator").evaluate().single as StatefulElement).state as FormBuilderFieldState;
       expect(coordinatorField.value, myId, reason: "the coordinator defaults to this member");
+      // Every member of the group is on offer, and no one else (#1393).
+      expect(tester.widget<FormBuilderDropdown<int>>(dropdownNamed("coordinator")).items, hasLength(config["n"] as int),
+          reason: "the coordinator dropdown lists the group's members",);
       await selectDropdown(tester, "Funding Account for the FROST messages", "DKG-Fund");
       await tapNext(tester);
       await pumpUntil(
