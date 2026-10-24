@@ -4,15 +4,15 @@ real Flutter app on regtest.
 The app (integration_test/docs_report_ui_test.dart) walks the screens the
 Reports pages show: the account page menu with the price fetch, the
 transaction page with its price and category, the send page with the
-exchange rate, the extra options with the category of a payment, the account
-manager menu, the category list, the new category form and the actions on a
-selected category. This side owns the chain and the funding wallet: it pays
-the app's account so the pages have transactions, serves a mock CoinGecko
-with a fixed price so the fetch works offline, mines on demand, then draws
-the annotations with tests/tools/docs_shots.py and copies the images into
-the docs site ($ZKOOL_DOCS_DIR/report/images, default
-~/projects/zkool-docs/docs). The charts are web views, which the app's
-frame capture cannot rasterize: their images are not retaken.
+exchange rate, the extra options with the category of a payment, the budget
+charts once the account has categorized income and spending, the market
+chart (a Guide image), and the account manager menu. This side owns the
+chain and the funding wallet: it pays the app's account so the pages have
+transactions, serves a mock CoinGecko with a fixed price and a klines mock
+with a seeded series so the pages work offline, mines the app's own
+payments on demand, then draws the annotations with
+tests/tools/docs_shots.py and copies the images into the docs site
+($ZKOOL_DOCS_DIR, default ~/projects/zkool-docs/docs).
 
 Run it with the regtest stack up and the SEED wallet funded (tests/README.md):
 
@@ -31,6 +31,7 @@ import pytest
 from coingecko_mock import CoingeckoMock
 from dkg import DkgParticipant, Rendezvous, app_documents_dir, demand_miner, launch_flutter_test
 from gql import GraphQLRequest
+from klines_mock import KlinesMock
 from test_frost_upgrade import SYNC, wait_ready
 from test_key_import import create
 from test_uivk import ADDRESSES, BALANCE, PAY
@@ -43,9 +44,17 @@ FRAMES_DIR = "docs_frames_report"
 DOCS_DIR = os.getenv("ZKOOL_DOCS_DIR", os.path.expanduser("~/projects/zkool-docs/docs"))
 DOCS_SHOTS = os.path.join(os.path.dirname(__file__), "..", "tools", "docs_shots.py")
 BUILD_TIMEOUT = 2400
-BUDGET_SECONDS = 1200
-# What the app's account receives up front: amounts and memos.
-FUNDING = [("0.3", "Welcome to Zkool"), ("0.15", None), ("0.05", "Coffee money")]
+BUDGET_SECONDS = 2400
+# What the app's account receives up front: amount, memo and the income
+# category the app files it under. The newest one is what the transaction
+# page shows, and the app picks Salary on it: it must be one already.
+FUNDING = [
+    ("0.05", "Mining payout", "Investment Income/Mining"),
+    ("0.08", "Thanks for the help", "Other Income"),
+    ("0.3", "September salary", "Salary"),
+    ("0.15", "Bonus", "Salary"),
+    ("0.1", "October salary", "Salary"),
+]
 USD_PRICE = 50.0
 
 
@@ -88,6 +97,7 @@ async def test_docs_report_flutter_ui(rpc_url, seed, zkool_binary):
     rendezvous = Rendezvous(os.path.join(docs_dir, "dkg_ui_rendezvous"))
 
     mock = CoingeckoMock({"usd": USD_PRICE})
+    klines = KlinesMock()
     wallet = DkgParticipant(DEFAULT_PORT, "/tmp/regtest_docs_report_funder.db", LWD_URL)
     flutter = None
     miner = None
@@ -114,8 +124,9 @@ async def test_docs_report_flutter_ui(rpc_url, seed, zkool_binary):
 
     async def launch():
         nonlocal flutter, miner, main
-        print("=== Step 1: Chain, funding wallet and price mock ===")
+        print("=== Step 1: Chain, funding wallet, price and klines mocks ===")
         mock.start()
+        klines.start()
         wallet.start(zkool_binary)
         await wait_ready(wallet)
         main = await create(wallet, "Main", seed)
@@ -127,7 +138,7 @@ async def test_docs_report_flutter_ui(rpc_url, seed, zkool_binary):
         balance = (await wallet.execute(GraphQLRequest(BALANCE, variable_values=by_account)))[
             "balanceByAccount"
         ]
-        needed = sum(float(amount) for amount, _ in FUNDING) + 0.01
+        needed = sum(float(amount) for amount, _, _ in FUNDING) + 0.01
         if float(balance["total"]) < needed:
             pytest.fail(
                 f"the SEED wallet holds {balance['total']} ZEC on this chain, {needed} needed: "
@@ -140,9 +151,10 @@ async def test_docs_report_flutter_ui(rpc_url, seed, zkool_binary):
             lwd=LWD_URL,
             frames_dir=FRAMES_DIR,
             coingecko_url=mock.url,
+            klines_url=klines.url,
             destination=addresses["ironwood"],
-            fund=str(sum(float(amount) for amount, _ in FUNDING)),
-            funded=len(FUNDING),
+            fund=str(sum(float(amount) for amount, _, _ in FUNDING)),
+            funding=[list(f) for f in FUNDING],
         )
         flutter = await launch_flutter_test("docs_report_ui_test.dart", rendezvous, FLUTTER_LOG)
         miner = asyncio.create_task(demand_miner(rpc_url, idle_fallback=3600))
@@ -150,7 +162,7 @@ async def test_docs_report_flutter_ui(rpc_url, seed, zkool_binary):
     async def body():
         print("\n=== Step 3: Fund the account ===")
         a_ua = await rendezvous.poll_ui("a_ua", timeout=BUILD_TIMEOUT, process=flutter)
-        for amount, memo in FUNDING:
+        for amount, memo, _ in FUNDING:
             txid = await pay(amount, memo, a_ua)
             # Each payment is mined before the next, so they never contend
             # for the same notes.
@@ -190,6 +202,7 @@ async def test_docs_report_flutter_ui(rpc_url, seed, zkool_binary):
                 await asyncio.wait_for(flutter.wait(), timeout=30)
         await wallet.stop()
         mock.stop()
+        klines.stop()
         rendezvous.cleanup()
         if os.path.exists(ui_db_path):
             os.remove(ui_db_path)

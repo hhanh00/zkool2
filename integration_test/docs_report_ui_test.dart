@@ -1,18 +1,18 @@
-/// Docs screenshots: the Categories / Reports pages of the docs site.
+/// Docs screenshots: the Categories / Reports pages of the docs site, and
+/// the market chart of the Guide.
 ///
 /// Not a test of the app but a scripted walkthrough that
 /// `tests/tests/test_docs_report_ui.py` drives on regtest: the account page
 /// menu with the price fetch, the transaction page with its price and
 /// category, the send page with the exchange rate, the extra options with
-/// the category of a payment and the account manager menu. The
-/// market price comes from the orchestrator's CoinGecko mock, so the fetch
-/// works offline and the prices are fixed. The charts are web views, which
-/// the frame capture cannot rasterize: their images are left as they are.
-/// Every shot is named after the image it replaces under
-/// `docs/report/images` in the docs site. See `docs_shots_support.dart` for
-/// how the shots are recorded.
+/// the category of a payment, the budget charts once the account has
+/// categorized income and spending, the market chart, and the account
+/// manager menu. The market price and the candles come from the
+/// orchestrator's CoinGecko and klines mocks, so the pages work offline
+/// with fixed data. Every shot is named after the image it replaces under
+/// `docs/report/images` (or `docs/guide/images`) in the docs site. See
+/// `docs_shots_support.dart` for how the shots are recorded.
 library;
-
 
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
@@ -20,25 +20,41 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:zkool/chart.dart';
 import 'package:zkool/main.dart';
+import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/tx_view.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
+import 'package:zkool/src/rust/api/transaction.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/market_chart.dart';
 import 'package:zkool/widgets/theme.dart';
 
 import 'docs_shots_support.dart';
 import 'support.dart';
 
 const _main = "Main Account";
-const _amount = "0.05";
-const _memo = "Weekly groceries";
 const _income = "Salary";
-const _expense = "Food & Groceries";
 const _sendTooltip = "Send funds to one or many addresses";
 const _fetchPrompt = "Do you want to retrieve historical ZEC prices for your past transactions?";
+const _sendPrompt = "Are you sure you want to send this transaction?";
 // Long enough for a toast, such as the synchronizer's, to have gone.
 const toastGone = Duration(seconds: 6);
+
+/// A payment the app makes, with the category it files it under.
+class _Spend {
+  final String amount;
+  final String memo;
+  final String category;
+  const _Spend(this.amount, this.memo, this.category);
+}
+
+const _spends = [
+  _Spend("0.05", "Weekly groceries", "Food & Groceries"),
+  _Spend("0.02", "Lunch with the team", "Restaurants & Coffee"),
+];
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -57,7 +73,9 @@ void main() {
     final destination = config["destination"] as String;
     final fund = config["fund"] as String;
     final coingeckoUrl = config["coingecko_url"] as String;
-    final funded = config["funded"] as int;
+    final klinesUrl = config["klines_url"] as String;
+    // What the orchestrator pays the account: [amount, memo, category].
+    final funding = (config["funding"] as List).cast<List>();
     expect(dbPath, contains("regtest"));
 
     final prefs = SharedPreferencesAsync();
@@ -78,9 +96,39 @@ void main() {
     // include "Unknown", so the dropdown's type is not the int one.
     final categoryField = find.byWidgetPredicate((w) => w is FormBuilderDropdown && w.name == "category");
 
+    // A badge just right of the widget [finder] matches, outside it.
+    Annot besides(Finder finder, int n) => shots.badgeAt(shots.rectOf(finder).centerRight + const Offset(26, 0), n);
+
+    // A badge right under the icon [finder] matches, for the app bar's
+    // icons, whose boxes reach the window's edge.
+    Annot under(Finder finder, int n) => shots.badgeAt(shots.rectOf(finder).bottomCenter + const Offset(0, 10), n);
+
     Future<void> openMenu() async {
       await tester.tap(find.byType(PopupMenuButton<String>).first);
       await pumpFor(tester, const Duration(seconds: 1));
+    }
+
+    /// Picks [category] on the extra options page.
+    Future<void> pickCategory(String category) async {
+      await tester.tap(categoryField);
+      await pumpFor(tester, const Duration(seconds: 1));
+      await tester.tap(find.text(category).last);
+      await pumpFor(tester, const Duration(seconds: 1));
+    }
+
+    /// Waits for [count] transactions in the account's history, syncing
+    /// along the way: a payment the app made must be mined and seen before
+    /// the next one, and before the charts.
+    Future<void> waitForHistory(int account, int count) async {
+      final deadline = DateTime.now().add(chainTimeout);
+      var polls = 0;
+      while (DateTime.now().isBefore(deadline)) {
+        final history = (await tester.runAsync(() => listTxHistory(account: account, c: coinContext.coin)))!;
+        if (history.length >= count) return;
+        if (polls++ % 3 == 0) await tapTooltip(tester, "Sync this account");
+        await pumpFor(tester, const Duration(seconds: 5));
+      }
+      fail("timed out waiting for $count transactions in the history");
     }
 
     try {
@@ -89,7 +137,7 @@ void main() {
           dbPath: dbPath,
           lwd: config["lwd"] as String,
           docsDir: docsDir.path,
-          props: {"coingecko_url": coingeckoUrl},
+          props: {"coingecko_url": coingeckoUrl, "klines_url": klinesUrl},
         );
       });
       final a = (await tester.runAsync(() => newAccount(
@@ -124,6 +172,7 @@ void main() {
       appRouter.go(accountRoute("/", a));
       await waitForAccountView(tester, _main);
       await waitForBalance(tester, a, atLeast: zecToZat(fund), what: "the funding to arrive");
+      await waitForHistory(a, funding.length);
       await waitForSync(tester, a);
 
       // ── Account page menu: the price fetch ───────────────────────────────
@@ -133,9 +182,24 @@ void main() {
       await tester.tap(find.text("Fetch Tx Prices").last);
       await pumpFor(tester, const Duration(seconds: 1));
       await answerDialog(tester, _fetchPrompt, "Ok");
-      final updated = "Updated $funded transaction price${funded == 1 ? '' : 's'}";
+      final updated = "Updated ${funding.length} transaction price${funding.length == 1 ? '' : 's'}";
       await waitForText(updated, what: "the price fetch to report its count");
       await pumpUntil(tester, () => find.text(updated).evaluate().isEmpty, timeout: const Duration(seconds: 15), what: "the toast to go");
+
+      // ── The received payments, filed under their income categories ──────
+      // Set here rather than through the page, one by one: the page shows
+      // the pick once, on the newest payment, below.
+      await tester.runAsync(() async {
+        final categories = await listCategories(c: coinContext.coin);
+        final history = await listTxHistory(account: a, c: coinContext.coin);
+        for (final tx in history) {
+          final entry = funding.firstWhere((f) => zecToZat(f[0] as String) == BigInt.from(tx.value));
+          final category = categories.firstWhere((c) => c.name == entry[2] as String);
+          await setTxCategory(id: tx.id, category: category.id, c: coinContext.coin);
+        }
+      });
+      container.invalidate(accountProvider(a));
+      await pumpFor(tester, const Duration(seconds: 1));
 
       // ── Transaction page: price and category ─────────────────────────────
       await tester.tap(find.byType(TransactionTile).first);
@@ -186,26 +250,110 @@ void main() {
       await tester.pageBack();
       await waitForAccountView(tester, _main);
 
-      // ── Send page: the exchange rate ─────────────────────────────────────
-      await tapTooltip(tester, _sendTooltip);
-      await pumpUntil(tester, () => fieldNamed("address").evaluate().isNotEmpty, timeout: shortTimeout, what: "the send page");
-      await enterRecipient(tester, destination, _amount, memo: _memo);
-      await tester.ensureVisible(fieldNamed("fx").first);
+      // ── Two payments, each under a spending category ─────────────────────
+      // The first one is shot on its way: the exchange rate on the send page
+      // and the category on the extra options page.
+      for (var i = 0; i < _spends.length; i++) {
+        final spend = _spends[i];
+        await waitForSync(tester, a);
+        await pumpFor(tester, const Duration(seconds: 1));
+        await tapTooltip(tester, _sendTooltip);
+        await pumpUntil(tester, () => fieldNamed("address").evaluate().isNotEmpty, timeout: shortTimeout, what: "the send page");
+        await enterRecipient(tester, destination, spend.amount, memo: spend.memo);
+        if (i == 0) {
+          await tester.ensureVisible(fieldNamed("fx").first);
+          await tester.pump();
+          await shots.take("report/images/09.fx", annots: () => [
+            shots.boxAround([fieldNamed("fx"), find.byIcon(Icons.refresh)]),
+          ]);
+        }
+        await tapTooltip(tester, "Send transaction (including queued recipients)");
+        await waitForText("Extra Options", what: "the send options page");
+        await pickCategory(spend.category);
+        if (i == 0) await shots.take("report/images/04.send", annots: () => [shots.box(categoryField)]);
+        await tapTooltip(tester, "Send (Summary and Confirmation)");
+        await pumpUntil(tester, () => find.byType(TxPage).evaluate().isNotEmpty && find.byTooltip("Confirm, broadcast transaction").evaluate().isNotEmpty,
+            timeout: const Duration(minutes: 2), what: "the transaction summary",);
+        await tapTooltip(tester, "Confirm, broadcast transaction");
+        await answerDialog(tester, _sendPrompt, "Ok");
+        await pumpUntil(
+          tester,
+          () => find.byWidgetPredicate((w) => w is CopyableText && w.text.startsWith("Transaction ID: ")).evaluate().isNotEmpty,
+          timeout: const Duration(minutes: 5),
+          what: "the transaction id of payment ${i + 1}",
+        );
+        appRouter.go(accountRoute("/", a));
+        await waitForAccountView(tester, _main);
+        // Mined by the orchestrator on demand, then seen by a sync.
+        await waitForHistory(a, funding.length + i + 1);
+      }
+      await waitForSync(tester, a);
+
+      // ── The budget charts ────────────────────────────────────────────────
+      await pumpFor(tester, toastGone);
+      await openMenuItem(tester, "Charts");
+      await pumpUntil(tester, () => find.byType(ChartPage).evaluate().isNotEmpty && find.byType(DonutLegendEntry).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the spending donut",);
+      final kind = find.byType(DropdownButton<bool>);
+      await shots.take("report/images/12.spending", annots: () => [shots.box(kind)]);
+      await tester.tap(kind);
+      await pumpFor(tester, const Duration(seconds: 1));
+      await tester.tap(find.text("Income").last);
+      await pumpUntil(tester, () => find.widgetWithText(DonutLegendEntry, _income).evaluate().isNotEmpty,
+          timeout: shortTimeout, what: "the income donut",);
+      await shots.take("report/images/01.report", annots: () => [shots.box(kind)]);
+      await tester.tap(find.widgetWithText(Tab, "Category"));
+      await pumpFor(tester, const Duration(seconds: 1));
+      // The tab loads its categories once shown; the dropdown stays shut
+      // while it has no items.
+      final categoryPick = find.byType(DropdownButton<int>);
+      await pumpUntil(
+        tester,
+        () => categoryPick.evaluate().isNotEmpty && (tester.widget<DropdownButton<int>>(categoryPick).items?.isNotEmpty ?? false),
+        timeout: shortTimeout,
+        what: "the category chart's dropdown with its categories",
+      );
+      await tester.tap(categoryPick);
+      await pumpFor(tester, const Duration(seconds: 1));
+      // The menu builds its entries lazily and the income categories come
+      // last: scroll it until the entry exists.
+      await tester.scrollUntilVisible(find.text(_income), 200, scrollable: find.byType(Scrollable).last);
       await tester.pump();
-      await shots.take("report/images/09.fx", annots: () => [
-        shots.boxAround([fieldNamed("fx"), find.byIcon(Icons.refresh)]),
+      await tester.tap(find.text(_income).last);
+      await pumpUntil(tester, () => find.byType(CategoryTimeChart).evaluate().isNotEmpty, timeout: shortTimeout, what: "the category chart");
+      // The menu's closing route still takes the taps for a moment.
+      await pumpFor(tester, const Duration(seconds: 1));
+      for (var attempt = 1; !(tester.widget<Checkbox>(find.byType(Checkbox)).value ?? false); attempt++) {
+        if (attempt > 3) fail("the cumulative box did not check");
+        await tester.tap(find.byType(Checkbox));
+        await pumpFor(tester, const Duration(seconds: 1));
+      }
+      await shots.take("report/images/13.category", annots: () => [
+        shots.boxAround([categoryPick, find.text("Cumulative"), find.byType(Checkbox)]),
       ]);
-      await tapTooltip(tester, "Send transaction (including queued recipients)");
-      await waitForText("Extra Options", what: "the send options page");
-      await tester.tap(categoryField);
-      await pumpFor(tester, const Duration(seconds: 1));
-      await tester.tap(find.text(_expense).last);
-      await pumpFor(tester, const Duration(seconds: 1));
-      await shots.take("report/images/04.send", annots: () => [shots.box(categoryField)]);
-      appRouter.go(accountRoute("/", a));
+      await tester.pageBack();
       await waitForAccountView(tester, _main);
 
-      // ── Account manager menu, the category list ──────────────────────────
+      // ── The market chart (a Guide image) ─────────────────────────────────
+      await openMenuItem(tester, "Market Price");
+      await tester.pump();
+      await pumpUntil(
+        tester,
+        () => find.byType(MarketChart).evaluate().isNotEmpty && find.byType(CircularProgressIndicator).evaluate().isEmpty,
+        timeout: shortTimeout,
+        what: "the market chart",
+      );
+      await pumpFor(tester, const Duration(seconds: 1));
+      await shots.take("guide/images/15.other", annots: () => [
+        besides(find.byType(SegmentedButton<String>), 1),
+        under(find.byTooltip("Chart style"), 2),
+        under(find.byTooltip("Volume"), 3),
+        under(find.byTooltip("Logarithmic scale"), 4),
+      ]);
+      await tester.pageBack();
+      await waitForAccountView(tester, _main);
+
+      // ── Account manager menu ─────────────────────────────────────────────
       appRouter.go("/accounts");
       await waitForAccountList(tester);
       await openMenu();
@@ -228,5 +376,5 @@ void main() {
         await prefs.setString("coingecko", savedApiKey);
       }
     }
-  }, timeout: const Timeout(Duration(minutes: 20)));
+  }, timeout: const Timeout(Duration(minutes: 40)));
 }
