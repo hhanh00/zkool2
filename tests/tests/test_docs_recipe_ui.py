@@ -2,9 +2,10 @@
 app on regtest.
 
 The app (integration_test/docs_recipe_ui_test.dart) walks the screens the
-Recipe pages show: the account list and its menu, the mempool, the account
-menu and viewing keys, the edit page, the receive page, the notes tab, the
-payment URI, the new account page with the Ledger options, the settings,
+Recipe pages show: the account list and its menu, the mempool, the contacts
+page and the `@` picker, the account menu and viewing keys, the edit page,
+the receive page, the notes tab, the payment URI, the new account page with
+the Ledger options, the settings,
 the database manager, and the cold wallet round trip between a watch-only
 account and the account with the keys. This side owns the chain and the
 funding wallet: it pays the app's account so the pages have data, holds
