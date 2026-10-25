@@ -115,6 +115,14 @@ export default defineUserConfig({
         ],
       },
       {
+        text: "Cloud Vault",
+        prefix: "/vault/",
+        children: [
+          "overview",
+          "howto",
+        ],
+      },
+      {
         text: "Zcash tech",
         prefix: "/tech/",
         children: [
