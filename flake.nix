@@ -78,7 +78,7 @@
           GIT_SSL_CAINFO = "${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt";
           outputHashMode = "recursive";
           outputHashAlgo = "sha256";
-          outputHash = "sha256-QYN7T3CYijsGTFdDWrJzVmYoKWO/nXki8w5cV92ERbk=";
+          outputHash = "sha256-pbGYJL74Ap9LsJoqe2zuXobikLlmjdTeuBoeABdONpI=";
           buildCommand = ''
             export HOME="$TMPDIR"
             export PUB_CACHE="$out"
