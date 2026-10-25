@@ -4,8 +4,9 @@
 /// `tests/tests/test_docs_recipe_ui.py` drives on regtest: the account
 /// list with a selection and its menu, the mempool with a transaction the
 /// orchestrator leaves unmined, the account page menu and viewing keys,
-/// the account edit page, the receive page's scan button, the notes tab,
-/// the payment URI, the new account page with the Ledger options, the
+/// the contacts page with a new contact and the `@` picker on the send
+/// page, the account edit page, the receive page's scan button, the notes
+/// tab, the payment URI, the new account page with the Ledger options, the
 /// settings page, the database manager, and the cold wallet round trip:
 /// a watch-only account saves an unsigned transaction, the account with the
 /// keys signs it offline, and the watch-only account loads the signed one.
@@ -36,6 +37,8 @@ const _main = "Main Account";
 const _watch = "Watch Only";
 const _amount = "0.05";
 const _memo = "Signed offline";
+const _contact = "Alice";
+const _contactNotes = "Pays for the coffee";
 const _newAccountHint = "Create a new wallet or restore an existing one";
 const _sendTooltip = "Send funds to one or many addresses";
 const _scanTooltip =
@@ -84,9 +87,20 @@ void main() {
     // row of icons with content right under it.
     Annot under(Finder finder, int n) => shots.badgeAt(shots.rectOf(finder).bottomRight + const Offset(-6, -6), n);
 
+    // Tapped until its items show: a tap that lands while the page rebuilds
+    // after a sync or a route change is lost.
     Future<void> openMenu() async {
-      await tester.tap(find.byType(PopupMenuButton<String>).first);
-      await pumpFor(tester, const Duration(seconds: 1));
+      await pumpUntil(
+        tester,
+        () => find.byType(PopupMenuItem<String>).evaluate().isNotEmpty,
+        timeout: shortTimeout,
+        what: "the menu to open",
+        beforeEach: () async {
+          if (find.byType(PopupMenuItem<String>).evaluate().isNotEmpty) return;
+          await tester.tap(find.byType(PopupMenuButton<String>).first, warnIfMissed: false);
+          await pumpFor(tester, const Duration(seconds: 1));
+        },
+      );
     }
 
     Future<void> closeMenu() async {
@@ -202,7 +216,67 @@ void main() {
       await openMenu();
       await shots.take("recipe/images/24.mempool1", annots: () => [shots.box(find.text("Mempool"))]);
       await shots.take("recipe/images/26.folders", annots: () => [shots.box(find.text("Folders"))]);
+      await shots.take("recipe/images/40.contacts_menu", annots: () => [shots.box(find.text("Contacts"))]);
       await closeMenu();
+
+      // ── Contacts: the editor, the list, the @ picker on the send page ────
+      unawaited(appRouter.push("/contacts"));
+      await waitForText("Contacts", what: "the contacts page");
+      await tapTooltip(tester, "New contact");
+      await waitForText("New Contact", what: "the contact editor");
+      await tester.enterText(fieldNamed("name"), _contact);
+      await tester.pump();
+      await tester.tap(find.text("Add Address"));
+      await pumpFor(tester, const Duration(milliseconds: 500));
+      // The address rows are named after an id of their own: taken in order.
+      final addressFields = find.byWidgetPredicate((w) => w is FormBuilderTextField && w.name.startsWith("address_"));
+      await tester.enterText(addressFields.at(0), addresses.ua!);
+      await tester.enterText(addressFields.at(1), addresses.taddr!);
+      await tester.enterText(fieldNamed("notes"), _contactNotes);
+      await pumpFor(tester, const Duration(milliseconds: 500));
+      await shots.take("recipe/images/38.contact_edit", annots: () => [
+        shots.badge(fieldNamed("name"), 1),
+        under(find.byTooltip("Import from OpenAlias"), 2),
+        shots.badgeAfterText(find.text("Address 1"), 3),
+        under(find.byTooltip("Scan QR code").first, 4),
+        under(find.byTooltip("Remove address"), 5),
+        besides(find.text("Add Address"), 6),
+        shots.badge(fieldNamed("notes"), 7),
+      ]);
+      // Leaving the editor saves the contact.
+      await tester.pageBack();
+      await pumpUntil(
+        tester,
+        () => find.descendant(of: find.byType(ListTile), matching: find.text(_contact)).evaluate().isNotEmpty,
+        timeout: shortTimeout,
+        what: "the new contact in the list",
+      );
+      await shots.take("recipe/images/37.contacts", annots: () => [
+        under(find.byTooltip("Import from vCard"), 1),
+        under(find.byTooltip("Import from Contacts"), 2),
+        under(find.byTooltip("Export as vCard"), 3),
+        // The last icon sits on the window's edge: its badge goes under it.
+        shots.badge(find.byTooltip("New contact"), 4, align: const Alignment(0, 2.2)),
+      ]);
+      await tester.pageBack();
+      await waitForAccountList(tester);
+      appRouter.go(accountRoute("/", a));
+      await waitForAccountView(tester, _main);
+      await tapTooltip(tester, _sendTooltip);
+      await pumpUntil(tester, () => fieldNamed("address").evaluate().isNotEmpty, timeout: shortTimeout, what: "the send page");
+      await tester.enterText(fieldNamed("address"), "@");
+      await pumpUntil(
+        tester,
+        () => find.descendant(of: find.byType(ListTile), matching: find.text(_contact)).evaluate().isNotEmpty,
+        timeout: shortTimeout,
+        what: "the contact suggestion",
+      );
+      await shots.take("recipe/images/39.contact_at", annots: () => [
+        shots.box(fieldNamed("address")),
+        shots.round(find.ancestor(of: find.text(_contact), matching: find.byType(ListTile)).first),
+      ]);
+      appRouter.go(accountRoute("/", a));
+      await waitForAccountView(tester, _main);
 
       // ── Account page menu, viewing keys ──────────────────────────────────
       appRouter.go(accountRoute("/", a));
