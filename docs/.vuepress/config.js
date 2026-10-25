@@ -16,6 +16,13 @@ export default defineUserConfig({
     sidebar: [
       // "/overview",
       {
+        text: "What's new",
+        prefix: "/news/",
+        children: [
+          "6.35",
+        ],
+      },
+      {
         text: "Guides",
         prefix: "/guide/",
         children: [
