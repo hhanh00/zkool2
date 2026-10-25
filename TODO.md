@@ -19,7 +19,7 @@ Legend: `[ ]` open, `[~]` in progress, `[x]` done.
 
 | | Feature | Where in the app | Note |
 | --- | --- | --- | --- |
-| [~] | Contacts page | Account manager menu → Contacts | guide/pay says to type `@` for a contact, nothing on adding, editing, importing or exporting one. Also covers OpenAlias `#alias` resolution. Planned as recipe/contacts.md |
+| [x] | Contacts page | Account manager menu → Contacts | recipe/contacts.md, with OpenAlias `#alias` resolution |
 | [ ] | Light Node vs Full Node server | Settings | The toggle changes the server field label and the sync path |
 | [ ] | Log viewer | Account menu → Log | |
 | [ ] | Clear and reset to birth height | Edit Account | Rewind is documented in recipe/account and recipe/sync, reset is not |
@@ -45,7 +45,7 @@ Legend: `[ ]` open, `[~]` in progress, `[x]` done.
 
 ## Suggested order
 
-1. Contacts (in progress)
+1. Contacts (done)
 2. Swaps
 3. Note Migration and Ironwood
 4. A Settings reference page covering the server, theme, QR, explorer, cancel-sync and plugin options in one place

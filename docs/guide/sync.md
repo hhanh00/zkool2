@@ -57,7 +57,7 @@ with the sync button on its appbar.
 ## Menu
 
 The menu button (three dots) on the appbar opens the
-Mempool, Folders, Categories and Contacts pages.
+Mempool, Folders, Categories and [Contacts](../recipe/contacts.md) pages.
 It also has the "Show All" option that reveals the
 hidden accounts after you authenticate.
 

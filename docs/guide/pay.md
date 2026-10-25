@@ -30,7 +30,7 @@ between your pools,
 
 ::: tip
 In the address field, type `!` to pick one of your own accounts,
-or `@` to pick a contact.
+or `@` to pick a [contact](../recipe/contacts.md).
 :::
 
 Click on the send button to continue to the next step.

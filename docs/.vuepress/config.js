@@ -49,6 +49,7 @@ export default defineUserConfig({
           "ledger",
           "sync",
           "folder",
+          "contacts",
           "database",
           "tor",
           "security",

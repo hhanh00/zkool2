@@ -59,7 +59,7 @@ purposes, here's a screenshot of another account that has some.
 ![Transaction History =450x](./images/09.tx_history.png)
 
 Each transaction row has
-1. The type and the contact name (if the address is in your contacts)
+1. The type and the contact name (if the address is in your [contacts](../recipe/contacts.md))
 2. The date and how long ago it was
 3. The amount (in Green when funds are incoming)
 
