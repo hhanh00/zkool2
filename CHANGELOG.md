@@ -1,5 +1,13 @@
 # Changelog
 
+## [6.35.0-rc.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.35.0-rc.6...zkool-v6.35.0-rc.7) (2026-10-25)
+
+
+### Miscellaneous Chores
+
+* release 6.35.0 ([e94e76a](https://github.com/hhanh00/zkool2/commit/e94e76a619ea37ba211cefc10a13c56ba6be7f1e))
+* the next release is 6.35.0-rc.7 ([4f408f5](https://github.com/hhanh00/zkool2/commit/4f408f52f8bb4ec06b10bfef2a861b27203f2eab))
+
 ## [6.35.0-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.35.0-rc.5...zkool-v6.35.0-rc.6) (2026-10-24)
 
 
