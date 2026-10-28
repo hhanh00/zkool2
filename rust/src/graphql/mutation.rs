@@ -528,8 +528,7 @@ impl Mutation {
 
     pub async fn frost_cancel(context: &Context) -> FieldResult<bool> {
         check_admin_auth(context)?;
-        let mut connection = context.coin.get_connection().await?;
-        crate::frost::dkg::delete_frost_state(&mut connection).await?;
+        context.driver.cancel(crate::frost::driver::Cancel::Sign).await?;
         Ok(true)
     }
 }

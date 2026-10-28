@@ -37,6 +37,7 @@ pub async fn sign_step(
     connection: &mut SqliteConnection,
     client: &mut Client,
     height: u32,
+    stopping: &(dyn Fn() -> bool + Send + Sync),
 ) -> Result<Option<SignStepOutcome>> {
     let Some(_state) = observe_sign(network, connection).await? else {
         return Ok(None); // no signing session in progress
@@ -94,6 +95,12 @@ pub async fn sign_step(
         if !task.is_satisfied_by(&fresh) {
             info!("sign task {task:?} no longer applies; replanning");
             continue;
+        }
+        // A cancel is waiting for this pass: it ends here, quietly, like a
+        // session reset between observes.
+        if stopping() {
+            info!("sign: cancelled; stopping before {task:?}");
+            return Ok(None);
         }
 
         match task {

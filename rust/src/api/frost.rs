@@ -13,7 +13,7 @@ use crate::{
     sync::{session::SyncRun, synchronize_within, DEFAULT_ACTIONS_PER_SYNC},
 };
 use crate::api::sync::SyncOutcome;
-use crate::frost::driver::Driver;
+use crate::frost::driver::{Cancel, Driver};
 use std::str::FromStr;
 #[cfg(feature = "flutter")]
 use std::time::Duration;
@@ -178,13 +178,6 @@ pub async fn set_dkg_address(id: u8, address: &str, c: &Coin) -> Result<()> {
     crate::frost::dkg::set_dkg_address(&mut connection, account, id, my_id, address).await
 }
 
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn cancel_dkg(c: &Coin) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-    let account = get_funding_account(&mut connection).await?;
-    crate::frost::dkg::cancel_dkg(&mut connection, account).await
-}
-
 pub(crate) async fn get_funding_account(connection: &mut SqliteConnection) -> Result<u32> {
     let (account,): (String,) = sqlx::query_as("SELECT value FROM props WHERE key = 'dkg_account'")
         .fetch_one(&mut *connection)
@@ -299,12 +292,6 @@ pub async fn restore_frost_backup(
             dkg_version,
         })
         .collect())
-}
-
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn reset_sign(c: &Coin) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-    crate::frost::sign::reset_sign(&mut *connection).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -474,5 +461,24 @@ impl ProtocolDriver {
     #[cfg_attr(feature = "flutter", frb(sync))]
     pub fn cancel(&mut self) {
         self.driver.take();
+    }
+
+    /// End `c`'s signing session once the step in flight has finished.
+    pub async fn cancel_sign(&self, c: &Coin) -> Result<()> {
+        cancel_session(self.driver.as_ref(), c, Cancel::Sign).await
+    }
+
+    /// End `c`'s DKG once the step in flight has finished.
+    pub async fn cancel_dkg(&self, c: &Coin) -> Result<()> {
+        cancel_session(self.driver.as_ref(), c, Cancel::Dkg).await
+    }
+}
+
+/// Through the running driver, so the cancel waits for its pass; with none,
+/// no pass can be running and the session is deleted directly.
+async fn cancel_session(driver: Option<&Driver>, c: &Coin, kind: Cancel) -> Result<()> {
+    match driver {
+        Some(driver) => driver.cancel(kind).await,
+        None => crate::frost::driver::cancel_session(c, kind).await,
     }
 }

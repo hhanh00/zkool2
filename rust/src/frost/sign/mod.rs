@@ -169,6 +169,7 @@ pub async fn do_sign_impl(
     client: &mut Client,
     height: u32,
     status: impl Sink<SigningStatus>,
+    stopping: &(dyn Fn() -> bool + Send + Sync),
 ) -> Result<()> {
     info!("sign: starting at height {}", height);
 
@@ -189,7 +190,7 @@ pub async fn do_sign_impl(
         return Ok(());
     }
 
-    let Some(outcome) = sign_step(network, connection, client, height).await? else {
+    let Some(outcome) = sign_step(network, connection, client, height, stopping).await? else {
         info!("sign: no signing session in progress");
         return Ok(());
     };

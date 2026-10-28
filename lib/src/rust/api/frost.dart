@@ -11,7 +11,7 @@ import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 import 'pay.dart';
 part 'frost.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `get_funding_account`, `sync_frost_accounts`
+// These functions are ignored because they are not marked as `pub`: `cancel_session`, `get_funding_account`, `sync_frost_accounts`
 // These types are ignored because they are neither used by any `pub` functions nor (for structs and enums) marked `#[frb(unignore)]`: `DKGParams`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `clone`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`, `fmt`
 
@@ -75,9 +75,6 @@ Future<void> setDkgAddress(
     RustLib.instance.api
         .crateApiFrostSetDkgAddress(id: id, address: address, c: c);
 
-Future<void> cancelDkg({required Coin c}) =>
-    RustLib.instance.api.crateApiFrostCancelDkg(c: c);
-
 /// The member's backup string for a frost account: one `zkfrost` bech32m
 /// string holding the participant id, t, n, the signing share and the
 /// group's sk. As sensitive as a seed phrase. For a legacy (dkg-0, dkg-1)
@@ -115,9 +112,6 @@ Future<List<FrostRestore>> restoreFrostBackup(
         birth: birth,
         c: c);
 
-Future<void> resetSign({required Coin c}) =>
-    RustLib.instance.api.crateApiFrostResetSign(c: c);
-
 Future<void> initSign(
         {required int coordinator,
         required int fundingAccount,
@@ -154,6 +148,12 @@ Future<int?> signingAccount({required Coin c}) =>
 abstract class ProtocolDriver implements RustOpaqueInterface {
   /// Stop after the pass in flight, if any; no further pass runs.
   void cancel();
+
+  /// End `c`'s DKG once the step in flight has finished.
+  Future<void> cancelDkg({required Coin c});
+
+  /// End `c`'s signing session once the step in flight has finished.
+  Future<void> cancelSign({required Coin c});
 
   factory ProtocolDriver() =>
       RustLib.instance.api.crateApiFrostProtocolDriverNew();

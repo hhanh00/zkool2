@@ -98,6 +98,7 @@ pub async fn dkg_step(
     client: &mut Client,
     height: u32,
     account: u32,
+    stopping: &(dyn Fn() -> bool + Send + Sync),
 ) -> Result<DkgStepOutcome> {
     let mut executed = Vec::new();
     let mut shared_address = None;
@@ -137,6 +138,16 @@ pub async fn dkg_step(
         if !task.is_satisfied_by(&fresh) {
             tracing::info!("DKG task {task:?} no longer applies; replanning");
             continue;
+        }
+        // A cancel is waiting for this pass: it ends here, with what it did.
+        if stopping() {
+            tracing::info!("DKG: cancelled; stopping before {task:?}");
+            return Ok(DkgStepOutcome {
+                executed,
+                shared_address,
+                waiting_for_funds: false,
+                progress: None,
+            });
         }
 
         match task {

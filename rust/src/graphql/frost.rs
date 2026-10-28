@@ -2,7 +2,7 @@ use bincode::config;
 use juniper::{FieldError, FieldResult};
 
 use crate::{
-    frost::keys::CURRENT_DKG_VERSION,
+    frost::{driver::Cancel, keys::CURRENT_DKG_VERSION},
     graphql::{
         data::{FrostParamsResult, FrostRestoreResult},
         Context,
@@ -61,7 +61,7 @@ pub async fn dkg_start(
 }
 
 pub async fn dkg_cancel(context: &Context) -> FieldResult<bool> {
-    crate::api::frost::cancel_dkg(&context.coin).await?;
+    context.driver.cancel(Cancel::Dkg).await?;
     Ok(true)
 }
 

@@ -23,6 +23,7 @@ Widget buildDKGPage(
   WidgetRef ref, {
   required int index,
   required bool finished,
+  required ProtocolDriver driver,
   required Widget child,
 }) {
   return Scaffold(
@@ -35,7 +36,7 @@ Widget buildDKGPage(
                 icon: const Icon(Icons.close),
               )
             : IconButton(
-                onPressed: () => onCancel(context, ref),
+                onPressed: () => onCancel(context, ref, driver: driver),
                 icon: const Icon(Icons.cancel),
               ),
       ],
@@ -505,6 +506,7 @@ class DKGPage3State extends ConsumerState<DKGPage3> {
       ref,
       index: index,
       finished: finished,
+      driver: _driver,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -557,16 +559,23 @@ class DKGSteps extends StatelessWidget {
 
 void onClose(BuildContext context) => GoRouter.of(context).go("/");
 
-void onCancel(BuildContext context, WidgetRef ref) async {
+/// [driver] is the page's running driver, if it has one; without one no
+/// pass can be running and the DKG is deleted directly.
+void onCancel(BuildContext context, WidgetRef ref, {ProtocolDriver? driver}) async {
   final confirmed = await confirmDialog(
     context,
     title: "Cancel DKG",
     message: "Are you sure you want to cancel the DKG process?",
   );
-  if (confirmed) {
-    final c = coinContext.coin;
-    await cancelDkg(c: c);
-    if (!context.mounted) return;
-    GoRouter.of(context).pop();
+  if (!confirmed || !context.mounted) return;
+  final c = coinContext.coin;
+  // The step in flight finishes first, which can take a while.
+  final dialog = showLoadingDialog(context, "Cancelling…");
+  try {
+    await (driver ?? ProtocolDriver()).cancelDkg(c: c);
+  } finally {
+    dialog.dismiss();
   }
+  if (!context.mounted) return;
+  GoRouter.of(context).pop();
 }

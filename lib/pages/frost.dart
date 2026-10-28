@@ -37,6 +37,7 @@ Widget buildFrostPage(
   required int account,
   required int index,
   required bool finished,
+  required ProtocolDriver driver,
   required Widget child,
 }) {
   return Scaffold(
@@ -51,7 +52,7 @@ Widget buildFrostPage(
                 icon: Icon(Icons.close),
               )
             : IconButton(
-                onPressed: () => onCancel(context, ref),
+                onPressed: () => onCancel(context, ref, driver),
                 icon: const Icon(Icons.cancel),
               ),
       ],
@@ -413,6 +414,7 @@ class FrostPage2State extends ConsumerState<FrostPage2> {
       account: widget.account,
       index: currentIndex,
       finished: finished,
+      driver: _driver,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -466,15 +468,21 @@ class FrostSteps extends StatelessWidget {
   }
 }
 
-void onCancel(BuildContext context, WidgetRef ref) async {
+void onCancel(BuildContext context, WidgetRef ref, ProtocolDriver driver) async {
   final c = coinContext.coin;
   final confirmed = await confirmDialog(
     context,
     title: "Cancel Multi Signature",
     message: "Are you sure you want to cancel the multi signature process?",
   );
-  if (!confirmed) return;
-  await resetSign(c: c);
+  if (!confirmed || !context.mounted) return;
+  // The step in flight finishes first, which can take a while.
+  final dialog = showLoadingDialog(context, "Cancelling…");
+  try {
+    await driver.cancelSign(c: c);
+  } finally {
+    dialog.dismiss();
+  }
   if (!context.mounted) return;
   GoRouter.of(context).pop();
 }
