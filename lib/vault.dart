@@ -188,6 +188,7 @@ class Vault {
         logger.i("append: downloaded ${cloudBytes.length} bytes from cloud");
       } catch (e) {
         logger.w("append: download from cloud failed: $e");
+        rethrow;
       }
       _hasDownloadedDevicePart = true;
     }
