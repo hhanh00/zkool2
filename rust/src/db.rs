@@ -1900,7 +1900,8 @@ pub async fn get_memos(pool: &mut SqliteConnection, account: u32) -> Result<Vec<
             t.time,
             COALESCE(NULLIF(um.user_memo, ''), m.memo_text) as memo_text,
             COALESCE(m.memo_bytes, X'') as memo_bytes,
-            (um.user_memo IS NOT NULL AND um.user_memo != '') as is_user_memo
+            (um.user_memo IS NOT NULL AND um.user_memo != '') as is_user_memo,
+            t.txid
         FROM transactions t
         LEFT JOIN memos m ON m.tx = t.id_tx AND m.account = t.account
         LEFT JOIN user_memos um ON um.id_tx = t.id_tx AND um.account = t.account
@@ -1931,7 +1932,8 @@ pub async fn get_memos_txid(
             t.time,
             COALESCE(NULLIF(um.user_memo, ''), m.memo_text) as memo_text,
             COALESCE(m.memo_bytes, X'') as memo_bytes,
-            (um.user_memo IS NOT NULL AND um.user_memo != '') as is_user_memo
+            (um.user_memo IS NOT NULL AND um.user_memo != '') as is_user_memo,
+            t.txid
         FROM transactions t
         LEFT JOIN memos m ON m.tx = t.id_tx AND m.account = t.account
         LEFT JOIN user_memos um ON um.id_tx = t.id_tx AND um.account = t.account
@@ -1957,9 +1959,11 @@ fn row_to_memo(row: SqliteRow) -> Memo {
     let memo_text: Option<String> = row.get(7);
     let memo_bytes: Vec<u8> = row.get(8);
     let is_user_memo: bool = row.get(9);
+    let txid: Vec<u8> = row.get(10);
     Memo {
         id,
         id_tx: tx,
+        txid,
         id_note: note,
         height,
         pool,
@@ -2408,14 +2412,16 @@ pub async fn store_pending_tx(
     Ok(())
 }
 
-/// Set or clear the user's note on a transaction. The note takes the
-/// transaction's height, so a rewind past it trims the note too; without
-/// the transaction (rewound since the caller saw it) there is nothing to
-/// note and the call does nothing.
+/// Set or clear the user's note on the account's transaction `txid`. The
+/// transaction is named by txid, not row id: a rewind since the caller saw
+/// it may have deleted the row and a later sync given its id to another
+/// transaction. The note takes the transaction's height, so a rewind past
+/// it trims the note too; without the transaction there is nothing to note
+/// and the call does nothing.
 pub async fn set_user_memo(
     connection: &mut SqliteConnection,
     account: u32,
-    id_tx: u32,
+    txid: &[u8],
     memo: Option<String>,
 ) -> Result<()> {
     match memo {
@@ -2423,21 +2429,24 @@ pub async fn set_user_memo(
             sqlx::query(
                 "INSERT INTO user_memos(account, id_tx, height, user_memo)
                 SELECT account, id_tx, height, ?3 FROM transactions
-                WHERE account = ?1 AND id_tx = ?2
+                WHERE account = ?1 AND txid = ?2
                 ON CONFLICT(account, id_tx) DO UPDATE SET user_memo = excluded.user_memo",
             )
             .bind(account)
-            .bind(id_tx)
+            .bind(txid)
             .bind(&memo)
             .execute(&mut *connection)
             .await?;
         }
         _ => {
-            sqlx::query("DELETE FROM user_memos WHERE account = ?1 AND id_tx = ?2")
-                .bind(account)
-                .bind(id_tx)
-                .execute(&mut *connection)
-                .await?;
+            sqlx::query(
+                "DELETE FROM user_memos WHERE account = ?1 AND id_tx IN
+                (SELECT id_tx FROM transactions WHERE account = ?1 AND txid = ?2)",
+            )
+            .bind(account)
+            .bind(txid)
+            .execute(&mut *connection)
+            .await?;
         }
     }
     Ok(())

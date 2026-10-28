@@ -559,9 +559,9 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                             transactions: _filterTx(account.transactions),
                             currency: currency,
                             onTap: (id) => gotoTransaction(context, widget.account, id),
-                            onMemoChanged: (txId, newMemo) async {
+                            onMemoChanged: (txid, newMemo) async {
                               await setUserMemo(
-                                idTx: txId,
+                                txid: txid,
                                 memo: newMemo,
                                 account: widget.account,
                                 c: c,
@@ -1415,9 +1415,9 @@ class _MemoWidgetState extends State<MemoWidget> {
     if (newText == oldText) return;
 
     if (newText.isEmpty) {
-      await setUserMemo(idTx: widget.memo.idTx, memo: null, account: widget.account, c: c);
+      await setUserMemo(txid: widget.memo.txid, memo: null, account: widget.account, c: c);
     } else {
-      await setUserMemo(idTx: widget.memo.idTx, memo: newText, account: widget.account, c: c);
+      await setUserMemo(txid: widget.memo.txid, memo: newText, account: widget.account, c: c);
     }
     widget.onMemoChanged();
   }

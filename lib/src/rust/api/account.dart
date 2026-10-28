@@ -321,6 +321,7 @@ sealed class Memo with _$Memo {
   const factory Memo({
     required int id,
     required int idTx,
+    required Uint8List txid,
     int? idNote,
     required int pool,
     required int height,

@@ -7,7 +7,7 @@ class TransactionTable extends StatefulWidget {
   final List<Tx> transactions;
   final String currency;
   final void Function(int id) onTap;
-  final Future<void> Function(int txId, String? newMemo) onMemoChanged;
+  final Future<void> Function(Uint8List txid, String? newMemo) onMemoChanged;
 
   const TransactionTable({
     super.key,
@@ -84,9 +84,9 @@ class _TransactionTableState extends State<TransactionTable> {
 
     if (newText.isEmpty) {
       // Clear user memo → revert to original
-      await widget.onMemoChanged(id, null);
+      await widget.onMemoChanged(tx.txid, null);
     } else {
-      await widget.onMemoChanged(id, newText);
+      await widget.onMemoChanged(tx.txid, newText);
     }
     if (mounted) setState(() {});
   }

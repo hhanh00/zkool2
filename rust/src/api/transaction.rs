@@ -32,7 +32,7 @@ pub async fn update_historical_prices(
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn set_user_memo(
-    id_tx: u32,
+    txid: Vec<u8>,
     memo: Option<String>,
     account: u32,
     c: &Coin,
@@ -42,7 +42,7 @@ pub async fn set_user_memo(
             c,
             crate::sync::driver::Apply::UserMemo {
                 account,
-                id_tx,
+                txid,
                 memo,
             },
         )

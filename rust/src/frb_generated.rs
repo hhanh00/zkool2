@@ -9401,7 +9401,7 @@ fn wire__crate__api__transaction__set_user_memo_impl(
             };
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
-            let api_id_tx = <u32>::sse_decode(&mut deserializer);
+            let api_txid = <Vec<u8>>::sse_decode(&mut deserializer);
             let api_memo = <Option<String>>::sse_decode(&mut deserializer);
             let api_account = <u32>::sse_decode(&mut deserializer);
             let api_c = <RustOpaqueMoi<
@@ -9426,7 +9426,7 @@ fn wire__crate__api__transaction__set_user_memo_impl(
                         }
                         let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::transaction::set_user_memo(
-                            api_id_tx,
+                            api_txid,
                             api_memo,
                             api_account,
                             &*api_c_guard,
@@ -12261,6 +12261,7 @@ impl SseDecode for crate::api::account::Memo {
     fn sse_decode(deserializer: &mut flutter_rust_bridge::for_generated::SseDeserializer) -> Self {
         let mut var_id = <u32>::sse_decode(deserializer);
         let mut var_idTx = <u32>::sse_decode(deserializer);
+        let mut var_txid = <Vec<u8>>::sse_decode(deserializer);
         let mut var_idNote = <Option<u32>>::sse_decode(deserializer);
         let mut var_pool = <u8>::sse_decode(deserializer);
         let mut var_height = <u32>::sse_decode(deserializer);
@@ -12272,6 +12273,7 @@ impl SseDecode for crate::api::account::Memo {
         return crate::api::account::Memo {
             id: var_id,
             id_tx: var_idTx,
+            txid: var_txid,
             id_note: var_idNote,
             pool: var_pool,
             height: var_height,
@@ -14755,6 +14757,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Memo {
         [
             self.id.into_into_dart().into_dart(),
             self.id_tx.into_into_dart().into_dart(),
+            self.txid.into_into_dart().into_dart(),
             self.id_note.into_into_dart().into_dart(),
             self.pool.into_into_dart().into_dart(),
             self.height.into_into_dart().into_dart(),
@@ -17037,6 +17040,7 @@ impl SseEncode for crate::api::account::Memo {
     fn sse_encode(self, serializer: &mut flutter_rust_bridge::for_generated::SseSerializer) {
         <u32>::sse_encode(self.id, serializer);
         <u32>::sse_encode(self.id_tx, serializer);
+        <Vec<u8>>::sse_encode(self.txid, serializer);
         <Option<u32>>::sse_encode(self.id_note, serializer);
         <u8>::sse_encode(self.pool, serializer);
         <u32>::sse_encode(self.height, serializer);

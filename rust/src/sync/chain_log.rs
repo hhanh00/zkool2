@@ -1121,7 +1121,7 @@ mod tests {
                     },
                 )
                 .await?;
-                crate::db::set_user_memo(&mut db, account, id_tx, Some("note".into())).await?;
+                crate::db::set_user_memo(&mut db, account, &[txid], Some("note".into())).await?;
                 store_header(
                     &mut db,
                     account,

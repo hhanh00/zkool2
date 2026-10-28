@@ -23,12 +23,12 @@ Future<void> updateHistoricalPrices(
         currency: currency, exchangeRate: exchangeRate, c: c);
 
 Future<void> setUserMemo(
-        {required int idTx,
+        {required List<int> txid,
         String? memo,
         required int account,
         required Coin c}) =>
     RustLib.instance.api.crateApiTransactionSetUserMemo(
-        idTx: idTx, memo: memo, account: account, c: c);
+        txid: txid, memo: memo, account: account, c: c);
 
 Future<void> setTxCategory({required int id, int? category, required Coin c}) =>
     RustLib.instance.api

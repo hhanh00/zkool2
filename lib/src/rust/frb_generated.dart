@@ -682,7 +682,10 @@ abstract class RustLibApi extends BaseApi {
       {required int id, double? price, required Coin c});
 
   Future<void> crateApiTransactionSetUserMemo(
-      {required int idTx, String? memo, required int account, required Coin c});
+      {required List<int> txid,
+      String? memo,
+      required int account,
+      required Coin c});
 
   Future<String> crateApiAccountShowLedgerSaplingAddress(
       {required int account, required Coin c});
@@ -5916,14 +5919,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
 
   @override
   Future<void> crateApiTransactionSetUserMemo(
-      {required int idTx,
+      {required List<int> txid,
       String? memo,
       required int account,
       required Coin c}) {
     return handler.executeNormal(NormalTask(
       callFfi: (port_) {
         final serializer = SseSerializer(generalizedFrbRustBinding);
-        sse_encode_u_32(idTx, serializer);
+        sse_encode_list_prim_u_8_loose(txid, serializer);
         sse_encode_opt_String(memo, serializer);
         sse_encode_u_32(account, serializer);
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
@@ -5936,7 +5939,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiTransactionSetUserMemoConstMeta,
-      argValues: [idTx, memo, account, c],
+      argValues: [txid, memo, account, c],
       apiImpl: this,
     ));
   }
@@ -5944,7 +5947,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   TaskConstMeta get kCrateApiTransactionSetUserMemoConstMeta =>
       const TaskConstMeta(
         debugName: "set_user_memo",
-        argNames: ["idTx", "memo", "account", "c"],
+        argNames: ["txid", "memo", "account", "c"],
       );
 
   @override
@@ -7974,19 +7977,20 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Memo dco_decode_memo(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 10)
-      throw Exception('unexpected arr length: expect 10 but see ${arr.length}');
+    if (arr.length != 11)
+      throw Exception('unexpected arr length: expect 11 but see ${arr.length}');
     return Memo(
       id: dco_decode_u_32(arr[0]),
       idTx: dco_decode_u_32(arr[1]),
-      idNote: dco_decode_opt_box_autoadd_u_32(arr[2]),
-      pool: dco_decode_u_8(arr[3]),
-      height: dco_decode_u_32(arr[4]),
-      vout: dco_decode_u_32(arr[5]),
-      time: dco_decode_u_32(arr[6]),
-      memoBytes: dco_decode_list_prim_u_8_strict(arr[7]),
-      memo: dco_decode_opt_String(arr[8]),
-      isUserMemo: dco_decode_bool(arr[9]),
+      txid: dco_decode_list_prim_u_8_strict(arr[2]),
+      idNote: dco_decode_opt_box_autoadd_u_32(arr[3]),
+      pool: dco_decode_u_8(arr[4]),
+      height: dco_decode_u_32(arr[5]),
+      vout: dco_decode_u_32(arr[6]),
+      time: dco_decode_u_32(arr[7]),
+      memoBytes: dco_decode_list_prim_u_8_strict(arr[8]),
+      memo: dco_decode_opt_String(arr[9]),
+      isUserMemo: dco_decode_bool(arr[10]),
     );
   }
 
@@ -10377,6 +10381,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     var var_id = sse_decode_u_32(deserializer);
     var var_idTx = sse_decode_u_32(deserializer);
+    var var_txid = sse_decode_list_prim_u_8_strict(deserializer);
     var var_idNote = sse_decode_opt_box_autoadd_u_32(deserializer);
     var var_pool = sse_decode_u_8(deserializer);
     var var_height = sse_decode_u_32(deserializer);
@@ -10388,6 +10393,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     return Memo(
         id: var_id,
         idTx: var_idTx,
+        txid: var_txid,
         idNote: var_idNote,
         pool: var_pool,
         height: var_height,
@@ -12844,6 +12850,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     // Codec=Sse (Serialization based), see doc to use other codecs
     sse_encode_u_32(self.id, serializer);
     sse_encode_u_32(self.idTx, serializer);
+    sse_encode_list_prim_u_8_strict(self.txid, serializer);
     sse_encode_opt_box_autoadd_u_32(self.idNote, serializer);
     sse_encode_u_8(self.pool, serializer);
     sse_encode_u_32(self.height, serializer);

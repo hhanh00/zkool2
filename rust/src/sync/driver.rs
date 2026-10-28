@@ -64,7 +64,7 @@ pub enum Apply {
     /// The user's note on a transaction, or none to clear it.
     UserMemo {
         account: u32,
-        id_tx: u32,
+        txid: Vec<u8>,
         memo: Option<String>,
     },
 }
@@ -316,9 +316,9 @@ impl Ops for WalletOps {
             }
             Apply::UserMemo {
                 account,
-                id_tx,
+                txid,
                 memo,
-            } => crate::db::set_user_memo(&mut connection, account, id_tx, memo).await,
+            } => crate::db::set_user_memo(&mut connection, account, &txid, memo).await,
         }
     }
 
@@ -373,7 +373,9 @@ mod tests {
         async fn apply(&self, _coin: Coin, apply: Apply) -> Result<()> {
             let what = match apply {
                 Apply::TxDetails { account, txs } => format!("details {account} {}", txs.len()),
-                Apply::UserMemo { account, id_tx, .. } => format!("memo {account} {id_tx}"),
+                Apply::UserMemo { account, txid, .. } => {
+                    format!("memo {account} {}", hex::encode(txid))
+                }
             };
             self.log.lock().unwrap().push(what);
             Ok(())
@@ -462,7 +464,7 @@ mod tests {
                         &coin(),
                         Apply::UserMemo {
                             account: 1,
-                            id_tx: 7,
+                            txid: vec![7],
                             memo: None,
                         },
                     )
@@ -485,7 +487,7 @@ mod tests {
         first.await.unwrap().unwrap();
         apply.await.unwrap().unwrap();
         settle().await;
-        assert_eq!(log(&script), ["sync 100", "memo 1 7", "sync 101"]);
+        assert_eq!(log(&script), ["sync 100", "memo 1 07", "sync 101"]);
         script.release.notify_one();
         assert_eq!(
             second.await.unwrap().unwrap(),

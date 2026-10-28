@@ -400,6 +400,8 @@ pub async fn list_tx_history(account: u32, c: &Coin) -> Result<Vec<Tx>> {
 pub struct Memo {
     pub id: u32,
     pub id_tx: u32,
+    /// Names the transaction across a rewind, which `id_tx` does not.
+    pub txid: Vec<u8>,
     pub id_note: Option<u32>,
     pub pool: u8,
     pub height: u32,

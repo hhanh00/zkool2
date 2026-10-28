@@ -2392,6 +2392,7 @@ class __$FrostParamsCopyWithImpl<$Res> implements _$FrostParamsCopyWith<$Res> {
 mixin _$Memo {
   int get id;
   int get idTx;
+  Uint8List get txid;
   int? get idNote;
   int get pool;
   int get height;
@@ -2415,6 +2416,7 @@ mixin _$Memo {
             other is Memo &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.idTx, idTx) || other.idTx == idTx) &&
+            const DeepCollectionEquality().equals(other.txid, txid) &&
             (identical(other.idNote, idNote) || other.idNote == idNote) &&
             (identical(other.pool, pool) || other.pool == pool) &&
             (identical(other.height, height) || other.height == height) &&
@@ -2431,6 +2433,7 @@ mixin _$Memo {
       runtimeType,
       id,
       idTx,
+      const DeepCollectionEquality().hash(txid),
       idNote,
       pool,
       height,
@@ -2442,7 +2445,7 @@ mixin _$Memo {
 
   @override
   String toString() {
-    return 'Memo(id: $id, idTx: $idTx, idNote: $idNote, pool: $pool, height: $height, vout: $vout, time: $time, memoBytes: $memoBytes, memo: $memo, isUserMemo: $isUserMemo)';
+    return 'Memo(id: $id, idTx: $idTx, txid: $txid, idNote: $idNote, pool: $pool, height: $height, vout: $vout, time: $time, memoBytes: $memoBytes, memo: $memo, isUserMemo: $isUserMemo)';
   }
 }
 
@@ -2454,6 +2457,7 @@ abstract mixin class $MemoCopyWith<$Res> {
   $Res call(
       {int id,
       int idTx,
+      Uint8List txid,
       int? idNote,
       int pool,
       int height,
@@ -2478,6 +2482,7 @@ class _$MemoCopyWithImpl<$Res> implements $MemoCopyWith<$Res> {
   $Res call({
     Object? id = null,
     Object? idTx = null,
+    Object? txid = null,
     Object? idNote = freezed,
     Object? pool = null,
     Object? height = null,
@@ -2496,6 +2501,10 @@ class _$MemoCopyWithImpl<$Res> implements $MemoCopyWith<$Res> {
           ? _self.idTx
           : idTx // ignore: cast_nullable_to_non_nullable
               as int,
+      txid: null == txid
+          ? _self.txid
+          : txid // ignore: cast_nullable_to_non_nullable
+              as Uint8List,
       idNote: freezed == idNote
           ? _self.idNote
           : idNote // ignore: cast_nullable_to_non_nullable
@@ -2626,6 +2635,7 @@ extension MemoPatterns on Memo {
     TResult Function(
             int id,
             int idTx,
+            Uint8List txid,
             int? idNote,
             int pool,
             int height,
@@ -2643,6 +2653,7 @@ extension MemoPatterns on Memo {
         return $default(
             _that.id,
             _that.idTx,
+            _that.txid,
             _that.idNote,
             _that.pool,
             _that.height,
@@ -2674,6 +2685,7 @@ extension MemoPatterns on Memo {
     TResult Function(
             int id,
             int idTx,
+            Uint8List txid,
             int? idNote,
             int pool,
             int height,
@@ -2690,6 +2702,7 @@ extension MemoPatterns on Memo {
         return $default(
             _that.id,
             _that.idTx,
+            _that.txid,
             _that.idNote,
             _that.pool,
             _that.height,
@@ -2718,6 +2731,7 @@ extension MemoPatterns on Memo {
     TResult? Function(
             int id,
             int idTx,
+            Uint8List txid,
             int? idNote,
             int pool,
             int height,
@@ -2734,6 +2748,7 @@ extension MemoPatterns on Memo {
         return $default(
             _that.id,
             _that.idTx,
+            _that.txid,
             _that.idNote,
             _that.pool,
             _that.height,
@@ -2754,6 +2769,7 @@ class _Memo implements Memo {
   const _Memo(
       {required this.id,
       required this.idTx,
+      required this.txid,
       this.idNote,
       required this.pool,
       required this.height,
@@ -2767,6 +2783,8 @@ class _Memo implements Memo {
   final int id;
   @override
   final int idTx;
+  @override
+  final Uint8List txid;
   @override
   final int? idNote;
   @override
@@ -2799,6 +2817,7 @@ class _Memo implements Memo {
             other is _Memo &&
             (identical(other.id, id) || other.id == id) &&
             (identical(other.idTx, idTx) || other.idTx == idTx) &&
+            const DeepCollectionEquality().equals(other.txid, txid) &&
             (identical(other.idNote, idNote) || other.idNote == idNote) &&
             (identical(other.pool, pool) || other.pool == pool) &&
             (identical(other.height, height) || other.height == height) &&
@@ -2815,6 +2834,7 @@ class _Memo implements Memo {
       runtimeType,
       id,
       idTx,
+      const DeepCollectionEquality().hash(txid),
       idNote,
       pool,
       height,
@@ -2826,7 +2846,7 @@ class _Memo implements Memo {
 
   @override
   String toString() {
-    return 'Memo(id: $id, idTx: $idTx, idNote: $idNote, pool: $pool, height: $height, vout: $vout, time: $time, memoBytes: $memoBytes, memo: $memo, isUserMemo: $isUserMemo)';
+    return 'Memo(id: $id, idTx: $idTx, txid: $txid, idNote: $idNote, pool: $pool, height: $height, vout: $vout, time: $time, memoBytes: $memoBytes, memo: $memo, isUserMemo: $isUserMemo)';
   }
 }
 
@@ -2839,6 +2859,7 @@ abstract mixin class _$MemoCopyWith<$Res> implements $MemoCopyWith<$Res> {
   $Res call(
       {int id,
       int idTx,
+      Uint8List txid,
       int? idNote,
       int pool,
       int height,
@@ -2863,6 +2884,7 @@ class __$MemoCopyWithImpl<$Res> implements _$MemoCopyWith<$Res> {
   $Res call({
     Object? id = null,
     Object? idTx = null,
+    Object? txid = null,
     Object? idNote = freezed,
     Object? pool = null,
     Object? height = null,
@@ -2881,6 +2903,10 @@ class __$MemoCopyWithImpl<$Res> implements _$MemoCopyWith<$Res> {
           ? _self.idTx
           : idTx // ignore: cast_nullable_to_non_nullable
               as int,
+      txid: null == txid
+          ? _self.txid
+          : txid // ignore: cast_nullable_to_non_nullable
+              as Uint8List,
       idNote: freezed == idNote
           ? _self.idNote
           : idNote // ignore: cast_nullable_to_non_nullable
