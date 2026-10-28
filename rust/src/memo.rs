@@ -1,12 +1,13 @@
 use crate::sync::chain_log::{self, MemoRow, NoteKey, OutputRow, TransactionDetails};
-use anyhow::{Context as _, Result};
+use anyhow::Result;
 use orchard::{
     note::ExtractedNoteCommitment,
     note_encryption::{IronwoodDomain, OrchardDomain},
     zsa::OrchardZSADomain,
 };
 use sapling_crypto::note_encryption::SaplingDomain;
-use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
+use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
+use std::collections::HashMap;
 use tracing::debug;
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec};
 use zcash_note_encryption::note_bytes::NoteBytesData;
@@ -23,6 +24,10 @@ use crate::{
 
 const TX_TYPE_MIGRATION: u8 = 16;
 
+/// Decrypt and store the details of every transaction of `account` that
+/// lacks them, under the caller's session: the sync's own detail pass.
+/// The app's background pass does the same work in two halves, through
+/// [`crate::api::sync::fetch_tx_details`].
 pub async fn fetch_tx_details(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -30,34 +35,75 @@ pub async fn fetch_tx_details(
     account: u32,
 ) -> Result<()> {
     debug!("fetch_tx_details");
-    let txids =
-        sqlx::query("SELECT id_tx, txid FROM transactions WHERE account = ? AND details = FALSE")
-            .bind(account)
-            .map(|row: SqliteRow| {
-                let id_tx: u32 = row.get(0);
-                let txid: Vec<u8> = row.get(1);
-                (id_tx, txid)
-            })
-            .fetch_all(&mut *connection)
-            .await?;
-
-    for (id_tx, txid) in txids.iter() {
-        decrypt_memo(network, connection, client, account, txid).await?;
-        let (tpe, value, asset_id, zsa_value) = summarize_tx(connection, *id_tx).await?;
-        chain_log::set_transaction_details(
-            connection,
-            *id_tx,
-            &TransactionDetails {
-                tpe,
-                value,
-                zsa_value,
-                asset_id,
-            },
-        )
-        .await?;
+    for txid in pending_details(connection, account).await? {
+        let tx = decrypt_tx(network, connection, client, account, &txid).await?;
+        apply_tx_details(connection, account, &tx).await?;
     }
-
     Ok(())
+}
+
+/// Txids of the account's transactions whose details are not stored yet.
+pub async fn pending_details(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Vec<Vec<u8>>> {
+    Ok(
+        sqlx::query_scalar("SELECT txid FROM transactions WHERE account = ? AND details = FALSE")
+            .bind(account)
+            .fetch_all(&mut *connection)
+            .await?,
+    )
+}
+
+/// A transaction's details, decrypted and ready to store. Produced by
+/// [`decrypt_tx`] from the network and the account's keys alone, so the
+/// app can build it outside the sync session; stored by
+/// [`apply_tx_details`], which looks the rows up again: the ones the
+/// decryption saw may have been rewound since.
+#[derive(Clone, Debug)]
+pub struct DecryptedTx {
+    pub txid: Vec<u8>,
+    pub height: u32,
+    pub fee: u64,
+    pub outputs: Vec<DecryptedOutput>,
+    pub memos: Vec<DecryptedMemo>,
+}
+
+/// An output the account sent, recovered through its outgoing key, or a
+/// transparent output of one of its transactions.
+#[derive(Clone, Debug)]
+pub struct DecryptedOutput {
+    pub pool: u8,
+    pub vout: u32,
+    pub value: u64,
+    pub address: String,
+}
+
+#[derive(Clone, Debug)]
+pub struct DecryptedMemo {
+    pub pool: u8,
+    pub vout: u32,
+    pub link: MemoLink,
+    pub text: Option<String>,
+    pub bytes: Vec<u8>,
+}
+
+/// What a memo hangs off. Named by content, not row id, and resolved when
+/// the memo is stored.
+#[derive(Clone, Debug)]
+pub enum MemoLink {
+    /// A note the account received, by commitment. The memo is stored
+    /// without a link when the note row is missing.
+    Note { cmx: Vec<u8> },
+    /// The output recorded at the memo's pool and index.
+    Output,
+    /// A note by commitment when the account has it, else an output
+    /// recorded with this value and address (a ZSA note).
+    NoteOrOutput {
+        cmx: Vec<u8>,
+        value: u64,
+        address: String,
+    },
 }
 
 async fn summarize_tx(
@@ -204,14 +250,16 @@ fn try_zsa_decrypt(
     }
 }
 
-pub async fn decrypt_memo(
+/// Fetch `txid` and decrypt what the account can see of it. Reads only the
+/// account's keys from the database; see [`DecryptedTx`].
+pub async fn decrypt_tx(
     network: &Network,
     connection: &mut SqliteConnection,
     client: &mut Client,
     account: u32,
     txid: &[u8],
-) -> Result<()> {
-    debug!("decrypt_memo {account} {}", hex::encode(txid));
+) -> Result<DecryptedTx> {
+    debug!("decrypt_tx {account} {}", hex::encode(txid));
     let (height, tx) = client.transaction(network, txid).await?;
 
     // Extract raw ZSA enc_ciphertexts before consuming tx with into_data()
@@ -219,11 +267,9 @@ pub async fn decrypt_memo(
 
     let tx_data = tx.into_data();
 
-    let (id_tx, _) = chain_log::transaction_ref(connection, account, txid)
-        .await
-        .context("Failed to find transaction")?;
-
     let mut fee_manager = FeeManager::default();
+    let mut outputs = vec![];
+    let mut memos = vec![];
     // Full or incoming-only keys: an incoming key decrypts what the account
     // received; only a full key also recovers what it sent, through the ovk.
     let skeys = sapling_viewing_keys(connection, account).await?;
@@ -241,17 +287,12 @@ pub async fn decrypt_memo(
                 .recipient_address()
                 .map(|addr| addr.encode(network))
                 .unwrap_or_default();
-            store_output(
-                connection,
-                account,
-                height,
-                id_tx,
-                0, // Transparent pool
-                vout as u32,
-                output.value().into_u64(),
-                &address,
-            )
-            .await?;
+            outputs.push(DecryptedOutput {
+                pool: 0,
+                vout: vout as u32,
+                value: output.value().into_u64(),
+                address,
+            });
         }
     }
 
@@ -270,51 +311,30 @@ pub async fn decrypt_memo(
                 if let Some((note, _address, memo_bytes)) =
                     try_note_decryption(&domain, &pivk, sout)
                 {
-                    let cmx = &note.cmu().to_bytes();
-                    let id_note = chain_log::find_note(connection, account, NoteKey::Cmx(cmx))
-                        .await?
-                        .map(|(id, _)| id);
-
-                    process_memo(
-                        connection,
-                        account,
-                        height,
-                        id_tx,
-                        id_note,
-                        None,
+                    let cmx = note.cmu().to_bytes().to_vec();
+                    collect_memo(
+                        &mut memos,
                         1,
                         vout as u32,
+                        MemoLink::Note { cmx },
                         &memo_bytes,
-                    )
-                    .await?;
+                    );
                 } else if let Some((note, address, memo_bytes)) = ovk.as_ref().and_then(|ovk| {
-                    try_output_recovery_with_ovk(&domain, ovk, sout, sout.cv(), sout.out_ciphertext())
+                    try_output_recovery_with_ovk(
+                        &domain,
+                        ovk,
+                        sout,
+                        sout.cv(),
+                        sout.out_ciphertext(),
+                    )
                 }) {
-                    let address = address.encode(network);
-                    let id_output = store_output(
-                        connection,
-                        account,
-                        height,
-                        id_tx,
-                        1, // Sapling pool
-                        vout as u32,
-                        note.value().inner(),
-                        &address,
-                    )
-                    .await?;
-
-                    process_memo(
-                        connection,
-                        account,
-                        height,
-                        id_tx,
-                        None,
-                        Some(id_output),
-                        1,
-                        vout as u32,
-                        &memo_bytes,
-                    )
-                    .await?;
+                    outputs.push(DecryptedOutput {
+                        pool: 1,
+                        vout: vout as u32,
+                        value: note.value().inner(),
+                        address: address.encode(network),
+                    });
+                    collect_memo(&mut memos, 1, vout as u32, MemoLink::Output, &memo_bytes);
                 }
             }
         }
@@ -340,29 +360,21 @@ pub async fn decrypt_memo(
                     if let Some((note, _address, memo_bytes)) =
                         try_note_decryption(&domain, &pivk, action)
                     {
-                        debug!("decrypt_memo: ivk decrypt ok for vout={vout} pool={pool}");
+                        debug!("decrypt_tx: ivk decrypt ok for vout={vout} pool={pool}");
                         let cmx: ExtractedNoteCommitment = note.commitment().into();
                         // The note row may be missing (e.g. a tx scanned
-                        // before its note was stored); attach the memo
-                        // without a note link like the sapling path instead
-                        // of failing the whole tx.
-                        let id_note =
-                            chain_log::find_note(connection, account, NoteKey::Cmx(&cmx.to_bytes()))
-                                .await?
-                                .map(|(id, _)| id);
-
-                        process_memo(
-                            connection,
-                            account,
-                            height,
-                            id_tx,
-                            id_note,
-                            None,
+                        // before its note was stored); the memo is then
+                        // stored without a note link, like the sapling
+                        // path, instead of failing the whole tx.
+                        collect_memo(
+                            &mut memos,
                             pool,
                             vout as u32,
+                            MemoLink::Note {
+                                cmx: cmx.to_bytes().to_vec(),
+                            },
                             &memo_bytes,
-                        )
-                        .await?;
+                        );
                     } else if let Some((note, address, memo_bytes)) = ovk.as_ref().and_then(|ovk| {
                         try_output_recovery_with_ovk(
                             &domain,
@@ -374,73 +386,40 @@ pub async fn decrypt_memo(
                     }) {
                         let address =
                             UnifiedAddress::from_receivers(Some(address), None, None, None, None).unwrap();
-                        let id_output = store_output(
-                            connection,
-                            account,
-                            height,
-                            id_tx,
+                        outputs.push(DecryptedOutput {
                             pool,
-                            vout as u32,
-                            note.value().inner(),
-                            &address.encode(network),
-                        )
-                        .await?;
-
-                        process_memo(
-                            connection,
-                            account,
-                            height,
-                            id_tx,
-                            None,
-                            Some(id_output),
-                            pool,
-                            vout as u32,
-                            &memo_bytes,
-                        )
-                        .await?;
+                            vout: vout as u32,
+                            value: note.value().inner(),
+                            address: address.encode(network),
+                        });
+                        collect_memo(&mut memos, pool, vout as u32, MemoLink::Output, &memo_bytes);
                     } else if pool == 2 && vout < zsa_raw_ciphertexts.len() {
                         // Try ZSA decryption with the original 612-byte enc_ciphertext
-                        if let Some(zsa_action) = try_zsa_decrypt(
+                        if let Some((note, address, memo_bytes)) = try_zsa_decrypt(
                             action,
                             &zsa_raw_ciphertexts[vout],
                             &pivk,
                             ovk.as_ref(),
                         ) {
-                            let (note, address, memo_bytes) = zsa_action;
                             let cmx: ExtractedNoteCommitment = note.commitment().into();
-                            if let Ok(Some((id_note, _))) = chain_log::find_note(
-                                connection,
-                                account,
-                                NoteKey::Cmx(&cmx.to_bytes()),
-                            )
-                            .await
-                            {
-                                process_memo(
-                                    connection, account, height, id_tx,
-                                    Some(id_note), None, pool, vout as u32, &memo_bytes,
-                                )
-                                .await?;
-                            } else {
-                                let address = UnifiedAddress::from_receivers(
-                                    Some(address), None, None, None, None)
-                                .unwrap();
-                                let id_output = store_output(
-                                    connection, account, height, id_tx, pool,
-                                    vout as u32,
-                                    note.value().inner(),
-                                    &address.encode(network),
-                                )
-                                .await?;
-                                process_memo(
-                                    connection, account, height, id_tx,
-                                    None, Some(id_output), pool, vout as u32, &memo_bytes,
-                                )
-                                .await?;
-                            }
+                            let address = UnifiedAddress::from_receivers(
+                                Some(address), None, None, None, None)
+                            .unwrap();
+                            collect_memo(
+                                &mut memos,
+                                pool,
+                                vout as u32,
+                                MemoLink::NoteOrOutput {
+                                    cmx: cmx.to_bytes().to_vec(),
+                                    value: note.value().inner(),
+                                    address: address.encode(network),
+                                },
+                                &memo_bytes,
+                            );
                         }
                     } else {
                         debug!(
-                            "decrypt_memo: both ivk and ovk decrypt failed for vout={vout} pool={pool}"
+                            "decrypt_tx: both ivk and ovk decrypt failed for vout={vout} pool={pool}"
                         );
                     }
                 }
@@ -458,70 +437,139 @@ pub async fn decrypt_memo(
     }
     if let Some(bundle) = tx_data.ironwood_bundle() {
         debug!(
-            "decrypt_memo: ironwood bundle with {} actions",
+            "decrypt_tx: ironwood bundle with {} actions",
             bundle.actions().len()
         );
         process_orchard_memo!(bundle, 3, IronwoodDomain);
     } else {
-        debug!(
-            "decrypt_memo: no ironwood bundle in tx {}",
-            hex::encode(txid)
-        );
+        debug!("decrypt_tx: no ironwood bundle in tx {}", hex::encode(txid));
     }
-    chain_log::set_transaction_fee(connection, id_tx, fee_manager.fee()).await?;
 
-    Ok(())
+    Ok(DecryptedTx {
+        txid: txid.to_vec(),
+        height,
+        fee: fee_manager.fee(),
+        outputs,
+        memos,
+    })
 }
 
-#[allow(clippy::too_many_arguments)]
-async fn process_memo(
-    connection: &mut SqliteConnection,
-    account: u32,
-    height: u32,
-    id_tx: u32,
-    id_note: Option<u32>,
-    id_output: Option<u32>,
+/// Keep a memo worth storing: one that parses and is not empty.
+fn collect_memo(
+    memos: &mut Vec<DecryptedMemo>,
     pool: u8,
     vout: u32,
+    link: MemoLink,
     memo_bytes: &[u8],
-) -> Result<()> {
+) {
     debug!("memo bytes: {}", hex::encode(&memo_bytes[0..32]));
     if let Ok(memo) = Memo::from_bytes(memo_bytes) {
         let text = match &memo {
-            Memo::Empty => return Ok(()),
-            Memo::Text(text_memo) => Some(&**text_memo),
+            Memo::Empty => return,
+            Memo::Text(text_memo) => Some(text_memo.to_string()),
             Memo::Future(_) | Memo::Arbitrary(_) => None,
         };
+        memos.push(DecryptedMemo {
+            pool,
+            vout,
+            link,
+            text,
+            bytes: memo_bytes.to_vec(),
+        });
+    }
+}
+
+/// Store a decrypted transaction's outputs, memos, fee and summary, in one
+/// database transaction. Returns `false`, storing nothing, when the account
+/// no longer has the transaction: it was rewound since the decryption, and
+/// the sync that records it again leaves it for the next detail pass.
+pub async fn apply_tx_details(
+    connection: &mut SqliteConnection,
+    account: u32,
+    tx: &DecryptedTx,
+) -> Result<bool> {
+    let Some((id_tx, _)) = chain_log::find_transaction(connection, account, &tx.txid).await? else {
+        debug!(
+            "details of {} dropped: account {account} no longer has it",
+            hex::encode(&tx.txid)
+        );
+        return Ok(false);
+    };
+    let mut db_tx = connection.begin().await?;
+
+    let mut output_ids = HashMap::new();
+    for output in &tx.outputs {
+        let id = store_output(&mut db_tx, account, tx.height, id_tx, output).await?;
+        output_ids.insert((output.pool, output.vout), id);
+    }
+
+    for memo in &tx.memos {
+        let (note, output) = match &memo.link {
+            MemoLink::Note { cmx } => (
+                chain_log::find_note(&mut db_tx, account, NoteKey::Cmx(cmx))
+                    .await?
+                    .map(|(id, _)| id),
+                None,
+            ),
+            MemoLink::Output => (None, output_ids.get(&(memo.pool, memo.vout)).copied()),
+            MemoLink::NoteOrOutput {
+                cmx,
+                value,
+                address,
+            } => match chain_log::find_note(&mut db_tx, account, NoteKey::Cmx(cmx)).await? {
+                Some((id_note, _)) => (Some(id_note), None),
+                None => {
+                    let output = DecryptedOutput {
+                        pool: memo.pool,
+                        vout: memo.vout,
+                        value: *value,
+                        address: address.clone(),
+                    };
+                    let id = store_output(&mut db_tx, account, tx.height, id_tx, &output).await?;
+                    (None, Some(id))
+                }
+            },
+        };
         chain_log::record_memo(
-            connection,
+            &mut db_tx,
             account,
             &MemoRow {
                 id_tx,
-                height,
-                pool,
-                vout,
-                note: id_note,
-                output: id_output,
-                text,
-                bytes: memo_bytes,
+                height: tx.height,
+                pool: memo.pool,
+                vout: memo.vout,
+                note,
+                output,
+                text: memo.text.as_deref(),
+                bytes: &memo.bytes,
             },
         )
         .await?;
     }
 
-    Ok(())
+    chain_log::set_transaction_fee(&mut db_tx, id_tx, tx.fee).await?;
+    let (tpe, value, asset_id, zsa_value) = summarize_tx(&mut db_tx, id_tx).await?;
+    chain_log::set_transaction_details(
+        &mut db_tx,
+        id_tx,
+        &TransactionDetails {
+            tpe,
+            value,
+            zsa_value,
+            asset_id,
+        },
+    )
+    .await?;
+    db_tx.commit().await?;
+    Ok(true)
 }
 
-#[allow(clippy::too_many_arguments)]
 async fn store_output(
     connection: &mut SqliteConnection,
     account: u32,
     height: u32,
     id_tx: u32,
-    pool: u8,
-    vout: u32,
-    value: u64,
-    address: &str,
+    output: &DecryptedOutput,
 ) -> Result<u32> {
     chain_log::record_output(
         connection,
@@ -529,10 +577,10 @@ async fn store_output(
         &OutputRow {
             id_tx,
             height,
-            pool,
-            vout,
-            value: value as i64,
-            address,
+            pool: output.pool,
+            vout: output.vout,
+            value: output.value as i64,
+            address: &output.address,
         },
     )
     .await
@@ -572,5 +620,60 @@ mod tests {
             self_transfer_type(-10_000, 10_000, true, true, false, false),
             12
         );
+    }
+
+    #[tokio::test]
+    async fn details_are_stored_against_the_transaction_as_found_or_dropped() -> Result<()> {
+        use crate::sync::chain_log::{record_transaction, TransactionRow};
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        crate::db::create_schema(&mut db).await?;
+        let id_tx = record_transaction(&mut db, 1, &TransactionRow::chain(&[7], 100, 0))
+            .await?
+            .unwrap();
+        let mut tx = DecryptedTx {
+            txid: vec![7],
+            height: 100,
+            fee: 1_000,
+            outputs: vec![DecryptedOutput {
+                pool: 2,
+                vout: 0,
+                value: 5,
+                address: "u1".into(),
+            }],
+            memos: vec![DecryptedMemo {
+                pool: 2,
+                vout: 0,
+                link: MemoLink::Output,
+                text: Some("hi".into()),
+                bytes: vec![0; 512],
+            }],
+        };
+
+        assert!(apply_tx_details(&mut db, 1, &tx).await?);
+        let (details, fee): (bool, i64) =
+            sqlx::query_as("SELECT details, fee FROM transactions WHERE id_tx = ?")
+                .bind(id_tx)
+                .fetch_one(&mut db)
+                .await?;
+        assert!(details);
+        assert_eq!(fee, 1_000);
+        let (memo_tx, output): (u32, Option<u32>) =
+            sqlx::query_as("SELECT tx, output FROM memos WHERE account = 1")
+                .fetch_one(&mut db)
+                .await?;
+        assert_eq!(memo_tx, id_tx);
+        assert!(
+            output.is_some(),
+            "the memo hangs off the output recorded with it"
+        );
+
+        // Rewound since the decryption: the account no longer has it.
+        tx.txid = vec![8];
+        assert!(!apply_tx_details(&mut db, 1, &tx).await?);
+        let memos: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM memos")
+            .fetch_one(&mut db)
+            .await?;
+        assert_eq!(memos, 1, "nothing stored for a transaction that is gone");
+        Ok(())
     }
 }

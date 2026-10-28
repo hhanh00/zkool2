@@ -20,6 +20,7 @@ use zcash_protocol::local_consensus::LocalNetwork;
 use crate::db::{backfill_diversifier_index, create_schema, migrate_sapling_addresses};
 use crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient;
 use crate::net::zebra::ZebraClient;
+use crate::sync::driver::SyncDriver;
 use crate::sync::session::SyncSession;
 use crate::{Client, IntoAnyhow};
 
@@ -38,6 +39,9 @@ pub struct Coin {
     /// One sync at a time for this database; shared by every clone of the
     /// handle that serves it.
     pub(crate) sync: Arc<SyncSession>,
+    /// The task every write of the chain log outside a sync goes through;
+    /// shared like `sync`. None until a database is open.
+    pub(crate) driver: Option<SyncDriver>,
     pub(crate) url: String,
     pub(crate) server_type: u8,
     /// Transport: 0 = direct, 1 = Tor (arti), 2 = Nym mixnet,
@@ -89,8 +93,16 @@ impl Coin {
             db_filepath,
             pool: Some(pool),
             sync: Arc::new(SyncSession::new()),
+            driver: Some(SyncDriver::start()),
             ..self.clone()
         })
+    }
+
+    /// The sync driver, for a write of the chain log outside a sync.
+    pub(crate) fn driver(&self) -> Result<&SyncDriver> {
+        self.driver
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("no wallet is open"))
     }
 
     /// Network id: 0 mainnet, 1 testnet, 2 regtest, 3 ZSA regtest.
@@ -586,6 +598,7 @@ impl Coin {
             db_filepath: String::new(),
             pool: None,
             sync: Arc::new(SyncSession::new()),
+            driver: None,
             server_type: 0,
             url: String::new(),
             transport: 0,

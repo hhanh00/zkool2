@@ -235,11 +235,13 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
         "CREATE TABLE IF NOT EXISTS user_memos(
         account INTEGER NOT NULL,
         id_tx INTEGER NOT NULL,
+        height INTEGER NOT NULL,
         user_memo TEXT NOT NULL,
         UNIQUE(account, id_tx))",
     )
     .execute(&mut *connection)
     .await?;
+    migrate_user_memos(connection).await?;
     tracing::debug!("create_schema: user_memos table ready");
 
     sqlx::query(
@@ -864,6 +866,38 @@ pub async fn store_account_metadata(
 }
 
 // Runtime schema migration; the account backup format is unchanged.
+/// Give `user_memos` the height of its transaction, so a rewind trims it
+/// with the chain log. Before, a note stayed on an `id_tx` that a rewind
+/// could delete and a later sync hand to another transaction; notes whose
+/// transaction is already gone are dropped here.
+async fn migrate_user_memos(connection: &mut SqliteConnection) -> Result<()> {
+    let has_height: Option<(String,)> =
+        sqlx::query_as("SELECT name FROM pragma_table_info('user_memos') WHERE name = 'height'")
+            .fetch_optional(&mut *connection)
+            .await?;
+    if has_height.is_some() {
+        return Ok(());
+    }
+    let mut tx = connection.begin().await?;
+    sqlx::query("ALTER TABLE user_memos ADD COLUMN height INTEGER NOT NULL DEFAULT 0")
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query(
+        "DELETE FROM user_memos WHERE NOT EXISTS (SELECT 1 FROM transactions t
+        WHERE t.account = user_memos.account AND t.id_tx = user_memos.id_tx)",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "UPDATE user_memos SET height = (SELECT t.height FROM transactions t
+        WHERE t.account = user_memos.account AND t.id_tx = user_memos.id_tx)",
+    )
+    .execute(&mut *tx)
+    .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
 async fn migrate_headers(connection: &mut SqliteConnection) -> Result<()> {
     let mut tx = connection.begin().await?;
     let columns = sqlx::query("PRAGMA table_info(headers)")
@@ -2374,6 +2408,10 @@ pub async fn store_pending_tx(
     Ok(())
 }
 
+/// Set or clear the user's note on a transaction. The note takes the
+/// transaction's height, so a rewind past it trims the note too; without
+/// the transaction (rewound since the caller saw it) there is nothing to
+/// note and the call does nothing.
 pub async fn set_user_memo(
     connection: &mut SqliteConnection,
     account: u32,
@@ -2383,7 +2421,9 @@ pub async fn set_user_memo(
     match memo {
         Some(memo) if !memo.is_empty() => {
             sqlx::query(
-                "INSERT INTO user_memos(account, id_tx, user_memo) VALUES (?1, ?2, ?3)
+                "INSERT INTO user_memos(account, id_tx, height, user_memo)
+                SELECT account, id_tx, height, ?3 FROM transactions
+                WHERE account = ?1 AND id_tx = ?2
                 ON CONFLICT(account, id_tx) DO UPDATE SET user_memo = excluded.user_memo",
             )
             .bind(account)

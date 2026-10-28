@@ -182,12 +182,25 @@ pub async fn transaction_ref(
     account: u32,
     txid: &[u8],
 ) -> Result<(u32, u32)> {
-    sqlx::query_as("SELECT id_tx, height FROM transactions WHERE account = ? AND txid = ?")
-        .bind(account)
-        .bind(txid)
-        .fetch_optional(&mut *conn)
+    find_transaction(conn, account, txid)
         .await?
         .ok_or_else(|| anyhow!("account {account} has no transaction {}", hex::encode(txid)))
+}
+
+/// [`transaction_ref`] for a caller to whom a missing transaction is a
+/// state, not an error: one rewound since the caller saw it.
+pub async fn find_transaction(
+    conn: &mut SqliteConnection,
+    account: u32,
+    txid: &[u8],
+) -> Result<Option<(u32, u32)>> {
+    Ok(
+        sqlx::query_as("SELECT id_tx, height FROM transactions WHERE account = ? AND txid = ?")
+            .bind(account)
+            .bind(txid)
+            .fetch_optional(&mut *conn)
+            .await?,
+    )
 }
 
 /// Set the block time of the account's transactions at `height`. With
@@ -904,6 +917,7 @@ pub async fn trim_to(tx: &mut Transaction<'_, Sqlite>, account: u32, height: u32
         "witnesses",
         "outputs",
         "memos",
+        "user_memos",
     ] {
         // Audited: `table` comes from the fixed list above.
         sqlx::query(sqlx::AssertSqlSafe(format!(
@@ -929,6 +943,7 @@ pub async fn delete_account_data(tx: &mut Transaction<'_, Sqlite>, account: u32)
     for table in [
         "outputs",
         "memos",
+        "user_memos",
         "witnesses",
         "notes",
         "spends",
@@ -1106,6 +1121,7 @@ mod tests {
                     },
                 )
                 .await?;
+                crate::db::set_user_memo(&mut db, account, id_tx, Some("note".into())).await?;
                 store_header(
                     &mut db,
                     account,
@@ -1139,6 +1155,7 @@ mod tests {
             "witnesses",
             "outputs",
             "memos",
+            "user_memos",
         ] {
             let above: i64 = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
                 "SELECT COUNT(*) FROM {table} WHERE account = 1 AND height > 120"
@@ -1156,6 +1173,11 @@ mod tests {
         assert_eq!(
             count(&mut db, "SELECT COUNT(*) FROM notes WHERE account = 1").await?,
             1
+        );
+        assert_eq!(
+            count(&mut db, "SELECT COUNT(*) FROM user_memos WHERE account = 1").await?,
+            1,
+            "the note on the transaction at the trim height stays"
         );
         let checkpoints: Vec<(u32, u32)> =
             sqlx::query_as("SELECT account, height FROM sync_heights ORDER BY account")

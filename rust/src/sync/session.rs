@@ -35,14 +35,24 @@ impl SyncSession {
     /// Start a run, or `None` while another one is live.
     pub fn try_begin(&self) -> Option<SyncRun<'_>> {
         let guard = self.lock.try_lock().ok()?;
+        Some(self.run(guard))
+    }
+
+    /// Start a run once the live one, if any, has ended.
+    pub async fn begin(&self) -> SyncRun<'_> {
+        let guard = self.lock.lock().await;
+        self.run(guard)
+    }
+
+    fn run<'a>(&'a self, guard: tokio::sync::MutexGuard<'a, ()>) -> SyncRun<'a> {
         let (sender, receiver) = broadcast::channel(16);
         *self.cancel.lock().unwrap() = Some(sender.clone());
-        Some(SyncRun {
+        SyncRun {
             _guard: guard,
             session: self,
             sender,
             receiver,
-        })
+        }
     }
 
     /// Ask the live run to stop. Returns whether there was one.

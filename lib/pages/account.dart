@@ -1075,6 +1075,8 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
     final h = await getDbHeight(account: account.id, c: c);
     final ss = ref.read(syncStateAccountProvider(account.id).notifier);
     ss.updateHeight(h.height, h.time);
+    // The history, notes and memos above the rewind height are gone.
+    ref.invalidate(accountProvider(account.id));
   }
 
   void onReset() async {

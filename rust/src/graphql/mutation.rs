@@ -10,11 +10,10 @@ use crate::{
         subs::SUBS,
         Context,
     },
-    Sink,
 };
 use bigdecimal::BigDecimal;
 use juniper::{graphql_object, FieldResult, GraphQLInputObject, GraphQLObject};
-use tokio::sync::{mpsc::Sender, Mutex};
+use tokio::sync::Mutex;
 use tokio_util::sync::CancellationToken;
 
 pub struct Mutation {}
@@ -73,6 +72,32 @@ pub struct UnsignedTx {
 
 /// The height a sync mutation reports. A skipped run is an error: the
 /// caller asked for a sync and none happened.
+/// Sync through the wallet's driver, without progress: the mutation only
+/// answers once the sync has ended.
+async fn synchronize(
+    coin: &crate::api::coin::Coin,
+    accounts: Vec<u32>,
+    current_height: u32,
+    transparent_limit: u32,
+    fast: bool,
+) -> anyhow::Result<crate::api::sync::SyncOutcome> {
+    let (progress, _) = tokio::sync::mpsc::channel(1);
+    coin.driver()?
+        .sync(
+            coin,
+            crate::sync::driver::SyncRequest {
+                accounts,
+                current_height,
+                actions_per_sync: 100_000,
+                transparent_limit,
+                checkpoint_age: 10_000,
+                skip_details: fast,
+            },
+            progress,
+        )
+        .await
+}
+
 fn synced_height(outcome: crate::api::sync::SyncOutcome, current_height: u32) -> FieldResult<i32> {
     use crate::api::sync::SyncOutcome;
     match outcome {
@@ -275,17 +300,7 @@ impl Mutation {
             .unwrap_or(crate::sync::DEFAULT_TRANSPARENT_LIMIT);
         let id_accounts = id_accounts.into_iter().map(|v| v as u32).collect();
         let current_height = crate::api::network::get_current_height(&context.coin).await?;
-        let outcome = crate::sync::synchronize_impl(
-            (),
-            id_accounts,
-            current_height,
-            100_000,
-            transparent_limit,
-            10_000,
-            fast,
-            &context.coin,
-        )
-        .await?;
+        let outcome = synchronize(&context.coin, id_accounts, current_height, transparent_limit, fast).await?;
         synced_height(outcome, current_height)
     }
 
@@ -301,17 +316,8 @@ impl Mutation {
             .map(|v| v as u32)
             .unwrap_or(crate::sync::DEFAULT_TRANSPARENT_LIMIT);
         let current_height = crate::api::network::get_current_height(&context.coin).await?;
-        let outcome = crate::sync::synchronize_impl(
-            (),
-            vec![id_account as u32],
-            current_height,
-            100_000,
-            transparent_limit,
-            10_000,
-            fast,
-            &context.coin,
-        )
-        .await?;
+        let outcome =
+            synchronize(&context.coin, vec![id_account as u32], current_height, transparent_limit, fast).await?;
         synced_height(outcome, current_height)
     }
 
@@ -530,16 +536,6 @@ impl Mutation {
         check_admin_auth(context)?;
         context.driver.cancel(crate::frost::driver::Cancel::Sign).await?;
         Ok(true)
-    }
-}
-
-impl<T: Send + Sync> Sink<T> for Sender<T> {
-    async fn send(&self, value: T) {
-        let _ = tokio::sync::mpsc::Sender::send(self, value).await;
-    }
-
-    async fn send_error(&self, e: anyhow::Error) {
-        tracing::error!("Error: {e}");
     }
 }
 

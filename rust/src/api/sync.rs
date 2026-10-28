@@ -6,6 +6,7 @@ use crate::Sink;
 
 use crate::db::calculate_balance;
 use crate::io::SyncHeight;
+use crate::sync::driver::{Apply, Rewind, SyncRequest, DETAILS_BATCH};
 use crate::sync::BlockHeader;
 
 #[cfg(feature = "flutter")]
@@ -32,18 +33,27 @@ pub async fn synchronize(
     fast: bool,
     c: &Coin,
 ) -> Result<()> {
-    match crate::sync::synchronize_impl(
-        progress.clone(),
+    // The driver reports through a channel; forward it to the stream.
+    let (events, mut receiver) = tokio::sync::mpsc::channel(16);
+    let stream = progress.clone();
+    tokio::spawn(async move {
+        while let Some(event) = receiver.recv().await {
+            stream.send(event).await;
+        }
+    });
+    let request = SyncRequest {
         accounts,
         current_height,
         actions_per_sync,
         transparent_limit,
         checkpoint_age,
-        fast,
-        c,
-    )
-    .await
-    {
+        skip_details: fast,
+    };
+    let result = match c.driver() {
+        Ok(driver) => driver.sync(c, request, events).await,
+        Err(e) => Err(e),
+    };
+    match result {
         Ok(outcome) => progress.send(SyncEvent::Finished { outcome }).await,
         Err(e) => progress.send_error(e).await,
     }
@@ -64,10 +74,11 @@ pub async fn cancel_sync(c: &Coin) -> Result<()> {
     Ok(())
 }
 
+/// Rewind `account` to the last checkpoint at or before `height`, through
+/// the sync driver: a sync in flight is cancelled first.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn rewind_sync(height: u32, account: u32, c: &Coin) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-    crate::sync::rewind_sync(&c.network(), &mut *connection, account, height).await
+    c.driver()?.rewind(c, account, Rewind::To(height)).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -78,17 +89,30 @@ pub async fn get_db_height(account: u32, c: &Coin) -> Result<SyncHeight> {
 
 /// Decrypt memos and store transaction details for `account`.
 ///
-/// Deliberately does NOT take the wallet's sync session. It did briefly, to
-/// stop it colliding with `do_dkg` — but holding the session here let it
-/// starve the next sync, which was then skipped, and the DKG went on to build
-/// a transaction from stale notes and double-spent. Detail fetching is best
-/// effort and its `database is locked` failures are self-healing; a starved
-/// sync is not.
+/// The fetching and decryption run outside the wallet's sync session: they
+/// take a network round trip per transaction, and holding the session for
+/// that once starved a sync, which was skipped while a DKG went on to build
+/// a transaction from stale notes and double-spent. Only the writes go
+/// through the sync driver, a batch at a time, so they never land on rows a
+/// rewind has deleted meanwhile.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn fetch_tx_details(account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
-    crate::memo::fetch_tx_details(&c.network(), &mut *connection, &mut client, account).await?;
+    let network = c.network();
+    let txids = crate::memo::pending_details(&mut connection, account).await?;
+    for batch in txids.chunks(DETAILS_BATCH) {
+        let mut txs = Vec::with_capacity(batch.len());
+        for txid in batch {
+            txs.push(
+                crate::memo::decrypt_tx(&network, &mut connection, &mut client, account, txid)
+                    .await?,
+            );
+        }
+        c.driver()?
+            .apply(c, Apply::TxDetails { account, txs })
+            .await?;
+    }
     Ok(())
 }
 

@@ -43,6 +43,8 @@ Future<PoolBalance> balance({required int account, required Coin c}) =>
 Future<void> cancelSync({required Coin c}) =>
     RustLib.instance.api.crateApiSyncCancelSync(c: c);
 
+/// Rewind `account` to the last checkpoint at or before `height`, through
+/// the sync driver: a sync in flight is cancelled first.
 Future<void> rewindSync(
         {required int height, required int account, required Coin c}) =>
     RustLib.instance.api
@@ -53,12 +55,12 @@ Future<SyncHeight> getDbHeight({required int account, required Coin c}) =>
 
 /// Decrypt memos and store transaction details for `account`.
 ///
-/// Deliberately does NOT take the wallet's sync session. It did briefly, to
-/// stop it colliding with `do_dkg` — but holding the session here let it
-/// starve the next sync, which was then skipped, and the DKG went on to build
-/// a transaction from stale notes and double-spent. Detail fetching is best
-/// effort and its `database is locked` failures are self-healing; a starved
-/// sync is not.
+/// The fetching and decryption run outside the wallet's sync session: they
+/// take a network round trip per transaction, and holding the session for
+/// that once starved a sync, which was skipped while a DKG went on to build
+/// a transaction from stale notes and double-spent. Only the writes go
+/// through the sync driver, a batch at a time, so they never land on rows a
+/// rewind has deleted meanwhile.
 Future<void> fetchTxDetails({required int account, required Coin c}) =>
     RustLib.instance.api.crateApiSyncFetchTxDetails(account: account, c: c);
 

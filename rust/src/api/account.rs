@@ -287,9 +287,9 @@ pub async fn generate_next_change_address(account: u32, c: &Coin) -> Result<Opti
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn reset_sync(id: u32, c: &Coin) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-
-    crate::account::reset_sync(&c.network(), &mut connection, id).await
+    c.driver()?
+        .rewind(c, id, crate::sync::driver::Rewind::Reset)
+        .await
 }
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]

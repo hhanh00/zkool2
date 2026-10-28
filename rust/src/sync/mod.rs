@@ -14,6 +14,7 @@ use std::collections::HashSet;
 use sqlx::Connection;
 
 pub mod chain_log;
+pub mod driver;
 pub mod plan;
 pub mod session;
 mod shielded;
@@ -41,55 +42,16 @@ pub struct NoteExtended {
     pub address: Vec<u8>,
     pub memo: Vec<u8>,
 }
-/// Synchronize `accounts` up to `current_height`.
+/// Synchronize `accounts` up to `current_height` under `run`, the wallet's
+/// session the caller holds: the sync driver for a sync the app or the
+/// server asked for, the protocol driver before it steps a DKG or signing
+/// session, so its writes never overlap a sync in between.
 ///
 /// Observe the accounts, plan the ranges to scan (see [`plan::plan_sync`]),
 /// then run each range in order: transparent scan, shielded scan, block
 /// times, and the detail pass unless `skip_details`. Progress streams through
 /// `progress`; the returned outcome says how the run ended. An error is a
 /// failed run; the work committed before it stays.
-///
-/// Only one sync runs at a time per wallet: when another holds the handle's
-/// session the call returns [`SyncOutcome::Skipped`] without touching
-/// anything.
-#[allow(clippy::too_many_arguments)]
-pub async fn synchronize_impl<S: Sink<SyncEvent> + Send + 'static>(
-    progress: S,
-    accounts: Vec<u32>,
-    current_height: u32,
-    actions_per_sync: u32,
-    transparent_limit: u32,
-    checkpoint_age: u32,
-    skip_details: bool,
-    c: &Coin,
-) -> Result<SyncOutcome> {
-    if accounts.is_empty() {
-        return Ok(SyncOutcome::Synced {
-            height: current_height,
-        });
-    }
-
-    let Some(mut run) = c.sync.try_begin() else {
-        return Ok(SyncOutcome::Skipped);
-    };
-    synchronize_within(
-        &mut run,
-        progress,
-        accounts,
-        current_height,
-        actions_per_sync,
-        transparent_limit,
-        checkpoint_age,
-        skip_details,
-        c,
-    )
-    .await
-}
-
-/// [`synchronize_impl`] for a caller that already holds the session, and
-/// keeps holding it afterwards: the protocol driver syncs and then steps a
-/// DKG or signing session under one run, so its writes never overlap a
-/// sync the app starts in between. Never returns [`SyncOutcome::Skipped`].
 #[allow(clippy::too_many_arguments)]
 pub async fn synchronize_within<S: Sink<SyncEvent> + Send + 'static>(
     run: &mut SyncRun<'_>,

@@ -88,3 +88,15 @@ impl<T: Send + Sync + std::fmt::Debug> Sink<T> for () {
     async fn send(&self, _value: T) {}
     async fn send_error(&self, _error: Error) {}
 }
+
+/// A channel sender: what the sync driver carries a sync's progress in. A
+/// receiver already dropped loses the values, like `()`.
+impl<T: Send + Sync> Sink<T> for tokio::sync::mpsc::Sender<T> {
+    async fn send(&self, value: T) {
+        let _ = tokio::sync::mpsc::Sender::send(self, value).await;
+    }
+
+    async fn send_error(&self, error: Error) {
+        tracing::error!("Error: {error}");
+    }
+}

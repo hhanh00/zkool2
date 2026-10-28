@@ -16,8 +16,7 @@ pub async fn fill_missing_tx_prices(
         crate::net::http::proxy_url(c.transport, &c.proxy),
         std::time::Duration::from_secs(15),
     )?;
-    crate::budget::fill_missing_tx_prices(&mut connection, account, &currency, &api, &client)
-        .await
+    crate::budget::fill_missing_tx_prices(&mut connection, account, &currency, &api, &client).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -38,9 +37,16 @@ pub async fn set_user_memo(
     account: u32,
     c: &Coin,
 ) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-    crate::db::set_user_memo(&mut connection, account, id_tx, memo).await?;
-    Ok(())
+    c.driver()?
+        .apply(
+            c,
+            crate::sync::driver::Apply::UserMemo {
+                account,
+                id_tx,
+                memo,
+            },
+        )
+        .await
 }
 
 #[cfg_attr(feature = "flutter", frb)]

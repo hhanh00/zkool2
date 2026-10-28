@@ -860,12 +860,13 @@ pub async fn import_account(
     for user_memo in io_account.user_memos.iter() {
         if let Some(new_id_tx) = new_txs.get(&user_memo.id_tx) {
             sqlx::query(
-                "INSERT INTO user_memos
-                (account, id_tx, user_memo) VALUES (?, ?, ?)",
+                "INSERT INTO user_memos (account, id_tx, height, user_memo)
+                SELECT account, id_tx, height, ? FROM transactions
+                WHERE account = ? AND id_tx = ?",
             )
+            .bind(&user_memo.user_memo)
             .bind(new_id_account)
             .bind(new_id_tx)
-            .bind(&user_memo.user_memo)
             .execute(&mut *tx)
             .await?;
         }
