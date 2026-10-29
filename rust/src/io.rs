@@ -515,9 +515,11 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
     Ok(data)
 }
 
+/// Import an exported account. For a caller holding the sync session: the
+/// sync driver, so a sync cannot pick the account up half-written.
 pub async fn import_account(
     network: &Network,
-    connection: &mut SqliteConnection,
+    connection: &mut crate::sync::session::Held<'_>,
     data: &[u8],
 ) -> Result<()> {
     let mut decoder = zstd::Decoder::new(data)?;
@@ -1398,7 +1400,9 @@ mod incoming_only_export_tests {
         assert!(before.1 .1.is_none() && before.1 .2.is_some(), "incoming-only sapling row");
 
         let data = export_account(&mut db, account).await?;
-        import_account(&NETWORK, &mut db, &data).await?;
+        let session = crate::sync::session::SyncSession::new();
+        let run = session.try_begin().unwrap();
+        import_account(&NETWORK, &mut run.held(&mut db), &data).await?;
         let (imported,): (u32,) = sqlx::query_as("SELECT MAX(id_account) FROM accounts")
             .fetch_one(&mut db)
             .await?;
@@ -1550,7 +1554,9 @@ mod dkg_export_tests {
 
         let data = export_account(&mut src, account).await?;
         let mut dst = fresh_db().await?;
-        import_account(&Network::Main, &mut dst, &data).await?;
+        let session = crate::sync::session::SyncSession::new();
+        let run = session.try_begin().unwrap();
+        import_account(&Network::Main, &mut run.held(&mut dst), &data).await?;
         let imported = newest_account(&mut dst).await?;
         let after = dkg_rows(&mut dst, imported).await?;
         assert_eq!(after, before);
@@ -1598,7 +1604,9 @@ mod dkg_export_tests {
         let data = encoder.finish()?;
 
         let mut dst = fresh_db().await?;
-        import_account(&Network::Main, &mut dst, &data).await?;
+        let session = crate::sync::session::SyncSession::new();
+        let run = session.try_begin().unwrap();
+        import_account(&Network::Main, &mut run.held(&mut dst), &data).await?;
         let imported = newest_account(&mut dst).await?;
         let rows = dkg_rows(&mut dst, imported).await?;
         // No version in the file, a key package and no round-0 package:
@@ -1662,7 +1670,9 @@ mod dkg_export_tests {
         let data = encoder.finish()?;
 
         let mut dst = fresh_db().await?;
-        import_account(&Network::Main, &mut dst, &data).await?;
+        let session = crate::sync::session::SyncSession::new();
+        let run = session.try_begin().unwrap();
+        import_account(&Network::Main, &mut run.held(&mut dst), &data).await?;
         let imported = newest_account(&mut dst).await?;
         let rows = dkg_rows(&mut dst, imported).await?;
         assert_eq!(rows.params.map(|p| (p.6, p.7)), Some((1, None)));

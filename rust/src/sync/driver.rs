@@ -81,6 +81,8 @@ pub enum Apply {
     Lock { account: u32, op: LockOp },
     /// An asset about to be issued, so the sync can name it.
     RecordAsset(AssetRecord),
+    /// An account backup, decrypted, to import.
+    ImportAccount { data: Vec<u8> },
 }
 
 /// What a sync is asked to do, as the app and the server pass it.
@@ -345,6 +347,9 @@ impl Ops for WalletOps {
             Apply::RecordAsset(asset) => {
                 crate::sync::chain_log::record_asset(&mut held, &asset.as_row()).await
             }
+            Apply::ImportAccount { data } => {
+                crate::io::import_account(&c.network(), &mut held, &data).await
+            }
         }
     }
 
@@ -407,6 +412,7 @@ mod tests {
                 }
                 Apply::Lock { account, op } => format!("lock {account} {op:?}"),
                 Apply::RecordAsset(asset) => format!("asset {}", hex::encode(asset.desc_hash)),
+                Apply::ImportAccount { data } => format!("import {} bytes", data.len()),
             };
             self.log.lock().unwrap().push(what);
             Ok(())

@@ -492,11 +492,11 @@ pub async fn export_account(id: u32, passphrase: &str, c: &Coin) -> Result<Vec<u
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn import_account(passphrase: &str, data: &[u8], c: &Coin) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-
+    // Decrypted here; only the write goes through the sync driver.
     let decrypted = decrypt(passphrase, data)?;
-    crate::io::import_account(&c.network(), &mut connection, &decrypted).await?;
-    Ok(())
+    c.driver()?
+        .apply(c, crate::sync::driver::Apply::ImportAccount { data: decrypted })
+        .await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
