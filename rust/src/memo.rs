@@ -1,4 +1,7 @@
-use crate::sync::chain_log::{self, MemoRow, NoteKey, OutputRow, TransactionDetails};
+use crate::sync::{
+    chain_log::{self, MemoRow, NoteKey, OutputRow, TransactionDetails},
+    session::Held,
+};
 use anyhow::Result;
 use orchard::{
     note::ExtractedNoteCommitment,
@@ -30,7 +33,7 @@ const TX_TYPE_MIGRATION: u8 = 16;
 /// [`crate::api::sync::fetch_tx_details`].
 pub async fn fetch_tx_details(
     network: &Network,
-    connection: &mut SqliteConnection,
+    connection: &mut Held<'_>,
     client: &mut Client,
     account: u32,
 ) -> Result<()> {
@@ -484,7 +487,7 @@ fn collect_memo(
 /// no longer has the transaction: it was rewound since the decryption, and
 /// the sync that records it again leaves it for the next detail pass.
 pub async fn apply_tx_details(
-    connection: &mut SqliteConnection,
+    connection: &mut Held<'_>,
     account: u32,
     tx: &DecryptedTx,
 ) -> Result<bool> {
@@ -649,7 +652,9 @@ mod tests {
             }],
         };
 
-        assert!(apply_tx_details(&mut db, 1, &tx).await?);
+        let session = crate::sync::session::SyncSession::new();
+        let run = session.try_begin().unwrap();
+        assert!(apply_tx_details(&mut run.held(&mut db), 1, &tx).await?);
         let (details, fee): (bool, i64) =
             sqlx::query_as("SELECT details, fee FROM transactions WHERE id_tx = ?")
                 .bind(id_tx)
@@ -669,7 +674,7 @@ mod tests {
 
         // Rewound since the decryption: the account no longer has it.
         tx.txid = vec![8];
-        assert!(!apply_tx_details(&mut db, 1, &tx).await?);
+        assert!(!apply_tx_details(&mut run.held(&mut db), 1, &tx).await?);
         let memos: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM memos")
             .fetch_one(&mut db)
             .await?;

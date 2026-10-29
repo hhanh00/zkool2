@@ -2134,7 +2134,20 @@ pub async fn get_addresses(
     Ok(addresses)
 }
 
+/// Reset `account` to its birth height: the chain log goes, the
+/// checkpoints start over. For a caller holding the session: the sync
+/// driver, for the user's reset.
 pub async fn reset_sync(
+    network: &Network,
+    connection: &mut crate::sync::session::Held<'_>,
+    account: u32,
+) -> Result<()> {
+    reset_within(network, connection, account).await
+}
+
+/// [`reset_sync`] from inside a sync run (a rewind that found no
+/// checkpoint). Called under the session by construction.
+pub(crate) async fn reset_within(
     network: &Network,
     connection: &mut SqliteConnection,
     account: u32,

@@ -6,8 +6,18 @@
 //! run is the proof that the caller holds the lock, and the only source of
 //! the cancellation receivers the scan loops listen on. Dropping the run
 //! releases the session.
+//!
+//! A write of the chain log outside the sync itself (a rewind, the details
+//! of a transaction, a note the user wrote) takes a [`Held`] connection,
+//! which only a run hands out: the function's signature says it must be
+//! called under the session, instead of its caller having to know.
 
-use std::sync::Mutex;
+use std::{
+    ops::{Deref, DerefMut},
+    sync::Mutex,
+};
+
+use sqlx::SqliteConnection;
 use tokio::sync::broadcast;
 
 #[derive(Default)]
@@ -68,10 +78,33 @@ impl SyncSession {
     }
 }
 
+/// A connection to write the chain log through, obtainable only from a
+/// [`SyncRun`]: a function that takes one is called under the session.
+/// Derefs to the connection, so the row helpers underneath take it as is.
+pub struct Held<'a>(&'a mut SqliteConnection);
+
+impl Deref for Held<'_> {
+    type Target = SqliteConnection;
+    fn deref(&self) -> &SqliteConnection {
+        self.0
+    }
+}
+
+impl DerefMut for Held<'_> {
+    fn deref_mut(&mut self) -> &mut SqliteConnection {
+        self.0
+    }
+}
+
 impl SyncRun<'_> {
     /// A receiver that fires when the run is cancelled.
     pub fn cancellation(&self) -> broadcast::Receiver<()> {
         self.sender.subscribe()
+    }
+
+    /// `connection`, marked as held under this run.
+    pub fn held<'a>(&'a self, connection: &'a mut SqliteConnection) -> Held<'a> {
+        Held(connection)
     }
 
     /// Whether a cancel was requested at any point during the run.

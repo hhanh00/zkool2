@@ -22,7 +22,7 @@ mod sweep;
 mod transparent;
 
 use plan::{plan_sync, AccountSyncState, SyncRange};
-use session::SyncRun;
+use session::{Held, SyncRun};
 
 pub use shielded::{
     get_compact_block_range, get_tree_state, preload_account_key_cache, shielded_sync,
@@ -193,8 +193,7 @@ async fn run_sync<S: Sink<SyncEvent> + Send + 'static>(
     }
 
     for account in accounts {
-        chain_log::apply_pending_metadata(&mut connection, *account, params.current_height)
-            .await?;
+        chain_log::apply_pending_metadata(&mut connection, *account, params.current_height).await?;
     }
     Ok(())
 }
@@ -271,7 +270,13 @@ async fn run_range(
 
     if !params.skip_details {
         for account in &account_ids {
-            crate::memo::fetch_tx_details(&network, connection, &mut client, *account).await?;
+            crate::memo::fetch_tx_details(
+                &network,
+                &mut run.held(connection),
+                &mut client,
+                *account,
+            )
+            .await?;
         }
     }
 
@@ -349,9 +354,21 @@ pub async fn check_witness_consistency(
     Ok(())
 }
 
-// for each account, find the latest checkpoint before the given height
-// and trim the synchronization data to that height
+/// Rewind `account` to its last checkpoint at or before `height`, or to
+/// its birth when it has none. For a caller holding the session: the sync
+/// driver, for the user's rewind.
 pub async fn rewind_sync(
+    network: &Network,
+    connection: &mut Held<'_>,
+    account: u32,
+    height: u32,
+) -> Result<()> {
+    rewind_within(network, connection, account, height).await
+}
+
+/// [`rewind_sync`] from inside a sync run, on its own transaction: the
+/// scan found a reorg. Called under the session by construction.
+pub(crate) async fn rewind_within(
     network: &Network,
     connection: &mut SqliteConnection,
     account: u32,
@@ -362,7 +379,7 @@ pub async fn rewind_sync(
     if let Some(prev_height) = prev_height {
         trim_sync_data(&mut *connection, account, prev_height).await?;
     } else {
-        crate::account::reset_sync(network, &mut *connection, account).await?;
+        crate::account::reset_within(network, &mut *connection, account).await?;
     }
 
     Ok(())
@@ -517,7 +534,9 @@ mod header_tests {
         )
         .execute(&mut db)
         .await?;
-        rewind_sync(&Network::Main, &mut db, 1, 175).await?;
+        let session = session::SyncSession::new();
+        let run = session.try_begin().unwrap();
+        rewind_sync(&Network::Main, &mut run.held(&mut db), 1, 175).await?;
         let a = get_db_height(&mut db, 1).await?;
         let b = get_db_height(&mut db, 2).await?;
         assert_eq!((a.height, a.time), (100, 101));

@@ -1121,7 +1121,15 @@ mod tests {
                     },
                 )
                 .await?;
-                crate::db::set_user_memo(&mut db, account, &[txid], Some("note".into())).await?;
+                let session = crate::sync::session::SyncSession::new();
+                let run = session.try_begin().unwrap();
+                crate::db::set_user_memo(
+                    &mut run.held(&mut db),
+                    account,
+                    &[txid],
+                    Some("note".into()),
+                )
+                .await?;
                 store_header(
                     &mut db,
                     account,

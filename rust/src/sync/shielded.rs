@@ -16,14 +16,14 @@ use crate::keys::{OrchardViewingKeys, SaplingViewingKeys};
 use crate::Client;
 use std::mem;
 
+use super::chain_log::{self, NoteKey, NoteRow, SpendRow, TransactionRow};
+use super::{check_witness_consistency, get_heights_without_time, rewind_within, WarpSyncMessage};
 use crate::{
     api::sync::SyncProgress,
     lwd::CompactBlock,
     warp::{legacy::CommitmentTreeFrontier, sync::warp_sync},
 };
 use bincode::config;
-use super::chain_log::{self, NoteKey, NoteRow, SpendRow, TransactionRow};
-use super::{check_witness_consistency, get_heights_without_time, rewind_sync, WarpSyncMessage};
 use sqlx::{Connection, Sqlite, SqlitePool};
 
 use tokio::sync::mpsc::Sender;
@@ -36,7 +36,6 @@ pub struct AccountKeyCache {
     pub sapling: HashMap<u32, SaplingViewingKeys>,
     pub orchard: HashMap<u32, OrchardViewingKeys>,
 }
-
 
 pub async fn get_compact_block_range(
     network: &Network,
@@ -462,7 +461,7 @@ async fn handle_message(
         WarpSyncMessage::Rewind(accounts, height) => {
             debug!("Discard height: {}", height);
             for account in accounts {
-                rewind_sync(network, db_tx, account, height).await?;
+                rewind_within(network, db_tx, account, height).await?;
             }
         }
         WarpSyncMessage::Error(e) => {

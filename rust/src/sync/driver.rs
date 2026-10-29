@@ -291,26 +291,26 @@ impl Ops for WalletOps {
 
     async fn rewind(&self, coin: Coin, account: u32, rewind: Rewind) -> Result<()> {
         let c = &coin;
-        let _run = c.sync.begin().await;
+        let run = c.sync.begin().await;
         let mut connection = c.get_connection().await?;
+        let mut held = run.held(&mut connection);
         match rewind {
             Rewind::To(height) => {
-                super::rewind_sync(&c.network(), &mut connection, account, height).await
+                super::rewind_sync(&c.network(), &mut held, account, height).await
             }
-            Rewind::Reset => {
-                crate::account::reset_sync(&c.network(), &mut connection, account).await
-            }
+            Rewind::Reset => crate::account::reset_sync(&c.network(), &mut held, account).await,
         }
     }
 
     async fn apply(&self, coin: Coin, apply: Apply) -> Result<()> {
         let c = &coin;
-        let _run = c.sync.begin().await;
+        let run = c.sync.begin().await;
         let mut connection = c.get_connection().await?;
+        let mut held = run.held(&mut connection);
         match apply {
             Apply::TxDetails { account, txs } => {
                 for tx in &txs {
-                    crate::memo::apply_tx_details(&mut connection, account, tx).await?;
+                    crate::memo::apply_tx_details(&mut held, account, tx).await?;
                 }
                 Ok(())
             }
@@ -318,7 +318,7 @@ impl Ops for WalletOps {
                 account,
                 txid,
                 memo,
-            } => crate::db::set_user_memo(&mut connection, account, &txid, memo).await,
+            } => crate::db::set_user_memo(&mut held, account, &txid, memo).await,
         }
     }
 

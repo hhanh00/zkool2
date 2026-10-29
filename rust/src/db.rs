@@ -2419,7 +2419,7 @@ pub async fn store_pending_tx(
 /// it trims the note too; without the transaction there is nothing to note
 /// and the call does nothing.
 pub async fn set_user_memo(
-    connection: &mut SqliteConnection,
+    connection: &mut crate::sync::session::Held<'_>,
     account: u32,
     txid: &[u8],
     memo: Option<String>,
@@ -2435,7 +2435,7 @@ pub async fn set_user_memo(
             .bind(account)
             .bind(txid)
             .bind(&memo)
-            .execute(&mut *connection)
+            .execute(&mut **connection)
             .await?;
         }
         _ => {
@@ -2445,7 +2445,7 @@ pub async fn set_user_memo(
             )
             .bind(account)
             .bind(txid)
-            .execute(&mut *connection)
+            .execute(&mut **connection)
             .await?;
         }
     }
