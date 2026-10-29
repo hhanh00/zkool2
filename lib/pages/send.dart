@@ -202,7 +202,7 @@ class SendPageState extends ConsumerState<SendPage> {
                               leading: a.avatar(),
                               title: Text(a.name),
                               subtitle: Text('Account #${a.id}', style: t.bodySmall),
-                              onTap: () => _selectSuggestion('!', a.name),
+                              onTap: () => _selectSuggestion(accountAddress(a, c)),
                             ))
                         .toList(),
                   ),
@@ -216,7 +216,7 @@ class SendPageState extends ConsumerState<SendPage> {
                               leading: Icon(Icons.person),
                               title: Text(c.name),
                               subtitle: Text(c.addresses.isNotEmpty ? c.addresses.first : 'No address', style: t.bodySmall),
-                              onTap: () => _selectSuggestion('@', c.name),
+                              onTap: () => _selectSuggestion(Future.value(contactAddress(c))),
                             ))
                         .toList(),
                   ),
@@ -526,7 +526,12 @@ class SendPageState extends ConsumerState<SendPage> {
         final resolved = await resolveAccountName(address, accounts, c);
         if (resolved == null) {
           if (mounted) {
-            showException(context, 'Unknown account: ${address.substring(1)}');
+            final name = referencedName(address, '!') ?? '';
+            final several = allNamed(name, accounts, (a) => a.name).length > 1;
+            showException(
+              context,
+              several ? 'Ambiguous account name: $name. Pick it from the list.' : 'Unknown account: $name',
+            );
           }
           return null;
         }
@@ -629,15 +634,11 @@ class SendPageState extends ConsumerState<SendPage> {
     );
   }
 
-  Future<void> _selectSuggestion(String prefix, String name) async {
-    String? resolved;
-    if (prefix == '!') {
-      final accounts = await ref.read(getAccountsProvider.future);
-      resolved = await resolveAccountName('!$name', accounts, c);
-    } else if (prefix == '@') {
-      final contacts = await ref.read(getContactsProvider.future);
-      resolved = resolveContactName('@$name', contacts);
-    }
+  /// Put the address of the suggestion the user tapped in the field: the
+  /// item itself, not its name looked up again, which could find another
+  /// item of the same name in a different case.
+  Future<void> _selectSuggestion(Future<String?> pick) async {
+    final resolved = await pick;
     if (resolved == null) return;
 
     formKey.currentState!.fields["address"]!.didChange(resolved);
