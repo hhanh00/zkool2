@@ -53,13 +53,15 @@ pub struct Coin {
 }
 
 impl Coin {
+    /// Open the wallet at `db_filepath`. The wallet's network is the one
+    /// stored in it; this handle's coin only names the network of a wallet
+    /// being created (the app passes the current wallet's when the user
+    /// creates one, the server its `--coin` flag).
     pub async fn open_database(
         &self,
         db_filepath: String,
         password: Option<String>,
     ) -> Result<Coin> {
-        let network = self.network();
-
         let hint_coin = if self.coin != 0 {
             Some(self.coin)
         } else {
@@ -69,14 +71,18 @@ impl Coin {
 
         let mut connection = pool.acquire().await?;
 
-        let mut default_coin = self.coin;
-        if default_coin == 2 && self.db_filepath.to_lowercase().contains("zsa") {
-            default_coin = 3;
-        }
+        // Written by `try_open` when it was missing, so always there.
         let coin = crate::db::get_prop(&mut connection, "coin")
             .await?
-            .unwrap_or(default_coin.to_string());
-        let coin = coin.parse::<u8>()?;
+            .ok_or_else(|| anyhow::anyhow!("the wallet has no network"))?
+            .parse::<u8>()?;
+        // The migrations encode addresses: for the wallet's network, not
+        // the caller's, which is the previous wallet's after a switch.
+        let network = Self {
+            coin,
+            ..self.clone()
+        }
+        .network();
 
         migrate_sapling_addresses(&network, &mut connection).await?;
         backfill_diversifier_index(&mut connection).await?;
@@ -310,32 +316,78 @@ async fn try_open(
 
     let mut connection = pool.acquire().await?;
     create_schema(&mut connection).await?;
-    if sqlx::query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='props'")
-        .fetch_optional(&mut *connection)
-        .await?
-        .is_some()
-    {
-        let coin_value = if let Some(coin) = hint_coin {
-            coin.to_string()
-        } else {
-            let testnet = db_filepath.contains("testnet");
-            let zsa = db_filepath.contains("zsa");
-            let regtest = db_filepath.contains("regtest");
-            if testnet {
-                "1"
-            } else if zsa {
-                "3"
-            } else if regtest {
-                "2"
-            } else {
-                "0"
+
+    // The stored network is the wallet's for good. It is set once, when
+    // the wallet is new: from the hint, else from the file name. A hint
+    // that disagrees later is the caller's, not the wallet's (the app
+    // passes the previous wallet's coin when switching databases).
+    match crate::db::get_prop(&mut connection, "coin").await? {
+        Some(stored) => {
+            if let Some(hint) = hint_coin {
+                if hint.to_string() != stored {
+                    tracing::warn!(
+                        "{db_filepath}: opened with coin {hint}, but the wallet is coin {stored}; keeping {stored}"
+                    );
+                }
             }
-            .to_string()
-        };
-        crate::db::put_prop(&mut connection, "coin", &coin_value).await?;
+        }
+        None => {
+            let coin_value = if let Some(coin) = hint_coin {
+                coin.to_string()
+            } else {
+                let testnet = db_filepath.contains("testnet");
+                let zsa = db_filepath.contains("zsa");
+                let regtest = db_filepath.contains("regtest");
+                if testnet {
+                    "1"
+                } else if zsa {
+                    "3"
+                } else if regtest {
+                    "2"
+                } else {
+                    "0"
+                }
+                .to_string()
+            };
+            crate::db::put_prop(&mut connection, "coin", &coin_value).await?;
+        }
     }
 
     Ok(pool)
+}
+
+#[cfg(test)]
+mod network_label_tests {
+    use super::Coin;
+
+    fn temp_db(name: &str) -> String {
+        let path = std::env::temp_dir().join(format!("{name}_{}.db", std::process::id()));
+        let _ = std::fs::remove_file(&path);
+        path.to_string_lossy().into_owned()
+    }
+
+    #[tokio::test]
+    async fn the_stored_network_survives_reopening_with_another_hint() {
+        let path = temp_db("zkool_label");
+        let first = Coin::new(Some(1))
+            .open_database(path.clone(), None)
+            .await
+            .unwrap();
+        assert_eq!(first.coin, 1, "a new wallet takes the hint");
+
+        let no_hint = Coin::new(None).open_database(path.clone(), None).await.unwrap();
+        assert_eq!(no_hint.coin, 1, "no hint: the stored network, not the file name");
+
+        let other_hint = Coin::new(Some(2)).open_database(path.clone(), None).await.unwrap();
+        assert_eq!(other_hint.coin, 1, "a differing hint does not relabel the wallet");
+    }
+
+    #[tokio::test]
+    async fn a_new_wallet_without_a_hint_is_named_by_its_file() {
+        let path = temp_db("zkool_regtest_label");
+        let coin = Coin::new(None).open_database(path, None).await.unwrap();
+        assert_eq!(coin.coin, 2);
+    }
 }
 
 async fn build_tor(directory: &str) -> anyhow::Result<TorClient<PreferredRuntime>> {

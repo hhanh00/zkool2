@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/store.dart';
@@ -56,7 +57,9 @@ class SplashPageState extends ConsumerState<SplashPage> {
 
   void tryOpenDatabase() async {
     String? password;
-    var c = coinContext.coin;
+    // A fresh handle: the wallet's network comes from the wallet itself,
+    // never from the one that was open before a switch.
+    var c = Coin();
     while (true) {
       final settings = await ref.read(appSettingsProvider.future);
       final dbName = settings.dbName;
