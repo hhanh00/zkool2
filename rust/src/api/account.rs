@@ -246,11 +246,9 @@ pub async fn update_account(update: &AccountUpdate, c: &Coin) -> Result<()> {
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn delete_account(account: u32, c: &Coin) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-
-    crate::db::delete_account(&mut connection, account).await?;
-
-    Ok(())
+    // Through the sync driver: a sync scanning the account is cancelled
+    // first, so it cannot write the account's rows back after the delete.
+    c.driver()?.delete(c, account).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -382,12 +380,6 @@ pub struct TAddressTxCount {
     pub amount: u64,
     pub tx_count: u32,
     pub time: u32,
-}
-
-pub async fn remove_account(account_id: u32, c: &Coin) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-    crate::db::delete_account(&mut connection, account_id).await?;
-    Ok(())
 }
 
 pub async fn list_tx_history(account: u32, c: &Coin) -> Result<Vec<Tx>> {

@@ -78,10 +78,6 @@ Future<String?> generateNextChangeAddress(
 Future<void> resetSync({required int id, required Coin c}) =>
     RustLib.instance.api.crateApiAccountResetSync(id: id, c: c);
 
-Future<void> removeAccount({required int accountId, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiAccountRemoveAccount(accountId: accountId, c: c);
-
 Future<List<Tx>> listTxHistory({required int account, required Coin c}) =>
     RustLib.instance.api.crateApiAccountListTxHistory(account: account, c: c);
 

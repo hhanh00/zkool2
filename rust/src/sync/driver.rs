@@ -16,7 +16,10 @@
 //!   next time, and the user who asked for the rewind is not kept waiting;
 //! - a [`Request::Apply`] is a short, database-only mutation prepared
 //!   outside the session: the details the app's background pass decrypted,
-//!   or a note the user wrote on a transaction.
+//!   or a note the user wrote on a transaction;
+//! - a [`Request::Delete`] removes an account. Like a rewind, it cancels a
+//!   sync in flight first: one scanning that account would write its rows
+//!   back after the delete.
 //!
 //! Requests run one at a time, in the order they arrived. Each carries the
 //! caller's wallet handle: the handle is rebuilt by every settings change
@@ -115,6 +118,18 @@ enum Request {
         apply: Apply,
         reply: oneshot::Sender<Result<()>>,
     },
+    Delete {
+        coin: Coin,
+        account: u32,
+        reply: oneshot::Sender<Result<()>>,
+    },
+}
+
+impl Request {
+    /// Whether the request must not wait for a sync in flight.
+    fn preempts(&self) -> bool {
+        matches!(self, Request::Rewind { .. } | Request::Delete { .. })
+    }
 }
 
 /// Handle to the driver task. Every clone of the wallet handle holds one;
@@ -165,6 +180,18 @@ impl SyncDriver {
         Self::answer(result).await
     }
 
+    /// Delete `account` of `coin`, cancelling a sync in flight first.
+    pub async fn delete(&self, coin: &Coin, account: u32) -> Result<()> {
+        let (reply, result) = oneshot::channel();
+        self.send(Request::Delete {
+            coin: coin.clone(),
+            account,
+            reply,
+        })
+        .await?;
+        Self::answer(result).await
+    }
+
     /// Apply a prepared mutation to `coin` after whatever the driver is doing.
     pub async fn apply(&self, coin: &Coin, apply: Apply) -> Result<()> {
         let (reply, result) = oneshot::channel();
@@ -207,13 +234,14 @@ trait Ops {
         rewind: Rewind,
     ) -> impl Future<Output = Result<()>> + Send;
     fn apply(&self, coin: Coin, apply: Apply) -> impl Future<Output = Result<()>> + Send;
+    fn delete(&self, coin: Coin, account: u32) -> impl Future<Output = Result<()>> + Send;
     /// Ask `coin`'s sync in flight to stop.
     fn cancel_sync(&self, coin: &Coin);
 }
 
-/// The driver loop. A sync runs while the inbox is watched: a rewind that
-/// arrives meanwhile cancels it, and every arrival is kept, in order, for
-/// after it.
+/// The driver loop. A sync runs while the inbox is watched: a rewind or a
+/// delete that arrives meanwhile cancels it, and every arrival is kept, in
+/// order, for after it.
 async fn run<O: Ops>(mut inbox: mpsc::Receiver<Request>, ops: O) {
     let mut pending = VecDeque::new();
     let mut closed = false;
@@ -240,8 +268,8 @@ async fn run<O: Ops>(mut inbox: mpsc::Receiver<Request>, ops: O) {
                         result = &mut sync => break result,
                         next = inbox.recv(), if !closed => match next {
                             Some(next) => {
-                                if matches!(next, Request::Rewind { .. }) {
-                                    info!("sync driver: a rewind is waiting; cancelling the sync");
+                                if next.preempts() {
+                                    info!("sync driver: a rewind or delete is waiting; cancelling the sync");
                                     ops.cancel_sync(&coin);
                                 }
                                 pending.push_back(next);
@@ -265,6 +293,18 @@ async fn run<O: Ops>(mut inbox: mpsc::Receiver<Request>, ops: O) {
                 let result = ops.rewind(coin, account, rewind).await;
                 if let Err(e) = &result {
                     error!("sync driver: rewind failed: {e:#}");
+                }
+                let _ = reply.send(result);
+            }
+            Request::Delete {
+                coin,
+                account,
+                reply,
+            } => {
+                info!("sync driver: deleting account {account}");
+                let result = ops.delete(coin, account).await;
+                if let Err(e) = &result {
+                    error!("sync driver: delete failed: {e:#}");
                 }
                 let _ = reply.send(result);
             }
@@ -316,6 +356,16 @@ impl Ops for WalletOps {
             }
             Rewind::Reset => crate::account::reset_sync(&c.network(), &mut held, account).await,
         }
+    }
+
+    async fn delete(&self, coin: Coin, account: u32) -> Result<()> {
+        let c = &coin;
+        let run = c.sync.begin().await;
+        let mut connection = c.get_connection().await?;
+        let mut held = run.held(&mut connection);
+        // The raw form: the DKG executor deletes its temporary accounts with
+        // it too, under the protocol driver's own run.
+        crate::db::delete_account(&mut held, account).await
     }
 
     async fn apply(&self, coin: Coin, apply: Apply) -> Result<()> {
@@ -401,6 +451,11 @@ mod tests {
             Ok(())
         }
 
+        async fn delete(&self, _coin: Coin, account: u32) -> Result<()> {
+            self.log.lock().unwrap().push(format!("delete {account}"));
+            Ok(())
+        }
+
         async fn apply(&self, _coin: Coin, apply: Apply) -> Result<()> {
             let what = match apply {
                 Apply::TxDetails { account, txs } => format!("details {account} {}", txs.len()),
@@ -480,6 +535,35 @@ mod tests {
         sync.await.unwrap().unwrap();
         rewind.await.unwrap().unwrap();
         assert_eq!(log(&script), ["sync 100", "rewind 1 To(50)"]);
+    }
+
+    #[tokio::test]
+    async fn a_delete_cancels_the_sync_in_flight_and_runs_after_it() {
+        let script = Arc::new(Script::default());
+        let driver = driver(script.clone());
+
+        let sync = tokio::spawn({
+            let driver = driver.clone();
+            async move { driver.sync(&coin(), request(100), mpsc::channel(1).0).await }
+        });
+        settle().await;
+
+        let delete = tokio::spawn({
+            let driver = driver.clone();
+            async move { driver.delete(&coin(), 3).await }
+        });
+        settle().await;
+        assert_eq!(
+            script.cancels.load(Ordering::SeqCst),
+            1,
+            "the sync is told to stop"
+        );
+        assert_eq!(log(&script), ["sync 100"], "the delete waits for it");
+
+        script.release.notify_one();
+        sync.await.unwrap().unwrap();
+        delete.await.unwrap().unwrap();
+        assert_eq!(log(&script), ["sync 100", "delete 3"]);
     }
 
     #[tokio::test]
