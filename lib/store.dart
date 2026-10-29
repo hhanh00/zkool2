@@ -1378,10 +1378,14 @@ class VotingSubmissionGuard extends _$VotingSubmissionGuard {
   }
 }
 
-/// The runs live in this process, by round id. The keep-alive job of each
-/// round owns its handle; this index lets the wallet-level stop reach them
-/// and keeps the submission guard truthful across rounds.
+/// The runs live in this process, by round and account: two accounts can
+/// take part in the same round at once, each with its own run. The
+/// keep-alive job of each (round, account) owns its handle; this index
+/// lets the wallet-level stop reach them and keeps the submission guard
+/// truthful across rounds.
 final Map<String, VotingDrive> _liveVotingDrives = {};
+
+String _liveVotingKey(String roundId, int account) => "$roundId:$account";
 
 void _syncVotingSubmissionGuard(Ref ref) {
   ref
@@ -1432,7 +1436,7 @@ class VotingDriveJob extends _$VotingDriveJob {
     ref.onDispose(() {
       _statuses?.cancel();
       _drive.cancel();
-      _liveVotingDrives.remove(_roundId);
+      _leaveLiveIndex();
     });
     return const VotingDriveJobState(stage: "idle");
   }
@@ -1471,7 +1475,7 @@ class VotingDriveJob extends _$VotingDriveJob {
     _roundName = roundName;
     _cancelledByUser = false;
     _cancelPending = false;
-    _liveVotingDrives[_roundId] = _drive;
+    _liveVotingDrives[_liveVotingKey(_roundId, _account)] = _drive;
     _syncVotingSubmissionGuard(ref);
     await _statuses?.cancel();
     _statuses = _drive
@@ -1564,8 +1568,16 @@ class VotingDriveJob extends _$VotingDriveJob {
   }
 
   void _stopped() {
-    _liveVotingDrives.remove(_roundId);
+    _leaveLiveIndex();
     _syncVotingSubmissionGuard(ref);
+  }
+
+  /// Removes this job's own run from the live index, and only its own: the
+  /// entry is keyed by round and account, but a stale job must not drop a
+  /// newer run of the same account either.
+  void _leaveLiveIndex() {
+    final key = _liveVotingKey(_roundId, _account);
+    if (identical(_liveVotingDrives[key], _drive)) _liveVotingDrives.remove(key);
   }
 }
 

@@ -136,7 +136,7 @@ pub async fn submission_status(
         .voting_drives
         .lock()
         .await
-        .get(&round_id)
+        .get(&(round_id.clone(), account))
         .and_then(VotingDrive::status);
     let status = match live {
         Some(status) => status,
@@ -228,7 +228,7 @@ pub async fn submit_vote(
     {
         let mut drives = context.voting_drives.lock().await;
         let drive = drives
-            .entry(round.round_id.clone())
+            .entry((round.round_id.clone(), account))
             .or_insert_with(VotingDrive::new);
         if !drive.is_running() {
             drive

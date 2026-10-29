@@ -26,9 +26,11 @@ pub struct Context {
     pub tx_loader: TxLoader,
     /// The one task that advances DKG and signing; see `frost::driver`.
     pub driver: Driver,
-    /// The submission runs this server started, by round id; a run stays
-    /// until the server stops, so `votingSubmissionStatus` can read it.
-    pub voting_drives: Arc<tokio::sync::Mutex<HashMap<String, VotingDrive>>>,
+    /// The submission runs this server started, by round id and account:
+    /// two accounts can take part in the same round, each with its own
+    /// run. A run stays until the server stops, so `votingSubmissionStatus`
+    /// can read it.
+    pub voting_drives: Arc<tokio::sync::Mutex<HashMap<(String, u32), VotingDrive>>>,
 }
 
 impl Context {
