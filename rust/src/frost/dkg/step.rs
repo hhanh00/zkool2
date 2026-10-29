@@ -131,9 +131,9 @@ pub async fn dkg_step(
         }
 
         // Re-validate before touching anything. The snapshot the task was
-        // planned from is an observe old, and a concurrent step — the app and
-        // the GraphQL server can drive the same wallet — may have moved the
-        // protocol underneath it. A stale task is re-planned, never executed.
+        // planned from is an observe old: a sync or a peer's package landing
+        // meanwhile may have moved the protocol underneath it. A stale task
+        // is re-planned, never executed.
         let fresh = observe(network, connection, account).await?;
         if !task.is_satisfied_by(&fresh) {
             tracing::info!("DKG task {task:?} no longer applies; replanning");

@@ -17,7 +17,7 @@ use reddsa_legacy::frost::redpallas::{
     Identifier, PallasBlake2b512, Randomizer,
 };
 use sqlx::{sqlite::SqliteRow, Connection as _, Row, SqliteConnection};
-use tracing::info;
+use tracing::{info, warn};
 use zcash_keys::{address::UnifiedAddress, keys::UnifiedSpendingKey};
 use zcash_protocol::memo::Memo;
 use zip32::AccountId;
@@ -703,9 +703,11 @@ pub async fn ensure_mailbox_from_seed(
     account: u32,
     birth_height: u32,
 ) -> Result<(u32, String)> {
+    // One transaction, taken for writing: see `get_mailbox_account`.
+    let mut tx = connection.begin_with("BEGIN IMMEDIATE").await?;
     let (seed,): (String,) = sqlx::query_as("SELECT seed FROM dkg_params WHERE account = ?1")
         .bind(account)
-        .fetch_one(&mut *connection)
+        .fetch_one(&mut *tx)
         .await
         .context("Fetch dkg_params")?;
     let existing: Option<(u32,)> = if seed.is_empty() {
@@ -713,7 +715,7 @@ pub async fn ensure_mailbox_from_seed(
     } else {
         sqlx::query_as("SELECT id_account FROM accounts WHERE seed = ?1")
             .bind(&seed)
-            .fetch_optional(&mut *connection)
+            .fetch_optional(&mut *tx)
             .await?
     };
     let mailbox = match existing {
@@ -735,21 +737,22 @@ pub async fn ensure_mailbox_from_seed(
                 internal: true,
                 hw: 0,
             };
-            let mailbox = new_account(network, &mut *connection, &na).await?;
+            let mailbox = new_account(network, &mut tx, &na).await?;
             if seed.is_empty() {
-                let seed = get_account_seed(&mut *connection, mailbox)
+                let seed = get_account_seed(&mut tx, mailbox)
                     .await?
                     .context("mailbox seed not found")?;
                 sqlx::query("UPDATE dkg_params SET seed = ?1 WHERE account = ?2")
                     .bind(&seed.mnemonic)
                     .bind(account)
-                    .execute(&mut *connection)
+                    .execute(&mut *tx)
                     .await?;
             }
             mailbox
         }
     };
-    let address = mailbox_address(network, connection, mailbox).await?;
+    let address = mailbox_address(network, &mut tx, mailbox).await?;
+    tx.commit().await?;
     Ok((mailbox, address))
 }
 
@@ -867,9 +870,12 @@ pub async fn publish(
         .context("broadcast in DKG publish")
 }
 
-/// Get (and create if needed) the private mailbox address for
-/// communication between all participants in the group
-///
+/// The participant's private DKG mailbox: an internal account whose seed
+/// is recorded in `dkg_params` and whose address is the participant's row
+/// of `dkg_addresses`. Created when missing, in one transaction taken for
+/// writing up front, so an interrupted attempt leaves nothing and two
+/// callers cannot each create one: the seed and the address always name
+/// the same account. Returns the account and its address.
 pub async fn get_mailbox_account(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -877,91 +883,93 @@ pub async fn get_mailbox_account(
     self_id: u8,
     birth_height: u32,
 ) -> Result<(u32, String)> {
-    let mut retry = 0;
-    let (account, mailbox_address) = loop {
-        if retry > 1 {
-            anyhow::bail!("Failed to create mailbox account");
-        }
+    let mut tx = connection.begin_with("BEGIN IMMEDIATE").await?;
 
-        // seed or empty string if not set
-        let seed = sqlx::query_as::<_, (String,)>("SELECT seed FROM dkg_params WHERE account = ?1")
-            .bind(account)
-            .fetch_optional(&mut *connection)
+    // seed or empty string if not set
+    let seed = sqlx::query_as::<_, (String,)>("SELECT seed FROM dkg_params WHERE account = ?1")
+        .bind(account)
+        .fetch_optional(&mut *tx)
+        .await?
+        .map(|row| row.0)
+        .unwrap_or_default();
+    let stored_address = sqlx::query_as::<_, (String,)>(
+        "SELECT address FROM dkg_addresses WHERE account = ? AND from_id = ?",
+    )
+    .bind(account)
+    .bind(self_id)
+    .fetch_optional(&mut *tx)
+    .await?
+    .map(|a| a.0);
+    let existing = if !seed.is_empty() {
+        sqlx::query_as::<_, (u32,)>("SELECT id_account FROM accounts WHERE seed = ?1")
+            .bind(&seed)
+            .fetch_optional(&mut *tx)
             .await?
             .map(|row| row.0)
-            .unwrap_or_default();
-
-        let address = sqlx::query_as::<_, (String,)>(
-            "SELECT address FROM dkg_addresses WHERE account = ? AND from_id = ?",
-        )
-        .bind(account)
-        .bind(self_id)
-        .fetch_optional(&mut *connection)
-        .await?
-        .map(|a| a.0);
-        let mailbox_account = if !seed.is_empty() {
-            sqlx::query_as::<_, (u32,)>("SELECT id_account FROM accounts WHERE seed = ?1")
-                .bind(&seed)
-                .fetch_optional(&mut *connection)
-                .await?
-        } else {
-            None
-        };
-
-        match (address, mailbox_account) {
-            (Some(mailbox_address), Some((mailbox_account,))) => {
-                break (mailbox_account, mailbox_address);
-            }
-            (_, None) => {
-                info!("Creating mailbox account");
-                // The account does not exist, create it with a random seed
-                let na = NewAccount {
-                    name: "frost-mailbox".to_string(),
-                    icon: None,
-                    restore: true,
-                    key: seed.clone(),
-                    passphrase: None,
-                    fingerprint: None,
-                    aindex: 0,
-                    birth: Some(birth_height),
-                    folder: "".to_string(),
-                    pools: None,
-                    use_internal: false,
-                    internal: true,
-                    hw: 0,
-                };
-                let mailbox_account = new_account(network, &mut *connection, &na).await?;
-                let fvk = get_orchard_vk(&mut *connection, mailbox_account)
-                    .await?
-                    .expect("Mailbox account should have orchard");
-                let address = fvk.address_at(0u64, Scope::External);
-                let ua =
-                    UnifiedAddress::from_receivers(Some(address), None, None, None, None).unwrap();
-                let ua = ua.encode(network);
-                sqlx::query(
-                    "INSERT INTO dkg_addresses (account, from_id, address)
-                    VALUES (?1, ?2, ?3) ON CONFLICT DO NOTHING",
-                )
-                .bind(account)
-                .bind(self_id)
-                .bind(ua)
-                .execute(&mut *connection)
-                .await?;
-                let seed = get_account_seed(&mut *connection, mailbox_account)
-                    .await?
-                    .expect("Seed should be set");
-                sqlx::query("UPDATE dkg_params SET seed = ?1 WHERE account = ?2")
-                    .bind(&seed.mnemonic)
-                    .bind(account)
-                    .execute(&mut *connection)
-                    .await?;
-            }
-            _ => unreachable!(),
-        }
-        retry += 1;
+    } else {
+        None
     };
 
-    Ok((account, mailbox_address))
+    let mailbox = match existing {
+        Some(mailbox) => mailbox,
+        None => {
+            info!("Creating mailbox account");
+            // The account does not exist, create it with a random seed
+            let na = NewAccount {
+                name: "frost-mailbox".to_string(),
+                icon: None,
+                restore: true,
+                key: seed.clone(),
+                passphrase: None,
+                fingerprint: None,
+                aindex: 0,
+                birth: Some(birth_height),
+                folder: "".to_string(),
+                pools: None,
+                use_internal: false,
+                internal: true,
+                hw: 0,
+            };
+            let mailbox = new_account(network, &mut tx, &na).await?;
+            let seed = get_account_seed(&mut tx, mailbox)
+                .await?
+                .context("mailbox seed not found")?;
+            sqlx::query("UPDATE dkg_params SET seed = ?1 WHERE account = ?2")
+                .bind(&seed.mnemonic)
+                .bind(account)
+                .execute(&mut *tx)
+                .await?;
+            mailbox
+        }
+    };
+
+    let address = mailbox_address(network, &mut tx, mailbox).await?;
+    match stored_address {
+        Some(stored) if stored == address => {}
+        stored => {
+            // No row yet, or one left by an earlier version that could split
+            // the pair: the stored address belonged to an account the seed
+            // no longer names, so no account could ever read from it.
+            if let Some(stored) = stored {
+                warn!(
+                    "mailbox address of participant {self_id} ({stored}) is not the mailbox \
+                     account's; replacing it with {address}"
+                );
+            }
+            sqlx::query(
+                "INSERT INTO dkg_addresses (account, from_id, address) VALUES (?1, ?2, ?3)
+                ON CONFLICT(account, from_id) DO UPDATE SET address = excluded.address",
+            )
+            .bind(account)
+            .bind(self_id)
+            .bind(&address)
+            .execute(&mut *tx)
+            .await?;
+        }
+    }
+
+    tx.commit().await?;
+    Ok((mailbox, address))
 }
 
 /// Seed of the shared broadcast account: a deterministic function of the
@@ -1102,4 +1110,110 @@ pub async fn get_addresses(
     }
 
     Ok(addresses)
+}
+
+#[cfg(test)]
+mod mailbox_tests {
+    use super::*;
+    use crate::{account::new_account, db::create_schema};
+
+    const NETWORK: Network = Network::Main;
+
+    async fn wallet() -> Result<(SqliteConnection, u32)> {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        create_schema(&mut db).await?;
+        let funding = new_account(
+            &NETWORK,
+            &mut db,
+            &NewAccount {
+                name: "funding".into(),
+                icon: None,
+                restore: false,
+                key: String::new(),
+                passphrase: None,
+                fingerprint: None,
+                aindex: 0,
+                birth: Some(1),
+                folder: String::new(),
+                pools: None,
+                use_internal: false,
+                internal: false,
+                hw: 0,
+            },
+        )
+        .await?;
+        sqlx::query(
+            "INSERT INTO dkg_params(account, id, n, t, seed, birth_height) VALUES (?, 1, 2, 2, '', 1)",
+        )
+        .bind(funding)
+        .execute(&mut db)
+        .await?;
+        Ok((db, funding))
+    }
+
+    async fn pair(db: &mut SqliteConnection, funding: u32) -> Result<(String, Option<String>, i64)> {
+        let (seed,): (String,) = sqlx::query_as("SELECT seed FROM dkg_params WHERE account = ?")
+            .bind(funding)
+            .fetch_one(&mut *db)
+            .await?;
+        let address: Option<(String,)> =
+            sqlx::query_as("SELECT address FROM dkg_addresses WHERE account = ? AND from_id = 1")
+                .bind(funding)
+                .fetch_optional(&mut *db)
+                .await?;
+        let mailboxes: (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM accounts WHERE name = 'frost-mailbox'")
+                .fetch_one(&mut *db)
+                .await?;
+        Ok((seed, address.map(|a| a.0), mailboxes.0))
+    }
+
+    #[tokio::test]
+    async fn an_interrupted_creation_leaves_nothing_and_the_retry_is_consistent() -> Result<()> {
+        let (mut db, funding) = wallet().await?;
+        // The last write of the creation fails, as a crash or a lock timeout
+        // there would.
+        sqlx::query(
+            "CREATE TRIGGER fail_seed BEFORE UPDATE OF seed ON dkg_params
+             BEGIN SELECT RAISE(FAIL, 'boom'); END",
+        )
+        .execute(&mut db)
+        .await?;
+        assert!(get_mailbox_account(&NETWORK, &mut db, funding, 1, 1).await.is_err());
+        assert_eq!(
+            pair(&mut db, funding).await?,
+            (String::new(), None, 0),
+            "nothing of the failed attempt is stored"
+        );
+
+        sqlx::query("DROP TRIGGER fail_seed").execute(&mut db).await?;
+        let (mailbox, address) = get_mailbox_account(&NETWORK, &mut db, funding, 1, 1).await?;
+        let (seed, stored, mailboxes) = pair(&mut db, funding).await?;
+        assert_eq!(mailboxes, 1);
+        assert_eq!(stored.as_deref(), Some(address.as_str()));
+        let mailbox_seed = get_account_seed(&mut db, mailbox).await?.unwrap().mnemonic;
+        assert_eq!(seed, mailbox_seed, "the seed names the account the address belongs to");
+        assert_eq!(mailbox_address(&NETWORK, &mut db, mailbox).await?, address);
+
+        let again = get_mailbox_account(&NETWORK, &mut db, funding, 1, 1).await?;
+        assert_eq!(again, (mailbox, address), "a later call finds the same pair");
+        assert_eq!(pair(&mut db, funding).await?.2, 1, "and creates nothing");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn an_address_no_account_can_serve_is_replaced() -> Result<()> {
+        let (mut db, funding) = wallet().await?;
+        // What the old code left after a split: an address row, no seed.
+        sqlx::query("INSERT INTO dkg_addresses(account, from_id, address) VALUES (?, 1, 'u1stale')")
+            .bind(funding)
+            .execute(&mut db)
+            .await?;
+        let (mailbox, address) = get_mailbox_account(&NETWORK, &mut db, funding, 1, 1).await?;
+        let (seed, stored, _) = pair(&mut db, funding).await?;
+        assert_eq!(stored.as_deref(), Some(address.as_str()));
+        assert_ne!(address, "u1stale");
+        assert_eq!(seed, get_account_seed(&mut db, mailbox).await?.unwrap().mnemonic);
+        Ok(())
+    }
 }

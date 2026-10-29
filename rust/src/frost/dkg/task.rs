@@ -72,10 +72,9 @@ impl DkgTask {
     /// Whether this task is still valid against freshly observed state.
     ///
     /// A task is planned from one snapshot and executed against another: a
-    /// sync lands, a peer's package arrives, another driver — the app and the
-    /// GraphQL server can drive the same wallet — advanced the protocol.
-    /// Re-checking here turns a stale plan into a re-plan rather than a
-    /// repeated publish.
+    /// sync lands or a peer's package arrives in between and advances the
+    /// protocol. Re-checking here turns a stale plan into a re-plan rather
+    /// than a repeated publish.
     pub fn is_satisfied_by(&self, s: &DkgState) -> bool {
         match self {
             DkgTask::WaitAddresses
