@@ -179,13 +179,18 @@ class Vault {
 
     final localFile = await _localFile;
 
-    // Lazy download: download once from cloud to ensure we have complete data
+    // Once per session, make the local file the union of this device's
+    // cloud part and whatever is local: the cloud part can be ahead (a
+    // reinstall) or behind (an upload that failed), and parts written by
+    // earlier versions hold copies of other parts, which the dedupe drops.
     if (!_hasDownloadedDevicePart) {
       try {
-        logger.i("append: downloading from cloud first");
-        final cloudBytes = await _download(VaultFile.devicePart);
-        await localFile.writeAsBytes(cloudBytes);
-        logger.i("append: downloaded ${cloudBytes.length} bytes from cloud");
+        logger.i("append: downloading this device's part from cloud first");
+        final cloudBytes = await _downloadOwnPart();
+        final localBytes = await localFile.exists() ? await localFile.readAsBytes() : Uint8List(0);
+        final merged = rust.dedupeVaultLog(bytes: Uint8List.fromList([...cloudBytes, ...localBytes]));
+        await localFile.writeAsBytes(merged);
+        logger.i("append: cloud ${cloudBytes.length} + local ${localBytes.length} bytes -> ${merged.length}");
       } catch (e) {
         logger.w("append: download from cloud failed: $e");
         rethrow;
@@ -256,57 +261,74 @@ class Vault {
         VaultFile.devicePart => "vault-dp-$deviceId.bin",
       };
 
-  Future<String?> _findFileId(drive.DriveApi driveApi, String filename) async {
-    final fileList = await driveApi.files.list(
-      spaces: 'appDataFolder',
-      q: "name = '$filename' and trashed = false",
-      $fields: 'files(id)',
-    );
-    return fileList.files?.isNotEmpty == true ? fileList.files!.first.id : null;
+  /// Every non-trashed file in the app folder matching [q], across pages.
+  Future<List<drive.File>> _listFiles(drive.DriveApi driveApi, String q) async {
+    final files = <drive.File>[];
+    String? pageToken;
+    do {
+      final page = await driveApi.files.list(
+        spaces: 'appDataFolder',
+        q: "$q and trashed = false",
+        $fields: 'nextPageToken, files(id, name)',
+        pageToken: pageToken,
+      );
+      files.addAll(page.files ?? []);
+      pageToken = page.nextPageToken;
+    } while (pageToken != null);
+    return files;
   }
 
+  Future<String?> _findFileId(drive.DriveApi driveApi, String filename) async {
+    final files = await _listFiles(driveApi, "name = '$filename'");
+    return files.isNotEmpty ? files.first.id : null;
+  }
+
+  Future<Uint8List> _downloadFile(drive.DriveApi driveApi, drive.File f) async {
+    final media = await driveApi.files.get(
+      f.id!,
+      downloadOptions: drive.DownloadOptions.fullMedia,
+    ) as drive.Media;
+    final bytes = await media.stream.expand((chunk) => chunk).toList();
+    logger.i("Downloaded ${f.name} (${bytes.length} bytes)");
+    return Uint8List.fromList(bytes);
+  }
+
+  /// One file by name, or empty bytes when it is not on Drive.
+  Future<Uint8List> _downloadNamed(drive.DriveApi driveApi, String filename) async {
+    final files = await _listFiles(driveApi, "name = '$filename'");
+    if (files.isEmpty) {
+      logger.i("File $filename not found on Drive");
+      return Uint8List(0);
+    }
+    return _downloadFile(driveApi, files.first);
+  }
+
+  /// This device's own part, to seed its local log. Recovery is the other
+  /// reader of the device parts and takes them all; see [_download].
+  Future<Uint8List> _downloadOwnPart() {
+    final filename = _fileName(VaultFile.devicePart);
+    return _withReauth((driveApi) => _downloadNamed(driveApi, filename));
+  }
+
+  /// The master part alone, or, for the device part, every vault file on
+  /// the drive joined: the master entry and all devices' parts, which is
+  /// what recovery decrypts.
   Future<Uint8List> _download(VaultFile file) async {
     logger.i("_download: ${file.name}");
     return _withReauth((driveApi) async {
       if (file == VaultFile.devicePart) {
-        // Download all files matching vault-* and aggregate
-        final fileList = await driveApi.files.list(
-          spaces: 'appDataFolder',
-          q: "name contains 'vault-'",
-          $fields: 'files(id, name)',
-        );
-        final files = fileList.files ?? [];
+        final files = await _listFiles(driveApi, "name contains 'vault-'");
         if (files.isEmpty) {
-          logger.i("No vault device files found on Drive");
+          logger.i("No vault files found on Drive");
           return Uint8List(0);
         }
         final allBytes = <int>[];
         for (final f in files) {
-          final media = await driveApi.files.get(
-            f.id!,
-            downloadOptions: drive.DownloadOptions.fullMedia,
-          ) as drive.Media;
-          final bytes = await media.stream.expand((chunk) => chunk).toList();
-          logger.i("Downloaded ${f.name} (${bytes.length} bytes)");
-          allBytes.addAll(bytes);
+          allBytes.addAll(await _downloadFile(driveApi, f));
         }
         return Uint8List.fromList(allBytes);
-      } else {
-        // Single file download (masterPart)
-        final filename = _fileName(file);
-        final id = await _findFileId(driveApi, filename);
-        if (id != null) {
-          final media = await driveApi.files.get(
-            id,
-            downloadOptions: drive.DownloadOptions.fullMedia,
-          ) as drive.Media;
-          final bytes = await media.stream.expand((chunk) => chunk).toList();
-          logger.i("Downloaded $filename (${bytes.length} bytes)");
-          return Uint8List.fromList(bytes);
-        }
-        logger.i("File $filename not found on Drive");
-        return Uint8List(0);
       }
+      return _downloadNamed(driveApi, _fileName(file));
     });
   }
 

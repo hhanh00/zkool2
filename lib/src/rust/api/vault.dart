@@ -12,6 +12,12 @@ Future<DartVault> initVault(
         {required FutureOr<void> Function(Uint8List) append}) =>
     RustLib.instance.api.crateApiVaultInitVault(append: append);
 
+/// Drop the byte-identical duplicate entries of a vault log, keeping
+/// first-seen order. The app merges a device's cloud part with its local
+/// file through this on the first append of a session.
+Uint8List dedupeVaultLog({required List<int> bytes}) =>
+    RustLib.instance.api.crateApiVaultDedupeVaultLog(bytes: bytes);
+
 // Rust type: RustOpaqueMoi<flutter_rust_bridge::for_generated::RustAutoOpaqueInner<DartVault>>
 abstract class DartVault implements RustOpaqueInterface {
   Future<List<RestoredAccount>> recover(
