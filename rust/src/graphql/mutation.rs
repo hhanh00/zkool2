@@ -326,13 +326,10 @@ impl Mutation {
         let coin = &context.coin;
         let pczt = prepare_tx(id_account, payment, coin).await?;
         let mut connection = coin.get_connection().await?;
-        let mut client = coin.client().await?;
         let network = coin.network();
         let signed_pczt =
             crate::pay::sign::sign(&network, &mut connection, id_account as u32, pczt, &()).await?;
-        let txid =
-            crate::pay::broadcast(&mut connection, &mut client, id_account as u32, &signed_pczt)
-                .await?;
+        let txid = crate::api::pay::broadcast(&signed_pczt, id_account as u32, coin).await?;
         Ok(txid)
     }
 
@@ -362,16 +359,7 @@ impl Mutation {
             coin,
         )
         .await?;
-        let mut connection = coin.get_connection().await?;
-        let mut client = coin.client().await?;
-        let txid = crate::pay::broadcast_bytes(
-            &mut connection,
-            &mut client,
-            id_account as u32,
-            &tx_bytes,
-            None,
-        )
-        .await?;
+        let txid = crate::api::pay::broadcast_bytes(&tx_bytes, id_account as u32, coin).await?;
         Ok(txid)
     }
 

@@ -492,7 +492,8 @@ pub async fn aggregate_and_send(
         return Ok(txid.to_string());
     }
     let txid =
-        crate::pay::broadcast_bytes(connection, client, state.account, &tx_bytes, None).await?;
+        crate::pay::broadcast_under_session(connection, client, state.account, &tx_bytes, None)
+            .await?;
     info!("Transaction sent: {txid}");
     delete_frost_state(&mut *connection).await?;
     Ok(txid)

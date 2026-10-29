@@ -70,7 +70,7 @@ pub async fn split(c: &Coin, account: u32, inputs: &[u32], outputs: &[(u64, u8)]
     let pczt = plan_transaction(&network, &mut connection, &mut client, account, &request, &mode)
         .await?;
 
-    broadcast(c, account, &mut connection, &mut client, pczt).await
+    broadcast(c, account, &mut connection, pczt).await
 }
 
 /// Broadcast the O→I hop: spend one Orchard SD note at `anchor`, mint
@@ -111,7 +111,7 @@ pub async fn migrate(c: &Coin, account: u32, note: u32, amount: u64, anchor: u32
     let pczt = plan_transaction(&network, &mut connection, &mut client, account, &request, &mode)
         .await?;
 
-    broadcast(c, account, &mut connection, &mut client, pczt).await
+    broadcast(c, account, &mut connection, pczt).await
 }
 
 /// Sign, extract, send, and lock the inputs. Returns the fee.
@@ -125,7 +125,6 @@ async fn broadcast(
     c: &Coin,
     account: u32,
     connection: &mut sqlx::SqliteConnection,
-    client: &mut crate::Client,
     pczt: crate::api::pay::PcztPackage,
 ) -> Result<u64> {
     let network = c.network();
@@ -133,7 +132,9 @@ async fn broadcast(
         .map(|p| p.fee)
         .unwrap_or(0);
     let pczt = sign(&network, &mut *connection, account, pczt, &()).await?;
-    let _txid = crate::pay::broadcast(&mut *connection, client, account, &pczt).await?;
+    // The step runs outside the sync session: the lock goes through the
+    // sync driver, after the post.
+    let _txid = crate::api::pay::broadcast(&pczt, account, c).await?;
     Ok(fee)
 }
 

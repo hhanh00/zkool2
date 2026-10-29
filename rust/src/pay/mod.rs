@@ -15,7 +15,10 @@ use zcash_protocol::consensus::BranchId;
 use zcash_transparent::address::TransparentAddress;
 
 pub mod broadcast;
-pub use broadcast::{broadcast, broadcast_bytes, lock_spent_notes, Pending};
+pub use broadcast::{
+    broadcast_package_under_session, broadcast_under_session, lock_spent_notes, pending_of, post,
+    record_sent, Pending, Sent,
+};
 pub mod error;
 pub mod fee;
 pub mod material;

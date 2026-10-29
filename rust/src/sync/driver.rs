@@ -37,6 +37,8 @@ use crate::{
         sync::{SyncEvent, SyncOutcome},
     },
     memo::DecryptedTx,
+    pay::{Pending, Sent},
+    sync::chain_log::{AssetRecord, LockOp},
 };
 
 /// Transactions the app's detail pass decrypts before queueing one
@@ -67,6 +69,18 @@ pub enum Apply {
         txid: Vec<u8>,
         memo: Option<String>,
     },
+    /// A transaction the app posted: lock the notes it spends and record
+    /// its pending metadata.
+    Sent {
+        account: u32,
+        sent: Sent,
+        tx_bytes: Vec<u8>,
+        pending: Option<Pending>,
+    },
+    /// A lock change the UI asked for.
+    Lock { account: u32, op: LockOp },
+    /// An asset about to be issued, so the sync can name it.
+    RecordAsset(AssetRecord),
 }
 
 /// What a sync is asked to do, as the app and the server pass it.
@@ -319,6 +333,18 @@ impl Ops for WalletOps {
                 txid,
                 memo,
             } => crate::db::set_user_memo(&mut held, account, &txid, memo).await,
+            Apply::Sent {
+                account,
+                sent,
+                tx_bytes,
+                pending,
+            } => crate::pay::record_sent(&mut held, account, &sent, &tx_bytes, pending).await,
+            Apply::Lock { account, op } => {
+                crate::sync::chain_log::apply_lock(&mut held, account, &op).await
+            }
+            Apply::RecordAsset(asset) => {
+                crate::sync::chain_log::record_asset(&mut held, &asset.as_row()).await
+            }
         }
     }
 
@@ -376,6 +402,11 @@ mod tests {
                 Apply::UserMemo { account, txid, .. } => {
                     format!("memo {account} {}", hex::encode(txid))
                 }
+                Apply::Sent { account, sent, .. } => {
+                    format!("sent {account} {}", hex::encode(sent.txid))
+                }
+                Apply::Lock { account, op } => format!("lock {account} {op:?}"),
+                Apply::RecordAsset(asset) => format!("asset {}", hex::encode(asset.desc_hash)),
             };
             self.log.lock().unwrap().push(what);
             Ok(())

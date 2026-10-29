@@ -136,17 +136,39 @@ pub fn unpack_transaction(bytes: &[u8]) -> Result<PcztPackage> {
 /// is an error.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn broadcast(package: &PcztPackage, account: u32, c: &Coin) -> Result<String> {
-    let mut connection = c.get_connection().await?;
-    let mut client = c.client().await?;
-    crate::pay::broadcast(&mut connection, &mut client, account, package).await
+    let tx_bytes = crate::pay::plan::extract_transaction(package).await?;
+    send(&tx_bytes, Some(crate::pay::pending_of(package)), account, c).await
 }
 
 /// Broadcast an already extracted transaction (an issuance, for instance).
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn broadcast_bytes(tx_bytes: &[u8], account: u32, c: &Coin) -> Result<String> {
-    let mut connection = c.get_connection().await?;
+    send(tx_bytes, None, account, c).await
+}
+
+/// Post outside the sync session, then queue the writes that follow an
+/// acceptance through the sync driver.
+async fn send(
+    tx_bytes: &[u8],
+    pending: Option<crate::pay::Pending>,
+    account: u32,
+    c: &Coin,
+) -> Result<String> {
     let mut client = c.client().await?;
-    crate::pay::broadcast_bytes(&mut connection, &mut client, account, tx_bytes, None).await
+    let sent = crate::pay::post(&mut client, tx_bytes).await?;
+    let response = sent.response.clone();
+    c.driver()?
+        .apply(
+            c,
+            crate::sync::driver::Apply::Sent {
+                account,
+                sent,
+                tx_bytes: tx_bytes.to_vec(),
+                pending,
+            },
+        )
+        .await?;
+    Ok(response)
 }
 
 #[cfg_attr(feature = "flutter", frb(sync))]

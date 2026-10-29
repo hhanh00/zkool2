@@ -862,7 +862,7 @@ pub async fn publish(
         .context("sign_transaction in DKG publish")?;
     // Broadcasting locks the funding notes this transaction spent so the
     // next round does not re-select them before the spend is mined.
-    crate::pay::broadcast(connection, client, account, &pczt)
+    crate::pay::broadcast_package_under_session(connection, client, account, &pczt)
         .await
         .context("broadcast in DKG publish")
 }

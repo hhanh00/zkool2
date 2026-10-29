@@ -2,6 +2,13 @@
 //! the notes it spends, and remember the price and category the wallet
 //! recorded for it. Every send path goes through here, whether it holds a
 //! signed PCZT package or the raw transaction bytes.
+//!
+//! The two halves are separate: [`post`] is the network, [`record_sent`]
+//! the chain-log writes that follow an acceptance. A caller under the sync
+//! session (the protocol driver, mid-pass) does both in one go with
+//! [`broadcast_under_session`]; the app and the server post, then queue the
+//! writes through the sync driver, so a send never waits behind a sync and
+//! never writes beside one.
 
 use anyhow::{anyhow, Result};
 use sqlx::SqliteConnection;
@@ -19,33 +26,41 @@ pub struct Pending {
     pub category: Option<u32>,
 }
 
+/// The package's price and category, to carry as pending metadata.
+pub fn pending_of(package: &PcztPackage) -> Pending {
+    Pending {
+        price: package.price,
+        category: package.category,
+    }
+}
+
 /// Extract a signed package and broadcast it, carrying the package's price
-/// and category as the pending metadata.
-pub async fn broadcast(
+/// and category as the pending metadata. For a caller holding the sync
+/// session.
+pub async fn broadcast_package_under_session(
     conn: &mut SqliteConnection,
     client: &mut Client,
     account: u32,
     package: &PcztPackage,
 ) -> Result<String> {
     let tx_bytes = super::plan::extract_transaction(package).await?;
-    let pending = Pending {
-        price: package.price,
-        category: package.category,
-    };
-    broadcast_bytes(conn, client, account, &tx_bytes, Some(pending)).await
+    broadcast_under_session(conn, client, account, &tx_bytes, Some(pending_of(package))).await
 }
 
-/// Post a serialized transaction. On acceptance, lock the notes it spends so
-/// a later plan cannot select them before the spend is mined, record the
-/// pending metadata when given, and return the txid. A rejection is an
-/// error and leaves the wallet untouched.
-pub async fn broadcast_bytes(
-    conn: &mut SqliteConnection,
-    client: &mut Client,
-    account: u32,
-    tx_bytes: &[u8],
-    pending: Option<Pending>,
-) -> Result<String> {
+/// What the server answered to an accepted transaction.
+#[derive(Clone, Debug)]
+pub struct Sent {
+    /// The chain height the transaction was posted at.
+    pub height: u32,
+    pub txid: Vec<u8>,
+    /// The server's answer, the txid in hex.
+    pub response: String,
+}
+
+/// Post a serialized transaction; a rejection is an error carrying the
+/// server's message. Network only: the chain-log writes that follow are
+/// [`record_sent`].
+pub async fn post(client: &mut Client, tx_bytes: &[u8]) -> Result<Sent> {
     let height = client.latest_height().await?;
     let span = span!(Level::INFO, "transaction");
     let response = client.post_transaction(height, tx_bytes).await?;
@@ -54,20 +69,52 @@ pub async fn broadcast_bytes(
     span.in_scope(|| {
         info!("TXID: {}", response);
     });
+    Ok(Sent {
+        height,
+        txid,
+        response,
+    })
+}
 
+/// After an acceptance: lock the notes the transaction spends, and record
+/// the pending metadata if any. Called under the sync session, by the
+/// driver or by a caller that holds it.
+pub async fn record_sent(
+    conn: &mut SqliteConnection,
+    account: u32,
+    sent: &Sent,
+    tx_bytes: &[u8],
+    pending: Option<Pending>,
+) -> Result<()> {
     lock_spent_notes(conn, account, tx_bytes).await?;
     if let Some(pending) = pending {
         crate::db::store_pending_tx(
             conn,
             account,
-            height,
-            &txid,
+            sent.height,
+            &sent.txid,
             pending.price,
             pending.category,
         )
         .await?;
     }
-    Ok(response)
+    Ok(())
+}
+
+/// Post a serialized transaction. On acceptance, lock the notes it spends so
+/// a later plan cannot select them before the spend is mined, record the
+/// pending metadata when given, and return the txid. A rejection is an
+/// error and leaves the wallet untouched.
+pub async fn broadcast_under_session(
+    conn: &mut SqliteConnection,
+    client: &mut Client,
+    account: u32,
+    tx_bytes: &[u8],
+    pending: Option<Pending>,
+) -> Result<String> {
+    let sent = post(client, tx_bytes).await?;
+    record_sent(conn, account, &sent, tx_bytes, pending).await?;
+    Ok(sent.response)
 }
 
 /// After a successful broadcast, mark the notes the transaction spends as
@@ -276,7 +323,8 @@ mod tests {
             category: Some(4),
         };
         let txid =
-            broadcast_bytes(&mut db, &mut client, 1, &spend_of(outpoint), Some(pending)).await?;
+            broadcast_under_session(&mut db, &mut client, 1, &spend_of(outpoint), Some(pending))
+                .await?;
         assert_eq!(txid, TXID);
         assert_eq!(locked(&mut db).await?, 1);
         let rows: Vec<(u32, Vec<u8>, Option<f64>, Option<u32>)> = sqlx::query_as(
@@ -295,7 +343,7 @@ mod tests {
         let outpoint = OutPoint::new([7u8; 32], 3);
         let mut db = wallet_with_note(&outpoint).await?;
         let mut client: Client = Box::new(Posts(TXID.to_string(), vec![]));
-        broadcast_bytes(&mut db, &mut client, 1, &spend_of(outpoint), None).await?;
+        broadcast_under_session(&mut db, &mut client, 1, &spend_of(outpoint), None).await?;
         assert_eq!(locked(&mut db).await?, 1);
         let pending: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM pending_txs")
             .fetch_one(&mut db)
@@ -309,7 +357,7 @@ mod tests {
         let outpoint = OutPoint::new([7u8; 32], 3);
         let mut db = wallet_with_note(&outpoint).await?;
         let mut client: Client = Box::new(Posts("tx has expired".to_string(), vec![]));
-        let err = broadcast_bytes(&mut db, &mut client, 1, &spend_of(outpoint), None)
+        let err = broadcast_under_session(&mut db, &mut client, 1, &spend_of(outpoint), None)
             .await
             .unwrap_err();
         assert_eq!(err.to_string(), "tx has expired");
@@ -322,7 +370,8 @@ mod tests {
         let outpoint = OutPoint::new([7u8; 32], 3);
         let mut db = wallet_with_note(&outpoint).await?;
         let mut client: Client = Box::new(Posts(TXID.to_string(), vec![]));
-        let txid = broadcast_bytes(&mut db, &mut client, 1, b"not a transaction", None).await?;
+        let txid =
+            broadcast_under_session(&mut db, &mut client, 1, b"not a transaction", None).await?;
         assert_eq!(txid, TXID);
         assert_eq!(locked(&mut db).await?, 0);
         Ok(())

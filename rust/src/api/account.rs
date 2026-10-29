@@ -2,6 +2,8 @@ use std::str::FromStr;
 
 use crate::pay::pool::{POOL_IRONWOOD, POOL_ORCHARD, POOL_SAPLING, POOL_TRANSPARENT};
 use anyhow::{anyhow, Result};
+
+use crate::sync::chain_log::LockOp;
 use bip39::Mnemonic;
 use csv_async::AsyncWriter;
 #[cfg(feature = "flutter")]
@@ -455,9 +457,7 @@ pub async fn list_notes(account: u32, c: &Coin) -> Result<Vec<TxNote>> {
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn lock_note(id: u32, locked: bool, account: u32, c: &Coin) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-    crate::sync::chain_log::set_note_lock(&mut connection, account, id, locked).await?;
-    Ok(())
+    lock(account, LockOp::Note { id_note: id, locked }, c).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -646,25 +646,25 @@ pub async fn get_exported_data(r#type: u8, account: u32, c: &Coin) -> Result<Str
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn lock_recent_notes(height: u32, threshold: u32, account: u32, c: &Coin) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-    crate::sync::chain_log::lock_notes_above(
-        &mut connection,
-        account,
-        height.saturating_sub(threshold),
-    )
-    .await
+    lock(account, LockOp::Above(height.saturating_sub(threshold)), c).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn unlock_all_notes(account: u32, c: &Coin) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-    crate::sync::chain_log::unlock_all(&mut connection, account).await
+    lock(account, LockOp::UnlockAll, c).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn toggle_all_notes(account: u32, c: &Coin) -> Result<()> {
-    let mut connection = c.get_connection().await?;
-    crate::sync::chain_log::toggle_all_locks(&mut connection, account).await
+    lock(account, LockOp::ToggleAll, c).await
+}
+
+/// A lock change goes through the sync driver, so it never lands beside a
+/// sync's own writes.
+async fn lock(account: u32, op: LockOp, c: &Coin) -> Result<()> {
+    c.driver()?
+        .apply(c, crate::sync::driver::Apply::Lock { account, op })
+        .await
 }
 
 #[cfg_attr(feature = "flutter", frb)]

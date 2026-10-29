@@ -19,8 +19,8 @@ use crate::{
     api::coin::Coin,
     pay::{
         plan::{extract_transaction, plan_transaction, PaymentRequest, PlanMode},
-        sign::sign,
         pool::ALL_POOLS,
+        sign::sign,
     },
 };
 
@@ -139,18 +139,19 @@ pub async fn issue_asset(
     // Only needed for first issuance; reissuance already has the asset row.
     if !is_reissuance {
         let first_seen_height = client.latest_height().await?;
-        crate::sync::chain_log::record_asset(
-            &mut connection,
-            &crate::sync::chain_log::AssetRow {
-                desc_hash: &desc_hash,
-                ik: &ik.encode(),
-                base: &asset_base_bytes,
-                name: Some(&asset_name),
-                finalized: finalize,
-                first_seen_height,
-            },
-        )
-        .await?;
+        c.driver()?
+            .apply(
+                c,
+                crate::sync::driver::Apply::RecordAsset(crate::sync::chain_log::AssetRecord {
+                    desc_hash: desc_hash.to_vec(),
+                    ik: ik.encode().to_vec(),
+                    base: asset_base_bytes.to_vec(),
+                    name: Some(asset_name.clone()),
+                    finalized: finalize,
+                    first_seen_height,
+                }),
+            )
+            .await?;
     }
 
     info!(

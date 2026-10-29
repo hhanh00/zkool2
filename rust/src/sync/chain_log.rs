@@ -24,6 +24,7 @@
 //! Row types are full table rows with the wallet metadata optional, so the
 //! backup import goes through the same functions as the sync paths.
 
+use super::session::Held;
 use anyhow::{anyhow, ensure, Result};
 use sqlx::{sqlite::SqliteRow, Row, Sqlite, SqliteConnection, Transaction};
 use tracing::debug;
@@ -343,6 +344,30 @@ pub struct AssetRow<'a> {
     pub first_seen_height: u32,
 }
 
+/// An [`AssetRow`] that owns its bytes, to carry through the sync driver.
+#[derive(Clone, Debug)]
+pub struct AssetRecord {
+    pub desc_hash: Vec<u8>,
+    pub ik: Vec<u8>,
+    pub base: Vec<u8>,
+    pub name: Option<String>,
+    pub finalized: bool,
+    pub first_seen_height: u32,
+}
+
+impl AssetRecord {
+    pub fn as_row(&self) -> AssetRow<'_> {
+        AssetRow {
+            desc_hash: &self.desc_hash,
+            ik: &self.ik,
+            base: &self.base,
+            name: self.name.as_deref(),
+            finalized: self.finalized,
+            first_seen_height: self.first_seen_height,
+        }
+    }
+}
+
 /// Record an asset; an asset already known by description hash and issuer
 /// key is left unchanged.
 pub async fn record_asset(conn: &mut SqliteConnection, asset: &AssetRow<'_>) -> Result<()> {
@@ -541,6 +566,30 @@ pub async fn record_spend(
         .execute(&mut *conn)
         .await?;
     Ok(r.rows_affected() == 1)
+}
+
+/// A change of the lock flag on an account's notes, as the UI asks for it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum LockOp {
+    Note {
+        id_note: u32,
+        locked: bool,
+    },
+    /// Lock every note received above this height.
+    Above(u32),
+    UnlockAll,
+    ToggleAll,
+}
+
+/// Apply a lock change. For a caller holding the sync session: the sync
+/// driver, on the UI's behalf.
+pub async fn apply_lock(conn: &mut Held<'_>, account: u32, op: &LockOp) -> Result<()> {
+    match *op {
+        LockOp::Note { id_note, locked } => set_note_lock(conn, account, id_note, locked).await,
+        LockOp::Above(height) => lock_notes_above(conn, account, height).await,
+        LockOp::UnlockAll => unlock_all(conn, account).await,
+        LockOp::ToggleAll => toggle_all_locks(conn, account).await,
+    }
 }
 
 /// Set the lock on one of the account's notes.
