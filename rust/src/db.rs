@@ -2518,12 +2518,23 @@ fn get_sqlite_column_value(row: &SqliteRow, index: usize) -> Result<String> {
 // Unfortunately, the current UI flow asks for the amount before
 // the source pool selection. Therefore we don't know what the user
 // wants to use yet
-pub async fn max_spendable(connection: &mut SqliteConnection, account: u32) -> Result<u64> {
+/// The most the account can send from `pools` (a pool mask) in one
+/// transaction with the fee taken from the amount: the sum of its unspent,
+/// unlocked ZEC notes the planner would select. Dust (a note worth less
+/// than one action's fee) is left out, as the planner leaves it out.
+pub async fn max_spendable(
+    connection: &mut SqliteConnection,
+    account: u32,
+    pools: u8,
+) -> Result<u64> {
     let (amount,): (Option<u64>,) = sqlx::query_as(
         "SELECT SUM(n.value) FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note
-    WHERE s.id_note IS NULL AND n.account = ?1 AND n.id_asset IS NULL AND NOT(locked)",
+    WHERE s.id_note IS NULL AND n.account = ?1 AND n.id_asset IS NULL AND NOT(locked)
+    AND (?2 & (1 << n.pool)) != 0 AND n.value >= ?3",
     )
     .bind(account)
+    .bind(pools)
+    .bind(crate::pay::fee::COST_PER_ACTION as i64)
     .fetch_one(connection)
     .await?;
     Ok(amount.unwrap_or_default())

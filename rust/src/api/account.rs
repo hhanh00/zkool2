@@ -662,7 +662,7 @@ async fn lock(account: u32, op: LockOp, c: &Coin) -> Result<()> {
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn max_spendable(account: u32, c: &Coin) -> Result<u64> {
     let mut connection = c.get_connection().await?;
-    crate::db::max_spendable(&mut connection, account).await
+    crate::db::max_spendable(&mut connection, account, crate::pay::pool::ALL_POOLS).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]

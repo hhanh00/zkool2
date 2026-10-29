@@ -40,15 +40,17 @@ use crate::{
 };
 
 /// Unspent, unlocked note value of an account in the Orchard and Ironwood
-/// pools.
+/// pools, dust left out: what a sweep could move.
 async fn spendable_by_pool(connection: &mut SqliteConnection, account: u32) -> Result<(u64, u64)> {
     let rows: Vec<(u8, i64)> = sqlx::query_as(
         "SELECT n.pool, COALESCE(SUM(n.value), 0) FROM notes n
         LEFT JOIN spends s ON n.id_note = s.id_note
         WHERE s.id_note IS NULL AND n.account = ?1 AND n.id_asset IS NULL AND NOT n.locked
+        AND n.value >= ?2
         GROUP BY n.pool",
     )
     .bind(account)
+    .bind(crate::pay::fee::COST_PER_ACTION as i64)
     .fetch_all(&mut *connection)
     .await?;
     let mut orchard = 0u64;
@@ -200,7 +202,7 @@ pub async fn plan_sweep(
     let sibling = sibling_of(connection, account)
         .await?
         .context("this frost account has no ZIP 2005 sibling yet; upgrade it first")?;
-    let amount = max_spendable(connection, account).await?;
+    let amount = max_spendable(connection, account, ALL_SHIELDED_POOLS).await?;
     if amount == 0 {
         bail!("nothing to sweep: the account has no spendable balance");
     }
@@ -366,13 +368,16 @@ mod tests {
         let sibling = upgrade_account(&Network::Main, &mut db, legacy, 500).await.unwrap();
 
         assert!(quantum_recoverable(&mut db, legacy, DKG_VERSION_0).await.unwrap());
-        add_note(&mut db, legacy, 3, 1000, false).await;
+        // Dust is nothing a sweep could move, so it does not count.
+        add_note(&mut db, legacy, 3, 4_999, false).await;
+        assert!(quantum_recoverable(&mut db, legacy, DKG_VERSION_0).await.unwrap());
+        add_note(&mut db, legacy, 3, 10_000, false).await;
         assert!(!quantum_recoverable(&mut db, legacy, DKG_VERSION_0).await.unwrap());
 
         assert!(quantum_recoverable(&mut db, sibling, DKG_VERSION_2).await.unwrap());
-        add_note(&mut db, sibling, 3, 1000, false).await;
+        add_note(&mut db, sibling, 3, 10_000, false).await;
         assert!(quantum_recoverable(&mut db, sibling, DKG_VERSION_2).await.unwrap());
-        add_note(&mut db, sibling, 2, 10, false).await;
+        add_note(&mut db, sibling, 2, 6_000, false).await;
         assert!(!quantum_recoverable(&mut db, sibling, DKG_VERSION_2).await.unwrap());
 
         // The Orchard note spent: recoverable again. A locked note does not
@@ -386,7 +391,26 @@ mod tests {
         .await
         .unwrap();
         assert!(quantum_recoverable(&mut db, sibling, DKG_VERSION_2).await.unwrap());
-        add_note(&mut db, sibling, 2, 10, true).await;
+        add_note(&mut db, sibling, 2, 6_000, true).await;
         assert!(quantum_recoverable(&mut db, sibling, DKG_VERSION_2).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn the_sweep_amount_is_what_selection_can_fund() {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        let (legacy, _, _) = legacy_account(&mut db).await;
+        add_note(&mut db, legacy, 3, 25_000, false).await;
+        add_note(&mut db, legacy, 3, 4_999, false).await; // dust: the planner drops it
+        add_note(&mut db, legacy, 0, 7_000, false).await; // transparent: not in a sweep
+        add_note(&mut db, legacy, 2, 9_000, true).await; // locked
+        assert_eq!(
+            max_spendable(&mut db, legacy, ALL_SHIELDED_POOLS).await.unwrap(),
+            25_000
+        );
+        assert_eq!(
+            max_spendable(&mut db, legacy, crate::pay::pool::ALL_POOLS).await.unwrap(),
+            32_000,
+            "the send page's Max counts transparent too, never dust"
+        );
     }
 }
