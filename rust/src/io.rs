@@ -703,7 +703,7 @@ pub async fn import_account(
     for taddr in io_account.taddrs.iter() {
         let r = sqlx::query(
             "INSERT INTO transparent_address_accounts
-            (account, scope, dindex, sk, pk, address) VALUES (?, ?, ?, ?, ?, ?)",
+            (account, scope, dindex, sk, pk, address, uncompressed) VALUES (?, ?, ?, ?, ?, ?, ?)",
         )
         .bind(new_id_account)
         .bind(taddr.scope)
@@ -711,6 +711,7 @@ pub async fn import_account(
         .bind(&taddr.sk)
         .bind(&taddr.pk)
         .bind(&taddr.address)
+        .bind(taddr.uncompressed)
         .execute(&mut *tx)
         .await?;
         let new_id_taddress = r.last_insert_rowid() as u32;
@@ -1127,6 +1128,9 @@ pub struct TAddress {
     pub sk: Option<HexBytes>,
     pub pk: HexBytes,
     pub address: String,
+    /// Absent from backups written before uncompressed keys were supported,
+    /// which could hold none.
+    #[serde(default)]
     pub uncompressed: bool,
 }
 
@@ -1368,6 +1372,77 @@ mod incoming_only_export_tests {
     /// An incoming-only account survives the encrypted export: the imported
     /// account holds the same incoming keys, no full key, and the same
     /// sapling address, derived from the incoming key.
+    /// `(uncompressed, length(pk))` of the account's transparent address rows.
+    async fn taddr_rows(db: &mut SqliteConnection, account: u32) -> Result<Vec<(bool, i64)>> {
+        Ok(sqlx::query_as(
+            "SELECT uncompressed, length(pk) FROM transparent_address_accounts
+            WHERE account = ? ORDER BY id_taddress",
+        )
+        .bind(account)
+        .fetch_all(&mut *db)
+        .await?)
+    }
+
+    #[tokio::test]
+    async fn an_uncompressed_wif_account_round_trips_with_its_flag() -> Result<()> {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        create_schema(&mut db).await?;
+        // A WIF without the compression byte: 0x80 || key, base58check.
+        let wif = bs58::encode([7u8; 32]).with_check_version(0x80).into_string();
+        let na = NewAccount {
+            icon: None,
+            name: "legacy".into(),
+            restore: true,
+            key: wif,
+            passphrase: None,
+            fingerprint: None,
+            aindex: 0,
+            birth: Some(1),
+            folder: String::new(),
+            pools: None,
+            use_internal: false,
+            internal: false,
+            hw: 0,
+        };
+        let account = new_account(&NETWORK, &mut db, &na).await?;
+        assert_eq!(taddr_rows(&mut db, account).await?, vec![(true, 65)]);
+
+        let data = export_account(&mut db, account).await?;
+        let session = crate::sync::session::SyncSession::new();
+        let run = session.try_begin().unwrap();
+        import_account(&NETWORK, &mut run.held(&mut db), &data).await?;
+        let (imported,): (u32,) = sqlx::query_as("SELECT MAX(id_account) FROM accounts")
+            .fetch_one(&mut db)
+            .await?;
+        assert_ne!(imported, account);
+        assert_eq!(
+            taddr_rows(&mut db, imported).await?,
+            vec![(true, 65)],
+            "the restored address keeps the flag its key was hashed with"
+        );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn opening_a_wallet_repairs_flags_lost_by_an_earlier_import() -> Result<()> {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        create_schema(&mut db).await?;
+        for (pk_len, id) in [(65usize, 1), (33, 2)] {
+            sqlx::query(
+                "INSERT INTO transparent_address_accounts(account, scope, dindex, pk, address, uncompressed)
+                VALUES (?, 0, 0, ?, 't1', FALSE)",
+            )
+            .bind(id)
+            .bind(vec![4u8; pk_len])
+            .execute(&mut db)
+            .await?;
+        }
+        create_schema(&mut db).await?;
+        assert_eq!(taddr_rows(&mut db, 1).await?, vec![(true, 65)], "repaired");
+        assert_eq!(taddr_rows(&mut db, 2).await?, vec![(false, 33)], "untouched");
+        Ok(())
+    }
+
     #[tokio::test]
     async fn an_incoming_only_account_round_trips() -> Result<()> {
         let mut db = SqliteConnection::connect("sqlite::memory:").await?;

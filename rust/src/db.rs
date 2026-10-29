@@ -103,6 +103,16 @@ pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
         sqlx::query("ALTER TABLE transparent_address_accounts ADD COLUMN uncompressed BOOL NOT NULL DEFAULT FALSE")
             .execute(&mut *connection)
             .await;
+    // An account restored from a backup by earlier versions lost the flag
+    // (the import did not write it), so its uncompressed keys were hashed
+    // as compressed and it could not spend. The stored key is in its
+    // original serialization, 65 bytes only when uncompressed.
+    sqlx::query(
+        "UPDATE transparent_address_accounts SET uncompressed = TRUE
+        WHERE uncompressed = FALSE AND length(pk) = 65",
+    )
+    .execute(&mut *connection)
+    .await?;
 
     // Incoming-only accounts (imported from an incoming viewing key) hold a
     // pool's incoming key and no full viewing key. For transparent that is
