@@ -17,6 +17,15 @@ pub fn init_vault(
     Ok(DartVault(vault))
 }
 
+/// Drop the byte-identical duplicate entries of a vault log, keeping
+/// first-seen order. The app merges a device's cloud part with its local
+/// file through this on the first append of a session.
+#[cfg(feature = "flutter")]
+#[frb(sync)]
+pub fn dedupe_vault_log(bytes: Vec<u8>) -> Vec<u8> {
+    crate::vault::crypto::dedupe_log(&bytes)
+}
+
 #[cfg(feature = "flutter")]
 #[frb(opaque)]
 pub struct DartVault(Vault<DartVaultIO>);

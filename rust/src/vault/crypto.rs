@@ -377,6 +377,50 @@ pub fn recover_with_prf(
     decrypt_accounts(&entries, &sk_bytes)
 }
 
+/// Size of the frame starting at `pos`, tag byte included, from its tag:
+/// Init and Device are fixed, Account carries its length. None for an
+/// unknown tag, or an Account header cut short.
+fn frame_size(vault_bytes: &[u8], pos: usize) -> Option<usize> {
+    match vault_bytes[pos] {
+        0 => Some(109), // tag(1) + pk(32) + protected_sk(60) + salt(16)
+        1 => Some(81),  // tag(1) + device_id(20) + protected_sk(60)
+        2 => {
+            // tag(1) + len(2 BE) + payload(var)
+            let header = vault_bytes.get(pos + 1..pos + 3)?;
+            Some(3 + u16::from_be_bytes([header[0], header[1]]) as usize)
+        }
+        _ => None,
+    }
+}
+
+/// Drop the byte-identical duplicates of a log, keeping first-seen order.
+/// A device's part used to be seeded from every part on the drive, so it
+/// held copies of the master entry and of other devices' entries, more of
+/// them every session; this makes it the set of distinct entries. Frames
+/// are split as `parse_entries` splits them; from the first byte that does
+/// not start a complete entry, the rest is kept as it is.
+pub fn dedupe_log(vault_bytes: &[u8]) -> Vec<u8> {
+    let len = vault_bytes.len();
+    let mut out = Vec::with_capacity(len);
+    let mut seen = std::collections::HashSet::new();
+    let mut pos = 0;
+    while pos < len {
+        let Some(size) = frame_size(vault_bytes, pos) else {
+            break;
+        };
+        if pos + size > len {
+            break;
+        }
+        let frame = &vault_bytes[pos..pos + size];
+        if seen.insert(frame) {
+            out.extend_from_slice(frame);
+        }
+        pos += size;
+    }
+    out.extend_from_slice(&vault_bytes[pos..]);
+    out
+}
+
 fn parse_entries(vault_bytes: &[u8]) -> Result<Vec<LogEntry>> {
     let mut entries = Vec::new();
     let len = vault_bytes.len();
@@ -385,27 +429,16 @@ fn parse_entries(vault_bytes: &[u8]) -> Result<Vec<LogEntry>> {
     while pos < len {
         let tag = vault_bytes[pos];
 
-        // Compute frame size based on tag (frame includes the tag byte itself)
-        let frame_size = match tag {
-            0 => 109usize, // tag(1) + pk(32) + protected_sk(60) + salt(16)
-            1 => 81,       // tag(1) + device_id(20) + protected_sk(60)
-            2 => {
-                // tag(1) + len(2 BE) + payload(var)
-                if pos + 3 > len {
-                    tracing::warn!(
-                        "parse_entries: truncated Account entry header at offset {pos}, stopping"
-                    );
-                    break;
-                }
-                let payload_len =
-                    u16::from_be_bytes([vault_bytes[pos + 1], vault_bytes[pos + 2]]) as usize;
-                3 + payload_len
+        let Some(frame_size) = frame_size(vault_bytes, pos) else {
+            if tag == 2 {
+                tracing::warn!(
+                    "parse_entries: truncated Account entry header at offset {pos}, stopping"
+                );
+                break;
             }
-            _ => {
-                tracing::warn!("parse_entries: invalid tag {tag} at offset {pos}, skipping byte");
-                pos += 1;
-                continue;
-            }
+            tracing::warn!("parse_entries: invalid tag {tag} at offset {pos}, skipping byte");
+            pos += 1;
+            continue;
         };
 
         let end = (pos + frame_size).min(len);
@@ -520,4 +553,60 @@ fn decrypt_accounts(entries: &[LogEntry], sk_bytes: &[u8]) -> Result<Vec<Restore
     }
 
     Ok(deduped.into_values().collect())
+}
+
+#[cfg(test)]
+mod dedupe_tests {
+    use super::dedupe_log;
+
+    fn init(fill: u8) -> Vec<u8> {
+        let mut f = vec![0u8; 109];
+        f[1..].fill(fill);
+        f
+    }
+
+    fn device(fill: u8) -> Vec<u8> {
+        let mut f = vec![1u8; 81];
+        f[1..].fill(fill);
+        f
+    }
+
+    fn account(payload: &[u8]) -> Vec<u8> {
+        let mut f = vec![2u8];
+        f.extend_from_slice(&(payload.len() as u16).to_be_bytes());
+        f.extend_from_slice(payload);
+        f
+    }
+
+    #[test]
+    fn duplicates_are_dropped_and_order_is_kept() {
+        let (a, b, c) = (init(1), device(2), account(b"c"));
+        let log: Vec<u8> = [&a[..], &b, &a, &c, &b, &c, &a].concat();
+        assert_eq!(dedupe_log(&log), [&a[..], &b, &c].concat());
+    }
+
+    #[test]
+    fn distinct_entries_of_the_same_kind_all_stay() {
+        let log: Vec<u8> = [account(b"x"), account(b"y"), account(b"x")].concat();
+        assert_eq!(dedupe_log(&log), [account(b"x"), account(b"y")].concat());
+    }
+
+    #[test]
+    fn the_unparseable_rest_is_kept_as_it_is() {
+        let a = init(1);
+        // A truncated frame at the end.
+        let mut log = [&a[..], &a, &a[..40]].concat();
+        assert_eq!(dedupe_log(&log), [&a[..], &a[..40]].concat());
+        // An unknown tag: nothing after it is touched, duplicates included.
+        log = [&a[..], &[9u8][..], &a, &a].concat();
+        assert_eq!(dedupe_log(&log), log);
+        // A short Account header.
+        log = [&a[..], &[2u8, 0][..]].concat();
+        assert_eq!(dedupe_log(&log), log);
+    }
+
+    #[test]
+    fn empty_stays_empty() {
+        assert!(dedupe_log(&[]).is_empty());
+    }
 }
