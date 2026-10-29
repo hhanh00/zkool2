@@ -86,7 +86,7 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
               if (addresses.saddr != null || addresses.oaddr != null)
                 PoolSelect(
                   enabled: availablePools,
-                  initialValue: uaPools,
+                  value: uaPools,
                   onChanged: onChangedUAPools,
                 ),
               if (addresses.ua != null) ...[
@@ -308,7 +308,7 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
                       child: Center(
                         child: PoolSelect(
                           enabled: widget.availablePools,
-                          initialValue: _selectedPools.fold(0, (acc, p) => acc | _poolBits[p]!),
+                          value: _selectedPools.fold(0, (acc, p) => acc | _poolBits[p]!),
                           onChanged: _onPoolsChanged,
                         ),
                       ),

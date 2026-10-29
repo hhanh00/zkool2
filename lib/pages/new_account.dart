@@ -340,7 +340,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                                       initialValue: keyPools,
                                       builder: (field) => PoolSelect(
                                         enabled: keyPools,
-                                        initialValue: field.value!,
+                                        value: field.value!,
                                         onChanged: (v) => field.didChange(v),
                                       ),
                                     ),

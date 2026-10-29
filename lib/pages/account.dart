@@ -1500,6 +1500,9 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
   String? uvk;
   Seed? seed;
   int accountPools = 7; // default to all pools
+  /// A key fetch is in flight: the selectors refuse input until it lands,
+  /// so the key shown always belongs to the selection shown.
+  bool loading = false;
   // Full by default, every time the page opens: never remembered, so a
   // user cannot hand out one key believing it is the other.
   bool incoming = false;
@@ -1523,8 +1526,8 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
       final a = accounts.firstWhere((a) => a.id == widget.account);
       useInternal = a.useInternal;
       incomingOnly = a.incomingOnly;
-      setState(() {});
-      await loadKey(pools, incomingOnly);
+      setState(() => pools = accountPools);
+      await loadKey(accountPools, incomingOnly);
     });
   }
 
@@ -1600,7 +1603,7 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
                   ],
                     selected: {incoming},
                     showSelectedIcon: false,
-                    onSelectionChanged: (s) => onKindChanged(s.first),
+                    onSelectionChanged: loading ? null : (s) => onKindChanged(s.first),
                   ),
                 ),
               ),
@@ -1610,7 +1613,7 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
             delegate: _PoolSelectHeaderDelegate(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(16, 0, 16, 8),
-                child: Center(child: PoolSelect(enabled: accountPools, initialValue: accountPools, onChanged: onPoolChanged)),
+                child: Center(child: PoolSelect(enabled: loading ? 0 : accountPools, value: pools, onChanged: onPoolChanged)),
               ),
             ),
           ),
@@ -1667,11 +1670,18 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
     await loadKey(pools, v);
   }
 
+  /// Fetches the key for a selection and applies selection and key
+  /// together once it lands. One fetch at a time: the selectors are
+  /// disabled meanwhile, so a late answer cannot belong to an older
+  /// selection.
   Future<void> loadKey(int v, bool incomingKey) async {
+    if (loading) return;
+    setState(() => loading = true);
     try {
       final uuvk = incomingKey
           ? await getAccountUivk(account: widget.account, pools: v, c: c)
           : await getAccountUfvk(account: widget.account, pools: v, c: c);
+      if (!mounted) return;
       setState(() {
         pools = v;
         incoming = incomingKey;
@@ -1680,11 +1690,14 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
     } on AnyhowException catch (e) {
       if (!mounted) return;
       await showException(context, e.message);
+      if (!mounted) return;
       setState(() {
         pools = v;
         incoming = incomingKey;
         uvk = null;
       });
+    } finally {
+      if (mounted) setState(() => loading = false);
     }
   }
 

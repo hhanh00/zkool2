@@ -747,7 +747,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
                         child: FormBuilderField<int>(
                           name: "source pools",
                           initialValue: account!.pool,
-                          builder: (field) => PoolSelect(enabled: account!.pool, initialValue: field.value!, onChanged: (v) => field.didChange(v)),
+                          builder: (field) => PoolSelect(enabled: account!.pool, value: field.value!, onChanged: (v) => field.didChange(v)),
                         ),
                       ),
                     ),

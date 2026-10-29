@@ -1,53 +1,23 @@
 import 'package:flutter/material.dart';
 
-class PoolSelect extends StatefulWidget {
+/// A pool multi-selector. Controlled: it shows [value] and nothing else,
+/// so a page that sets its state only once an async fetch completes keeps
+/// the selector in step with what it displays. Pass [enabled] as 0 to
+/// refuse input while such a fetch is in flight.
+class PoolSelect extends StatelessWidget {
   final int enabled;
-  final int initialValue;
+  final int value;
   final void Function(int v)? onChanged;
   const PoolSelect({
     super.key,
     required this.enabled,
-    required this.initialValue,
+    required this.value,
     required this.onChanged,
   });
 
   @override
-  State<PoolSelect> createState() => _PoolSelectState();
-}
-
-enum Pool { transparent, sapling, orchard, ironwood }
-
-extension PoolBit on Pool {
-  int get bit => 1 << index;
-}
-
-int poolMask(Iterable<Pool> pools) =>
-    pools.fold(0, (mask, pool) => mask | pool.bit);
-
-class _PoolSelectState extends State<PoolSelect> {
-  late Set<Pool> pools;
-
-  Set<Pool> _valueToPools(int value) {
-    return Pool.values.where((p) => value & p.bit != 0).toSet();
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    pools = _valueToPools(widget.initialValue);
-  }
-
-  @override
-  void didUpdateWidget(covariant PoolSelect oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialValue != widget.initialValue) {
-      pools = _valueToPools(widget.initialValue);
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final onChanged = widget.onChanged;
+    final onChanged = this.onChanged;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -65,35 +35,42 @@ class _PoolSelectState extends State<PoolSelect> {
             ButtonSegment<Pool>(
               value: Pool.transparent,
               label: Text('Trp'),
-              enabled: widget.enabled & Pool.transparent.bit != 0,
+              enabled: enabled & Pool.transparent.bit != 0,
             ),
             ButtonSegment<Pool>(
               value: Pool.sapling,
               label: Text('Sap'),
-              enabled: widget.enabled & Pool.sapling.bit != 0,
+              enabled: enabled & Pool.sapling.bit != 0,
             ),
             ButtonSegment<Pool>(
               value: Pool.orchard,
               label: Text('Orc'),
-              enabled: widget.enabled & Pool.orchard.bit != 0,
+              enabled: enabled & Pool.orchard.bit != 0,
             ),
             ButtonSegment<Pool>(
               value: Pool.ironwood,
               label: Text('Iwd'),
-              enabled: widget.enabled & Pool.ironwood.bit != 0,
+              enabled: enabled & Pool.ironwood.bit != 0,
             ),
           ],
-          selected: pools,
+          selected: poolsOf(value),
           onSelectionChanged: onChanged != null
-              ? (Set<Pool> newSelection) {
-                  setState(() {
-                    pools = newSelection;
-                    onChanged(poolMask(newSelection));
-                  });
-                }
+              ? (Set<Pool> newSelection) => onChanged(poolMask(newSelection))
               : null,
         ),
       ],
     );
   }
 }
+
+enum Pool { transparent, sapling, orchard, ironwood }
+
+extension PoolBit on Pool {
+  int get bit => 1 << index;
+}
+
+int poolMask(Iterable<Pool> pools) =>
+    pools.fold(0, (mask, pool) => mask | pool.bit);
+
+Set<Pool> poolsOf(int mask) =>
+    Pool.values.where((p) => mask & p.bit != 0).toSet();
