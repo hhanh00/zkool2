@@ -125,7 +125,12 @@ class AccountListPageState extends ConsumerState<AccountListPage> {
                 );
                 return;
               }
-              final confirmed = await confirmDialog(context, title: "Delete Account(s)", message: "Are you sure you want to delete these accounts?");
+              final names = accounts.map((a) => a.name).join(", ");
+              final confirmed = await confirmDialog(
+                context,
+                title: "Delete Account(s)",
+                message: "Are you sure you want to delete: $names?",
+              );
               if (confirmed) {
                 for (var a in accounts) {
                   await deleteAccount(account: a.id, c: coinContext.coin);
@@ -227,14 +232,9 @@ class AccountListPageState extends ConsumerState<AccountListPage> {
     try {
       final listState = listKey.currentState;
       if (listState == null) return;
-      List<Account> accountToSync = [];
-      final hasSelection = listState.selected.any((s) => s);
-      if (hasSelection) {
-        // if any selection, use the selection, otherwise use the enabled flag
-        for (var i = 0; i < listState.selected.length; i++) {
-          if (listState.selected[i]) accountToSync.add(listState.items[i]);
-        }
-      } else {
+      // if any selection, use the selection, otherwise use the enabled flag
+      List<Account> accountToSync = listState.selectedItems;
+      if (accountToSync.isEmpty) {
         // no selection, use the enabled flag
         final accounts = await ref.read(getAccountsProvider.future);
         for (var a in accounts) {

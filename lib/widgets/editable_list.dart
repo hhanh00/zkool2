@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:animated_reorderable_list/animated_reorderable_list.dart';
-import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 
 class EditableList<T extends Object> extends StatefulWidget {
@@ -44,16 +43,17 @@ class EditableList<T extends Object> extends StatefulWidget {
 
 class EditableListState<T extends Object> extends State<EditableList<T>> {
   late List<T> items = widget.items;
-  late List<bool> selected = List.generate(widget.items.length, (_) => false);
+  /// The selection, as items compared with `isEqual`: it follows them
+  /// through a reorder and a reload, where a row index would not.
+  List<T> _selected = [];
 
-  @override
-  void initState() {
-    super.initState();
-  }
+  bool _isSelected(T item) => _selected.any((s) => widget.isEqual(s, item));
 
-  @override
-  void dispose() {
-    super.dispose();
+  void _select(T item, bool value) {
+    setState(() {
+      _selected.removeWhere((s) => widget.isEqual(s, item));
+      if (value) _selected.add(item);
+    });
   }
 
   @override
@@ -61,13 +61,14 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.items != widget.items) {
       items = widget.items;
-      selected = List.generate(items.length, (_) => false);
+      // Keep what is still there, as the reloaded objects.
+      _selected = items.where(_isSelected).toList();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final anySelected = selected.any(identity);
+    final anySelected = _selected.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -96,10 +97,8 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
                     context,
                     index,
                     items[index],
-                    selected: selected[index],
-                    onSelectChanged: (value) => setState(() {
-                      selected[index] = value ?? false;
-                    }),
+                    selected: _isSelected(items[index]),
+                    onSelectChanged: (value) => _select(items[index], value ?? false),
                   ),
                   isSameItem: (T a, T b) => widget.isEqual(a, b),
                   onReorder: (int oldIndex, int newIndex) {
@@ -122,7 +121,6 @@ class EditableListState<T extends Object> extends State<EditableList<T>> {
 
   onDelete() => widget.deleteBuilder(context, selectedItems);
 
-  List<T> get selectedItems => items.whereIndexed((index, _) => selected[index]).toList();
+  /// The selected items, in list order.
+  List<T> get selectedItems => items.where(_isSelected).toList();
 }
-
-T identity<T>(T t) => t;
