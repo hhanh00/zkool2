@@ -6,7 +6,9 @@ use crate::Sink;
 
 use crate::db::calculate_balance;
 use crate::io::SyncHeight;
-use crate::sync::driver::{Apply, Rewind, SyncRequest, DETAILS_BATCH};
+#[cfg(feature = "flutter")]
+use crate::sync::driver::SyncRequest;
+use crate::sync::driver::{Apply, Rewind, DETAILS_BATCH};
 use crate::sync::BlockHeader;
 
 #[cfg(feature = "flutter")]
