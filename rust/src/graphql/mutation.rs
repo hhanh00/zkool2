@@ -7,7 +7,7 @@ use crate::{
     graphql::{
         data::{Addresses, Event, EventType, FrostRestoreResult, MigrationEvent, UnconfirmedNote},
         query::{prepare_tx, zats_to_zec},
-        subs::SUBS,
+        subs::{fan_out, SUBS},
         Context,
     },
 };
@@ -568,35 +568,31 @@ pub async fn run_mempool(context: Context) -> anyhow::Result<()> {
                             }
                             {
                                 let account = account as i32;
-                                let ss = SUBS.lock().await;
-                                if let Some(subs) = ss.get(&account) {
-                                    for s in subs {
-                                        let _ = s
-                                            .send(Ok(Event {
-                                                r#type: EventType::Tx,
-                                                txid: txid.clone(),
-                                                value: zats_to_zec(value),
-                                                notes: notes.clone(),
-                                                ..Event::default()
-                                            }))
-                                            .await;
-                                    }
+                                let mut ss = SUBS.lock().await;
+                                if let Some(subs) = ss.get_mut(&account) {
+                                    fan_out(
+                                        subs,
+                                        &Event {
+                                            r#type: EventType::Tx,
+                                            txid: txid.clone(),
+                                            value: zats_to_zec(value),
+                                            notes: notes.clone(),
+                                            ..Event::default()
+                                        },
+                                    );
                                 }
                             }
                         }
                     }
                     MempoolMsg::BlockHeight(height) => {
-                        let ss = SUBS.lock().await;
-                        for subs in ss.values() {
-                            for s in subs {
-                                let _ = s
-                                    .send(Ok(Event {
-                                        r#type: EventType::Block,
-                                        height: height as i32,
-                                        ..Event::default()
-                                    }))
-                                    .await;
-                            }
+                        let mut ss = SUBS.lock().await;
+                        let event = Event {
+                            r#type: EventType::Block,
+                            height: height as i32,
+                            ..Event::default()
+                        };
+                        for subs in ss.values_mut() {
+                            fan_out(subs, &event);
                         }
                     }
                 }
