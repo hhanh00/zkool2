@@ -400,7 +400,7 @@ void main() {
           timeout: shortTimeout, what: "Carol listed for deletion",);
       step("select Carol and delete");
       await selectAndTap(tester, c, Icons.delete);
-      await answerDialog(tester, "Are you sure you want to delete these accounts?", "Ok");
+      await answerDialog(tester, "Are you sure you want to delete: $_accountCRenamed?", "Ok");
       await pumpUntil(tester, () => find.text(_accountCRenamed).evaluate().isEmpty,
           timeout: shortTimeout, what: "Carol to leave the list",);
       final remaining = (await tester.runAsync(() => accountIds()))!;
