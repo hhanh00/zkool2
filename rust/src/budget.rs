@@ -44,8 +44,7 @@ async fn get_historical_prices(
     );
     let rep: Value = http::http_get(client, &[&historical_price_url], http::RetryPolicy::default())
         .await?
-        .json()
-        .await?;
+        .json()?;
     let prices = rep
         .pointer("/prices")
         .ok_or(anyhow!("No /prices"))?

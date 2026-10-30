@@ -170,10 +170,7 @@ async fn download_and_verify(
     let part1_resp = crate::net::http::http_get(&client, &[&part1_url], crate::net::http::RetryPolicy::default())
         .await
         .with_context(|| format!("Failed to download {part1_url}"))?;
-    let part1_bytes = part1_resp
-        .bytes()
-        .await
-        .with_context(|| format!("Failed to read response body from {part1_url}"))?;
+    let part1_bytes = part1_resp.bytes();
 
     let mut combined: Vec<u8> = part1_bytes.to_vec();
 
@@ -189,10 +186,7 @@ async fn download_and_verify(
             crate::net::http::http_get(&client, &[&part2_url], crate::net::http::RetryPolicy::default())
                 .await
                 .with_context(|| format!("Failed to download {part2_url}"))?;
-        let part2_bytes = part2_resp
-            .bytes()
-            .await
-            .with_context(|| format!("Failed to read response body from {part2_url}"))?;
+        let part2_bytes = part2_resp.bytes();
         combined.extend_from_slice(&part2_bytes);
     }
 

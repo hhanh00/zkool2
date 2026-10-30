@@ -93,8 +93,7 @@ pub async fn get_klines(
     let url = klines_request_url(base, interval, limit)?;
     let rep: Value = http::http_get(client, &[&url], http::RetryPolicy::default())
         .await?
-        .json()
-        .await?;
+        .json()?;
     parse_klines(&rep)
 }
 

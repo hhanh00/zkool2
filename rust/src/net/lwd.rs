@@ -205,8 +205,7 @@ pub async fn query_lwd_list(coin: u8) -> Result<Vec<LWDInfo>> {
         crate::net::http::RetryPolicy::default(),
     )
     .await?
-    .json::<serde_json::Value>()
-    .await?;
+    .json::<serde_json::Value>()?;
 
     // Parse the JSON response and convert it to Vec<LWDInfo>
     let servers = rep["servers"].as_array().cloned().unwrap_or_default();

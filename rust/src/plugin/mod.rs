@@ -248,10 +248,7 @@ pub async fn install_plugin_from_url(c: &Coin, url: &str) -> Result<Plugin> {
     let response = crate::net::http::http_get(&client, &[url], crate::net::http::RetryPolicy::default())
         .await
         .context("Failed to download plugin")?;
-    let archive_bytes = response
-        .bytes()
-        .await
-        .context("Failed to read plugin archive")?;
+    let archive_bytes = response.bytes();
 
     install_plugin_from_bytes(c, &archive_bytes).await
 }
