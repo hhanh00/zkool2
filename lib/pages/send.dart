@@ -233,10 +233,12 @@ class SendPageState extends ConsumerState<SendPage> {
                     });
                   },
                 ),
+                // No initialValue bound to `amount`: a form reset would
+                // restore the amount last typed or loaded (#1420). Everything
+                // that sets the amount goes through setAmount.
                 InputAmount(
                   key: amountKey,
                   name: "amount",
-                  initialValue: amount,
                   onChanged: (v) => setState(() => amount = v),
                   onMax: selectedAssetBase.every((b) => b == 0) ? onMax : null,
                   showFx: selectedAssetBase.every((b) => b == 0),
@@ -283,10 +285,9 @@ class SendPageState extends ConsumerState<SendPage> {
   }
 
   void onMax() async {
-    final form = formKey.currentState!;
     final total = await maxSpendable(account: widget.account, c: c);
     final a = zatToString(total);
-    form.fields['amount']?.didChange(a);
+    amountKey.currentState!.setAmount(a);
     setState(() {
       amount = a;
       _recipientPaysFee = true;
@@ -294,6 +295,12 @@ class SendPageState extends ConsumerState<SendPage> {
   }
 
   void onAdd() async {
+    // The form holds the edit of a queued tile: Add commits it in place
+    // rather than queueing the tile a second time.
+    if (editingIndex != null) {
+      await finishEditing();
+      return;
+    }
     final recipient = await validateAndGetRecipient();
     if (recipient != null) {
       setState(() {
@@ -354,7 +361,7 @@ class SendPageState extends ConsumerState<SendPage> {
         amount = zatToString(recipient.amount);
         memo = recipient.userMemo;
         fields["address"]!.didChange(address);
-        fields["amount"]!.didChange(amount);
+        amountKey.currentState!.setAmount(amount!);
         fields["memo"]!.didChange(memo);
       });
     }
@@ -449,7 +456,7 @@ class SendPageState extends ConsumerState<SendPage> {
             fields["address"]!.didChange(address);
             if (recipient.amount > BigInt.zero) {
               amount = zatToString(recipient.amount);
-              fields["amount"]!.didChange(amount);
+              amountKey.currentState!.setAmount(amount!);
             }
             memo = recipient.userMemo;
             fields["memo"]!.didChange(memo);

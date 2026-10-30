@@ -208,6 +208,28 @@ void main() {
     expect(find.text('send2'), findsOneWidget);
   }
 
+  testWidgets('queueing a recipient, typed or edited, leaves an empty form', (tester) async {
+    final sent = <List<Recipient>>[];
+    await openSend(tester, sent);
+    await queue(tester, addrA, '0.1');
+    expect(fieldText(tester, 'address'), '');
+    expect(fieldText(tester, 'zat'), '');
+
+    await edit(tester, addrA);
+    expect(fieldText(tester, 'zat'), zatToString(stringToZat('0.1')));
+    await tester.enterText(field('zat'), '0.3');
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Queue this recipient to create a multi send'));
+    await tester.pumpAndSettle();
+    expect(fieldText(tester, 'address'), '');
+    expect(fieldText(tester, 'zat'), '');
+    expect(tester.state<SendPageState>(find.byType(SendPage)).formKey.currentState!.isDirty, isFalse);
+
+    await send(tester);
+    expect(sent.single.map((r) => r.address), [addrA]);
+    expect(sent.single.single.amount, stringToZat('0.3'));
+  });
+
   testWidgets('deleting the recipient being edited clears the form and Send does not add it back', (tester) async {
     final sent = <List<Recipient>>[];
     await openSend(tester, sent);
@@ -219,9 +241,7 @@ void main() {
 
     expect(tile(addrA), findsNothing);
     expect(fieldText(tester, 'address'), '');
-    // The amount widget keeps showing the last edited amount after any form
-    // reset (its initialValue follows the page's amount); what matters here
-    // is that the form holds nothing Send would queue.
+    expect(fieldText(tester, 'zat'), '');
     expect(tester.state<SendPageState>(find.byType(SendPage)).formKey.currentState!.isDirty, isFalse);
 
     await send(tester);
