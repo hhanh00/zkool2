@@ -111,12 +111,7 @@ class SendPageState extends ConsumerState<SendPage> {
             subtitle: r.assetBase.every((b) => b == 0) ? zatToText(r.amount, selectable: false) : Text("${r.amount} ${r.assetName!}"),
             trailing: IconButton(
               icon: Icon(Icons.delete),
-              onPressed: () {
-                setState(() {
-                  editingIndex = null;
-                  recipients.remove(r);
-                });
-              },
+              onPressed: () => onDelete(i),
             ),
             onTap: () => onEdit(i),
             selectedTileColor: cs.inversePrimary,
@@ -363,6 +358,26 @@ class SendPageState extends ConsumerState<SendPage> {
         fields["memo"]!.didChange(memo);
       });
     }
+  }
+
+  /// Removes the queued recipient at [index].
+  ///
+  /// The form is the editing surface of the tile at [editingIndex]: deleting
+  /// that tile clears the form too, or Send would append the deleted
+  /// recipient again from the dirty form (#1420). Deleting any other tile
+  /// keeps the edit open; the index follows the edited tile when an earlier
+  /// one is removed.
+  void onDelete(int index) {
+    final editing = editingIndex;
+    setState(() {
+      recipients.removeAt(index);
+      if (editing == index) {
+        editingIndex = null;
+      } else if (editing != null && editing > index) {
+        editingIndex = editing - 1;
+      }
+    });
+    if (editing == index) onClear();
   }
 
   Future<void> finishEditing() async {
