@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
@@ -24,6 +25,7 @@ import 'package:zkool/src/rust/pay.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/transfer.dart';
 import 'package:zkool/utils.dart';
+import 'package:zkool/widgets/busy_gate.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/address_resolver.dart';
 import 'package:zkool/validators.dart';
@@ -44,7 +46,10 @@ class SendPage extends ConsumerStatefulWidget {
   ConsumerState<SendPage> createState() => SendPageState();
 }
 
-class SendPageState extends ConsumerState<SendPage> {
+class SendPageState extends ConsumerState<SendPage> with BusyGate<SendPage> {
+  /// Bound on an OpenAlias lookup, so the page's lock always releases.
+  static const openaliasTimeout = Duration(seconds: 20);
+
   late final c = coinContext.coin;
   final formKey = GlobalKey<FormBuilderState>();
   final amountKey = GlobalKey<InputAmountState>();
@@ -125,140 +130,153 @@ class SendPageState extends ConsumerState<SendPage> {
       appBar: AppBar(
         title: Text("Recipient"),
         actions: [
-          IconButton(tooltip: "Load an unsigned transaction", onPressed: onLoad, icon: Icon(Icons.file_open)),
-          IconButton(tooltip: "Clear Form Inputs", onPressed: onClear, icon: Icon(Icons.clear)),
-          IconButton(tooltip: "Queue this recipient to create a multi send", onPressed: onAdd, icon: Icon(Icons.add)),
-          IconButton(tooltip: "Send transaction (including queued recipients)", onPressed: onSend, icon: Icon(Icons.send)),
+          IconButton(tooltip: "Load an unsigned transaction", onPressed: busy ? null : onLoad, icon: Icon(Icons.file_open)),
+          IconButton(tooltip: "Clear Form Inputs", onPressed: busy ? null : onClear, icon: Icon(Icons.clear)),
+          IconButton(tooltip: "Queue this recipient to create a multi send", onPressed: busy ? null : onAdd, icon: Icon(Icons.add)),
+          IconButton(tooltip: "Send transaction (including queued recipients)", onPressed: busy ? null : onSend, icon: Icon(Icons.send)),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8),
-          child: FormBuilder(
-            key: formKey,
-            child: Column(
-              children: [
-                ...recipientTiles,
-                if (balance != null) BalanceWidget(balance, onPoolSelected: onPoolSelected),
-                Gap(16),
-                OverflowBar(
-                  spacing: 16,
-                  children: [
-                    if (addresses?.taddr != null) IconButton(onPressed: onUnshield, tooltip: "Unshield All", icon: Icon(Icons.lock_open)),
-                    if (addresses?.saddr != null || addresses?.oaddr != null) ...[
-                      IconButton(onPressed: () => onShield(true), tooltip: "Shield One", icon: Icon(Icons.shield_outlined)),
-                      IconButton(onPressed: () => onShield(false), tooltip: "Shield All", icon: Icon(Icons.shield)),
+      // While an OpenAlias lookup (or Add/Send) is pending, nothing on the
+      // page can write the fields its result lands in (#1422).
+      body: AbsorbPointer(
+        absorbing: busy,
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: FormBuilder(
+              key: formKey,
+              child: Column(
+                children: [
+                  ...recipientTiles,
+                  if (balance != null) BalanceWidget(balance, onPoolSelected: onPoolSelected),
+                  Gap(16),
+                  OverflowBar(
+                    spacing: 16,
+                    children: [
+                      if (addresses?.taddr != null) IconButton(onPressed: onUnshield, tooltip: "Unshield All", icon: Icon(Icons.lock_open)),
+                      if (addresses?.saddr != null || addresses?.oaddr != null) ...[
+                        IconButton(onPressed: () => onShield(true), tooltip: "Shield One", icon: Icon(Icons.shield_outlined)),
+                        IconButton(onPressed: () => onShield(false), tooltip: "Shield All", icon: Icon(Icons.shield)),
+                      ],
                     ],
-                  ],
-                ),
-                if (account!.notes.any((n) => n.locked))
-                  Container(
-                    color: cs.secondaryContainer,
-                    child: Text("Some notes are disabled", style: t.bodyLarge!.copyWith(color: cs.onSecondaryContainer)),
                   ),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Tooltip(
-                        message: "Receiver Address (Transparent, Sapling or UA)",
-                        child: Focus(
-                          canRequestFocus: false,
-                          onFocusChange: (v) => {
-                            if (!v) onAddressEditComplete(),
-                          },
-                          // No initialValue bound to `address`, which onChanged
-                          // keeps in step with the text: a form reset would
-                          // restore it. Everything that sets the address goes
-                          // through didChange.
-                          child: FormBuilderTextField(
-                            name: "address",
-                            decoration: const InputDecoration(labelText: "Address"),
-                            validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAddressOrPaymentURI]),
-                            onChanged: onAddressChanged,
-                            textInputAction: TextInputAction.next,
-                            onEditingComplete: () {
-                              _tryResolveOpenalias();
-                              FocusScope.of(context).nextFocus();
+                  if (account!.notes.any((n) => n.locked))
+                    Container(
+                      color: cs.secondaryContainer,
+                      child: Text("Some notes are disabled", style: t.bodyLarge!.copyWith(color: cs.onSecondaryContainer)),
+                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Tooltip(
+                          message: "Receiver Address (Transparent, Sapling or UA)",
+                          child: Focus(
+                            canRequestFocus: false,
+                            onFocusChange: (v) => {
+                              if (!v) onAddressEditComplete(),
                             },
+                            // No initialValue bound to `address`, which onChanged
+                            // keeps in step with the text: a form reset would
+                            // restore it. Everything that sets the address goes
+                            // through didChange.
+                            child: FormBuilderTextField(
+                              name: "address",
+                              decoration: InputDecoration(
+                                labelText: "Address",
+                                suffixIcon: busyShown
+                                    ? const Padding(
+                                        padding: EdgeInsets.all(12),
+                                        child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                                      )
+                                    : null,
+                              ),
+                              validator: FormBuilderValidators.compose([FormBuilderValidators.required(), validAddressOrPaymentURI]),
+                              onChanged: onAddressChanged,
+                              textInputAction: TextInputAction.next,
+                              onEditingComplete: () {
+                                _tryResolveOpenalias();
+                                FocusScope.of(context).nextFocus();
+                              },
+                            ),
                           ),
                         ),
                       ),
+                      IconButton(tooltip: "Open the QR Scanner", onPressed: onScan, icon: Icon(Icons.qr_code_scanner)),
+                    ],
+                  ),
+                  if (_accountSuggestions.isNotEmpty)
+                    _suggestionDropdown(
+                      cs,
+                      children: _accountSuggestions
+                          .map((a) => ListTile(
+                                key: ValueKey(a.id),
+                                dense: true,
+                                leading: a.avatar(),
+                                title: Text(a.name),
+                                subtitle: Text('Account #${a.id}', style: t.bodySmall),
+                                onTap: () => _selectSuggestion(accountAddress(a, c)),
+                              ))
+                          .toList(),
                     ),
-                    IconButton(tooltip: "Open the QR Scanner", onPressed: onScan, icon: Icon(Icons.qr_code_scanner)),
-                  ],
-                ),
-                if (_accountSuggestions.isNotEmpty)
-                  _suggestionDropdown(
-                    cs,
-                    children: _accountSuggestions
-                        .map((a) => ListTile(
-                              key: ValueKey(a.id),
-                              dense: true,
-                              leading: a.avatar(),
-                              title: Text(a.name),
-                              subtitle: Text('Account #${a.id}', style: t.bodySmall),
-                              onTap: () => _selectSuggestion(accountAddress(a, c)),
-                            ))
-                        .toList(),
+                  if (_contactSuggestions.isNotEmpty)
+                    _suggestionDropdown(
+                      cs,
+                      children: _contactSuggestions
+                          .map((c) => ListTile(
+                                key: ValueKey(c.id),
+                                dense: true,
+                                leading: Icon(Icons.person),
+                                title: Text(c.name),
+                                subtitle: Text(c.addresses.isNotEmpty ? c.addresses.first : 'No address', style: t.bodySmall),
+                                onTap: () => _selectSuggestion(Future.value(contactAddress(c))),
+                              ))
+                          .toList(),
+                    ),
+                  FormBuilderDropdown<Uint8List>(
+                    name: "asset",
+                    decoration: const InputDecoration(labelText: "Currency"),
+                    initialValue: zecBase,
+                    items: [
+                      DropdownMenuItem(value: zecBase, child: const Text("ZEC")),
+                      ...zsas.map((z) => DropdownMenuItem(
+                            value: z.assetBase,
+                            child: Text(z.assetName.isNotEmpty ? z.assetName : hex.encode(z.assetDescHash.sublist(0, 8))),
+                          )),
+                    ],
+                    onChanged: (v) {
+                      setState(() {
+                        selectedAssetBase = v ?? zecBase;
+                        selectedAssetName = zsas.firstWhereOrNull((z) => z.assetBase == v)?.assetName;
+                      });
+                    },
                   ),
-                if (_contactSuggestions.isNotEmpty)
-                  _suggestionDropdown(
-                    cs,
-                    children: _contactSuggestions
-                        .map((c) => ListTile(
-                              key: ValueKey(c.id),
-                              dense: true,
-                              leading: Icon(Icons.person),
-                              title: Text(c.name),
-                              subtitle: Text(c.addresses.isNotEmpty ? c.addresses.first : 'No address', style: t.bodySmall),
-                              onTap: () => _selectSuggestion(Future.value(contactAddress(c))),
-                            ))
-                        .toList(),
+                  // No initialValue bound to `amount`: a form reset would
+                  // restore the amount last typed or loaded (#1420). Everything
+                  // that sets the amount goes through setAmount.
+                  InputAmount(
+                    key: amountKey,
+                    name: "amount",
+                    onChanged: (v) => setState(() => amount = v),
+                    onMax: selectedAssetBase.every((b) => b == 0) ? onMax : null,
+                    showFx: selectedAssetBase.every((b) => b == 0),
+                    label: selectedAssetName != null ? "Amount in $selectedAssetName" : "Amount in ZEC",
                   ),
-                FormBuilderDropdown<Uint8List>(
-                  name: "asset",
-                  decoration: const InputDecoration(labelText: "Currency"),
-                  initialValue: zecBase,
-                  items: [
-                    DropdownMenuItem(value: zecBase, child: const Text("ZEC")),
-                    ...zsas.map((z) => DropdownMenuItem(
-                          value: z.assetBase,
-                          child: Text(z.assetName.isNotEmpty ? z.assetName : hex.encode(z.assetDescHash.sublist(0, 8))),
-                        )),
-                  ],
-                  onChanged: (v) {
-                    setState(() {
-                      selectedAssetBase = v ?? zecBase;
-                      selectedAssetName = zsas.firstWhereOrNull((z) => z.assetBase == v)?.assetName;
-                    });
-                  },
-                ),
-                // No initialValue bound to `amount`: a form reset would
-                // restore the amount last typed or loaded (#1420). Everything
-                // that sets the amount goes through setAmount.
-                InputAmount(
-                  key: amountKey,
-                  name: "amount",
-                  onChanged: (v) => setState(() => amount = v),
-                  onMax: selectedAssetBase.every((b) => b == 0) ? onMax : null,
-                  showFx: selectedAssetBase.every((b) => b == 0),
-                  label: selectedAssetName != null ? "Amount in $selectedAssetName" : "Amount in ZEC",
-                ),
-                Visibility(
-                  visible: supportsMemo,
-                  maintainState: true,
-                  // No initialValue bound to `memo`: a form reset would restore
-                  // the text last typed, and the field keeps its state while
-                  // hidden for a transparent address (#1355). Edits set it
-                  // through didChange.
-                  child: FormBuilderTextField(
-                    name: "memo",
-                    decoration: const InputDecoration(labelText: "Memo"),
-                    maxLines: 8,
-                    onChanged: (v) => setState(() => memo = v),
+                  Visibility(
+                    visible: supportsMemo,
+                    maintainState: true,
+                    // No initialValue bound to `memo`: a form reset would restore
+                    // the text last typed, and the field keeps its state while
+                    // hidden for a transparent address (#1355). Edits set it
+                    // through didChange.
+                    child: FormBuilderTextField(
+                      name: "memo",
+                      decoration: const InputDecoration(labelText: "Memo"),
+                      maxLines: 8,
+                      onChanged: (v) => setState(() => memo = v),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
@@ -294,7 +312,12 @@ class SendPageState extends ConsumerState<SendPage> {
     });
   }
 
-  void onAdd() async {
+  // Add and Send resolve names and aliases before they use the form, so they
+  // run under the page's gate: one at a time, the page locked meanwhile.
+  void onAdd() => runExclusive(_add);
+  void onSend() => runExclusive(_send);
+
+  Future<void> _add() async {
     // The form holds the edit of a queued tile: Add commits it in place
     // rather than queueing the tile a second time.
     if (editingIndex != null) {
@@ -396,7 +419,7 @@ class SendPageState extends ConsumerState<SendPage> {
     }
   }
 
-  void onSend() async {
+  Future<void> _send() async {
     await finishEditing();
 
     if (formKey.currentState!.isDirty) {
@@ -474,7 +497,7 @@ class SendPageState extends ConsumerState<SendPage> {
 
   void onAddressEditComplete() {
     _tryResolveOpenalias();
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   /// Resolve #alias via OpenAlias DNS. Returns the first [Recipient]
@@ -483,8 +506,8 @@ class SendPageState extends ConsumerState<SendPage> {
   Future<Recipient?> _resolveOpenaliasRecipient(String alias) async {
     final c = coinContext.coin;
     try {
-      final result = await resolveOpenalias(alias: alias, c: c);
-      if (result.recipients.isEmpty) return null;
+      final result = await resolveOpenalias(alias: alias, c: c).timeout(openaliasTimeout);
+      if (result.recipients.isEmpty || !mounted) return null;
       if (result.dnssecStatus != 'verified') {
         final (title, message) = switch (result.dnssecStatus) {
           'unsigned' => (
@@ -511,24 +534,34 @@ class SendPageState extends ConsumerState<SendPage> {
       return result.recipients.first;
     } on AnyhowException catch (_) {
       return null;
+    } on TimeoutException catch (_) {
+      return null;
     }
   }
 
+  /// Resolves a `#alias` left in the address field when editing completes.
+  ///
+  /// The lookup runs under the page's gate (#1422): the page is locked while
+  /// it is pending, so the result cannot land on an address typed in the
+  /// meantime, and the second trigger of a blur (editing complete, then focus
+  /// loss) is dropped rather than resolving, and asking about DNSSEC, twice.
   Future<void> _tryResolveOpenalias() async {
-    final fields = formKey.currentState?.fields;
-    if (fields == null) return;
-    final addr = fields['address']?.value as String?;
+    final addr = formKey.currentState?.fields['address']?.value as String?;
     if (addr == null || !addr.startsWith('#')) return;
-
-    final recipient = await _resolveOpenaliasRecipient(addr.substring(1));
-    if (recipient != null) {
+    await runExclusive(() async {
+      final recipient = await _resolveOpenaliasRecipient(addr.substring(1));
+      if (recipient == null || !mounted) return;
+      final fields = formKey.currentState?.fields;
+      // The scanner opens before the lock and can return under it; what it
+      // scanned stays.
+      if (fields == null || fields['address']?.value != addr) return;
       fields['address']!.didChange(recipient.address);
       setState(() => address = recipient.address);
       if (recipient.userMemo != null) {
         memo = recipient.userMemo;
         fields['memo']!.didChange(memo);
       }
-    }
+    });
   }
 
   Future<Recipient?> validateAndGetRecipient() async {
