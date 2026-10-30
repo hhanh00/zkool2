@@ -15,8 +15,8 @@ use crate::{
         store_account_transparent_sk, store_account_transparent_vk, update_dindex,
     },
     key::{
-        is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key, is_valid_ufvk,
-        is_valid_uivk,
+        decode_bech32, is_valid_phrase, is_valid_sapling_key, is_valid_transparent_key,
+        is_valid_ufvk, is_valid_uivk,
     },
     keys::{sapling_dfvk_to_fvk, SaplingAddressDerivation, ScopeExt},
     ledger::{HwKind, LedgerHandle},
@@ -280,7 +280,7 @@ fn classify_key(network: &Network, hw: HwKind, key: &str) -> Result<KeySource> {
                 pk: tpk,
                 uncompressed: sk.1,
             })
-        } else if let Ok((_hrp, tpk)) = bech32::decode(key) {
+        } else if let Ok((_hrp, tpk)) = decode_bech32::<bech32::Bech32>(key) {
             Ok(KeySource::TransparentSingle {
                 sk: None,
                 pk: tpk,

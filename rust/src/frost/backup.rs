@@ -20,7 +20,7 @@
 //! quantum recoverable.
 
 use anyhow::{anyhow, bail, Context, Result};
-use bech32::{primitives::decode::CheckedHrpstring, Bech32m, Hrp};
+use bech32::{Bech32m, Hrp};
 use orchard::keys::{FullViewingKey, SpendingKey};
 use reddsa_legacy::frost::redpallas::{
     frost::{
@@ -69,15 +69,14 @@ impl FrostBackup {
         Ok(bech32::encode::<Bech32m>(Hrp::parse(HRP)?, &payload)?)
     }
 
-    /// Rejects a wrong prefix, a bad checksum, a wrong length and an
-    /// unknown format version.
+    /// Rejects a wrong prefix, a bad checksum, non-canonical padding, a
+    /// wrong length and an unknown format version.
     pub fn decode(s: &str) -> Result<Self> {
-        let checked = CheckedHrpstring::new::<Bech32m>(s.trim())
+        let (hrp, payload) = crate::key::decode_bech32::<Bech32m>(s.trim())
             .map_err(|e| anyhow!("not a valid zkfrost backup string: {e}"))?;
-        if checked.hrp().to_lowercase() != HRP {
+        if hrp.to_lowercase() != HRP {
             bail!("not a zkfrost backup string");
         }
-        let payload: Vec<u8> = checked.byte_iter().collect();
         if payload.len() != PAYLOAD_LEN {
             bail!(
                 "invalid zkfrost backup string: expected {PAYLOAD_LEN} bytes, got {}",
@@ -321,6 +320,16 @@ mod tests {
         assert!(s.starts_with("zkfrost1"));
         assert_eq!(FrostBackup::decode(&s).unwrap(), b);
         assert_eq!(FrostBackup::decode(&format!("  {}\n", s.to_uppercase())).unwrap(), b);
+
+        // Non-canonical padding (ZIP 173): the one leftover bit set, and
+        // one extra zero character, which leaves six. Both spell the fields
+        // of member 1 of group A in the draft ZIP's test vectors (#1466).
+        const PADDING_BIT_SET: &str = "zkfrost1qyqsyql3xwkurktqyq2hmycdz7pwxvyjd4kxvtt82n4fq0487auamzzyxx683wrs9swj26072tja0kada33z8ngsl494qndt43ll7garwd3argkjsqp";
+        const EXTRA_CHARACTER: &str = "zkfrost1qyqsyql3xwkurktqyq2hmycdz7pwxvyjd4kxvtt82n4fq0487auamzzyxx683wrs9swj26072tja0kada33z8ngsl494qndt43ll7garwd3azqf2e54r";
+        for s in [PADDING_BIT_SET, EXTRA_CHARACTER] {
+            let err = FrostBackup::decode(s).unwrap_err().to_string();
+            assert!(err.contains("not a valid zkfrost backup string"), "{err}");
+        }
 
         // Wrong checksum: one data character changed.
         let mut chars: Vec<char> = s.chars().collect();

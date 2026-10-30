@@ -2,7 +2,7 @@ use std::str::FromStr as _;
 
 use crate::{api::coin::Network, db::get_account_dindex};
 use anyhow::Result;
-use bech32::Hrp;
+use bech32::{primitives::decode::CheckedHrpstring, Checksum, Hrp};
 use bip32::{ChildNumber, ExtendedKeyAttrs, ExtendedPrivateKey, ExtendedPublicKey, Prefix};
 use bip39::Mnemonic;
 use secp256k1::{PublicKey, SecretKey};
@@ -161,6 +161,18 @@ pub fn is_valid_phrase(phrase: &str) -> bool {
     mnemonic.is_ok()
 }
 
+/// Decodes a bech32 string the strict way: checksum `Ck` only, and the
+/// bits left over when the data part is regrouped into bytes at most 4 and
+/// all zero, as ZIP 173 (and BIP 173) require. `bech32::decode` and
+/// `CheckedHrpstring::byte_iter` drop those bits unchecked, which lets one
+/// payload have a second valid spelling (#1466). The padding check is the
+/// crate's segwit one; the rule is the same, and nothing here is segwit.
+pub fn decode_bech32<Ck: Checksum>(s: &str) -> Result<(Hrp, Vec<u8>)> {
+    let checked = CheckedHrpstring::new::<Ck>(s)?;
+    checked.validate_segwit_padding()?;
+    Ok((checked.hrp(), checked.byte_iter().collect()))
+}
+
 pub fn is_valid_transparent_key(key: &str) -> bool {
     if bip38::import_tsk(key).is_ok() {
         return true;
@@ -174,7 +186,7 @@ pub fn is_valid_transparent_key(key: &str) -> bool {
         return true;
     }
 
-    if let Ok((hrp, pk)) = bech32::decode(key) {
+    if let Ok((hrp, pk)) = decode_bech32::<bech32::Bech32>(key) {
         if hrp == Hrp::parse_unchecked("zpk") && PublicKey::from_slice(&pk).is_ok() {
             return true;
         }
@@ -216,6 +228,35 @@ pub fn is_valid_uivk(network: &Network, key: &str) -> bool {
 
 pub fn is_valid_transparent_address(network: &Network, address: &str) -> bool {
     TransparentAddress::decode(network, address).is_ok()
+}
+
+#[cfg(test)]
+mod bech32_tests {
+    use bech32::{Bech32, ByteIterExt as _, Fe32, Fe32IterExt as _};
+
+    use super::*;
+
+    /// A `zpk` string with its one leftover bit set is the same key in a
+    /// second spelling. ZIP 173 says the leftover bits are zero; the lenient
+    /// decoder takes the string, the strict one does not.
+    #[test]
+    fn zpk_with_a_non_zero_padding_bit_is_rejected() {
+        let sk = SecretKey::from_secret_bytes([7u8; 32]).unwrap();
+        let pk = sk.public_key().serialize();
+        let hrp = Hrp::parse("zpk").unwrap();
+        let canonical = bech32::encode::<Bech32>(hrp, &pk).unwrap();
+        assert!(is_valid_transparent_key(&canonical));
+
+        // 33 bytes are 264 bits: 53 characters, one bit left over. Set it
+        // and checksum the string again.
+        let mut fes: Vec<Fe32> = pk.iter().copied().bytes_to_fes().collect();
+        let last = fes.pop().unwrap();
+        fes.push(Fe32::try_from(u8::from(last) | 1).unwrap());
+        let padded: String = fes.into_iter().with_checksum::<Bech32>(&hrp).chars().collect();
+        assert_ne!(padded, canonical);
+        assert_eq!(bech32::decode(&padded).unwrap().1, pk, "the lenient decoder takes it");
+        assert!(!is_valid_transparent_key(&padded));
+    }
 }
 
 #[cfg(test)]
