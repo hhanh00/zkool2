@@ -205,14 +205,40 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
     );
     if (!confirmed) return;
 
-    for (var dbName in selection) {
+    final deleted = selection.toList();
+    for (var dbName in deleted) {
       final db = await getFullDatabasePath(dbName);
       await deleteDb(dbFilepath: db, c: coinContext.coin);
     }
+    await _preferredDeleted(deleted);
 
     if (!mounted) return;
     await showMessage(context, "Databases deleted");
     await refresh();
+  }
+
+  /// The `database` preference names the wallet the next start opens. It is
+  /// the file's name, so a rename or delete of that wallet leaves it pointing
+  /// at a file that is gone, and the next start would create an empty wallet
+  /// under the old name (#1428).
+  Future<void> _preferredRenamed(String oldName, String newName) async {
+    final prefs = SharedPreferencesAsync();
+    if (await prefs.getString("database") != oldName) return;
+    await prefs.setString("database", newName);
+    ref.invalidate(appSettingsProvider);
+    if (mounted) setState(() => _lastOpenedDb = newName);
+  }
+
+  /// Nothing is preferred after its wallet is deleted: the next start comes
+  /// back here for the user to pick one, instead of creating the default.
+  Future<void> _preferredDeleted(List<String> names) async {
+    final prefs = SharedPreferencesAsync();
+    final preferred = await prefs.getString("database");
+    if (preferred == null || !names.contains(preferred)) return;
+    await prefs.remove("database");
+    await prefs.setBool("recovery", true);
+    ref.invalidate(appSettingsProvider);
+    if (mounted) setState(() => _lastOpenedDb = null);
   }
 
   Future<void> onChangeName() async {
@@ -250,9 +276,12 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
         false;
     if (confirmed) {
       try {
-        final oldDbFilepath = await getFullDatabasePath(selection.first);
-        final newDbFilepath = await getFullDatabasePath(name.text);
+        final oldName = selection.first;
+        final newName = name.text;
+        final oldDbFilepath = await getFullDatabasePath(oldName);
+        final newDbFilepath = await getFullDatabasePath(newName);
         await renameDb(dbFilepath: oldDbFilepath, newDbFilepath: newDbFilepath, c: coinContext.coin);
+        await _preferredRenamed(oldName, newName);
         await refresh();
       } on AnyhowException catch (e) {
         if (!mounted) return;

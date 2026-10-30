@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/db.dart';
@@ -60,6 +62,13 @@ class SplashPageState extends ConsumerState<SplashPage> {
     // A fresh handle: the wallet's network comes from the wallet itself,
     // never from the one that was open before a switch.
     var c = Coin();
+    final missing = await missingPreferredDatabase();
+    if (missing != null) {
+      // Opening the path would create an empty wallet under the old name.
+      if (mounted) await showMessage(context, "Wallet '$missing' was not found", title: "Database Manager");
+      if (mounted) setState(() => openDatabaseSuccess = false);
+      return;
+    }
     while (true) {
       final settings = await ref.read(appSettingsProvider.future);
       final dbName = settings.dbName;
@@ -119,4 +128,17 @@ class SplashPageState extends ConsumerState<SplashPage> {
     unawaited(Future(mempool.runMempoolListener));
     setState(() => openDatabaseSuccess = true);
   }
+}
+
+/// The wallet named by the `database` preference when its file is gone, for
+/// instance renamed or deleted by another install sharing the preferences,
+/// or the preferences restored without the files. Null when the file is there,
+/// or when nothing is preferred yet: the first start creates the default
+/// wallet, and the manager sets the preference once a wallet is picked.
+Future<String?> missingPreferredDatabase() async {
+  final prefs = SharedPreferencesAsync();
+  final name = await prefs.getString("database");
+  if (name == null) return null;
+  final path = await getFullDatabasePath(name);
+  return File(path).existsSync() ? null : name;
 }
