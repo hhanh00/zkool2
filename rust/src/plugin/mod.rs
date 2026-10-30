@@ -224,20 +224,40 @@ pub async fn parse_memo_with_plugins(c: &Coin, memo_bytes: &[u8]) -> Result<Vec<
             }
         };
 
-        let memo = Memo::new(payload.to_vec());
-        match engine.call_fn::<Dynamic>(&mut Scope::new(), &ast, "process_memo", (memo,)) {
-            Ok(result) => {
-                for section in extract_sections(result) {
-                    sections.push(MemoSection::from(section));
-                }
-            }
-            Err(e) => {
-                tracing::warn!("Plugin process_memo failed: {e}");
-            }
+        for section in run_plugin(&engine, &ast, Memo::new(payload.to_vec())) {
+            sections.push(MemoSection::from(section));
         }
     }
 
     Ok(sections)
+}
+
+/// Runs one plugin's `process_memo` on `memo`. A script error, or a panic in
+/// a native function the script called, is that plugin's failure alone: it
+/// is logged, the plugin contributes no sections, and the other plugins
+/// still run (#1423). Nothing is held across the call: the engine is shared
+/// read-only, the scope is this call's, and the AST cache lock was released
+/// by `compile_plugin`.
+fn run_plugin(engine: &Engine, ast: &AST, memo: Memo) -> Vec<ParsedMemoSection> {
+    let call = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        engine.call_fn::<Dynamic>(&mut Scope::new(), ast, "process_memo", (memo,))
+    }));
+    match call {
+        Ok(Ok(result)) => extract_sections(result),
+        Ok(Err(e)) => {
+            tracing::warn!("Plugin process_memo failed: {e}");
+            vec![]
+        }
+        Err(panic) => {
+            let message = panic
+                .downcast_ref::<&str>()
+                .map(|s| s.to_string())
+                .or_else(|| panic.downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "unknown panic".to_string());
+            tracing::warn!("Plugin process_memo panicked: {message}");
+            vec![]
+        }
+    }
 }
 
 // ── Install / remove ────────────────────────────────────────────────────
@@ -403,5 +423,37 @@ impl From<ParsedMemoCell> for MemoCell {
             cell_type: c.cell_type,
             value: c.value,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A plugin whose script makes a native function panic contributes no
+    /// sections; the call returns instead of unwinding to the FRB boundary.
+    #[test]
+    fn a_panicking_plugin_loses_only_its_own_sections() {
+        let mut engine = create_sandboxed_engine();
+        engine.register_fn("boom", |_: i64| -> i64 { panic!("boom") });
+        let broken = engine
+            .compile(r#"fn process_memo(memo) { boom(memo.read_u8(0)); [section("x", [], [])] }"#)
+            .unwrap();
+        let sound = engine
+            .compile(
+                r#"fn process_memo(memo) {
+                    let rows = [];
+                    rows.push([cell_number(memo.read_u8(0))]);
+                    [section("ok", ["h"], rows)]
+                }"#,
+            )
+            .unwrap();
+
+        assert!(run_plugin(&engine, &broken, Memo::new(vec![7])).is_empty());
+
+        let sections = run_plugin(&engine, &sound, Memo::new(vec![7]));
+        assert_eq!(sections.len(), 1);
+        assert_eq!(sections[0].title, "ok");
+        assert_eq!(sections[0].rows[0][0].value, "7");
     }
 }

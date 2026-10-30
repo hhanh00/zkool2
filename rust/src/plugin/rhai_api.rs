@@ -27,68 +27,60 @@ impl Memo {
         self.data.len() as i64
     }
 
+    // The offsets and lengths come from the script, which usually read them
+    // out of the memo itself, so they are whatever the sender wrote: negative,
+    // past the end, or large enough to overflow. Every read checks its range
+    // before touching the bytes; out of range is 0 or empty, never a panic
+    // (#1423).
+
+    /// The `width` bytes at `offset`, when that whole range is in the memo.
+    fn range(&self, offset: i64, width: usize) -> Option<&[u8]> {
+        let start = usize::try_from(offset).ok()?;
+        let end = start.checked_add(width)?;
+        self.data.get(start..end)
+    }
+
+    /// The bytes from `offset`, at most `len` of them: a start past the end
+    /// yields none, a length past the end yields the tail that is there.
+    fn tail(&self, offset: i64, len: i64) -> &[u8] {
+        let available = self.data.len();
+        let start = usize::try_from(offset.max(0)).unwrap_or(usize::MAX).min(available);
+        let n = usize::try_from(len.max(0)).unwrap_or(usize::MAX);
+        let end = start.saturating_add(n).min(available);
+        &self.data[start..end]
+    }
+
     fn read_u8(&mut self, offset: i64) -> i64 {
-        let idx = offset as usize;
-        if idx < self.data.len() {
-            self.data[idx] as i64
-        } else {
-            0
-        }
+        self.range(offset, 1).map(|b| b[0] as i64).unwrap_or(0)
     }
 
     fn read_u16_le(&mut self, offset: i64) -> i64 {
-        let idx = offset as usize;
-        if idx + 1 < self.data.len() {
-            u16::from_le_bytes([self.data[idx], self.data[idx + 1]]) as i64
-        } else {
-            0
-        }
+        self.range(offset, 2)
+            .and_then(|b| <[u8; 2]>::try_from(b).ok())
+            .map(|b| u16::from_le_bytes(b) as i64)
+            .unwrap_or(0)
     }
 
     fn read_u32_le(&mut self, offset: i64) -> i64 {
-        let idx = offset as usize;
-        if idx + 3 < self.data.len() {
-            u32::from_le_bytes([
-                self.data[idx],
-                self.data[idx + 1],
-                self.data[idx + 2],
-                self.data[idx + 3],
-            ]) as i64
-        } else {
-            0
-        }
+        self.range(offset, 4)
+            .and_then(|b| <[u8; 4]>::try_from(b).ok())
+            .map(|b| u32::from_le_bytes(b) as i64)
+            .unwrap_or(0)
     }
 
     fn read_u64_le(&mut self, offset: i64) -> i64 {
-        let idx = offset as usize;
-        if idx + 7 < self.data.len() {
-            u64::from_le_bytes([
-                self.data[idx],
-                self.data[idx + 1],
-                self.data[idx + 2],
-                self.data[idx + 3],
-                self.data[idx + 4],
-                self.data[idx + 5],
-                self.data[idx + 6],
-                self.data[idx + 7],
-            ]) as i64
-        } else {
-            0
-        }
+        self.range(offset, 8)
+            .and_then(|b| <[u8; 8]>::try_from(b).ok())
+            .map(|b| u64::from_le_bytes(b) as i64)
+            .unwrap_or(0)
     }
 
     fn read_bytes(&mut self, offset: i64, len: i64) -> Blob {
-        let idx = offset.max(0) as usize;
-        let n = len.max(0) as usize;
-        let end = (idx + n).min(self.data.len());
-        self.data[idx..end].to_vec()
+        self.tail(offset, len).to_vec()
     }
 
     fn read_string(&mut self, offset: i64, len: i64) -> String {
-        let idx = offset.max(0) as usize;
-        let n = len.max(0) as usize;
-        let end = (idx + n).min(self.data.len());
-        let slice = &self.data[idx..end];
+        let slice = self.tail(offset, len);
         // Trim trailing zeros
         let slice = match slice.iter().position(|&b| b == 0) {
             Some(zero_pos) => &slice[..zero_pos],
@@ -232,6 +224,52 @@ mod tests {
             .call_fn(&mut Scope::new(), &ast, "t", (Memo::new(vec![0x01, 0x02]),))
             .unwrap();
         assert_eq!(result, 0, "OOB read should return 0");
+    }
+
+    /// Runs `expr` on a 4-byte memo and returns the value as JSON.
+    fn eval_on_memo(expr: &str) -> serde_json::Value {
+        let engine = create_sandboxed_engine();
+        let ast = engine.compile(format!("fn t(memo) {{ {expr} }}")).unwrap();
+        let result: Dynamic = engine
+            .call_fn(
+                &mut Scope::new(),
+                &ast,
+                "t",
+                (Memo::new(vec![0x01, 0x02, 0x03, 0x04]),),
+            )
+            .unwrap();
+        serde_json::to_value(&result).unwrap()
+    }
+
+    /// V12 F-107 (#1423): offsets and lengths the memo made the script pass
+    /// are out of range in every way, and every reader answers 0 or empty.
+    #[test]
+    fn out_of_range_reads_are_zero_or_empty_and_never_panic() {
+        for reader in ["read_u8", "read_u16_le", "read_u32_le", "read_u64_le"] {
+            for offset in ["-1", "-9223372036854775808", "1000", "9223372036854775807"] {
+                assert_eq!(eval_on_memo(&format!("memo.{reader}({offset})")), 0, "{reader}({offset})");
+            }
+        }
+        // A start in range whose width spills past the end.
+        assert_eq!(eval_on_memo("memo.read_u16_le(3)"), 0);
+        assert_eq!(eval_on_memo("memo.read_u32_le(1)"), 0);
+        assert_eq!(eval_on_memo("memo.read_u64_le(0)"), 0);
+        // The last fitting position still reads.
+        assert_eq!(eval_on_memo("memo.read_u16_le(2)"), 0x0403);
+        assert_eq!(eval_on_memo("memo.read_u32_le(0)"), 0x04030201);
+
+        for (call, expected) in [
+            ("memo.read_bytes(1000, 0)", serde_json::json!([])),
+            ("memo.read_bytes(4, 10)", serde_json::json!([])),
+            ("memo.read_bytes(9223372036854775807, 9223372036854775807)", serde_json::json!([])),
+            ("memo.read_bytes(2, 9223372036854775807)", serde_json::json!([3, 4])),
+            ("memo.read_bytes(-5, 2)", serde_json::json!([1, 2])),
+            ("memo.read_bytes(1, -1)", serde_json::json!([])),
+            ("memo.read_string(1000, 5)", serde_json::json!("")),
+            ("memo.read_string(-1, 9223372036854775807)", serde_json::json!("\u{1}\u{2}\u{3}\u{4}")),
+        ] {
+            assert_eq!(eval_on_memo(call), expected, "{call}");
+        }
     }
 
     #[test]
