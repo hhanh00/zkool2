@@ -2827,7 +2827,7 @@ mod lock_tests {
         writer.await.unwrap();
 
         // Sapling skips invalid diversifier indexes, so only "advanced" holds.
-        assert!(dindex >= 1, "dindex {dindex}");
+        assert!(dindex >= 1, "dindex did not advance");
         assert_eq!(get_account_dindex(&mut db, account).await.unwrap(), dindex);
         // It waited for the writer rather than skipping the lock somehow.
         assert!(started.elapsed() >= HOLD / 2, "did not wait: {:?}", started.elapsed());
