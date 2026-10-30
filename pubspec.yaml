@@ -90,6 +90,9 @@ dev_dependencies:
   freezed: ^3.2.3
   riverpod_generator: ^3.0.3
   flutter_launcher_icons: ^0.14.3
+  shared_preferences_platform_interface: ^2.4.2
+  path_provider_platform_interface: ^2.1.3
+  plugin_platform_interface: ^2.1.8
 
 # Local development override — points flutter_passkey_service at the sibling
 # checkout so edits there take effect without pushing and bumping the git ref.
