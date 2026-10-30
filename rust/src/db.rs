@@ -53,9 +53,16 @@ pub const DB_VERSION: u16 = 9;
 /// synchronizer writes, takes this. The sync session is the first line of
 /// defence, for the writers that hold it; this is the second, for the ones
 /// that do not (the GraphQL mutations).
+///
+/// Inside a transaction already open on the connection, this is a savepoint
+/// like `begin`: the lock mode is the outer transaction's to choose, and
+/// SQLite has no `SAVEPOINT IMMEDIATE`.
 pub async fn begin_immediate(
     connection: &mut SqliteConnection,
 ) -> Result<sqlx::Transaction<'_, sqlx::Sqlite>> {
+    if connection.is_in_transaction() {
+        return Ok(connection.begin().await?);
+    }
     Ok(connection.begin_with("BEGIN IMMEDIATE").await?)
 }
 
