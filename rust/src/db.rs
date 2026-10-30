@@ -39,6 +39,33 @@ use crate::api::sync::PoolBalance;
 /// changes (queries, PoolBalance, solve mode, etc.).
 pub const DB_VERSION: u16 = 9;
 
+/// A transaction taken for writing from its first statement.
+///
+/// A deferred transaction (`begin`) takes SQLite's SHARED lock at its first
+/// read and asks for RESERVED at its first write. When another connection
+/// already holds RESERVED, that upgrade fails at once with "database is
+/// locked": SQLite skips the busy handler there, to avoid a deadlock between
+/// two readers that both wait to write, so the pool's busy timeout never
+/// applies. `BEGIN IMMEDIATE` asks for RESERVED up front, where the busy
+/// timeout does cover the wait.
+///
+/// A transaction that reads before it writes, and may run while the
+/// synchronizer writes, takes this. The sync session is the first line of
+/// defence, for the writers that hold it; this is the second, for the ones
+/// that do not (the GraphQL mutations).
+///
+/// Inside a transaction already open on the connection, this is a savepoint
+/// like `begin`: the lock mode is the outer transaction's to choose, and
+/// SQLite has no `SAVEPOINT IMMEDIATE`.
+pub async fn begin_immediate(
+    connection: &mut SqliteConnection,
+) -> Result<sqlx::Transaction<'_, sqlx::Sqlite>> {
+    if connection.is_in_transaction() {
+        return Ok(connection.begin().await?);
+    }
+    Ok(connection.begin_with("BEGIN IMMEDIATE").await?)
+}
+
 pub async fn create_schema(connection: &mut SqliteConnection) -> Result<()> {
     sqlx::query(
         "CREATE TABLE IF NOT EXISTS props(

@@ -31,7 +31,7 @@ use crate::{
         key::generate_seed,
     },
     db::{
-        get_account_dindex, get_account_hw, store_account_hw,
+        begin_immediate, get_account_dindex, get_account_hw, store_account_hw,
         store_account_metadata,
     },
     pay::pool::{ALL_POOLS, POOL_IRONWOOD, POOL_ORCHARD, POOL_SAPLING, POOL_TRANSPARENT},
@@ -84,7 +84,8 @@ pub async fn new_account(
     connection: &mut SqliteConnection,
     na: &NewAccount,
 ) -> Result<u32> {
-    let mut db_tx = connection.begin().await?;
+    // Reads the account positions before it inserts: taken for writing.
+    let mut db_tx = begin_immediate(connection).await?;
 
     let birth = na.birth.unwrap_or_else(|| {
         network
@@ -1828,7 +1829,9 @@ pub async fn generate_next_dindex(
     connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<u32> {
-    let mut db_tx = connection.begin().await?;
+    // Reads the keys and dindex before it updates them: taken for writing,
+    // so a sync holding the write lock is waited out, not failed on (#1458).
+    let mut db_tx = begin_immediate(connection).await?;
     let ledger = get_ledger(&mut db_tx, account).await?;
     let (aindex, mut dindex): (u32, u32) =
         sqlx::query_as("SELECT aindex, dindex FROM accounts WHERE id_account = ?")
@@ -2743,4 +2746,91 @@ pub(crate) fn derive_sapling_address(
 ) -> String {
     let address = sxvk.address(dindex.into()).unwrap();
     address.encode(network)
+}
+
+#[cfg(test)]
+mod lock_tests {
+    use std::time::{Duration, Instant};
+
+    use sqlx::sqlite::SqliteConnectOptions;
+
+    use super::*;
+    use crate::db::create_schema;
+
+    const MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+
+    /// A fresh database path under the system temp dir, with no leftovers.
+    /// Two connections on one file are needed to see a lock; an in-memory
+    /// database is private to its connection.
+    fn db_path(name: &str) -> String {
+        let path = std::env::temp_dir().join(format!("{name}_{}.db", std::process::id()));
+        let path = path.to_str().unwrap().to_string();
+        let _ = std::fs::remove_file(&path);
+        path
+    }
+
+    async fn open(path: &str) -> SqliteConnection {
+        let options = SqliteConnectOptions::new()
+            .filename(path)
+            .create_if_missing(true);
+        SqliteConnection::connect_with(&options).await.unwrap()
+    }
+
+    /// Regression for #1458. `newAddresses` failed at once with "database is
+    /// locked" while the synchronizer held the write lock: a deferred
+    /// transaction cannot wait on its SHARED to RESERVED upgrade. Taken for
+    /// writing up front, it waits the writer out and succeeds.
+    #[tokio::test]
+    async fn next_address_waits_for_a_writer_instead_of_failing() {
+        let path = db_path("next_address_waits_for_a_writer");
+        let mut db = open(&path).await;
+        create_schema(&mut db).await.unwrap();
+        let na = NewAccount {
+            icon: None,
+            name: "seed".into(),
+            restore: true,
+            key: MNEMONIC.into(),
+            passphrase: None,
+            fingerprint: None,
+            aindex: 0,
+            birth: Some(1),
+            folder: String::new(),
+            pools: Some(ALL_POOLS),
+            use_internal: true,
+            internal: false,
+            hw: 0,
+        };
+        let account = new_account(&Network::Main, &mut db, &na).await.unwrap();
+
+        // A second connection holds the write lock for a while, as the
+        // synchronizer does while it commits a batch.
+        const HOLD: Duration = Duration::from_millis(300);
+        let (ready_tx, ready_rx) = tokio::sync::oneshot::channel();
+        let writer_path = path.clone();
+        let writer = tokio::spawn(async move {
+            let mut writer = open(&writer_path).await;
+            let mut held = writer.begin_with("BEGIN IMMEDIATE").await.unwrap();
+            sqlx::query("UPDATE accounts SET name = name")
+                .execute(&mut *held)
+                .await
+                .unwrap();
+            ready_tx.send(()).unwrap();
+            tokio::time::sleep(HOLD).await;
+            held.commit().await.unwrap();
+        });
+        ready_rx.await.unwrap();
+
+        let started = Instant::now();
+        let dindex = generate_next_dindex(&Network::Main, &mut db, account)
+            .await
+            .unwrap();
+        writer.await.unwrap();
+
+        // Sapling skips invalid diversifier indexes, so only "advanced" holds.
+        assert!(dindex >= 1, "dindex did not advance");
+        assert_eq!(get_account_dindex(&mut db, account).await.unwrap(), dindex);
+        // It waited for the writer rather than skipping the lock somehow.
+        assert!(started.elapsed() >= HOLD / 2, "did not wait: {:?}", started.elapsed());
+        let _ = std::fs::remove_file(&path);
+    }
 }
