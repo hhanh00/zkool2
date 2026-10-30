@@ -48,8 +48,7 @@ pub async fn get_coingecko_price(api: &str, currency: &str, c: &Coin) -> Result<
         http::RetryPolicy::default(),
     )
     .await?
-    .json::<Value>()
-    .await?;
+    .json::<Value>()?;
     let price = rep["zcash"][currency]
         .as_f64()
         .ok_or(anyhow!("Price not found for currency: {currency}"))?;
@@ -71,8 +70,7 @@ pub async fn get_supported_vs_currencies(api: &str, c: &Coin) -> Result<Vec<Stri
         http::RetryPolicy::default(),
     )
     .await?
-    .json::<Vec<String>>()
-    .await?;
+    .json::<Vec<String>>()?;
     Ok(rep)
 }
 
@@ -99,8 +97,7 @@ pub async fn get_exchange_rate(
         http::RetryPolicy::default(),
     )
     .await?
-    .json::<Value>()
-    .await?;
+    .json::<Value>()?;
     let from_price = rep["zcash"][from_currency]
         .as_f64()
         .ok_or(anyhow!("Price not found for currency: {from_currency}"))?;

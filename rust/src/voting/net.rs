@@ -102,7 +102,7 @@ pub async fn fetch_rounds(
         })
         .collect();
     let response = http::http_get(client, &urls, http::RetryPolicy::default()).await?;
-    Ok(response.json::<Envelope>().await?.current_rounds)
+    Ok(response.json::<Envelope>()?.current_rounds)
 }
 
 /// Resolves and authenticates the voting config for a source URL.
@@ -114,8 +114,7 @@ pub async fn voting_config_resolve(
 
     let static_bytes = http::http_get(client, &[&source], http::RetryPolicy::default())
         .await?
-        .bytes()
-        .await?;
+        .bytes();
     let resolved_static =
         zcash_voting::config::resolve_static_voting_config(&source, &static_bytes)?;
     let dynamic_bytes = http::http_get(
@@ -124,8 +123,7 @@ pub async fn voting_config_resolve(
         http::RetryPolicy::default(),
     )
     .await?
-    .bytes()
-    .await?;
+    .bytes();
     let resolved = zcash_voting::config::resolve_dynamic_voting_config(
         resolved_static,
         &dynamic_bytes,
@@ -168,7 +166,7 @@ pub async fn fetch_round_params(
         http::RetryPolicy::default(),
     )
     .await?;
-    let body: serde_json::Value = response.json().await?;
+    let body: serde_json::Value = response.json()?;
     let round = &body["round"];
     let snapshot_height = round["snapshot_height"]
         .as_u64()

@@ -231,16 +231,44 @@ pub fn client(proxy: &str, timeout: Duration) -> Result<reqwest::Client> {
     Ok(builder.build()?)
 }
 
+/// A GET response with its body already read: the read happens inside
+/// [`http_get`]'s loop, so a body cut short by a reset or a timeout is one
+/// failed attempt like any other, and the next URL is tried (#1434).
+#[derive(Debug)]
+pub struct HttpResponse {
+    pub status: reqwest::StatusCode,
+    pub headers: reqwest::header::HeaderMap,
+    pub body: Bytes,
+}
+
+impl HttpResponse {
+    /// The body parsed as JSON.
+    pub fn json<T: serde::de::DeserializeOwned>(&self) -> Result<T> {
+        Ok(serde_json::from_slice(&self.body)?)
+    }
+
+    /// The body as UTF-8 text.
+    pub fn text(&self) -> Result<String> {
+        Ok(String::from_utf8(self.body.to_vec())?)
+    }
+
+    /// The body.
+    pub fn bytes(&self) -> Bytes {
+        self.body.clone()
+    }
+}
+
 /// GETs candidate URLs in round-robin order, advancing after each transport
-/// failure or HTTP 4xx/5xx response and wrapping after the last URL.
-/// [RetryPolicy::attempts] limits total requests across all URLs. Each call
-/// starts at the first URL unless `policy.randomize_first` selects a random starting
-/// index. Backoff and the last-error behavior are unchanged.
+/// failure, HTTP 4xx/5xx response or failed body read, and wrapping after
+/// the last URL. [RetryPolicy::attempts] limits total requests across all
+/// URLs. Each call starts at the first URL unless `policy.randomize_first`
+/// selects a random starting index. The body is read before a response is
+/// returned, so every caller's read is covered by the retries.
 pub async fn http_get<S: AsRef<str>>(
     client: &reqwest::Client,
     urls: &[S],
     policy: RetryPolicy,
-) -> Result<reqwest::Response> {
+) -> Result<HttpResponse> {
     if urls.is_empty() {
         return Err(anyhow!("GET requires at least one URL"));
     }
@@ -258,12 +286,19 @@ pub async fn http_get<S: AsRef<str>>(
                 .mul_f64(policy.rate.powi((attempt - 1) as i32)),
         )
         .await;
-        match client
-            .get(url)
-            .send()
-            .await
-            .and_then(reqwest::Response::error_for_status)
-        {
+        let result = async {
+            let response = client.get(url).send().await?.error_for_status()?;
+            let status = response.status();
+            let headers = response.headers().clone();
+            let body = response.bytes().await?;
+            Ok::<_, reqwest::Error>(HttpResponse {
+                status,
+                headers,
+                body,
+            })
+        }
+        .await;
+        match result {
             Ok(response) => return Ok(response),
             Err(e) => last_err = Some(anyhow!("GET {url}: {e}")),
         }
@@ -332,8 +367,49 @@ mod tests {
         .await
         .unwrap()
         .unwrap();
-        assert_eq!(response.status(), reqwest::StatusCode::OK);
+        assert_eq!(response.status, reqwest::StatusCode::OK);
         server.await.unwrap();
+    }
+
+    /// V12 F-19 (#1434): a 200 whose body is cut short is one failed attempt,
+    /// and the next URL is requested.
+    #[tokio::test]
+    async fn advances_after_a_body_cut_short() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let base = format!("http://{}", listener.local_addr().unwrap());
+        let urls = [format!("{base}/short"), format!("{base}/whole")];
+        let server = tokio::spawn(async move {
+            let mut paths = Vec::new();
+            for _ in 0..2 {
+                let (mut socket, _) = listener.accept().await.unwrap();
+                let mut request = Vec::new();
+                while !request.ends_with(b"\r\n\r\n") {
+                    request.push(socket.read_u8().await.unwrap());
+                }
+                let request = String::from_utf8(request).unwrap();
+                let path = request.split_whitespace().nth(1).unwrap().to_string();
+                let response: &[u8] = if path == "/short" {
+                    // 128 bytes announced, a few sent, then the connection closes.
+                    b"HTTP/1.1 200 OK\r\nContent-Length: 128\r\nConnection: close\r\n\r\nabc"
+                } else {
+                    b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\nConnection: close\r\n\r\nwhole"
+                };
+                socket.write_all(response).await.unwrap();
+                socket.shutdown().await.unwrap();
+                paths.push(path);
+            }
+            paths
+        });
+        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let response = tokio::time::timeout(
+            Duration::from_secs(5),
+            http_get(&client, &urls, immediate_policy(2)),
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        assert_eq!(response.text().unwrap(), "whole");
+        assert_eq!(server.await.unwrap(), ["/short", "/whole"]);
     }
 
     #[tokio::test]

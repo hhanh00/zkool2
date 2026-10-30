@@ -6,9 +6,10 @@
 //!
 //! JSON envelopes are returned as raw bodies — the vote-sdk schema is still
 //! evolving and the Dart UI parses leniently (mirroring vizor's client).
-//! GETs use the shared HTTP helper, retrying transport failures and HTTP
-//! 4xx/5xx responses. Successful responses expose the status, body, and
-//! `Retry-After` header. POSTs pass completed HTTP responses through.
+//! GETs use the shared HTTP helper, retrying transport failures, HTTP
+//! 4xx/5xx responses and bodies cut short. Successful responses expose the
+//! status, body, and `Retry-After` header. POSTs pass completed HTTP
+//! responses through.
 //!
 //! Transient failures retry in place: idempotent GETs use the shared retry
 //! policy, and POSTs retry only when the request never reached the server (a
@@ -39,9 +40,9 @@ async fn get(base_url: &str, path: &str, proxy: &str) -> Result<(u16, String, Op
         http::RetryPolicy::default(),
     )
     .await?;
-    let status = response.status().as_u16();
-    let retry_after = retry_after_secs(response.headers());
-    let body = response.text().await?;
+    let status = response.status.as_u16();
+    let retry_after = retry_after_secs(&response.headers);
+    let body = response.text()?;
     Ok((status, body, retry_after))
 }
 
@@ -79,7 +80,11 @@ async fn post(
         };
         let status = response.status().as_u16();
         let retry_after = retry_after_secs(response.headers());
-        let body = response.text().await?;
+        // The server has the request by now; a resend could deliver it twice,
+        // so a failed read is reported, not retried.
+        let body = response.text().await.map_err(|e| {
+            anyhow!("vote chain POST {url}: the response body could not be read, the outcome is unknown: {e}")
+        })?;
         return Ok((status, body, retry_after));
     }
     Err(last_err.expect("POST_ATTEMPTS is at least 1"))
@@ -186,5 +191,5 @@ pub async fn fetch_bytes(url: &str, proxy: &str) -> Result<Vec<u8>> {
         http::RetryPolicy::default(),
     )
     .await?;
-    Ok(response.bytes().await?.to_vec())
+    Ok(response.body.to_vec())
 }
