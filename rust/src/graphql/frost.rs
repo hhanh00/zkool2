@@ -13,6 +13,21 @@ fn invalid_integer(name: &str) -> FieldError {
     FieldError::new(format!("Invalid {name}"), juniper::Value::Null)
 }
 
+/// Every FROST and DKG entry point starts here. A FROST session is
+/// wallet-wide, one at a time whatever account owns it, so a server with
+/// token authentication, which is multi-tenant, does not offer it: one
+/// tenant could otherwise act on another's session (#1529).
+pub(crate) fn require_frost(enabled: bool) -> FieldResult<()> {
+    if enabled {
+        Ok(())
+    } else {
+        Err(FieldError::new(
+            "FROST is not available with token authentication: the signing session is wallet-wide",
+            juniper::Value::Null,
+        ))
+    }
+}
+
 pub async fn dkg_start(
     name: String,
     threshold: i32,
@@ -22,6 +37,7 @@ pub async fn dkg_start(
     dkg_version: Option<i32>,
     context: &Context,
 ) -> FieldResult<String> {
+    require_frost(context.frost_enabled)?;
     if id_participant <= 0 || id_participant > participants {
         return Err(invalid_integer("id_participant"));
     }
@@ -61,6 +77,7 @@ pub async fn dkg_start(
 }
 
 pub async fn dkg_cancel(context: &Context) -> FieldResult<bool> {
+    require_frost(context.frost_enabled)?;
     context.driver.cancel(Cancel::Dkg).await?;
     Ok(true)
 }
@@ -70,6 +87,7 @@ pub async fn dkg_set_address(
     address: String,
     context: &Context,
 ) -> FieldResult<bool> {
+    require_frost(context.frost_enabled)?;
     let id_participant = id_participant
         .try_into()
         .map_err(|_| invalid_integer("id_participant"))?;
@@ -80,6 +98,7 @@ pub async fn dkg_set_address(
 /// Run one protocol pass now, through the driver, and report its result.
 /// Passes also run on every new block without being asked.
 pub async fn do_dkg(context: &Context) -> FieldResult<bool> {
+    require_frost(context.frost_enabled)?;
     context.driver.step().await?;
     Ok(true)
 }
@@ -89,6 +108,7 @@ pub async fn frost_params(
     id_account: i32,
     context: &Context,
 ) -> FieldResult<Option<FrostParamsResult>> {
+    require_frost(context.frost_enabled)?;
     let id_account = id_account
         .try_into()
         .map_err(|_| invalid_integer("id_account"))?;
@@ -105,6 +125,7 @@ pub async fn frost_params(
 
 /// Create (or return) the ZIP 2005 sibling of a legacy frost account.
 pub async fn frost_upgrade(id_account: i32, context: &Context) -> FieldResult<i32> {
+    require_frost(context.frost_enabled)?;
     let id_account = id_account
         .try_into()
         .map_err(|_| invalid_integer("id_account"))?;
@@ -121,6 +142,7 @@ pub async fn frost_sweep(
     message_account: i32,
     context: &Context,
 ) -> FieldResult<String> {
+    require_frost(context.frost_enabled)?;
     let account: u32 = id_account
         .try_into()
         .map_err(|_| invalid_integer("id_account"))?;
@@ -140,6 +162,7 @@ pub async fn frost_sweep(
 
 /// The member's `zkfrost` backup string for a frost account.
 pub async fn frost_export_backup(id_account: i32, context: &Context) -> FieldResult<String> {
+    require_frost(context.frost_enabled)?;
     let id_account = id_account
         .try_into()
         .map_err(|_| invalid_integer("id_account"))?;
@@ -157,6 +180,7 @@ pub async fn frost_restore(
     birth: Option<i32>,
     context: &Context,
 ) -> FieldResult<Vec<FrostRestoreResult>> {
+    require_frost(context.frost_enabled)?;
     let coin = &context.coin;
     let (legacy, zip2005) = match (legacy, zip2005) {
         (None, None) => {
@@ -192,6 +216,7 @@ pub async fn frost_sign(
     pczt: String,
     context: &Context,
 ) -> FieldResult<bool> {
+    require_frost(context.frost_enabled)?;
     let coin = &context.coin;
     let mut connection = coin.get_connection().await?;
     tracing::info!("frost_sign: initializing signing");
@@ -215,4 +240,16 @@ pub async fn frost_sign(
     )
     .await?;
     Ok(true)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::require_frost;
+
+    #[test]
+    fn frost_is_refused_when_disabled() {
+        assert!(require_frost(true).is_ok());
+        let m = require_frost(false).unwrap_err().message().to_string();
+        assert!(m.contains("not available with token authentication"), "{m}");
+    }
 }

@@ -275,7 +275,13 @@ async fn main() -> Result<()> {
         tracing::info!("Sapling parameters downloaded successfully");
     }
 
-    let context = Context::new(coin);
+    let mut context = Context::new(coin);
+    // A FROST session is wallet-wide; a token-authenticated server is
+    // multi-tenant and does not offer it (#1529).
+    context.frost_enabled = decoding_key.is_none();
+    if !context.frost_enabled {
+        tracing::info!("FROST and DKG are disabled: the server runs with token authentication");
+    }
     if !no_mempool {
         tokio::spawn(run_mempool(context.clone()));
     }

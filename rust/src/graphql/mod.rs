@@ -32,6 +32,10 @@ pub struct Context {
     /// `votingSubmissionStatus` can read how it ended; the sidecar answers
     /// for it afterwards.
     pub voting_drives: Arc<tokio::sync::Mutex<HashMap<(String, u32), VotingDrive>>>,
+    /// FROST and DKG are offered. A server with token authentication is
+    /// multi-tenant, and a FROST session is wallet-wide, so it refuses
+    /// them (#1529); the single-operator server keeps them.
+    pub frost_enabled: bool,
 }
 
 impl Context {
@@ -47,6 +51,7 @@ impl Context {
             auth: None,
             driver,
             voting_drives: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
+            frost_enabled: true,
         }
     }
 }

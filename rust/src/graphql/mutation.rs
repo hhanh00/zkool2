@@ -522,6 +522,7 @@ impl Mutation {
 
     pub async fn frost_cancel(context: &Context) -> FieldResult<bool> {
         check_admin_auth(context)?;
+        crate::graphql::frost::require_frost(context.frost_enabled)?;
         context.driver.cancel(crate::frost::driver::Cancel::Sign).await?;
         Ok(true)
     }
