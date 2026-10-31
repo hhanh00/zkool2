@@ -107,6 +107,10 @@ pub async fn sibling_of(connection: &mut SqliteConnection, account: u32) -> Resu
 /// Create the ZIP 2005 sibling of a legacy frost account, or return the
 /// one that exists. The legacy account is left as it is. Every member
 /// obtains the same address because the derivation is deterministic.
+///
+/// The sibling lookup and the inserts run in one immediate transaction,
+/// so two upgrades of one account cannot both find no sibling: the second
+/// waits for the first to commit, then returns what it created (#1517).
 pub async fn upgrade_account(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -122,13 +126,15 @@ pub async fn upgrade_account(
     if is_recoverable(dkg_version) {
         bail!("this frost account already uses the ZIP 2005 derivation");
     }
+    let mut tx = crate::db::begin_immediate(connection).await?;
     // Caches sk in dkg_params, which is what sibling_of pairs on.
-    let sk = group_sk(network, connection, account).await?;
-    if let Some(sibling) = sibling_of(connection, account).await? {
+    let sk = group_sk(network, &mut tx, account).await?;
+    if let Some(sibling) = sibling_of(&mut tx, account).await? {
+        tx.commit().await?;
         return Ok(sibling);
     }
 
-    let legacy_fvk = get_orchard_vk(&mut *connection, account)
+    let legacy_fvk = get_orchard_vk(&mut *tx, account)
         .await?
         .context("frost account has no Orchard key")?;
     let ak: [u8; 32] = legacy_fvk.to_bytes()[..32].try_into().unwrap();
@@ -136,11 +142,10 @@ pub async fn upgrade_account(
     let (account_name,): (String,) =
         sqlx::query_as("SELECT name FROM accounts WHERE id_account = ?")
             .bind(account)
-            .fetch_one(&mut *connection)
+            .fetch_one(&mut *tx)
             .await?;
     let name = format!("{account_name} (ZIP 2005)");
 
-    let mut tx = connection.begin().await?;
     let sibling =
         store_account_metadata(&mut *tx, &name, &None, &None, height, false, false).await?;
     init_account_orchard(network, &mut *tx, sibling, height).await?;
