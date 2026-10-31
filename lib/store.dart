@@ -481,8 +481,15 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
         ));
   }
 
+  /// Reloads the settings from the preferences and the database, for a
+  /// caller whose save failed part-way and whose draft no longer tells
+  /// what is stored.
+  void reload() => ref.invalidateSelf();
+
   /// Persist all settings to prefs/DB props and apply live coin changes
   /// (lwd/transport/proxy). Called once when leaving the settings page.
+  /// A failed write throws: nothing after it is written, the live coin is
+  /// left as it was, and the caller reports it (#1511).
   Future<void> save(AppSettings settings) async {
     final c = coinContext.coin;
     final prefs = SharedPreferencesAsync();

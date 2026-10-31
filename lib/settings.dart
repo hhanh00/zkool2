@@ -69,7 +69,19 @@ class SettingsPageState extends ConsumerState<SettingsPage> with RouteAware {
     super.didPop();
     final s = settings;
     if (s != null) {
-      ref.read(appSettingsProvider.notifier).save(s);
+      _save(ref.read(appSettingsProvider.notifier), s);
+    }
+  }
+
+  /// The page is gone by the time the save runs, so a failure is reported
+  /// through the app navigator, and the provider reloads what was actually
+  /// stored rather than keeping the draft that was only half written (#1511).
+  Future<void> _save(AppSettingsNotifier notifier, AppSettings s) async {
+    try {
+      await notifier.save(s);
+    } catch (e) {
+      showSnackbar("Settings were not saved: $e");
+      notifier.reload();
     }
   }
 }
