@@ -1,5 +1,6 @@
-//! Shared HTTP plumbing: the wallet's standard reqwest client and one retry
-//! policy for idempotent GETs.
+//! Shared HTTP plumbing: the wallet's standard reqwest client, the Tor
+//! request primitive, the [`Route`] that applies the selected transport to
+//! a GET, and one retry policy for idempotent GETs.
 
 use anyhow::{anyhow, Result};
 use http_body_util::{BodyExt, Full};
@@ -208,6 +209,99 @@ pub fn proxy_url(transport: u8, proxy: &str) -> &str {
     }
 }
 
+/// How a GET leaves the wallet: the selected transport applied to HTTP.
+///
+/// The selectors are the wallet's: `0` direct, `1` Tor, `2` Nym, `3` the
+/// external proxy. Nym has no HTTP transport yet and fails closed, so a
+/// request never goes out in the clear under a transport the user chose
+/// for privacy. One route serves every request of an operation.
+pub enum Route {
+    /// A reqwest client: direct, or through the external proxy.
+    Direct(reqwest::Client),
+    /// One isolated Arti circuit per request. Redirects are not followed.
+    Tor {
+        timeout: Duration,
+        max_response_bytes: usize,
+    },
+    /// Every request fails before it is sent.
+    Nym,
+}
+
+impl Route {
+    /// The route for `transport`, with `proxy` for transport 3 and `timeout`
+    /// applied to each request. Bodies are not capped; see [`Route::capped`].
+    pub fn new(transport: u8, proxy: &str, timeout: Duration) -> Result<Self> {
+        match transport {
+            0 => Ok(Self::Direct(client("", timeout)?)),
+            1 => Ok(Self::Tor {
+                timeout,
+                max_response_bytes: usize::MAX,
+            }),
+            2 => Ok(Self::Nym),
+            3 => Ok(Self::Direct(client(proxy, timeout)?)),
+            other => Err(anyhow!("unsupported transport {other}")),
+        }
+    }
+
+    /// Caps the body of a Tor response, which is read whole into memory.
+    /// The reqwest route reads whole bodies uncapped as it always has.
+    pub fn capped(self, max_response_bytes: usize) -> Self {
+        match self {
+            Self::Tor { timeout, .. } => Self::Tor {
+                timeout,
+                max_response_bytes,
+            },
+            other => other,
+        }
+    }
+
+    /// One GET; a response outside 2xx is a failure, as `error_for_status`
+    /// makes it on the reqwest route.
+    async fn get_once(&self, url: &str) -> Result<HttpResponse> {
+        match self {
+            Self::Direct(client) => {
+                let response = client.get(url).send().await?.error_for_status()?;
+                let status = response.status();
+                let headers = response.headers().clone();
+                let body = response.bytes().await?;
+                Ok(HttpResponse {
+                    status,
+                    headers,
+                    body,
+                })
+            }
+            Self::Tor {
+                timeout,
+                max_response_bytes,
+            } => {
+                let response = tor_request(
+                    Method::GET,
+                    url,
+                    Vec::new(),
+                    &[],
+                    *timeout,
+                    *max_response_bytes,
+                )
+                .await?;
+                let status = reqwest::StatusCode::from_u16(response.status)?;
+                if !status.is_success() {
+                    return Err(anyhow!("HTTP status {status}"));
+                }
+                let mut headers = reqwest::header::HeaderMap::new();
+                if let Some(content_type) = response.content_type {
+                    headers.insert(reqwest::header::CONTENT_TYPE, content_type.parse()?);
+                }
+                Ok(HttpResponse {
+                    status,
+                    headers,
+                    body: Bytes::from(response.body),
+                })
+            }
+            Self::Nym => Err(anyhow!("Nym transport is unavailable")),
+        }
+    }
+}
+
 /// Builds the wallet's reqwest client: user agent, per-request timeout, and
 /// an optional proxy URL ("http://…", "socks5h://…"; empty = direct).
 ///
@@ -258,19 +352,23 @@ impl HttpResponse {
     }
 }
 
-/// GETs candidate URLs in round-robin order, advancing after each transport
-/// failure, HTTP 4xx/5xx response or failed body read, and wrapping after
-/// the last URL. [RetryPolicy::attempts] limits total requests across all
-/// URLs. Each call starts at the first URL unless `policy.randomize_first`
-/// selects a random starting index. The body is read before a response is
-/// returned, so every caller's read is covered by the retries.
+/// GETs candidate URLs over `route` in round-robin order, advancing after
+/// each transport failure, HTTP 4xx/5xx response or failed body read, and
+/// wrapping after the last URL. [RetryPolicy::attempts] limits total
+/// requests across all URLs. Each call starts at the first URL unless
+/// `policy.randomize_first` selects a random starting index. The body is
+/// read before a response is returned, so every caller's read is covered by
+/// the retries. A route that fails closed fails here without a retry.
 pub async fn http_get<S: AsRef<str>>(
-    client: &reqwest::Client,
+    route: &Route,
     urls: &[S],
     policy: RetryPolicy,
 ) -> Result<HttpResponse> {
     if urls.is_empty() {
         return Err(anyhow!("GET requires at least one URL"));
+    }
+    if matches!(route, Route::Nym) {
+        return route.get_once("").await;
     }
     let start = if policy.randomize_first {
         rand::rng().random_range(0..urls.len())
@@ -286,19 +384,7 @@ pub async fn http_get<S: AsRef<str>>(
                 .mul_f64(policy.rate.powi((attempt - 1) as i32)),
         )
         .await;
-        let result = async {
-            let response = client.get(url).send().await?.error_for_status()?;
-            let status = response.status();
-            let headers = response.headers().clone();
-            let body = response.bytes().await?;
-            Ok::<_, reqwest::Error>(HttpResponse {
-                status,
-                headers,
-                body,
-            })
-        }
-        .await;
-        match result {
+        match route.get_once(url).await {
             Ok(response) => return Ok(response),
             Err(e) => last_err = Some(anyhow!("GET {url}: {e}")),
         }
@@ -308,7 +394,7 @@ pub async fn http_get<S: AsRef<str>>(
 
 #[cfg(test)]
 mod tests {
-    use super::{http_get, proxy_url, tor_get, RetryPolicy};
+    use super::{http_get, proxy_url, tor_get, RetryPolicy, Route};
     use std::time::Duration;
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
@@ -324,8 +410,8 @@ mod tests {
 
     #[tokio::test]
     async fn rejects_empty_url_list() {
-        let client = reqwest::Client::new();
-        let error = http_get(&client, &[] as &[&str], immediate_policy(3))
+        let route = Route::Direct(reqwest::Client::new());
+        let error = http_get(&route, &[] as &[&str], immediate_policy(3))
             .await
             .unwrap_err();
         assert!(error.to_string().contains("at least one URL"));
@@ -359,10 +445,10 @@ mod tests {
                     .unwrap();
             }
         });
-        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let route = Route::Direct(reqwest::Client::builder().no_proxy().build().unwrap());
         let response = tokio::time::timeout(
             Duration::from_secs(5),
-            http_get(&client, &urls, immediate_policy(3)),
+            http_get(&route, &urls, immediate_policy(3)),
         )
         .await
         .unwrap()
@@ -400,10 +486,10 @@ mod tests {
             }
             paths
         });
-        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let route = Route::Direct(reqwest::Client::builder().no_proxy().build().unwrap());
         let response = tokio::time::timeout(
             Duration::from_secs(5),
-            http_get(&client, &urls, immediate_policy(2)),
+            http_get(&route, &urls, immediate_policy(2)),
         )
         .await
         .unwrap()
@@ -453,11 +539,11 @@ mod tests {
                 assert_eq!(pair[1], (pair[0] + 1) % 3);
             }
         });
-        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let route = Route::Direct(reqwest::Client::builder().no_proxy().build().unwrap());
         tokio::time::timeout(
             Duration::from_secs(5),
             http_get(
-                &client,
+                &route,
                 &urls,
                 RetryPolicy {
                     randomize_first: true,
@@ -488,10 +574,10 @@ mod tests {
                 .await
                 .unwrap();
         });
-        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let route = Route::Direct(reqwest::Client::builder().no_proxy().build().unwrap());
         let error = tokio::time::timeout(
             Duration::from_secs(5),
-            http_get(&client, &["invalid-url", &url], immediate_policy(2)),
+            http_get(&route, &["invalid-url", &url], immediate_policy(2)),
         )
         .await
         .unwrap()
@@ -516,5 +602,53 @@ mod tests {
     #[tokio::test]
     async fn tor_get_rejects_an_invalid_url_before_opening_a_route() {
         assert!(tor_get("not a URL", Duration::from_secs(1)).await.is_err());
+    }
+
+    /// Nym fails closed before any request and without the retry delays:
+    /// the listener never sees a connection.
+    #[tokio::test]
+    async fn nym_route_fails_closed_without_a_request() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let route = Route::new(2, "", Duration::from_secs(1)).unwrap();
+        let error = tokio::time::timeout(
+            Duration::from_millis(200),
+            http_get(&route, &[&url], RetryPolicy::default()),
+        )
+        .await
+        .unwrap()
+        .unwrap_err();
+        assert!(error.to_string().contains("Nym transport is unavailable"));
+        assert!(tokio::time::timeout(Duration::from_millis(50), listener.accept())
+            .await
+            .is_err());
+    }
+
+    #[tokio::test]
+    async fn tor_route_rejects_an_invalid_url_before_opening_a_circuit() {
+        let route = Route::new(1, "", Duration::from_secs(1)).unwrap();
+        assert!(http_get(&route, &["not a URL"], immediate_policy(1))
+            .await
+            .is_err());
+    }
+
+    #[test]
+    fn routes_follow_the_transport_selector() {
+        assert!(matches!(
+            Route::new(0, "socks5://x", Duration::from_secs(1)).unwrap(),
+            Route::Direct(_)
+        ));
+        assert!(matches!(
+            Route::new(1, "", Duration::from_secs(1)).unwrap().capped(8),
+            Route::Tor {
+                max_response_bytes: 8,
+                ..
+            }
+        ));
+        assert!(matches!(
+            Route::new(3, "socks5://127.0.0.1:1080", Duration::from_secs(1)).unwrap(),
+            Route::Direct(_)
+        ));
+        assert!(Route::new(4, "", Duration::from_secs(1)).is_err());
     }
 }

@@ -85,7 +85,7 @@ impl ServerRound {
 /// Fetches nonterminal rounds, rotating through equivalent servers on failure.
 pub async fn fetch_rounds(
     servers: &[String],
-    client: &reqwest::Client,
+    route: &http::Route,
 ) -> Result<Vec<ServerRound>> {
     #[derive(serde::Deserialize)]
     struct Envelope {
@@ -101,24 +101,24 @@ pub async fn fetch_rounds(
             )
         })
         .collect();
-    let response = http::http_get(client, &urls, http::RetryPolicy::default()).await?;
+    let response = http::http_get(route, &urls, http::RetryPolicy::default()).await?;
     Ok(response.json::<Envelope>()?.current_rounds)
 }
 
 /// Resolves and authenticates the voting config for a source URL.
 pub async fn voting_config_resolve(
     source: &str,
-    client: &reqwest::Client,
+    route: &http::Route,
 ) -> Result<zcash_voting::config::ResolvedVotingConfig> {
     let source = source.to_string();
 
-    let static_bytes = http::http_get(client, &[&source], http::RetryPolicy::default())
+    let static_bytes = http::http_get(route, &[&source], http::RetryPolicy::default())
         .await?
         .bytes();
     let resolved_static =
         zcash_voting::config::resolve_static_voting_config(&source, &static_bytes)?;
     let dynamic_bytes = http::http_get(
-        client,
+        route,
         &[&resolved_static.dynamic_config_url],
         http::RetryPolicy::default(),
     )
@@ -137,7 +137,7 @@ pub async fn voting_config_resolve(
 pub async fn fetch_round_params(
     round_id: &str,
     config: &zcash_voting::config::ResolvedVotingConfig,
-    client: &reqwest::Client,
+    route: &http::Route,
 ) -> Result<zcash_voting::VotingRoundParams> {
     ensure!(
         round_id.len() == 64 && round_id.bytes().all(|b| b.is_ascii_hexdigit()),
@@ -161,7 +161,7 @@ pub async fn fetch_round_params(
         })
         .collect();
     let response = http::http_get(
-        client,
+        route,
         &urls.iter().map(String::as_str).collect::<Vec<_>>(),
         http::RetryPolicy::default(),
     )
@@ -294,8 +294,8 @@ mod tests {
                 .await
                 .unwrap();
         });
-        let client = reqwest::Client::builder().no_proxy().build().unwrap();
-        let params = super::fetch_round_params(&round_id, &config, &client)
+        let route = crate::net::http::Route::Direct(reqwest::Client::builder().no_proxy().build().unwrap());
+        let params = super::fetch_round_params(&round_id, &config, &route)
             .await
             .unwrap();
         assert_eq!(params.ea_pk, vec![7; 32]);
@@ -303,7 +303,7 @@ mod tests {
         assert_eq!(params.nc_root, vec![2; 32]);
         assert_eq!(params.nullifier_imt_root, vec![3; 32]);
         assert!(
-            super::fetch_round_params(&"ff".repeat(32), &config, &client)
+            super::fetch_round_params(&"ff".repeat(32), &config, &route)
                 .await
                 .is_err()
         );
@@ -334,10 +334,10 @@ mod tests {
                 .await
                 .unwrap();
         });
-        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let route = crate::net::http::Route::Direct(reqwest::Client::builder().no_proxy().build().unwrap());
         let rounds = tokio::time::timeout(
             Duration::from_secs(10),
-            fetch_rounds(&["invalid-url".into(), url], &client),
+            fetch_rounds(&["invalid-url".into(), url], &route),
         )
         .await
         .unwrap()
@@ -392,10 +392,10 @@ mod tests {
                     .unwrap();
             }
         });
-        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let route = crate::net::http::Route::Direct(reqwest::Client::builder().no_proxy().build().unwrap());
         let error = tokio::time::timeout(
             Duration::from_secs(10),
-            voting_config_resolve(&source, &client),
+            voting_config_resolve(&source, &route),
         )
         .await
         .expect("config fetch timed out")

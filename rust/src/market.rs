@@ -88,10 +88,10 @@ pub async fn get_klines(
     base: &str,
     interval: &str,
     limit: u32,
-    client: &reqwest::Client,
+    route: &http::Route,
 ) -> Result<Vec<Candle>> {
     let url = klines_request_url(base, interval, limit)?;
-    let rep: Value = http::http_get(client, &[&url], http::RetryPolicy::default())
+    let rep: Value = http::http_get(route, &[&url], http::RetryPolicy::default())
         .await?
         .json()?;
     parse_klines(&rep)
@@ -178,10 +178,11 @@ mod tests {
                 .await
                 .unwrap();
         });
-        let client = reqwest::Client::builder().no_proxy().build().unwrap();
+        let route =
+            crate::net::http::Route::Direct(reqwest::Client::builder().no_proxy().build().unwrap());
         let candles = tokio::time::timeout(
             Duration::from_secs(5),
-            get_klines(&base, "4h", 2, &client),
+            get_klines(&base, "4h", 2, &route),
         )
         .await
         .unwrap()

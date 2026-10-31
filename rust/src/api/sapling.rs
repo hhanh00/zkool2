@@ -164,10 +164,10 @@ async fn download_and_verify(
     // Download the two parts and concatenate them.
     tracing::info!("Downloading Sapling parameter {} …", name);
     // Parameter parts are tens of MB; the timeout must cover the whole body.
-    let client = crate::net::http::client("", Duration::from_secs(300))?;
+    let route = crate::net::http::Route::Direct(crate::net::http::client("", Duration::from_secs(300))?);
 
     let part1_url = format!("{}/{}.part.1", DOWNLOAD_URL, name);
-    let part1_resp = crate::net::http::http_get(&client, &[&part1_url], crate::net::http::RetryPolicy::default())
+    let part1_resp = crate::net::http::http_get(&route, &[&part1_url], crate::net::http::RetryPolicy::default())
         .await
         .with_context(|| format!("Failed to download {part1_url}"))?;
     let part1_bytes = part1_resp.bytes();
@@ -183,7 +183,7 @@ async fn download_and_verify(
             part2_url
         );
         let part2_resp =
-            crate::net::http::http_get(&client, &[&part2_url], crate::net::http::RetryPolicy::default())
+            crate::net::http::http_get(&route, &[&part2_url], crate::net::http::RetryPolicy::default())
                 .await
                 .with_context(|| format!("Failed to download {part2_url}"))?;
         let part2_bytes = part2_resp.bytes();

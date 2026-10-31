@@ -10,7 +10,6 @@
 
 use std::path::PathBuf;
 use std::str::FromStr;
-use std::time::Duration;
 
 use anyhow::{anyhow, ensure, Result};
 use bip39::Mnemonic;
@@ -23,7 +22,7 @@ use zcash_voting::prelude::BundlePolicy;
 use zcash_voting::session::resume_plan;
 
 use crate::api::coin::Coin;
-use crate::api::voting::{voting_network, wallet_id};
+use crate::api::voting::{voting_network, voting_route, wallet_id};
 #[cfg(feature = "flutter")]
 use crate::frb_generated::StreamSink;
 use crate::voting::{drive, hotkey, net as voting_net, note_source, sidecar::VotingSidecar};
@@ -84,10 +83,10 @@ async fn fetch_round_timing(
     round_id: &str,
     c: &Coin,
 ) -> Result<Option<(u64, u64)>> {
-    let proxy = crate::net::http::proxy_url(c.transport, &c.proxy);
+    let route = voting_route(c)?;
     for server in servers {
         let Ok((status, body, _)) =
-            crate::net::votechain::round_status(server, round_id, proxy).await
+            crate::net::votechain::round_status(server, round_id, &route).await
         else {
             continue;
         };
@@ -216,10 +215,7 @@ async fn resolve_round_config(round_id: &str, account: u32, c: &Coin) -> Result<
     let wallet = wallet_id(account, c).await?;
     let sidecar = VotingSidecar::open(PathBuf::from(&c.db_filepath), wallet).await?;
 
-    let http_client = crate::net::http::client(
-        crate::net::http::proxy_url(c.transport, &c.proxy),
-        Duration::from_secs(15),
-    )?;
+    let route = voting_route(c)?;
 
     let mut connection = c.get_connection().await?;
     let source = crate::db::get_prop(&mut connection, "voting_config_url")
@@ -228,14 +224,14 @@ async fn resolve_round_config(round_id: &str, account: u32, c: &Coin) -> Result<
         .ok_or_else(|| anyhow!("voting configuration is missing"))?;
     drop(connection);
 
-    let config = voting_net::voting_config_resolve(&source, &http_client).await?;
-    let params = voting_net::fetch_round_params(round_id, &config, &http_client).await?;
+    let config = voting_net::voting_config_resolve(&source, &route).await?;
+    let params = voting_net::fetch_round_params(round_id, &config, &route).await?;
     let servers: Vec<String> = config
         .vote_servers
         .iter()
         .map(|server| server.url.clone())
         .collect();
-    let server_round = voting_net::fetch_rounds(&servers, &http_client)
+    let server_round = voting_net::fetch_rounds(&servers, &route)
         .await?
         .into_iter()
         .find(|round| round.round_id == round_id)

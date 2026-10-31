@@ -643,6 +643,11 @@ async fn http_connect_tunnel(
 }
 
 impl Coin {
+    /// The HTTP route for the selected transport, `timeout` per request.
+    pub(crate) fn route(&self, timeout: std::time::Duration) -> Result<crate::net::http::Route> {
+        crate::net::http::Route::new(self.transport, &self.proxy, timeout)
+    }
+
     #[cfg_attr(feature = "flutter", frb(sync))]
     pub fn new(default_coin: Option<u8>) -> Self {
         Coin {

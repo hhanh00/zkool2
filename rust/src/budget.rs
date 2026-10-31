@@ -22,12 +22,12 @@ async fn get_historical_prices_all(
     base: &str,
     currency: &str,
     api: &str,
-    client: &reqwest::Client,
+    route: &http::Route,
 ) -> Result<Vec<PriceQuote>> {
     // 1, 90 and 365 are the max day ranges per interval
-    let mut pqs = get_historical_prices(base, 1, currency, api, client).await?;
-    pqs.extend(get_historical_prices(base, 90, currency, api, client).await?);
-    pqs.extend(get_historical_prices(base, 365, currency, api, client).await?);
+    let mut pqs = get_historical_prices(base, 1, currency, api, route).await?;
+    pqs.extend(get_historical_prices(base, 90, currency, api, route).await?);
+    pqs.extend(get_historical_prices(base, 365, currency, api, route).await?);
     pqs.sort_by_key(|pq| pq.time);
     Ok(pqs)
 }
@@ -37,12 +37,12 @@ async fn get_historical_prices(
     days: u32,
     currency: &str,
     api: &str,
-    client: &reqwest::Client,
+    route: &http::Route,
 ) -> Result<Vec<PriceQuote>> {
     let historical_price_url = format!(
         "{base}/api/v3/coins/zcash/market_chart?vs_currency={currency}&days={days}&x_cg_demo_api_key={api}"
     );
-    let rep: Value = http::http_get(client, &[&historical_price_url], http::RetryPolicy::default())
+    let rep: Value = http::http_get(route, &[&historical_price_url], http::RetryPolicy::default())
         .await?
         .json()?;
     let prices = rep
@@ -121,12 +121,12 @@ pub async fn fill_missing_tx_prices(
     account: u32,
     currency: &str,
     api: &str,
-    client: &reqwest::Client,
+    route: &http::Route,
 ) -> Result<u32> {
     let mut txs = fetch_missing_tx_prices(&mut *connection, account).await?;
     let n = txs.len() as u32;
     let base = coingecko_url(&mut *connection).await?;
-    let pqs = get_historical_prices_all(&base, currency, api, client).await?;
+    let pqs = get_historical_prices_all(&base, currency, api, route).await?;
     fill_historical_prices(&mut txs, &pqs).await?;
     store_tx_prices(&mut *connection, &txs).await?;
     Ok(n)

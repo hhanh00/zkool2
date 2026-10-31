@@ -264,8 +264,8 @@ fn run_plugin(engine: &Engine, ast: &AST, memo: Memo) -> Vec<ParsedMemoSection> 
 
 /// Download and install a plugin from a URL.
 pub async fn install_plugin_from_url(c: &Coin, url: &str) -> Result<Plugin> {
-    let client = crate::net::http::client("", Duration::from_secs(60))?;
-    let response = crate::net::http::http_get(&client, &[url], crate::net::http::RetryPolicy::default())
+    let route = crate::net::http::Route::Direct(crate::net::http::client("", Duration::from_secs(60))?);
+    let response = crate::net::http::http_get(&route, &[url], crate::net::http::RetryPolicy::default())
         .await
         .context("Failed to download plugin")?;
     let archive_bytes = response.bytes();

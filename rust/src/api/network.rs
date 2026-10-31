@@ -36,12 +36,9 @@ async fn coingecko_url(c: &Coin) -> Result<String> {
 
 pub async fn get_coingecko_price(api: &str, currency: &str, c: &Coin) -> Result<f64> {
     let base = coingecko_url(c).await?;
-    let client = http::client(
-        http::proxy_url(c.transport, &c.proxy),
-        Duration::from_secs(15),
-    )?;
+    let route = c.route(Duration::from_secs(15))?;
     let rep = http::http_get(
-        &client,
+        &route,
         &[&format!(
             "{base}/api/v3/simple/price?ids=zcash&vs_currencies={currency}&x_cg_demo_api_key={api}"
         )],
@@ -58,12 +55,9 @@ pub async fn get_coingecko_price(api: &str, currency: &str, c: &Coin) -> Result<
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn get_supported_vs_currencies(api: &str, c: &Coin) -> Result<Vec<String>> {
     let base = coingecko_url(c).await?;
-    let client = http::client(
-        http::proxy_url(c.transport, &c.proxy),
-        Duration::from_secs(15),
-    )?;
+    let route = c.route(Duration::from_secs(15))?;
     let rep = http::http_get(
-        &client,
+        &route,
         &[&format!(
             "{base}/api/v3/simple/supported_vs_currencies?x_cg_demo_api_key={api}"
         )],
@@ -85,12 +79,9 @@ pub async fn get_exchange_rate(
     c: &Coin,
 ) -> Result<ExchangeRate> {
     let base = coingecko_url(c).await?;
-    let client = http::client(
-        http::proxy_url(c.transport, &c.proxy),
-        Duration::from_secs(15),
-    )?;
+    let route = c.route(Duration::from_secs(15))?;
     let rep = http::http_get(
-        &client,
+        &route,
         &[&format!(
             "{base}/api/v3/simple/price?ids=zcash&vs_currencies={from_currency},{to_currency}&x_cg_demo_api_key={api}"
         )],
@@ -121,11 +112,8 @@ pub async fn fetch_candles(interval: &str, limit: u32, c: &Coin) -> Result<Vec<C
         let mut connection = c.get_connection().await?;
         crate::market::klines_url(&mut connection).await?
     };
-    let client = http::client(
-        http::proxy_url(c.transport, &c.proxy),
-        Duration::from_secs(15),
-    )?;
-    crate::market::get_klines(&base, interval, limit, &client).await
+    let route = c.route(Duration::from_secs(15))?;
+    crate::market::get_klines(&base, interval, limit, &route).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]

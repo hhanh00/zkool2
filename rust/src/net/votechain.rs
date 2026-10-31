@@ -6,7 +6,8 @@
 //!
 //! JSON envelopes are returned as raw bodies — the vote-sdk schema is still
 //! evolving and the Dart UI parses leniently (mirroring vizor's client).
-//! GETs use the shared HTTP helper, retrying transport failures, HTTP
+//! GETs use the shared HTTP helper over the caller's [`http::Route`], so
+//! they follow the selected transport; they retry transport failures, HTTP
 //! 4xx/5xx responses and bodies cut short. Successful responses expose the
 //! status, body, and `Retry-After` header. POSTs pass completed HTTP
 //! responses through.
@@ -32,10 +33,14 @@ const POST_RETRY_DELAY: Duration = Duration::from_millis(500);
 
 /// Returns the status code, body, and `Retry-After` of a GET after the shared
 /// helper checks its status and retries failures.
-async fn get(base_url: &str, path: &str, proxy: &str) -> Result<(u16, String, Option<u64>)> {
+async fn get(
+    base_url: &str,
+    path: &str,
+    route: &http::Route,
+) -> Result<(u16, String, Option<u64>)> {
     let url = endpoint(base_url, path)?;
     let response = http::http_get(
-        &http::client(proxy, Duration::from_secs(15))?,
+        route,
         &[&url],
         http::RetryPolicy::default(),
     )
@@ -107,26 +112,29 @@ fn endpoint(base_url: &str, path: &str) -> Result<String> {
 
 /// Lists rounds from the vote server. Current vote-sdk returns
 /// `{ "rounds": [...] }`; an empty `{}` means no rounds.
-pub async fn list_rounds(base_url: &str, proxy: &str) -> Result<(u16, String, Option<u64>)> {
-    get(base_url, "rounds", proxy).await
+pub async fn list_rounds(
+    base_url: &str,
+    route: &http::Route,
+) -> Result<(u16, String, Option<u64>)> {
+    get(base_url, "rounds", route).await
 }
 
 /// Fetches one round's status (`{ "round": ... }` envelope).
 pub async fn round_status(
     base_url: &str,
     round_id: &str,
-    proxy: &str,
+    route: &http::Route,
 ) -> Result<(u16, String, Option<u64>)> {
-    get(base_url, &format!("round/{round_id}"), proxy).await
+    get(base_url, &format!("round/{round_id}"), route).await
 }
 
 /// Fetches the round tally envelope (`tally-results`).
 pub async fn round_tally(
     base_url: &str,
     round_id: &str,
-    proxy: &str,
+    route: &http::Route,
 ) -> Result<(u16, String, Option<u64>)> {
-    get(base_url, &format!("tally-results/{round_id}"), proxy).await
+    get(base_url, &format!("tally-results/{round_id}"), route).await
 }
 
 /// Broadcasts a delegation transaction to the vote chain.
@@ -151,9 +159,9 @@ pub async fn submit_vote_commitment(
 pub async fn tx_confirmation(
     base_url: &str,
     tx_hash: &str,
-    proxy: &str,
+    route: &http::Route,
 ) -> Result<(u16, String, Option<u64>)> {
-    get(base_url, &format!("tx/{tx_hash}"), proxy).await
+    get(base_url, &format!("tx/{tx_hash}"), route).await
 }
 
 /// Posts one encrypted share to a helper server. The payload must already
@@ -171,12 +179,12 @@ pub async fn share_status(
     server_url: &str,
     round_id: &str,
     share_id: &str,
-    proxy: &str,
+    route: &http::Route,
 ) -> Result<(u16, String, Option<u64>)> {
     get(
         server_url,
         &format!("share-status/{round_id}/{share_id}"),
-        proxy,
+        route,
     )
     .await
 }
@@ -184,9 +192,9 @@ pub async fn share_status(
 /// Fetches raw bytes from an arbitrary URL (voting config blobs).
 /// Transport failures and HTTP 4xx/5xx responses retry via
 /// [`http::http_get`].
-pub async fn fetch_bytes(url: &str, proxy: &str) -> Result<Vec<u8>> {
+pub async fn fetch_bytes(url: &str, route: &http::Route) -> Result<Vec<u8>> {
     let response = http::http_get(
-        &http::client(proxy, Duration::from_secs(15))?,
+        route,
         &[url],
         http::RetryPolicy::default(),
     )

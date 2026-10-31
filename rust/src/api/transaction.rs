@@ -12,11 +12,8 @@ pub async fn fill_missing_tx_prices(
     c: &Coin,
 ) -> Result<u32> {
     let mut connection = c.get_connection().await?;
-    let client = crate::net::http::client(
-        crate::net::http::proxy_url(c.transport, &c.proxy),
-        std::time::Duration::from_secs(15),
-    )?;
-    crate::budget::fill_missing_tx_prices(&mut connection, account, &currency, &api, &client).await
+    let route = c.route(std::time::Duration::from_secs(15))?;
+    crate::budget::fill_missing_tx_prices(&mut connection, account, &currency, &api, &route).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]

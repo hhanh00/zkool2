@@ -7,7 +7,19 @@ use anyhow::{anyhow, ensure, Result};
 use flutter_rust_bridge::frb;
 use serde::{Deserialize, Serialize};
 
-use crate::{api::coin::Coin, voting, voting::sidecar::VotingSidecar};
+use crate::{api::coin::Coin, net::http::Route, voting, voting::sidecar::VotingSidecar};
+
+/// Cap on a voting response read over Tor; the chain transport uses the same.
+const MAX_VOTING_RESPONSE_BYTES: usize = 8 << 20;
+
+/// The route for the voting discovery GETs: config, round parameters and
+/// the rounds overview. They go to the config host and the vote servers,
+/// the same hosts that later receive the vote, so they must take the same
+/// transport the vote takes (#1580).
+pub(crate) fn voting_route(c: &Coin) -> Result<Route> {
+    Ok(c.route(std::time::Duration::from_secs(15))?
+        .capped(MAX_VOTING_RESPONSE_BYTES))
+}
 
 pub(crate) fn voting_network(c: &Coin) -> Result<zcash_voting::Network> {
     match c.coin {
@@ -100,11 +112,8 @@ pub async fn voting_round_list(account: u32, c: &Coin) -> Result<Vec<VotingRound
     };
     drop(connection);
 
-    let client = crate::net::http::client(
-        crate::net::http::proxy_url(c.transport, &c.proxy),
-        std::time::Duration::from_secs(15),
-    )?;
-    let config = voting::net::voting_config_resolve(&source, &client).await?;
+    let route = voting_route(c)?;
+    let config = voting::net::voting_config_resolve(&source, &route).await?;
     let servers: Vec<_> = config
         .vote_servers
         .iter()
@@ -115,14 +124,14 @@ pub async fn voting_round_list(account: u32, c: &Coin) -> Result<Vec<VotingRound
         .iter()
         .map(|round| round.round_id.as_str())
         .collect();
-    let rounds: Vec<_> = voting::net::fetch_rounds(&servers, &client)
+    let rounds: Vec<_> = voting::net::fetch_rounds(&servers, &route)
         .await?
         .into_iter()
         .filter(|round| authenticated_ids.contains(round.round_id.as_str()))
         .collect();
     let mut snapshot_heights = HashMap::with_capacity(rounds.len());
     for round in &rounds {
-        let params = voting::net::fetch_round_params(&round.round_id, &config, &client).await?;
+        let params = voting::net::fetch_round_params(&round.round_id, &config, &route).await?;
         snapshot_heights.insert(
             round.round_id.clone(),
             u32::try_from(params.snapshot_height).map_err(|_| {
@@ -306,12 +315,9 @@ async fn ensure_ballot_round(sidecar: &VotingSidecar, round_id: &str, c: &Coin) 
         .filter(|source| !source.is_empty())
         .ok_or_else(|| anyhow!("voting configuration is missing"))?;
     drop(connection);
-    let client = crate::net::http::client(
-        crate::net::http::proxy_url(c.transport, &c.proxy),
-        std::time::Duration::from_secs(15),
-    )?;
-    let config = voting::net::voting_config_resolve(&source, &client).await?;
-    let params = voting::net::fetch_round_params(round_id, &config, &client).await?;
+    let route = voting_route(c)?;
+    let config = voting::net::voting_config_resolve(&source, &route).await?;
+    let params = voting::net::fetch_round_params(round_id, &config, &route).await?;
     let network = voting_network(c)?;
     sidecar
         .run(move |db| db.ensure_round(network, &params, None))
