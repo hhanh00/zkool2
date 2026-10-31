@@ -46,17 +46,28 @@ pub struct VotingRoundListItem {
     pub vote_end_time: Option<u64>,
 }
 
+/// The id that scopes an account's rows in the voting sidecar.
+///
+/// Accounts derived from one seed at different ZIP-32 indices are separate
+/// voters, each with its own notes and delegation identity, so the id is the
+/// seed fingerprint and the account index together. The fingerprint alone
+/// made two such accounts read and overwrite each other's ballots (#1567).
 pub(crate) async fn wallet_id(account: u32, c: &Coin) -> Result<String> {
     let mut connection = c.get_connection().await?;
     let fingerprint = crate::db::get_account_fingerprint(&mut connection, account)
         .await?
         .ok_or_else(|| anyhow!("account {} has no seed fingerprint", account))?;
+    let aindex = crate::db::get_account_aindex(&mut connection, account).await?;
+    sidecar_wallet_id(&fingerprint, aindex)
+}
+
+fn sidecar_wallet_id(fingerprint: &[u8], aindex: u32) -> Result<String> {
     ensure!(
         fingerprint.len() == 32,
         "seed fingerprint must be 32 bytes, got {}",
         fingerprint.len()
     );
-    Ok(hex::encode(fingerprint))
+    Ok(format!("{}:{aindex}", hex::encode(fingerprint)))
 }
 
 fn normalized_status(status: &serde_json::Value) -> String {
@@ -324,7 +335,22 @@ pub async fn voting_clear_selection(
 
 #[cfg(test)]
 mod tests {
-    use super::normalized_status;
+    use super::{normalized_status, sidecar_wallet_id};
+
+    #[test]
+    fn sidecar_id_separates_accounts_of_one_seed() {
+        let fingerprint = [0xabu8; 32];
+        let first = sidecar_wallet_id(&fingerprint, 0).unwrap();
+        let seventh = sidecar_wallet_id(&fingerprint, 7).unwrap();
+        assert_eq!(first, format!("{}:0", "ab".repeat(32)));
+        assert_eq!(seventh, format!("{}:7", "ab".repeat(32)));
+        assert_ne!(first, seventh);
+    }
+
+    #[test]
+    fn sidecar_id_rejects_a_short_fingerprint() {
+        assert!(sidecar_wallet_id(&[0u8; 16], 0).is_err());
+    }
 
     #[test]
     fn normalizes_numeric_and_named_statuses() {
