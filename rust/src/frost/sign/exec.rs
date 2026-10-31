@@ -569,8 +569,15 @@ async fn load_signing_key(
     .await?;
     match result {
         Some((b,)) => {
-            let arr: [u8; ed25519_dalek::SECRET_KEY_LENGTH] =
-                b.try_into().expect("invalid SigningKey length");
+            // A row of the wrong length is an error naming the account, as
+            // the DKG loader reports it, not a panic (#1495).
+            let arr: [u8; ed25519_dalek::SECRET_KEY_LENGTH] = b.try_into().map_err(|b: Vec<u8>| {
+                anyhow::anyhow!(
+                    "account {account}: invalid signing key length in the DKG state, expected {} bytes, got {}",
+                    ed25519_dalek::SECRET_KEY_LENGTH,
+                    b.len()
+                )
+            })?;
             Ok(Some(SigningKey::from_bytes(&arr)))
         }
         None => Ok(None),
@@ -768,7 +775,8 @@ async fn load_all_sigshares(
 #[cfg(test)]
 mod guard_tests {
     use super::*;
-    use crate::api::pay::PcztPackage;
+    use crate::{api::pay::PcztPackage, db::create_schema};
+    use sqlx::Connection;
 
     fn package(orchard: Vec<usize>, ironwood: Vec<usize>) -> PcztPackage {
         PcztPackage {
@@ -793,5 +801,17 @@ mod guard_tests {
         assert!(m.contains("Orchard action 0 twice"), "{m}");
     }
 
-
+    /// #1495: a signing key of the wrong length is an error, not a panic.
+    #[tokio::test]
+    async fn a_short_signing_key_is_an_error() {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        create_schema(&mut db).await.unwrap();
+        sqlx::query("INSERT INTO dkg_state(account, signing_keypair) VALUES (1, ?)")
+            .bind(vec![7u8; 31])
+            .execute(&mut db)
+            .await
+            .unwrap();
+        let m = load_signing_key(&mut db, 1).await.unwrap_err().to_string();
+        assert!(m.contains("account 1") && m.contains("got 31"), "{m}");
+    }
 }
