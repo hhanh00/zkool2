@@ -681,6 +681,7 @@ pub async fn set_dkg_params(
     dkg_version: u8,
 ) -> Result<()> {
     check_dkg_params(id, n, t)?;
+    check_no_dkg(&mut *connection).await?;
     let height = client.latest_height().await?;
     let birth_height = height.saturating_sub(10000) + 1;
     tracing::info!("birth_height {birth_height}");
@@ -703,6 +704,29 @@ pub async fn set_dkg_params(
         .execute(&mut *connection)
         .await?;
 
+    Ok(())
+}
+
+/// A DKG is set up and not finalized: `set_dkg_params` wrote the
+/// `dkg_account` prop and `delete_frost_state`, run by finalize and cancel,
+/// has not removed it. A signing session writes the same prop for its
+/// funding account, so it is excluded.
+pub async fn dkg_in_progress(connection: &mut SqliteConnection) -> Result<bool> {
+    if crate::frost::sign::is_signing_in_progress(&mut *connection).await? {
+        return Ok(false);
+    }
+    let exists = sqlx::query("SELECT 1 FROM props WHERE key = 'dkg_account'")
+        .fetch_optional(&mut *connection)
+        .await?;
+    Ok(exists.is_some())
+}
+
+/// Refuses to set up a DKG while one is in progress: one at a time, said
+/// plainly rather than as a `dkg_params` primary key failure (#1546).
+async fn check_no_dkg(connection: &mut SqliteConnection) -> Result<()> {
+    if dkg_in_progress(&mut *connection).await? {
+        anyhow::bail!("A DKG is in progress; finish or cancel it first");
+    }
     Ok(())
 }
 

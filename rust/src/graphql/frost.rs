@@ -181,6 +181,10 @@ pub async fn frost_restore(
         .collect())
 }
 
+/// Starts the signing session for `pczt`. A session already in progress is
+/// an error (#1546): the driver advances it on its own and `doDkg` runs a
+/// pass on request, so a call that cannot start a session is refused
+/// rather than answered with a pass over someone else's.
 pub async fn frost_sign(
     id_coordinator: i32,
     id_account: i32,
@@ -190,34 +194,25 @@ pub async fn frost_sign(
 ) -> FieldResult<bool> {
     let coin = &context.coin;
     let mut connection = coin.get_connection().await?;
-
-    // Check if signing is already in progress
-    let in_progress = crate::frost::sign::in_sign(&mut *connection).await?;
-    if in_progress {
-        tracing::info!("frost_sign: signing already in progress, running a pass");
-        context.driver.step().await?;
-    } else {
-        // Not in progress, initialize signing
-        tracing::info!("frost_sign: initializing signing");
-        let id_account = id_account
-            .try_into()
-            .map_err(|_| invalid_integer("id_account"))?;
-        let message_account = message_account
-            .try_into()
-            .map_err(|_| invalid_integer("message_account"))?;
-        let id_coordinator = id_coordinator
-            .try_into()
-            .map_err(|_| invalid_integer("id_coordinator"))?;
-        let pczt = hex::decode(&pczt)?;
-        let (pczt, _) = bincode::decode_from_slice(&pczt, config::standard())?;
-        crate::frost::sign::init_sign(
-            &mut connection,
-            id_account,
-            message_account,
-            id_coordinator,
-            &pczt,
-        )
-        .await?;
-    }
+    tracing::info!("frost_sign: initializing signing");
+    let id_account = id_account
+        .try_into()
+        .map_err(|_| invalid_integer("id_account"))?;
+    let message_account = message_account
+        .try_into()
+        .map_err(|_| invalid_integer("message_account"))?;
+    let id_coordinator = id_coordinator
+        .try_into()
+        .map_err(|_| invalid_integer("id_coordinator"))?;
+    let pczt = hex::decode(&pczt)?;
+    let (pczt, _) = bincode::decode_from_slice(&pczt, config::standard())?;
+    crate::frost::sign::init_sign(
+        &mut connection,
+        id_account,
+        message_account,
+        id_coordinator,
+        &pczt,
+    )
+    .await?;
     Ok(true)
 }

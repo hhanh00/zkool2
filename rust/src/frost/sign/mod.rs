@@ -85,6 +85,11 @@ pub async fn check_group_pczt(
     Ok(())
 }
 
+/// Starts the wallet's signing session. There is one session at a time:
+/// a session already stored is an error, not a silent no-op, so a caller
+/// whose PCZT was not taken learns it (#1546). The session's three props
+/// are written in one transaction, so a crash cannot leave a PCZT without
+/// its params.
 pub async fn init_sign(
     connection: &mut SqliteConnection,
     account: u32,
@@ -96,28 +101,37 @@ pub async fn init_sign(
         "init_sign: account={}, funding_account={}, coordinator={}",
         account, funding_account, coordinator
     );
+    check_no_session(&mut *connection).await?;
     check_group_pczt(&mut *connection, account, pczt).await?;
     let pczt_bytes = bincode::encode_to_vec(pczt, config::legacy()).unwrap();
-    sqlx::query("INSERT INTO props(key, value) VALUES ('frost_pczt', ?) ON CONFLICT DO NOTHING")
-        .bind(&pczt_bytes)
-        .execute(&mut *connection)
-        .await?;
     let params = FrostSignParams {
         account,
         coordinator,
         funding_account,
     };
     let params_json = serde_json::to_string(&params).unwrap();
-    sqlx::query(
-        "INSERT INTO props(key, value) VALUES ('frost_sign_params', ?) ON CONFLICT DO NOTHING",
-    )
-    .bind(&params_json)
-    .execute(&mut *connection)
-    .await?;
-    sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_account', ?) ON CONFLICT DO NOTHING")
-        .bind(funding_account)
-        .execute(&mut *connection)
+    let mut tx = crate::db::begin_immediate(&mut *connection).await?;
+    sqlx::query("INSERT INTO props(key, value) VALUES ('frost_pczt', ?)")
+        .bind(&pczt_bytes)
+        .execute(&mut *tx)
         .await?;
+    sqlx::query("INSERT INTO props(key, value) VALUES ('frost_sign_params', ?)")
+        .bind(&params_json)
+        .execute(&mut *tx)
+        .await?;
+    sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_account', ?)")
+        .bind(funding_account)
+        .execute(&mut *tx)
+        .await?;
+    tx.commit().await?;
+    Ok(())
+}
+
+/// Refuses to start a signing session while one is stored.
+async fn check_no_session(connection: &mut SqliteConnection) -> Result<()> {
+    if is_signing_in_progress(&mut *connection).await? {
+        bail!("A signing session is in progress; finish or cancel it first");
+    }
     Ok(())
 }
 
@@ -142,6 +156,9 @@ pub async fn signing_account(connection: &mut SqliteConnection) -> Result<Option
     Ok(Some(state::load_sign_params(&mut *connection).await?.account))
 }
 
+/// A signing session is stored. The PCZT is the session: `init_sign`
+/// writes it with the params in one transaction and `delete_frost_state`
+/// removes every `frost_%` prop together, so this is the one predicate.
 pub async fn is_signing_in_progress(connection: &mut SqliteConnection) -> Result<bool> {
     let exists =
         sqlx::query_as::<_, (bool,)>("SELECT TRUE FROM props WHERE key = 'frost_pczt'")
@@ -151,10 +168,7 @@ pub async fn is_signing_in_progress(connection: &mut SqliteConnection) -> Result
 }
 
 pub async fn in_sign(connection: &mut SqliteConnection) -> Result<bool> {
-    let exists = sqlx::query("SELECT 1 FROM props WHERE key LIKE 'frost_%'")
-        .fetch_optional(connection)
-        .await?;
-    Ok(exists.is_some())
+    is_signing_in_progress(connection).await
 }
 
 // ── do_sign / do_sign_impl ───────────────────────────────────────────────────
@@ -264,6 +278,51 @@ fn sign_statuses_for(task: &SignTask) -> Vec<SigningStatus> {
             SigningStatus::SendingTransaction,
         ],
         SignTask::Done => vec![SigningStatus::SigningCompleted],
+    }
+}
+
+#[cfg(test)]
+mod guard_tests {
+    use super::*;
+    use crate::db::create_schema;
+    use sqlx::Connection;
+
+    async fn wallet() -> SqliteConnection {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        create_schema(&mut db).await.unwrap();
+        db
+    }
+
+    fn pczt() -> PcztPackage {
+        PcztPackage {
+            pczt: vec![],
+            n_spends: [0; 4],
+            sapling_indices: vec![],
+            orchard_indices: vec![],
+            ironwood_indices: vec![],
+            can_sign: true,
+            can_broadcast: true,
+            price: None,
+            category: None,
+            is_issuance: false,
+        }
+    }
+
+    async fn message(result: Result<()>) -> String {
+        result.unwrap_err().to_string()
+    }
+
+    /// #1546: a second session is refused, and the caller is told why.
+    #[tokio::test]
+    async fn a_second_signing_session_is_an_error() {
+        let mut db = wallet().await;
+        sqlx::query("INSERT INTO props(key, value) VALUES ('frost_pczt', x'00')")
+            .execute(&mut db)
+            .await
+            .unwrap();
+        let m = message(init_sign(&mut db, 1, 2, 1, &pczt()).await).await;
+        assert!(m.contains("signing session is in progress"), "{m}");
+        assert!(in_sign(&mut db).await.unwrap());
     }
 }
 
