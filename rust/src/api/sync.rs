@@ -102,10 +102,19 @@ pub async fn fetch_tx_details(account: u32, c: &Coin) -> Result<()> {
     let mut connection = c.get_connection().await?;
     let mut client = c.client().await?;
     let network = c.network();
-    let txids = crate::memo::pending_details(&mut connection, account).await?;
-    for batch in txids.chunks(DETAILS_BATCH) {
+    // One batch in memory at a time, by a cursor on the transaction id
+    // (#1514): a cancel or an error loses at most one batch of work.
+    let mut after = 0;
+    loop {
+        let batch =
+            crate::memo::pending_details_after(&mut connection, account, after, DETAILS_BATCH as u32)
+                .await?;
+        let Some((last, _)) = batch.last() else {
+            break;
+        };
+        after = *last;
         let mut txs = Vec::with_capacity(batch.len());
-        for txid in batch {
+        for (_, txid) in &batch {
             txs.push(
                 crate::memo::decrypt_tx(&network, &mut connection, &mut client, account, txid)
                     .await?,
@@ -114,6 +123,9 @@ pub async fn fetch_tx_details(account: u32, c: &Coin) -> Result<()> {
         c.driver()?
             .apply(c, Apply::TxDetails { account, txs })
             .await?;
+        if batch.len() < DETAILS_BATCH {
+            break;
+        }
     }
     Ok(())
 }

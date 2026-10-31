@@ -58,6 +58,29 @@ pub async fn pending_details(
     )
 }
 
+/// The next `limit` transactions of the account whose details are not
+/// stored yet, by id after `after`: one batch of the app's background pass,
+/// which walks the backlog a batch at a time instead of loading it whole
+/// (#1514). The cursor, not the `details` flag, is what advances it, so a
+/// transaction whose details cannot be fetched does not hold it up.
+pub async fn pending_details_after(
+    connection: &mut SqliteConnection,
+    account: u32,
+    after: u32,
+    limit: u32,
+) -> Result<Vec<(u32, Vec<u8>)>> {
+    Ok(sqlx::query_as(
+        "SELECT id_tx, txid FROM transactions
+         WHERE account = ? AND details = FALSE AND id_tx > ?
+         ORDER BY id_tx LIMIT ?",
+    )
+    .bind(account)
+    .bind(after)
+    .bind(limit)
+    .fetch_all(&mut *connection)
+    .await?)
+}
+
 /// A transaction's details, decrypted and ready to store. Produced by
 /// [`decrypt_tx`] from the network and the account's keys alone, so the
 /// app can build it outside the sync session; stored by
@@ -623,6 +646,24 @@ mod tests {
             self_transfer_type(-10_000, 10_000, true, true, false, false),
             12
         );
+    }
+
+    /// #1514: the background pass reads its backlog a batch at a time.
+    #[tokio::test]
+    async fn pending_details_come_in_ordered_batches_after_a_cursor() -> Result<()> {
+        use crate::sync::chain_log::{record_transaction, TransactionRow};
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        crate::db::create_schema(&mut db).await?;
+        for txid in [7u8, 8, 9] {
+            record_transaction(&mut db, 1, &TransactionRow::chain(&[txid], 100, 0)).await?;
+        }
+        let first = pending_details_after(&mut db, 1, 0, 2).await?;
+        assert_eq!(first.iter().map(|(_, t)| t[0]).collect::<Vec<_>>(), [7, 8]);
+        let last = first.last().unwrap().0;
+        let second = pending_details_after(&mut db, 1, last, 2).await?;
+        assert_eq!(second.iter().map(|(_, t)| t[0]).collect::<Vec<_>>(), [9]);
+        assert!(pending_details_after(&mut db, 1, second[0].0, 2).await?.is_empty());
+        Ok(())
     }
 
     #[tokio::test]
