@@ -9,6 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:form_builder_validators/form_builder_validators.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:zkool/main.dart' show PinLock;
 import 'package:zkool/src/rust/api/issuance.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/api/zsa.dart';
@@ -109,6 +110,9 @@ class _ZsaHoldingsPageState extends ConsumerState<ZsaHoldingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value ?? false) return PinLock();
+
     final tt = Theme.of(context).textTheme;
 
     final accountData = ref.watch(accountProvider(widget.account));
@@ -218,6 +222,9 @@ class _IssueAssetPageState extends ConsumerState<IssueAssetPage> {
 
   @override
   Widget build(BuildContext context) {
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value ?? false) return PinLock();
+
     final reissuance = _isReissuance;
     final name = _prefilledName ?? "";
 

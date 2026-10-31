@@ -3,6 +3,7 @@ import 'dart:typed_data';
 
 import 'package:collection/collection.dart';
 import 'package:convert/convert.dart';
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,6 +38,9 @@ import 'package:zkool/widgets/scanner.dart';
 
 /// The native ZEC asset base (32 zero bytes).
 final zecBase = Uint8List(32);
+
+/// ZEC is the all-zero asset base, whichever array holds it.
+bool isZec(Uint8List assetBase) => assetBase.every((b) => b == 0);
 
 class SendPage extends ConsumerStatefulWidget {
   final int account;
@@ -379,14 +383,37 @@ class SendPageState extends ConsumerState<SendPage> with BusyGate<SendPage> {
       editingIndex = index;
       final fields = formKey.currentState!.fields;
       final recipient = recipients[index];
+      selectAsset(recipient.assetBase);
       setState(() {
         address = recipient.address;
-        amount = zatToString(recipient.amount);
+        amount = amountText(recipient);
         memo = recipient.userMemo;
         fields["address"]!.didChange(address);
         amountKey.currentState!.setAmount(amount!);
         fields["memo"]!.didChange(memo);
       });
+    }
+  }
+
+  /// The amount of [recipient] as the form shows it: ZEC with its decimals,
+  /// an asset in whole units (which is how `validateAndGetRecipient` parses
+  /// it back).
+  String amountText(Recipient recipient) =>
+      isZec(recipient.assetBase) ? zatToString(recipient.amount) : recipient.amount.toString();
+
+  /// Selects [assetBase] in the Currency dropdown and in the fields the next
+  /// recipient is built from. A queued recipient or a payment URI brings its
+  /// own array, and the dropdown's values are the holdings' arrays compared
+  /// by identity: the match is by content. An asset no longer among the
+  /// holdings stays selected as it is, so the recipient keeps its asset
+  /// (#1416); the dropdown is only moved to a value it has.
+  void selectAsset(Uint8List assetBase) {
+    final holding = zsas.firstWhereOrNull((z) => listEquals(z.assetBase, assetBase));
+    final base = isZec(assetBase) ? zecBase : holding?.assetBase ?? assetBase;
+    selectedAssetBase = base;
+    selectedAssetName = holding?.assetName;
+    if (isZec(base) || holding != null) {
+      formKey.currentState!.fields["asset"]!.didChange(base);
     }
   }
 
@@ -474,11 +501,12 @@ class SendPageState extends ConsumerState<SendPage> with BusyGate<SendPage> {
         final recipient = recipients2.first;
         final fields = formKey.currentState!.fields;
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          selectAsset(recipient.assetBase);
           setState(() {
             address = recipient.address;
             fields["address"]!.didChange(address);
             if (recipient.amount > BigInt.zero) {
-              amount = zatToString(recipient.amount);
+              amount = amountText(recipient);
               amountKey.currentState!.setAmount(amount!);
             }
             memo = recipient.userMemo;
@@ -722,6 +750,10 @@ class SendPageState extends ConsumerState<SendPage> with BusyGate<SendPage> {
       address = null;
       amount = null;
       memo = null;
+      // reset() also puts the dropdown back to ZEC through onChanged; the
+      // fields do not depend on that.
+      selectedAssetBase = zecBase;
+      selectedAssetName = null;
       _accountSuggestions = [];
       _contactSuggestions = [];
     });

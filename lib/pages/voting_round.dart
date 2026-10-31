@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:zkool/main.dart' show PinLock;
 import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/src/rust/api/voting_drive.dart';
 import 'package:zkool/store.dart'
@@ -10,6 +11,7 @@ import 'package:zkool/store.dart'
         VotingDriveJobState,
         appSettingsProvider,
         coinContext,
+        lifecycleProvider,
         votingDriveJobProvider,
         votingQuiescenceLabel;
 import 'package:zkool/utils.dart' show zatToString;
@@ -257,6 +259,9 @@ class _VotingRoundPageState extends ConsumerState<VotingRoundPage> {
 
   @override
   Widget build(BuildContext context) {
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value ?? false) return PinLock();
+
     final job = ref.watch(votingDriveJobProvider(widget.round.roundId, widget.account));
     final notifier = ref.read(votingDriveJobProvider(widget.round.roundId, widget.account).notifier);
     // The status view shows a run of this process, or a submission the
