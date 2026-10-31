@@ -1177,6 +1177,11 @@ class TransparentScan extends _$TransparentScan {
   bool get running => state.isNotEmpty;
 
   Future<void> run(BuildContext context, int account, int gapLimit, {required void Function() onComplete}) async {
+    // One scan at a time: a second Run while one is pending would create a
+    // second scanner and leave the first one beyond Stop's reach (#1578).
+    // The placeholder flips the dialog to Stop before the first await.
+    if (scanner != null || progressSubscription != null) return;
+    state = "Starting…";
     try {
       final c = coinContext.coin;
       final sc = await TransparentScanner.newInstance();
@@ -1203,6 +1208,8 @@ class TransparentScan extends _$TransparentScan {
         cancelOnError: true,
       );
     } on AnyhowException catch (e) {
+      state = "";
+      scanner = null;
       if (context.mounted) await showException(context, e.message);
     }
   }
