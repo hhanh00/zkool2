@@ -19,6 +19,7 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/validators.dart';
+import 'package:zkool/widgets/busy_gate.dart';
 import 'package:zkool/widgets/frost_generation_select.dart';
 import 'package:zkool/widgets/pool_select.dart';
 import 'package:zkool/router.dart';
@@ -30,7 +31,7 @@ class NewAccountPage extends ConsumerStatefulWidget {
   ConsumerState<NewAccountPage> createState() => NewAccountPageState();
 }
 
-class NewAccountPageState extends ConsumerState<NewAccountPage> {
+class NewAccountPageState extends ConsumerState<NewAccountPage> with BusyGate {
   late var c = coinContext.coin;
   var name = "";
   var restore = false;
@@ -79,11 +80,15 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
           IconButton(
             icon: const Icon(Icons.save),
             tooltip: "Save",
-            onPressed: onSave,
+            onPressed: busy ? null : onSave,
           ),
         ],
       ),
-      body: Padding(
+      // While the key match or the save is pending, nothing on the page can
+      // write the fields their result lands in (#1523).
+      body: AbsorbPointer(
+        absorbing: busy,
+        child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: SingleChildScrollView(
           child: FormBuilder(
@@ -211,7 +216,10 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
                                   prefixIcon: Icon(Icons.group),
                                 ),
                                 validator: (s) => (s == null || s.isEmpty) ? "The group's viewing key is required" : null,
-                                onChanged: onFrostUfvkChanged,
+                                onChanged: (v) => frostUfvk = v ?? "",
+                                // The match runs once editing completes, not on
+                                // every keystroke (#1523).
+                                onEditingComplete: onFrostUfvkChanged,
                               ),
                             ),
                             Gap(12),
@@ -417,6 +425,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -427,7 +436,11 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
     formKey.currentState!.fields["key"]!.didChange(seed);
   }
 
-  void onSave() async {
+  // The save and the key match run under the page's gate: one at a time,
+  // the page locked meanwhile, so neither can race the other (#1523).
+  void onSave() => runExclusive(_save);
+
+  Future<void> _save() async {
     if (formKey.currentState?.saveAndValidate() ?? false) {
       final currentHeight = await _currentHeight();
       if (!mounted) return;
@@ -553,16 +566,21 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
   }
 
   /// The generation the pasted key matches is what to restore by default.
-  void onFrostUfvkChanged(String? v) async {
-    frostUfvk = v ?? "";
-    if (frostUfvk.isEmpty) return;
-    try {
-      final matched = await matchFrostBackup(backup: key.trim(), ufvk: frostUfvk.trim(), c: c);
-      if (!mounted) return;
-      setState(() => frostGenerations = matched >= 2 ? FrostGeneration.zip2005.bit : FrostGeneration.legacy.bit);
-    } on AnyhowException catch (_) {
-      // Not a key of this group, or not a key yet; the restore reports it.
-    }
+  /// The match runs under the page's gate (#1523): the page is locked while
+  /// it is pending, so the result cannot land on a key typed in the
+  /// meantime, and it is checked against the field before it is applied.
+  void onFrostUfvkChanged() {
+    final ufvk = frostUfvk.trim();
+    if (ufvk.isEmpty) return;
+    runExclusive(() async {
+      try {
+        final matched = await matchFrostBackup(backup: key.trim(), ufvk: ufvk, c: c);
+        if (!mounted || frostUfvk.trim() != ufvk) return;
+        setState(() => frostGenerations = matched >= 2 ? FrostGeneration.zip2005.bit : FrostGeneration.legacy.bit);
+      } on AnyhowException catch (_) {
+        // Not a key of this group, or not a key yet; the restore reports it.
+      }
+    });
   }
 
   /// The chain tip, fetched now. The cached value is only kept fresh by
