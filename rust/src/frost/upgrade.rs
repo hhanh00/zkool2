@@ -230,6 +230,7 @@ pub async fn plan_sweep(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use sqlx::Connection as _;
     use crate::{
         db::create_schema,
         frost::{
