@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:zkool/main.dart' show PinLock;
 import 'package:zkool/router.dart';
-import 'package:zkool/store.dart' show coinContext, votingDriveJobProvider, votingStatusHeadline;
+import 'package:zkool/store.dart' show coinContext, lifecycleProvider, votingDriveJobProvider, votingStatusHeadline;
 import 'package:zkool/src/rust/api/voting.dart';
 import 'package:zkool/widgets/error_display.dart';
 import 'package:zkool/widgets/loading_steps.dart';
@@ -48,6 +49,9 @@ class _VotingPageState extends ConsumerState<VotingPage> {
 
   @override
   Widget build(BuildContext context) {
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value ?? false) return PinLock();
+
     // TODO: Show pending helper-share delivery status.
     return Scaffold(
       appBar: AppBar(

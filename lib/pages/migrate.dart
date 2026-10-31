@@ -6,7 +6,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:zkool/main.dart' show appKey, logger;
+import 'package:zkool/main.dart' show PinLock, appKey, logger;
 import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/migrate.dart';
 import 'package:zkool/store.dart';
@@ -260,6 +260,9 @@ class _MigratePageState extends ConsumerState<MigratePage> with WidgetsBindingOb
 
   @override
   Widget build(BuildContext context) {
+    final pinlock = ref.watch(lifecycleProvider);
+    if (pinlock.value ?? false) return PinLock();
+
     final status = _status;
 
     // Show success dialog once when migration completes
