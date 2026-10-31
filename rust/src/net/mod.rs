@@ -20,7 +20,11 @@ pub trait LwdServer: Send {
     async fn latest_height(&mut self) -> Result<u32>;
     async fn block(&mut self, network: &Network, height: u32) -> Result<CompactBlock>;
 
-    type CompactBlockStream: Stream<Item = CompactBlock>;
+    /// A stream item is a block, or the error that ended the stream. A
+    /// stream that just ends is complete only if its consumer saw the last
+    /// height it asked for: a transport failure must not look like the
+    /// end of the range.
+    type CompactBlockStream: Stream<Item = Result<CompactBlock>>;
     async fn block_range(
         &mut self,
         network: &Network,
@@ -31,7 +35,9 @@ pub trait LwdServer: Send {
     async fn transaction(&mut self, network: &Network, txid: &[u8]) -> Result<(u32, Transaction)>;
     async fn post_transaction(&mut self, height: u32, tx: &[u8]) -> Result<String>;
 
-    type TransactionStream: Stream<Item = (u32, Transaction, usize)>;
+    /// Height, transaction and serialized size; or the error that ended the
+    /// stream, so a consumer does not take a dead stream for an empty one.
+    type TransactionStream: Stream<Item = Result<(u32, Transaction, usize)>>;
     async fn taddress_txs(
         &mut self,
         network: &Network,

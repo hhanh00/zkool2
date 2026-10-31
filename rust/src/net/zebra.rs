@@ -241,27 +241,37 @@ impl LwdServer for ZebraClient {
         Ok((height as u32, tx))
     }
 
-    type CompactBlockStream = ReceiverStream<CompactBlock>;
+    type CompactBlockStream = ReceiverStream<Result<CompactBlock>>;
     async fn block_range(
         &mut self,
         network: &Network,
         start: u32,
         end: u32,
     ) -> Result<Self::CompactBlockStream> {
-        let (tx, rx) = tokio::sync::mpsc::channel::<CompactBlock>(10);
+        let (tx, rx) = tokio::sync::mpsc::channel::<Result<CompactBlock>>(10);
         let mut client = self.clone();
         let network = *network;
         tokio::spawn(async move {
+            // A failed block fetch is the stream's last item, so the
+            // consumer does not take the range for complete (#1474).
             for height in start..=end {
-                let cb = client.block(&network, height).await?;
-                tx.send(cb).await.ok();
+                match client.block(&network, height).await {
+                    Ok(cb) => {
+                        if tx.send(Ok(cb)).await.is_err() {
+                            break;
+                        }
+                    }
+                    Err(e) => {
+                        let _ = tx.send(Err(e)).await;
+                        break;
+                    }
+                }
             }
-            Ok::<_, anyhow::Error>(())
         });
         Ok(ReceiverStream::new(rx))
     }
 
-    type TransactionStream = ReceiverStream<(u32, Transaction, usize)>;
+    type TransactionStream = ReceiverStream<Result<(u32, Transaction, usize)>>;
     async fn taddress_txs(
         &mut self,
         network: &Network,
@@ -290,24 +300,30 @@ impl LwdServer for ZebraClient {
             .collect::<Result<Vec<_>, _>>()?;
         let mut client = self.clone();
         let network = *network;
-        let (txs, rx) = tokio::sync::mpsc::channel::<(u32, Transaction, usize)>(10);
+        let (txs, rx) = tokio::sync::mpsc::channel::<Result<(u32, Transaction, usize)>>(10);
         tokio::spawn(async move {
-            for txid in txids.iter() {
-                let mut txid_hex = hex::decode(txid)
-                    .map_err(|e| anyhow::anyhow!("Invalid txid hex from node: {}", e))?;
-                txid_hex.reverse();
-                let (height, tx) = client.transaction(&network, &txid_hex).await?;
-                txs.send((height, tx, 0)).await?;
+            let forward = async {
+                for txid in txids.iter() {
+                    let mut txid_hex = hex::decode(txid)
+                        .map_err(|e| anyhow::anyhow!("Invalid txid hex from node: {}", e))?;
+                    txid_hex.reverse();
+                    let (height, tx) = client.transaction(&network, &txid_hex).await?;
+                    if txs.send(Ok((height, tx, 0))).await.is_err() {
+                        break;
+                    }
+                }
+                Ok::<_, anyhow::Error>(())
+            };
+            if let Err(e) = forward.await {
+                let _ = txs.send(Err(e)).await;
             }
-
-            Ok::<_, anyhow::Error>(())
         });
 
         Ok(ReceiverStream::new(rx))
     }
 
     async fn mempool_stream(&mut self, network: &Network) -> Result<Self::TransactionStream> {
-        let (_, rx) = tokio::sync::mpsc::channel::<(u32, Transaction, usize)>(10);
+        let (_, rx) = tokio::sync::mpsc::channel::<Result<(u32, Transaction, usize)>>(10);
         Ok(ReceiverStream::new(rx))
     }
 

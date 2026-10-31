@@ -92,6 +92,19 @@ pub(crate) async fn transparent_sync(
                     anyhow::bail!("Sync canceled");
                 }
                 m = txs.recv() => {
+                    // A dead stream must not pass for an empty one: the
+                    // checkpoint below would then skip the transactions it
+                    // never delivered (V12 F-77).
+                    let m = match m {
+                        Some(Err(e)) => {
+                            return Err(e.context(format!(
+                                "the transaction stream for {} failed",
+                                address_row.1
+                            )));
+                        }
+                        Some(Ok(item)) => Some(item),
+                        None => None,
+                    };
                     if let Some((height, transaction, _)) = m {
                         let txid = transaction.txid().as_ref().to_vec();
                         debug!(

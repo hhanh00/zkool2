@@ -35,7 +35,7 @@ impl LwdServer for GRPCClient {
         Ok(block)
     }
 
-    type CompactBlockStream = ReceiverStream<CompactBlock>;
+    type CompactBlockStream = ReceiverStream<Result<CompactBlock>>;
     async fn block_range(
         &mut self,
         _network: &Network,
@@ -57,12 +57,24 @@ impl LwdServer for GRPCClient {
             }))
             .await?
             .into_inner();
-        let (tx, rx) = tokio::sync::mpsc::channel::<CompactBlock>(10);
+        let (tx, rx) = tokio::sync::mpsc::channel::<Result<CompactBlock>>(10);
         tokio::spawn(async move {
-            while let Some(block) = blocks.message().await? {
-                tx.send(block).await?;
+            // The error goes down the channel as the last item: a stream
+            // that failed must not look like one that ended (#1474).
+            loop {
+                match blocks.message().await {
+                    Ok(Some(block)) => {
+                        if tx.send(Ok(block)).await.is_err() {
+                            break; // the consumer is gone
+                        }
+                    }
+                    Ok(None) => break,
+                    Err(e) => {
+                        let _ = tx.send(Err(e.into())).await;
+                        break;
+                    }
+                }
             }
-            Ok::<_, anyhow::Error>(())
         });
         Ok(ReceiverStream::new(rx))
     }
@@ -97,7 +109,7 @@ impl LwdServer for GRPCClient {
         Ok(m)
     }
 
-    type TransactionStream = ReceiverStream<(u32, Transaction, usize)>;
+    type TransactionStream = ReceiverStream<Result<(u32, Transaction, usize)>>;
     async fn taddress_txs(
         &mut self,
         network: &Network,
@@ -123,33 +135,41 @@ impl LwdServer for GRPCClient {
             .await?
             .into_inner();
         let network = *network;
-        let (sender, rx) = tokio::sync::mpsc::channel::<(u32, Transaction, usize)>(10);
+        let (sender, rx) = tokio::sync::mpsc::channel::<Result<(u32, Transaction, usize)>>(10);
         tokio::spawn(async move {
-            while let Some(rtx) = txs.message().await? {
-                let len = rtx.data.len();
-                let branch_id =
-                    BranchId::for_height(&network, BlockHeight::from_u32(rtx.height as u32));
-                let tx = Transaction::read(&mut &rtx.data[..], branch_id)?;
-                let txid = tx.txid();
-                let has_tb = tx.transparent_bundle().is_some();
-                let (n_vin, n_vout) = tx
-                    .transparent_bundle()
-                    .map(|tb| (tb.vin.len(), tb.vout.len()))
-                    .unwrap_or((0, 0));
-                debug!(
-                    "LWD raw_tx: height={} branch_id={:?} txid={} size={} has_transparent={} n_vin={} n_vout={} raw_hex_first120={}",
-                    rtx.height,
-                    branch_id,
-                    txid,
-                    len,
-                    has_tb,
-                    n_vin,
-                    n_vout,
-                    hex::encode(&rtx.data[..rtx.data.len().min(120)]),
-                );
-                sender.send((rtx.height as u32, tx, len)).await?;
+            // A transport or decode error is the stream's last item.
+            let forward = async {
+                while let Some(rtx) = txs.message().await? {
+                    let len = rtx.data.len();
+                    let branch_id =
+                        BranchId::for_height(&network, BlockHeight::from_u32(rtx.height as u32));
+                    let tx = Transaction::read(&mut &rtx.data[..], branch_id)?;
+                    let txid = tx.txid();
+                    let has_tb = tx.transparent_bundle().is_some();
+                    let (n_vin, n_vout) = tx
+                        .transparent_bundle()
+                        .map(|tb| (tb.vin.len(), tb.vout.len()))
+                        .unwrap_or((0, 0));
+                    debug!(
+                        "LWD raw_tx: height={} branch_id={:?} txid={} size={} has_transparent={} n_vin={} n_vout={} raw_hex_first120={}",
+                        rtx.height,
+                        branch_id,
+                        txid,
+                        len,
+                        has_tb,
+                        n_vin,
+                        n_vout,
+                        hex::encode(&rtx.data[..rtx.data.len().min(120)]),
+                    );
+                    if sender.send(Ok((rtx.height as u32, tx, len))).await.is_err() {
+                        break;
+                    }
+                }
+                Ok::<_, anyhow::Error>(())
+            };
+            if let Err(e) = forward.await {
+                let _ = sender.send(Err(e)).await;
             }
-            Ok::<_, anyhow::Error>(())
         });
         Ok(ReceiverStream::new(rx))
     }
@@ -160,16 +180,23 @@ impl LwdServer for GRPCClient {
             .await?
             .into_inner();
         let network = *network;
-        let (sender, rx) = tokio::sync::mpsc::channel::<(u32, Transaction, usize)>(10);
+        let (sender, rx) = tokio::sync::mpsc::channel::<Result<(u32, Transaction, usize)>>(10);
         tokio::spawn(async move {
-            while let Some(rtx) = txs.message().await? {
-                let len = rtx.data.len();
-                let branch_id =
-                    BranchId::for_height(&network, BlockHeight::from_u32(rtx.height as u32));
-                let tx = Transaction::read(&mut &rtx.data[..], branch_id)?;
-                sender.send((rtx.height as u32, tx, len)).await?;
+            let forward = async {
+                while let Some(rtx) = txs.message().await? {
+                    let len = rtx.data.len();
+                    let branch_id =
+                        BranchId::for_height(&network, BlockHeight::from_u32(rtx.height as u32));
+                    let tx = Transaction::read(&mut &rtx.data[..], branch_id)?;
+                    if sender.send(Ok((rtx.height as u32, tx, len))).await.is_err() {
+                        break;
+                    }
+                }
+                Ok::<_, anyhow::Error>(())
+            };
+            if let Err(e) = forward.await {
+                let _ = sender.send(Err(e)).await;
             }
-            Ok::<_, anyhow::Error>(())
         });
         Ok(ReceiverStream::new(rx))
     }

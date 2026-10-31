@@ -91,7 +91,19 @@ pub(crate) async fn scan_transparent_addresses(
                     .taddress_txs(network, &addr.address, start_height, end_height)
                     => {
                     let mut txids = txids?;
-                    if txids.next().await.is_some() {
+                    // A stream that fails before its first item is not an
+                    // unused address (V12 F-77).
+                    let used = match txids.next().await {
+                        Some(Ok(_)) => true,
+                        Some(Err(e)) => {
+                            return Err(e.context(format!(
+                                "the history of {} could not be read",
+                                addr.address
+                            )));
+                        }
+                        None => false,
+                    };
+                    if used {
                         // A used address resets the gap count: only
                         // consecutive unused addresses end the scan.
                         gap = 0;
@@ -189,8 +201,8 @@ mod tests {
 
     #[async_trait]
     impl LwdServer for UsedAddresses {
-        type CompactBlockStream = ReceiverStream<CompactBlock>;
-        type TransactionStream = ReceiverStream<(u32, Transaction, usize)>;
+        type CompactBlockStream = ReceiverStream<Result<CompactBlock>>;
+        type TransactionStream = ReceiverStream<Result<(u32, Transaction, usize)>>;
 
         async fn latest_height(&mut self) -> Result<u32> {
             unimplemented!()
@@ -221,7 +233,7 @@ mod tests {
         ) -> Result<Self::TransactionStream> {
             let (tx, rx) = tokio::sync::mpsc::channel(1);
             if self.0.contains(taddress) {
-                tx.send((100, empty_tx(), 0)).await.unwrap();
+                tx.send(Ok((100, empty_tx(), 0))).await.unwrap();
             }
             Ok(ReceiverStream::new(rx))
         }
@@ -285,6 +297,115 @@ mod tests {
         .await?;
         let tried = tried.lock().unwrap().clone();
         Ok((added, tried))
+    }
+
+    /// A server whose history stream fails before its first item.
+    struct BrokenHistory;
+
+    #[async_trait]
+    impl LwdServer for BrokenHistory {
+        type CompactBlockStream = ReceiverStream<Result<CompactBlock>>;
+        type TransactionStream = ReceiverStream<Result<(u32, Transaction, usize)>>;
+
+        async fn latest_height(&mut self) -> Result<u32> {
+            unimplemented!()
+        }
+        async fn block(&mut self, _: &Network, _: u32) -> Result<CompactBlock> {
+            unimplemented!()
+        }
+        async fn block_range(
+            &mut self,
+            _: &Network,
+            _: u32,
+            _: u32,
+        ) -> Result<Self::CompactBlockStream> {
+            unimplemented!()
+        }
+        async fn transaction(&mut self, _: &Network, _: &[u8]) -> Result<(u32, Transaction)> {
+            unimplemented!()
+        }
+        async fn post_transaction(&mut self, _: u32, _: &[u8]) -> Result<String> {
+            unimplemented!()
+        }
+        async fn taddress_txs(
+            &mut self,
+            _: &Network,
+            _: &str,
+            _: u32,
+            _: u32,
+        ) -> Result<Self::TransactionStream> {
+            let (tx, rx) = tokio::sync::mpsc::channel(1);
+            tx.send(Err(anyhow::anyhow!("connection reset"))).await.unwrap();
+            Ok(ReceiverStream::new(rx))
+        }
+        async fn mempool_stream(&mut self, _: &Network) -> Result<Self::TransactionStream> {
+            unimplemented!()
+        }
+        async fn tree_state(&mut self, _: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)> {
+            unimplemented!()
+        }
+    }
+
+    // A history stream that dies is not an empty history (#1474, V12 F-77):
+    // the sweep must not count the address as unused, and the transparent
+    // scan must not checkpoint past transactions it never saw.
+
+    #[tokio::test]
+    async fn a_failed_history_stream_fails_the_sweep_instead_of_counting_as_unused() -> Result<()> {
+        let mut db = test_db(false).await?;
+        let (xvk, xsk) = software_keys();
+        let source = TransparentKeySource::software(xvk, Some(xsk));
+        let mut client: Client = Box::new(BrokenHistory);
+        let r = scan_transparent_addresses(
+            &Network::Main,
+            &mut db,
+            &mut client,
+            1,
+            &source,
+            1,
+            1000,
+            2,
+            false,
+            |_| {},
+            CancellationToken::new(),
+        )
+        .await;
+        let err = format!("{:#}", r.unwrap_err());
+        assert!(err.contains("could not be read"), "{err}");
+        assert!(err.contains("connection reset"), "{err}");
+        assert!(stored(&mut db).await?.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn a_failed_history_stream_fails_the_transparent_scan_and_keeps_the_checkpoint() -> Result<()> {
+        let mut db = test_db(false).await?;
+        let (xvk, xsk) = software_keys();
+        let source = TransparentKeySource::software(xvk, Some(xsk));
+        let addr = source.derive(&Network::Main, 0, 0).await?;
+        crate::db::store_account_transparent_addr(&mut db, 1, 0, 0, addr.sk, &addr.pk, &addr.address, false)
+            .await?;
+        let (_cancel, rx_cancel) = tokio::sync::broadcast::channel(1);
+        let mut client: Client = Box::new(BrokenHistory);
+        let r = super::super::transparent::transparent_sync(
+            &Network::Main,
+            &mut db,
+            &mut client,
+            &[1],
+            1,
+            500,
+            10,
+            rx_cancel,
+        )
+        .await;
+        let err = format!("{:#}", r.unwrap_err());
+        assert!(err.contains("failed") && err.contains("connection reset"), "{err}");
+        let (h,): (u32,) =
+            sqlx::query_as("SELECT height FROM sync_heights WHERE account = 1 AND pool = 0")
+                .fetch_one(&mut db)
+                .await?;
+        assert_eq!(h, 1, "the checkpoint stays where the stream left it");
+        Ok(())
     }
 
     #[tokio::test]

@@ -207,8 +207,8 @@ mod tests {
 
     #[async_trait]
     impl LwdServer for Posts {
-        type CompactBlockStream = ReceiverStream<CompactBlock>;
-        type TransactionStream = ReceiverStream<(u32, Transaction, usize)>;
+        type CompactBlockStream = ReceiverStream<Result<CompactBlock>>;
+        type TransactionStream = ReceiverStream<Result<(u32, Transaction, usize)>>;
 
         async fn latest_height(&mut self) -> Result<u32> {
             Ok(500)

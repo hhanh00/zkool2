@@ -105,7 +105,10 @@ pub async fn run_mempool_impl<S: Sink<MempoolMsg> + Send + 'static>(
                 }
                 r = mempool_txs.next() => {
                     match r {
-                        Some((_, tx, len)) => {
+                        Some(Err(e)) => {
+                            return Err(e.context("the mempool stream failed"));
+                        }
+                        Some(Ok((_, tx, len))) => {
                             let txid = tx.txid();
                             let tx_hash = txid.to_string();
 

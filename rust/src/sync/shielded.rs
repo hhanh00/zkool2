@@ -21,7 +21,10 @@ use super::{check_witness_consistency, get_heights_without_time, rewind_within, 
 use crate::{
     api::sync::SyncProgress,
     lwd::CompactBlock,
-    warp::{legacy::CommitmentTreeFrontier, sync::warp_sync},
+    warp::{
+        legacy::CommitmentTreeFrontier,
+        sync::{warp_sync, ScanEnd},
+    },
 };
 use bincode::config;
 use sqlx::{Connection, Sqlite, SqlitePool};
@@ -42,7 +45,7 @@ pub async fn get_compact_block_range(
     client: &mut Client,
     start: u32,
     end: u32,
-) -> Result<ReceiverStream<CompactBlock>> {
+) -> Result<ReceiverStream<Result<CompactBlock>>> {
     let blocks = client.block_range(network, start, end).await?;
     Ok(blocks)
 }
@@ -167,9 +170,15 @@ pub async fn shielded_sync(
 
     let chunk_size = chunk_size.unwrap_or(u32::MAX).max(1);
     let mut chunk_start = start;
+    // Where the last reorg was detected. A reorg is absorbed here: the
+    // writer rewinds, the scan restarts from where the database stands, and
+    // the caller never hears of it. Each one must be detected strictly
+    // below the previous one, or the server is serving the same blocks that
+    // do not connect, and the run fails instead of looping (#1474).
+    let mut last_reorg: Option<u32> = None;
     loop {
         let chunk_end = chunk_start.saturating_add(chunk_size - 1).min(end);
-        shielded_sync_range(
+        match shielded_sync_range(
             network,
             pool,
             client,
@@ -180,7 +189,28 @@ pub async fn shielded_sync(
             tx_progress.clone(),
             rx_cancel.resubscribe(),
         )
-        .await?;
+        .await?
+        {
+            RangeEnd::Cancelled => break,
+            RangeEnd::Reorg {
+                detected_at,
+                restart_from,
+            } => {
+                if let Some(previous) = last_reorg {
+                    if detected_at >= previous {
+                        anyhow::bail!(
+                            "the server's blocks do not connect at height {detected_at} \
+                             after a rewind for the same height: giving up"
+                        );
+                    }
+                }
+                info!("reorg detected at {detected_at}; rescanning from {restart_from}");
+                last_reorg = Some(detected_at);
+                chunk_start = restart_from.max(start);
+                continue;
+            }
+            RangeEnd::Completed => {}
+        }
         if chunk_end >= end {
             break;
         }
@@ -199,6 +229,36 @@ pub async fn shielded_sync(
     Ok(())
 }
 
+/// How one range scan ended. A range that stopped short is an error from
+/// `shielded_sync_range`, never a variant.
+#[derive(Debug, PartialEq, Eq)]
+pub enum RangeEnd {
+    Completed,
+    Cancelled,
+    /// The writer rewound the accounts; `restart_from` is the first height
+    /// they have not synced now.
+    Reorg { detected_at: u32, restart_from: u32 },
+}
+
+/// The first height none of `accounts` has synced: one past the lowest
+/// checkpoint among them.
+async fn restart_height(connection: &mut SqliteConnection, accounts: &[u32]) -> Result<u32> {
+    let mut lowest: Option<u32> = None;
+    for account in accounts {
+        let (height,): (Option<u32>,) =
+            sqlx::query_as("SELECT MIN(height) FROM sync_heights WHERE account = ?")
+                .bind(account)
+                .fetch_one(&mut *connection)
+                .await?;
+        if let Some(height) = height {
+            lowest = Some(lowest.map_or(height, |l| l.min(height)));
+        }
+    }
+    lowest
+        .map(|h| h + 1)
+        .ok_or_else(|| anyhow::anyhow!("no checkpoint left to restart the scan from"))
+}
+
 #[allow(clippy::too_many_arguments)]
 async fn shielded_sync_range(
     network: &Network,
@@ -210,10 +270,10 @@ async fn shielded_sync_range(
     actions_per_sync: u32,
     tx_progress: Sender<SyncProgress>,
     rx_cancel: broadcast::Receiver<()>,
-) -> Result<()> {
+) -> Result<RangeEnd> {
     let accounts = accounts.to_vec();
     let account_ids: Vec<u32> = accounts.iter().map(|(a, _)| *a).collect();
-    let db_writer_task = {
+    let (db_writer_task, scan_task) = {
         let (s, o, i) = get_tree_state(network, client, start - 1).await?;
 
         debug!("get compact block range");
@@ -235,6 +295,7 @@ async fn shielded_sync_range(
 
         let network = *network;
         let mut messages = vec![];
+        let writer_account_ids = account_ids.clone();
         let db_writer_task = tokio::spawn(async move {
             debug!("[db handler] starting");
             while let Some(msg) = rx_messages.recv().await {
@@ -250,7 +311,7 @@ async fn shielded_sync_range(
                             msg,
                             &tx_progress,
                             &key_cache,
-                            &account_ids,
+                            &writer_account_ids,
                         )
                         .await
                         {
@@ -276,7 +337,7 @@ async fn shielded_sync_range(
                     msg,
                     &tx_progress,
                     &key_cache,
-                    &account_ids,
+                    &writer_account_ids,
                 )
                 .await
                 {
@@ -290,17 +351,18 @@ async fn shielded_sync_range(
             db_tx.commit().await?;
 
             debug!("[db handler] stopped");
-            check_witness_consistency(&mut writer_connection, &account_ids).await?;
+            check_witness_consistency(&mut writer_connection, &writer_account_ids).await?;
 
             Ok::<_, anyhow::Error>(())
         });
 
-        tokio::spawn(async move {
+        let scan_task = tokio::spawn(async move {
             debug!("Start sync");
-            if let Err(e) = warp_sync(
+            let scan = warp_sync(
                 &network,
                 &mut connection,
                 start,
+                end,
                 &accounts,
                 blocks,
                 heights_without_time,
@@ -311,20 +373,44 @@ async fn shielded_sync_range(
                 tx_messages.clone(),
                 rx_cancel,
             )
-            .await
-            {
+            .await;
+            if let Err(e) = &scan {
                 tracing::error!("Error during warp sync: {:?}", e);
-                let _ = tx_messages.send(WarpSyncMessage::Error(e)).await;
             }
-
+            // The writer learns of a failure through the channel too, so it
+            // stops before its final flush commits anything more.
+            if let Err(e) = scan {
+                let _ = tx_messages.send(WarpSyncMessage::Error(e)).await;
+                return Err(anyhow::anyhow!("scan failed"));
+            }
             debug!("Sync finished");
+            scan.map_err(|e| anyhow::anyhow!(e))
         });
 
-        db_writer_task
+        (db_writer_task, scan_task)
     };
 
     db_writer_task.await??;
-    Ok(())
+    // A scanner that panicked dropped its sender: the writer saw a normal
+    // end of stream and flushed. Joining the task turns that into an error
+    // instead of a run reported as synced (V12 F-72).
+    let scan = match scan_task.await {
+        Ok(scan) => scan?,
+        Err(e) if e.is_panic() => anyhow::bail!("the shielded scanner panicked: {e}"),
+        Err(e) => anyhow::bail!("the shielded scanner was cancelled: {e}"),
+    };
+    match scan {
+        ScanEnd::Completed => Ok(RangeEnd::Completed),
+        ScanEnd::Cancelled => Ok(RangeEnd::Cancelled),
+        ScanEnd::Reorg { detected_at } => {
+            let mut connection = pool.acquire().await?;
+            let restart_from = restart_height(&mut connection, &account_ids).await?;
+            Ok(RangeEnd::Reorg {
+                detected_at,
+                restart_from,
+            })
+        }
+    }
 }
 
 async fn handle_message(
@@ -470,4 +556,266 @@ async fn handle_message(
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod stream_tests {
+    use std::collections::VecDeque;
+    use std::sync::{Arc, Mutex};
+
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+    use tonic::async_trait;
+    use zcash_primitives::transaction::Transaction;
+
+    use super::*;
+    use crate::account::new_account;
+    use crate::api::account::NewAccount;
+    use crate::db::create_schema;
+    use crate::net::LwdServer;
+    use crate::pay::pool::{POOL_ORCHARD, POOL_SAPLING};
+
+    // A run must not report success when the block stream did not deliver
+    // the range (#1474): a stream that ends or fails short is an error, a
+    // reorg is rescanned from where the database stands, and a reorg the
+    // server repeats at the same height fails the run.
+
+    const MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+
+    fn regtest() -> Network {
+        use zcash_protocol::consensus::{BlockHeight, OrchardMode};
+        use zcash_protocol::local_consensus::LocalNetwork;
+        Network::Regtest(LocalNetwork {
+            overwinter: Some(BlockHeight::from_u32(1)),
+            sapling: Some(BlockHeight::from_u32(1)),
+            blossom: Some(BlockHeight::from_u32(1)),
+            heartwood: Some(BlockHeight::from_u32(1)),
+            canopy: Some(BlockHeight::from_u32(1)),
+            nu5: Some(BlockHeight::from_u32(1)),
+            nu6: Some(BlockHeight::from_u32(1)),
+            nu6_1: Some(BlockHeight::from_u32(1)),
+            nu6_2: Some(BlockHeight::from_u32(1)),
+            nu6_3: Some(BlockHeight::from_u32(250)),
+            nu7: None,
+            zsa: None,
+            orchard_mode: OrchardMode::Normal,
+        })
+    }
+
+    /// What one `block_range` call serves.
+    #[derive(Clone, Copy)]
+    enum Serve {
+        /// Every block of the range, each connected to the previous one.
+        Whole,
+        /// The blocks up to this height, then the stream ends.
+        EndsAfter(u32),
+        /// The blocks up to this height, then an error.
+        FailsAfter(u32),
+        /// Every block, but this one does not connect to its predecessor.
+        Broken(u32),
+    }
+
+    /// A block source following a script, one entry per `block_range` call,
+    /// the last entry repeating. Records the ranges it was asked for.
+    struct Blocks {
+        script: VecDeque<Serve>,
+        asked: Arc<Mutex<Vec<(u32, u32)>>>,
+    }
+
+    fn hash(h: u32) -> Vec<u8> {
+        let mut v = vec![0xABu8; 32];
+        v[..4].copy_from_slice(&h.to_le_bytes());
+        v
+    }
+
+    fn block(h: u32, prev: u32) -> CompactBlock {
+        CompactBlock {
+            height: h as u64,
+            hash: hash(h),
+            prev_hash: hash(prev),
+            time: 1_700_000_000 + h,
+            ..Default::default()
+        }
+    }
+
+    #[async_trait]
+    impl LwdServer for Blocks {
+        type CompactBlockStream = ReceiverStream<Result<CompactBlock>>;
+        type TransactionStream = ReceiverStream<Result<(u32, Transaction, usize)>>;
+
+        async fn latest_height(&mut self) -> Result<u32> {
+            unimplemented!()
+        }
+        async fn block(&mut self, _: &Network, _: u32) -> Result<CompactBlock> {
+            unimplemented!()
+        }
+        async fn block_range(
+            &mut self,
+            _: &Network,
+            start: u32,
+            end: u32,
+        ) -> Result<Self::CompactBlockStream> {
+            self.asked.lock().unwrap().push((start, end));
+            let serve = if self.script.len() > 1 {
+                self.script.pop_front().unwrap()
+            } else {
+                *self.script.front().unwrap()
+            };
+            let (tx, rx) = tokio::sync::mpsc::channel(1024);
+            for h in start..=end {
+                match serve {
+                    Serve::EndsAfter(last) if h > last => break,
+                    Serve::FailsAfter(last) if h > last => {
+                        tx.send(Err(anyhow::anyhow!("connection reset"))).await.unwrap();
+                        break;
+                    }
+                    Serve::Broken(b) if h == b => tx.send(Ok(block(h, h + 1000))).await.unwrap(),
+                    _ => tx.send(Ok(block(h, h - 1))).await.unwrap(),
+                }
+            }
+            Ok(ReceiverStream::new(rx))
+        }
+        async fn transaction(&mut self, _: &Network, _: &[u8]) -> Result<(u32, Transaction)> {
+            unimplemented!()
+        }
+        async fn post_transaction(&mut self, _: u32, _: &[u8]) -> Result<String> {
+            unimplemented!()
+        }
+        async fn taddress_txs(
+            &mut self,
+            _: &Network,
+            _: &str,
+            _: u32,
+            _: u32,
+        ) -> Result<Self::TransactionStream> {
+            unimplemented!()
+        }
+        async fn mempool_stream(&mut self, _: &Network) -> Result<Self::TransactionStream> {
+            unimplemented!()
+        }
+        /// Empty trees: the scan starts from a fresh frontier.
+        async fn tree_state(&mut self, _: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)> {
+            Ok((vec![], vec![], vec![]))
+        }
+    }
+
+    /// A file-backed wallet, since the scan's two connections must see one
+    /// database, with one account holding Sapling and Orchard keys, born at
+    /// height 1.
+    async fn wallet(name: &str) -> Result<(SqlitePool, String)> {
+        let path = std::env::temp_dir().join(format!("{name}_{}.db", std::process::id()));
+        let path = path.to_str().unwrap().to_string();
+        let _ = std::fs::remove_file(&path);
+        let pool = SqlitePoolOptions::new()
+            .max_connections(4)
+            .connect_with(
+                SqliteConnectOptions::new()
+                    .filename(&path)
+                    .create_if_missing(true),
+            )
+            .await?;
+        let mut db = pool.acquire().await?;
+        create_schema(&mut db).await?;
+        new_account(
+            &regtest(),
+            &mut db,
+            &NewAccount {
+                icon: None,
+                name: "a".into(),
+                restore: true,
+                key: MNEMONIC.into(),
+                passphrase: None,
+                fingerprint: None,
+                aindex: 0,
+                birth: Some(1),
+                folder: String::new(),
+                pools: Some(POOL_SAPLING | POOL_ORCHARD),
+                use_internal: false,
+                internal: false,
+                hw: 0,
+            },
+        )
+        .await?;
+        Ok((pool, path))
+    }
+
+    async fn synced_height(pool: &SqlitePool) -> Result<u32> {
+        let (h,): (u32,) = sqlx::query_as("SELECT MIN(height) FROM sync_heights WHERE account = 1")
+            .fetch_one(pool)
+            .await?;
+        Ok(h)
+    }
+
+    /// Scans 1..=end with the scripted source; returns the outcome and the
+    /// ranges the source was asked for.
+    async fn scan(pool: &SqlitePool, script: &[Serve], end: u32) -> (Result<()>, Vec<(u32, u32)>) {
+        let asked = Arc::new(Mutex::new(vec![]));
+        let mut client: Client = Box::new(Blocks {
+            script: script.iter().copied().collect(),
+            asked: asked.clone(),
+        });
+        let (progress, _rx_progress) = channel::<SyncProgress>(1024);
+        let (_cancel, rx_cancel) = broadcast::channel(1);
+        let r = shielded_sync(
+            &regtest(),
+            pool,
+            &mut client,
+            &[(1, false)],
+            1,
+            end,
+            1000,
+            None,
+            progress,
+            rx_cancel,
+        )
+        .await;
+        let asked = asked.lock().unwrap().clone();
+        (r, asked)
+    }
+
+    #[tokio::test]
+    async fn a_stream_that_ends_early_fails_the_run_and_keeps_its_progress() -> Result<()> {
+        let (pool, path) = wallet("ends_early").await?;
+        let (r, _) = scan(&pool, &[Serve::EndsAfter(6)], 10).await;
+        let err = format!("{:#}", r.unwrap_err());
+        assert!(err.contains("ended at height 6, 10 asked"), "{err}");
+        assert_eq!(synced_height(&pool).await?, 6, "the blocks that did arrive are committed");
+        let _ = std::fs::remove_file(path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn a_stream_error_fails_the_run_and_keeps_its_progress() -> Result<()> {
+        let (pool, path) = wallet("fails").await?;
+        let (r, _) = scan(&pool, &[Serve::FailsAfter(4)], 10).await;
+        let err = format!("{:#}", r.unwrap_err());
+        assert!(err.contains("failed after height 4, 10 asked"), "{err}");
+        assert!(err.contains("connection reset"), "the cause is kept: {err}");
+        assert_eq!(synced_height(&pool).await?, 4);
+        let _ = std::fs::remove_file(path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn a_reorg_is_rescanned_from_where_the_database_stands() -> Result<()> {
+        let (pool, path) = wallet("reorg").await?;
+        let (r, asked) = scan(&pool, &[Serve::Broken(5), Serve::Whole], 8).await;
+        r?;
+        // Nothing of the first pass was committed, so the rewind went back to
+        // the birth checkpoint and the rescan starts just above it.
+        assert_eq!(asked, vec![(1, 8), (2, 8)]);
+        assert_eq!(synced_height(&pool).await?, 8);
+        let _ = std::fs::remove_file(path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn a_reorg_repeated_at_the_same_height_fails_the_run() -> Result<()> {
+        let (pool, path) = wallet("reorg_twice").await?;
+        let (r, asked) = scan(&pool, &[Serve::Broken(5)], 8).await;
+        let err = format!("{:#}", r.unwrap_err());
+        assert!(err.contains("do not connect at height 5"), "{err}");
+        assert_eq!(asked.len(), 2, "one rewind, then no third attempt");
+        let _ = std::fs::remove_file(path);
+        Ok(())
+    }
 }

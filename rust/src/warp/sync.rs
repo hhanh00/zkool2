@@ -34,17 +34,42 @@ pub enum BlockMessage {
     Chunk(Vec<CompactBlock>),
     SaveHeader(BlockHeader),
     Cancel,
-    StallAbort,
+    /// No block arrived for a whole stall interval; `reached` is the last
+    /// height seen.
+    StallAbort { reached: u32 },
+    /// The stream ended before `end`: `reached` is the last height seen.
+    Interrupted { reached: u32 },
+    /// The stream failed after `reached`.
+    Failed { reached: u32, error: anyhow::Error },
     Reorg(Vec<u32>, u32),
 }
+
+/// How a scan ended, for the caller to decide what comes next. A scan that
+/// did not reach its end is an error, not a variant: the run must not look
+/// finished (#1474).
+#[derive(Debug, PartialEq, Eq)]
+pub enum ScanEnd {
+    /// Every block up to `end` was processed.
+    Completed,
+    /// The user cancelled; whatever was committed stays.
+    Cancelled,
+    /// A block did not connect to the previous one. The rewind was sent to
+    /// the writer; the caller restarts the scan from where the database
+    /// stands after it. `detected_at` is the height that did not connect.
+    Reorg { detected_at: u32 },
+}
+
+/// How long without a block before the connection is given up.
+const STALL: Duration = Duration::from_secs(60);
 
 #[allow(clippy::too_many_arguments)]
 pub async fn warp_sync(
     network: &Network,
     connection: &mut SqliteConnection,
     start_height: u32,
+    end_height: u32,
     accounts: &[(u32, bool)],
-    mut blocks: ReceiverStream<CompactBlock>,
+    mut blocks: ReceiverStream<anyhow::Result<CompactBlock>>,
     mut heights_without_time: HashSet<u32>,
     actions_per_sync: u32,
     sapling_state: &CommitmentTreeFrontier,
@@ -52,7 +77,7 @@ pub async fn warp_sync(
     ironwood_state: &CommitmentTreeFrontier,
     tx_decrypted: Sender<WarpSyncMessage>,
     mut rx_cancel: broadcast::Receiver<()>,
-) -> Result<(), SyncError> {
+) -> Result<ScanEnd, SyncError> {
     let sap_hasher = SaplingHasher::default();
 
     let mut sap_dec = SaplingSync::new(
@@ -103,7 +128,7 @@ pub async fn warp_sync(
     let ironwood_has_keys = ironwood_dec.as_ref().map_or(false, |d| !d.has_no_keys());
     if sap_dec.has_no_keys() && orch_dec.has_no_keys() && !ironwood_has_keys {
         debug!("No keys to sync");
-        return Ok(());
+        return Ok(ScanEnd::Completed);
     }
 
     // Check every account: accounts at the same height can still be on different chains.
@@ -122,10 +147,11 @@ pub async fn warp_sync(
     tokio::spawn(async move {
         let mut bs = vec![];
 
-        let mut interval = tokio::time::interval(Duration::from_secs(60));
+        let mut interval = tokio::time::interval(STALL);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
-        let mut current_height = start_height;
-        let mut prev_current_height = 0;
+        // The last height seen; `start_height - 1` until the first block.
+        let mut current_height = start_height.saturating_sub(1);
+        let mut prev_current_height = u32::MAX;
 
         let mut c = 0;
         loop {
@@ -134,7 +160,7 @@ pub async fn warp_sync(
                     debug!("Syncing at height {}", current_height);
                     if prev_current_height == current_height {
                         debug!("Connection stalled. Aborting...");
-                        let _ = tx_blocks.send(BlockMessage::StallAbort).await;
+                        let _ = tx_blocks.send(BlockMessage::StallAbort { reached: current_height }).await;
                         break;
                     }
                     prev_current_height = current_height;
@@ -145,58 +171,80 @@ pub async fn warp_sync(
                     break;
                 }
                 m = blocks.next() => {
-                    if let Some(block) = m {
-                        let block_prev_hash = block.prev_hash.clone();
-                        current_height = block.height as u32;
-                        let discontinuity = match &prev_hash {
-                            Some(hash) => hash != &block_prev_hash,
-                            None => frontier_hashes.iter().any(|hash| hash != &block_prev_hash),
-                        };
-                        if discontinuity {
-                            let _ = tx_blocks.send(BlockMessage::Reorg(account_ids, current_height - 1)).await;
-                            debug!("Reorganization detected at block {}", block.height);
+                    let block = match m {
+                        Some(Ok(block)) => block,
+                        Some(Err(error)) => {
+                            // Keep what was scanned, then report the break.
+                            if !bs.is_empty() {
+                                let _ = tx_blocks.send(BlockMessage::Chunk(bs)).await;
+                            }
+                            let _ = tx_blocks.send(BlockMessage::Failed { reached: current_height, error }).await;
                             break;
                         }
-                        prev_hash = Some(block.hash.clone());
-
-                        let bheight = block.height as u32;
-                        if heights_without_time.remove(&bheight) {
-                            let bh = BlockHeader {
-                                height: bheight,
-                                hash: block.hash.clone(),
-                                time: block.time,
-                            };
-                            let _ = tx_blocks.send(BlockMessage::SaveHeader(bh)).await;
+                        None => {
+                            if !bs.is_empty() {
+                                let _ = tx_blocks.send(BlockMessage::Chunk(bs)).await;
+                            }
+                            if current_height < end_height {
+                                debug!("block stream ended at {} of {}", current_height, end_height);
+                                let _ = tx_blocks.send(BlockMessage::Interrupted { reached: current_height }).await;
+                            } else {
+                                debug!("no more blocks to process");
+                            }
+                            break;
                         }
-
-                        for vtx in block.vtx.iter() {
-                            c += vtx.outputs.len();
-                            c += vtx.actions.len();
-                        }
-
-                        bs.push(block);
-
-                        if c >= actions_per_sync as usize && !bs.is_empty() {
-                            tx_blocks.send(BlockMessage::Chunk(bs)).await.unwrap();
-                            bs = vec![];
-                            c = 0;
-                        }
-                    }
-                    else {
-                        debug!("no more blocks to process");
-                        if !bs.is_empty() {
-                            tx_blocks.send(BlockMessage::Chunk(bs)).await.unwrap();
-                        }
+                    };
+                    let block_prev_hash = block.prev_hash.clone();
+                    current_height = block.height as u32;
+                    let discontinuity = match &prev_hash {
+                        Some(hash) => hash != &block_prev_hash,
+                        None => frontier_hashes.iter().any(|hash| hash != &block_prev_hash),
+                    };
+                    if discontinuity {
+                        let _ = tx_blocks.send(BlockMessage::Reorg(account_ids, current_height - 1)).await;
+                        debug!("Reorganization detected at block {}", block.height);
                         break;
+                    }
+                    prev_hash = Some(block.hash.clone());
+
+                    let bheight = block.height as u32;
+                    if heights_without_time.remove(&bheight) {
+                        let bh = BlockHeader {
+                            height: bheight,
+                            hash: block.hash.clone(),
+                            time: block.time,
+                        };
+                        let _ = tx_blocks.send(BlockMessage::SaveHeader(bh)).await;
+                    }
+
+                    // Every field the scanners process counts toward the
+                    // batch, or a range of Ironwood-only blocks would be
+                    // held until the stream ends (V12 F-183).
+                    for vtx in block.vtx.iter() {
+                        c += vtx.spends.len();
+                        c += vtx.outputs.len();
+                        c += vtx.actions.len();
+                        c += vtx.ironwood_actions.len();
+                        c += vtx.issuances.len();
+                    }
+
+                    bs.push(block);
+
+                    if c >= actions_per_sync as usize && !bs.is_empty() {
+                        if tx_blocks.send(BlockMessage::Chunk(bs)).await.is_err() {
+                            break; // the writer is gone
+                        }
+                        bs = vec![];
+                        c = 0;
                     }
                 }
             }
         }
 
-        debug!("warp_sync completed");
-        Ok::<_, SyncError>(())
+        debug!("warp_sync block reader done");
     });
 
+    let mut end = ScanEnd::Completed;
     while let Some(bm) = rx_blocks.recv().await {
         match bm {
             BlockMessage::Chunk(bs) => {
@@ -242,14 +290,32 @@ pub async fn warp_sync(
                 let _ = tx_decrypted.send(WarpSyncMessage::BlockHeader(bh)).await;
                 let _ = tx_decrypted.send(WarpSyncMessage::Commit).await;
             }
-            BlockMessage::Cancel | BlockMessage::StallAbort => {
+            BlockMessage::Cancel => {
                 debug!("Cancelling...");
+                end = ScanEnd::Cancelled;
                 break;
+            }
+            BlockMessage::StallAbort { reached } => {
+                return Err(SyncError::Other(anyhow::anyhow!(
+                    "no block received for {} s after height {reached}, {end_height} asked",
+                    STALL.as_secs()
+                )));
+            }
+            BlockMessage::Interrupted { reached } => {
+                return Err(SyncError::Other(anyhow::anyhow!(
+                    "the block stream ended at height {reached}, {end_height} asked"
+                )));
+            }
+            BlockMessage::Failed { reached, error } => {
+                return Err(SyncError::Other(error.context(format!(
+                    "the block stream failed after height {reached}, {end_height} asked"
+                ))));
             }
             BlockMessage::Reorg(accounts, height) => {
                 let _ = tx_decrypted
                     .send(WarpSyncMessage::Rewind(accounts, height))
                     .await;
+                end = ScanEnd::Reorg { detected_at: height + 1 };
                 break;
             }
             BlockMessage::SaveHeader(bh) => {
@@ -258,5 +324,5 @@ pub async fn warp_sync(
         }
     }
 
-    Ok(())
+    Ok(end)
 }
