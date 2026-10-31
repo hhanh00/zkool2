@@ -105,6 +105,11 @@ pub async fn fetch_tx_details(account: u32, c: &Coin) -> Result<()> {
     // One batch in memory at a time, by a cursor on the transaction id
     // (#1514): a cancel or an error loses at most one batch of work.
     let mut after = 0;
+    // A transaction whose details cannot be fetched is logged and left for
+    // the next pass; the cursor moves on (#1520). An error is returned
+    // only when nothing succeeded, so a dead server is still reported.
+    let mut succeeded = 0;
+    let mut failed = None;
     loop {
         let batch =
             crate::memo::pending_details_after(&mut connection, account, after, DETAILS_BATCH as u32)
@@ -115,19 +120,30 @@ pub async fn fetch_tx_details(account: u32, c: &Coin) -> Result<()> {
         after = *last;
         let mut txs = Vec::with_capacity(batch.len());
         for (_, txid) in &batch {
-            txs.push(
-                crate::memo::decrypt_tx(&network, &mut connection, &mut client, account, txid)
-                    .await?,
-            );
+            match crate::memo::decrypt_tx(&network, &mut connection, &mut client, account, txid)
+                .await
+            {
+                Ok(tx) => txs.push(tx),
+                Err(e) => {
+                    tracing::warn!("details of {} not fetched: {e:#}", hex::encode(txid));
+                    failed = Some(e);
+                }
+            }
         }
-        c.driver()?
-            .apply(c, Apply::TxDetails { account, txs })
-            .await?;
+        succeeded += txs.len();
+        if !txs.is_empty() {
+            c.driver()?
+                .apply(c, Apply::TxDetails { account, txs })
+                .await?;
+        }
         if batch.len() < DETAILS_BATCH {
             break;
         }
     }
-    Ok(())
+    match failed {
+        Some(e) if succeeded == 0 => Err(e.context("no transaction's details could be fetched")),
+        _ => Ok(()),
+    }
 }
 
 #[cfg_attr(feature = "flutter", frb)]
