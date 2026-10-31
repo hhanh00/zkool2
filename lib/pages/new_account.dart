@@ -429,7 +429,8 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
 
   void onSave() async {
     if (formKey.currentState?.saveAndValidate() ?? false) {
-      final currentHeight = ref.read(currentHeightProvider).value;
+      final currentHeight = await _currentHeight();
+      if (!mounted) return;
 
       // Handle the save logic here
       final formData = formKey.currentState?.value;
@@ -450,6 +451,25 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       final icon = iconBytes;
 
       final r = restore ?? false;
+      // The birth of an account created without one. The tip when the
+      // server answers; offline, a new account can fall back to the highest
+      // height the wallet has synced to, since it received nothing before it
+      // existed and that height is at or below the tip. A restore has no safe
+      // default: its history may start anywhere. Never 1, which is a scan
+      // from Sapling activation (#1473).
+      var defaultBirth = currentHeight;
+      if (birth == null && defaultBirth == null && !r) {
+        defaultBirth = await _highestSyncedHeight();
+        if (!mounted) return;
+      }
+      if (birth == null && defaultBirth == null) {
+        await showException(
+          context,
+          "The current block height is unknown: the wallet is offline or the server did not answer. "
+          "Enter a birth height to create the account.",
+        );
+        return;
+      }
       if (r && birth == null) {
         final confirmed = await confirmDialog(
           context,
@@ -459,7 +479,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
         if (!confirmed) return;
       }
 
-      final bh = birth != null ? int.parse(birth) : currentHeight ?? 1;
+      final bh = birth != null ? int.parse(birth) : defaultBirth!;
       AwesomeDialog? dialog;
       try {
         String message = "Please wait while we create the account";
@@ -522,7 +542,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
             title: "Account Imported",
             message: "Account imported successfully. Would you like to synchronize it now?",
           );
-          if (shouldSync && mounted) await _syncOnly([account], currentHeight);
+          if (shouldSync && mounted) await _syncOnly([account]);
         }
         if (mounted) GoRouter.of(context).go(accountRoute("/", account));
       } on AnyhowException catch (e) {
@@ -545,12 +565,36 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
     }
   }
 
+  /// The chain tip, fetched now. The cached value is only kept fresh by
+  /// autosync, and stays null with autosync off or before its first poll
+  /// (#1473). Null offline, or when the server does not answer.
+  Future<int?> _currentHeight() async {
+    try {
+      return await ref.read(currentHeightProvider.notifier).fetch();
+    } catch (e) {
+      logger.w("Current height unavailable: $e");
+      return ref.read(currentHeightProvider).value;
+    }
+  }
+
+  /// The highest height any account of the wallet has synced to, or null in
+  /// a wallet that has never synced.
+  Future<int?> _highestSyncedHeight() async {
+    final accounts = await ref.read(getAccountsProvider.future);
+    int? highest;
+    for (final a in accounts) {
+      if (a.height > 0 && (highest == null || a.height > highest)) highest = a.height;
+    }
+    return highest;
+  }
+
   /// Starts a sync of just the accounts this page created: the user said
   /// yes to syncing the new account, not to catching up every other one.
-  Future<void> _syncOnly(Iterable<int> ids, int currentHeight) async {
+  /// The run fetches its own tip, as the sync button does.
+  Future<void> _syncOnly(Iterable<int> ids) async {
     final wanted = ids.toSet();
     final accounts = (await ref.read(getAccountsProvider.future)).where((a) => wanted.contains(a.id)).toList();
-    unawaited(ref.read(synchronizerProvider.notifier).startSynchronize(accounts, currentHeight: currentHeight));
+    unawaited(ref.read(synchronizerProvider.notifier).startSynchronize(accounts));
   }
 
   Future<void> onRestoreFrostBackup(String name, String ufvk, String? birth) async {
@@ -577,7 +621,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
       // The ZIP 2005 account when both were restored: it is the one to use.
       final account = restored.last.account;
       await ref.read(selectedAccountIdProvider.notifier).set(account);
-      final currentHeight = ref.read(currentHeightProvider).value;
+      final currentHeight = await _currentHeight();
       if (mounted && currentHeight != null) {
         final shouldSync = await confirmDialog(
           context,
@@ -586,7 +630,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> {
               "Would you like to synchronize now?",
         );
         if (shouldSync && mounted) {
-          await _syncOnly(restored.map((r) => r.account), currentHeight);
+          await _syncOnly(restored.map((r) => r.account));
         }
       }
       if (mounted) GoRouter.of(context).go(accountRoute("/", account));
