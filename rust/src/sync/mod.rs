@@ -218,6 +218,10 @@ async fn run_range(
     let pool = c.get_pool()?;
     let mut client = c.client().await?;
 
+    // A cancel is checked before every stage and inside the two loops that
+    // have no scanner of their own, so none of them runs to completion
+    // after the user asked to stop (#1571).
+    run.check_cancelled()?;
     transparent_sync(
         &network,
         connection,
@@ -234,6 +238,7 @@ async fn run_range(
     // GetBlockRange stream fits in one nym-rpc session; elsewhere a
     // single stream for the whole range is cheaper.
     let chunk_size = c.is_mixnet().then_some(MIXNET_SYNC_CHUNK);
+    run.check_cancelled()?;
     shielded_sync(
         &network,
         &pool,
@@ -252,6 +257,7 @@ async fn run_range(
     let heights_without_time =
         get_heights_without_time(connection, &account_ids, range.start, range.end).await?;
     for h in heights_without_time {
+        run.check_cancelled()?;
         debug!("fetch block @{h}");
         let block = client.block(&network, h).await?;
         let time = block.time;
@@ -270,6 +276,7 @@ async fn run_range(
 
     if !params.skip_details {
         for account in &account_ids {
+            run.check_cancelled()?;
             crate::memo::fetch_tx_details(
                 &network,
                 &mut run.held(connection),

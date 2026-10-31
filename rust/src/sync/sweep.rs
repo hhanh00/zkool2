@@ -385,7 +385,6 @@ mod tests {
         let addr = source.derive(&Network::Main, 0, 0).await?;
         crate::db::store_account_transparent_addr(&mut db, 1, 0, 0, addr.sk, &addr.pk, &addr.address, false)
             .await?;
-        let (_cancel, rx_cancel) = tokio::sync::broadcast::channel(1);
         let mut client: Client = Box::new(BrokenHistory);
         let r = super::super::transparent::transparent_sync(
             &Network::Main,
@@ -395,7 +394,7 @@ mod tests {
             1,
             500,
             10,
-            rx_cancel,
+            CancellationToken::new(),
         )
         .await;
         let err = format!("{:#}", r.unwrap_err());
@@ -405,6 +404,36 @@ mod tests {
                 .fetch_one(&mut db)
                 .await?;
         assert_eq!(h, 1, "the checkpoint stays where the stream left it");
+        Ok(())
+    }
+
+    /// #1571: a cancel that landed before the scanner started is seen by
+    /// it; nothing is asked of the server.
+    #[tokio::test]
+    async fn a_cancelled_token_stops_the_transparent_scan_before_any_request() -> Result<()> {
+        let mut db = test_db(false).await?;
+        let (xvk, xsk) = software_keys();
+        let source = TransparentKeySource::software(xvk, Some(xsk));
+        let addr = source.derive(&Network::Main, 0, 0).await?;
+        crate::db::store_account_transparent_addr(&mut db, 1, 0, 0, addr.sk, &addr.pk, &addr.address, false)
+            .await?;
+        let cancel = CancellationToken::new();
+        cancel.cancel();
+        let mut client: Client = Box::new(BrokenHistory);
+        let r = super::super::transparent::transparent_sync(
+            &Network::Main,
+            &mut db,
+            &mut client,
+            &[1],
+            1,
+            500,
+            10,
+            cancel,
+        )
+        .await;
+        let err = format!("{:#}", r.unwrap_err());
+        assert!(err.contains("Sync canceled"), "{err}");
+        assert!(!err.contains("connection reset"), "the server was not asked: {err}");
         Ok(())
     }
 

@@ -5,7 +5,7 @@
 use anyhow::Result;
 use sqlx::SqliteConnection;
 use sqlx::{sqlite::SqliteRow, Row};
-use tokio::sync::broadcast;
+use tokio_util::sync::CancellationToken;
 use tokio_stream::StreamExt;
 use tracing::debug;
 use zcash_transparent::address::TransparentAddress;
@@ -28,7 +28,7 @@ pub(crate) async fn transparent_sync(
     start_height: u32,
     end_height: u32,
     limit: u32,
-    mut rx_cancel: broadcast::Receiver<()>,
+    cancel: CancellationToken,
 ) -> Result<()> {
     let mut addresses = vec![];
     debug!(
@@ -87,7 +87,7 @@ pub(crate) async fn transparent_sync(
         let mut db_tx = connection.begin().await?;
         loop {
             tokio::select! {
-                _ = rx_cancel.recv() => {
+                _ = cancel.cancelled() => {
                     debug!("Canceling sync");
                     anyhow::bail!("Sync canceled");
                 }

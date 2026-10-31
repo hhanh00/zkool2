@@ -3,7 +3,8 @@ use std::{collections::HashSet, time::Duration};
 use anyhow::{Context as _, Result};
 use shielded::Synchronizer;
 use sqlx::SqliteConnection;
-use tokio::sync::{broadcast, mpsc::Sender};
+use tokio::sync::mpsc::Sender;
+use tokio_util::sync::CancellationToken;
 use tokio_stream::{wrappers::ReceiverStream, StreamExt};
 use tracing::debug;
 use zcash_protocol::consensus::{NetworkUpgrade, Parameters};
@@ -76,7 +77,7 @@ pub async fn warp_sync(
     orchard_state: &CommitmentTreeFrontier,
     ironwood_state: &CommitmentTreeFrontier,
     tx_decrypted: Sender<WarpSyncMessage>,
-    mut rx_cancel: broadcast::Receiver<()>,
+    cancel: CancellationToken,
 ) -> Result<ScanEnd, SyncError> {
     let sap_hasher = SaplingHasher::default();
 
@@ -165,7 +166,7 @@ pub async fn warp_sync(
                     }
                     prev_current_height = current_height;
                 }
-                _ = rx_cancel.recv() => {
+                _ = cancel.cancelled() => {
                     debug!("Sync cancelled");
                     let _ = tx_blocks.send(BlockMessage::Cancel).await;
                     break;
