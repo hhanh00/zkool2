@@ -21,6 +21,15 @@ mixin _$SyncState {
   List<Account> get accounts;
   bool get cancelling;
 
+  /// Null while nothing is running or waiting to retry.
+  SyncKind? get kind;
+
+  /// The retry about to run, 1-based; 0 while a run is in progress.
+  int get attempt;
+
+  /// How long the current backoff wait is, for the page to show.
+  int get retryInSeconds;
+
   /// Create a copy of SyncState
   /// with the given fields replaced by the non-null parameter values.
   @JsonKey(includeFromJson: false, includeToJson: false)
@@ -39,16 +48,29 @@ mixin _$SyncState {
             (identical(other.time, time) || other.time == time) &&
             const DeepCollectionEquality().equals(other.accounts, accounts) &&
             (identical(other.cancelling, cancelling) ||
-                other.cancelling == cancelling));
+                other.cancelling == cancelling) &&
+            (identical(other.kind, kind) || other.kind == kind) &&
+            (identical(other.attempt, attempt) || other.attempt == attempt) &&
+            (identical(other.retryInSeconds, retryInSeconds) ||
+                other.retryInSeconds == retryInSeconds));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, start, end, height, time,
-      const DeepCollectionEquality().hash(accounts), cancelling);
+  int get hashCode => Object.hash(
+      runtimeType,
+      start,
+      end,
+      height,
+      time,
+      const DeepCollectionEquality().hash(accounts),
+      cancelling,
+      kind,
+      attempt,
+      retryInSeconds);
 
   @override
   String toString() {
-    return 'SyncState(start: $start, end: $end, height: $height, time: $time, accounts: $accounts, cancelling: $cancelling)';
+    return 'SyncState(start: $start, end: $end, height: $height, time: $time, accounts: $accounts, cancelling: $cancelling, kind: $kind, attempt: $attempt, retryInSeconds: $retryInSeconds)';
   }
 }
 
@@ -63,7 +85,10 @@ abstract mixin class $SyncStateCopyWith<$Res> {
       int height,
       int time,
       List<Account> accounts,
-      bool cancelling});
+      bool cancelling,
+      SyncKind? kind,
+      int attempt,
+      int retryInSeconds});
 }
 
 /// @nodoc
@@ -84,6 +109,9 @@ class _$SyncStateCopyWithImpl<$Res> implements $SyncStateCopyWith<$Res> {
     Object? time = null,
     Object? accounts = null,
     Object? cancelling = null,
+    Object? kind = freezed,
+    Object? attempt = null,
+    Object? retryInSeconds = null,
   }) {
     return _then(_self.copyWith(
       start: null == start
@@ -110,6 +138,18 @@ class _$SyncStateCopyWithImpl<$Res> implements $SyncStateCopyWith<$Res> {
           ? _self.cancelling
           : cancelling // ignore: cast_nullable_to_non_nullable
               as bool,
+      kind: freezed == kind
+          ? _self.kind
+          : kind // ignore: cast_nullable_to_non_nullable
+              as SyncKind?,
+      attempt: null == attempt
+          ? _self.attempt
+          : attempt // ignore: cast_nullable_to_non_nullable
+              as int,
+      retryInSeconds: null == retryInSeconds
+          ? _self.retryInSeconds
+          : retryInSeconds // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }
@@ -205,16 +245,32 @@ extension SyncStatePatterns on SyncState {
 
   @optionalTypeArgs
   TResult maybeWhen<TResult extends Object?>(
-    TResult Function(int start, int end, int height, int time,
-            List<Account> accounts, bool cancelling)?
+    TResult Function(
+            int start,
+            int end,
+            int height,
+            int time,
+            List<Account> accounts,
+            bool cancelling,
+            SyncKind? kind,
+            int attempt,
+            int retryInSeconds)?
         $default, {
     required TResult orElse(),
   }) {
     final _that = this;
     switch (_that) {
       case _SyncState() when $default != null:
-        return $default(_that.start, _that.end, _that.height, _that.time,
-            _that.accounts, _that.cancelling);
+        return $default(
+            _that.start,
+            _that.end,
+            _that.height,
+            _that.time,
+            _that.accounts,
+            _that.cancelling,
+            _that.kind,
+            _that.attempt,
+            _that.retryInSeconds);
       case _:
         return orElse();
     }
@@ -235,15 +291,31 @@ extension SyncStatePatterns on SyncState {
 
   @optionalTypeArgs
   TResult when<TResult extends Object?>(
-    TResult Function(int start, int end, int height, int time,
-            List<Account> accounts, bool cancelling)
+    TResult Function(
+            int start,
+            int end,
+            int height,
+            int time,
+            List<Account> accounts,
+            bool cancelling,
+            SyncKind? kind,
+            int attempt,
+            int retryInSeconds)
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _SyncState():
-        return $default(_that.start, _that.end, _that.height, _that.time,
-            _that.accounts, _that.cancelling);
+        return $default(
+            _that.start,
+            _that.end,
+            _that.height,
+            _that.time,
+            _that.accounts,
+            _that.cancelling,
+            _that.kind,
+            _that.attempt,
+            _that.retryInSeconds);
     }
   }
 
@@ -261,15 +333,31 @@ extension SyncStatePatterns on SyncState {
 
   @optionalTypeArgs
   TResult? whenOrNull<TResult extends Object?>(
-    TResult? Function(int start, int end, int height, int time,
-            List<Account> accounts, bool cancelling)?
+    TResult? Function(
+            int start,
+            int end,
+            int height,
+            int time,
+            List<Account> accounts,
+            bool cancelling,
+            SyncKind? kind,
+            int attempt,
+            int retryInSeconds)?
         $default,
   ) {
     final _that = this;
     switch (_that) {
       case _SyncState() when $default != null:
-        return $default(_that.start, _that.end, _that.height, _that.time,
-            _that.accounts, _that.cancelling);
+        return $default(
+            _that.start,
+            _that.end,
+            _that.height,
+            _that.time,
+            _that.accounts,
+            _that.cancelling,
+            _that.kind,
+            _that.attempt,
+            _that.retryInSeconds);
       case _:
         return null;
     }
@@ -285,7 +373,10 @@ class _SyncState implements SyncState {
       required this.height,
       required this.time,
       required final List<Account> accounts,
-      this.cancelling = false})
+      this.cancelling = false,
+      this.kind,
+      this.attempt = 0,
+      this.retryInSeconds = 0})
       : _accounts = accounts;
 
   @override
@@ -308,6 +399,20 @@ class _SyncState implements SyncState {
   @JsonKey()
   final bool cancelling;
 
+  /// Null while nothing is running or waiting to retry.
+  @override
+  final SyncKind? kind;
+
+  /// The retry about to run, 1-based; 0 while a run is in progress.
+  @override
+  @JsonKey()
+  final int attempt;
+
+  /// How long the current backoff wait is, for the page to show.
+  @override
+  @JsonKey()
+  final int retryInSeconds;
+
   /// Create a copy of SyncState
   /// with the given fields replaced by the non-null parameter values.
   @override
@@ -327,16 +432,29 @@ class _SyncState implements SyncState {
             (identical(other.time, time) || other.time == time) &&
             const DeepCollectionEquality().equals(other._accounts, _accounts) &&
             (identical(other.cancelling, cancelling) ||
-                other.cancelling == cancelling));
+                other.cancelling == cancelling) &&
+            (identical(other.kind, kind) || other.kind == kind) &&
+            (identical(other.attempt, attempt) || other.attempt == attempt) &&
+            (identical(other.retryInSeconds, retryInSeconds) ||
+                other.retryInSeconds == retryInSeconds));
   }
 
   @override
-  int get hashCode => Object.hash(runtimeType, start, end, height, time,
-      const DeepCollectionEquality().hash(_accounts), cancelling);
+  int get hashCode => Object.hash(
+      runtimeType,
+      start,
+      end,
+      height,
+      time,
+      const DeepCollectionEquality().hash(_accounts),
+      cancelling,
+      kind,
+      attempt,
+      retryInSeconds);
 
   @override
   String toString() {
-    return 'SyncState(start: $start, end: $end, height: $height, time: $time, accounts: $accounts, cancelling: $cancelling)';
+    return 'SyncState(start: $start, end: $end, height: $height, time: $time, accounts: $accounts, cancelling: $cancelling, kind: $kind, attempt: $attempt, retryInSeconds: $retryInSeconds)';
   }
 }
 
@@ -354,7 +472,10 @@ abstract mixin class _$SyncStateCopyWith<$Res>
       int height,
       int time,
       List<Account> accounts,
-      bool cancelling});
+      bool cancelling,
+      SyncKind? kind,
+      int attempt,
+      int retryInSeconds});
 }
 
 /// @nodoc
@@ -375,6 +496,9 @@ class __$SyncStateCopyWithImpl<$Res> implements _$SyncStateCopyWith<$Res> {
     Object? time = null,
     Object? accounts = null,
     Object? cancelling = null,
+    Object? kind = freezed,
+    Object? attempt = null,
+    Object? retryInSeconds = null,
   }) {
     return _then(_SyncState(
       start: null == start
@@ -401,6 +525,18 @@ class __$SyncStateCopyWithImpl<$Res> implements _$SyncStateCopyWith<$Res> {
           ? _self.cancelling
           : cancelling // ignore: cast_nullable_to_non_nullable
               as bool,
+      kind: freezed == kind
+          ? _self.kind
+          : kind // ignore: cast_nullable_to_non_nullable
+              as SyncKind?,
+      attempt: null == attempt
+          ? _self.attempt
+          : attempt // ignore: cast_nullable_to_non_nullable
+              as int,
+      retryInSeconds: null == retryInSeconds
+          ? _self.retryInSeconds
+          : retryInSeconds // ignore: cast_nullable_to_non_nullable
+              as int,
     ));
   }
 }

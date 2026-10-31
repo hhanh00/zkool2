@@ -566,7 +566,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'f91232871b263e892c96119a48a7f1ef01cd5b37';
+    r'd130e3d2c680560e6b475d2d87596c607c7f0da9';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -850,7 +850,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'a7b0c7dda4b292793e86b3eece48644c43ea3aa1';
+    r'22a4f43640189d33b46f61c212c02ea5b485aedd';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();
@@ -1639,7 +1639,7 @@ final class VotingDriveJobProvider
   }
 }
 
-String _$votingDriveJobHash() => r'f3b57afde19c1c8ad458f61f9398b098ea8c544d';
+String _$votingDriveJobHash() => r'0abeee641dbaacd889048e3d3aedbb2c7281cbd0';
 
 /// Submission job for one round. `prepare` persists the bundle layout and
 /// returns the eligibility preview the UI shows before the voter commits;

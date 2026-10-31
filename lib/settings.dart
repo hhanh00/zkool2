@@ -113,7 +113,6 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final cancelling = ref.watch(synchronizerProvider).cancelling;
 
     return Scaffold(
       appBar: AppBar(
@@ -255,31 +254,18 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   ),
                 ),
                 Gap(16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Tooltip(
-                        message: "AutoSync interval in blocks. Accounts that are behind by more than this value will start synchronization",
-                        child: FormBuilderTextField(
-                          name: "autosync",
-                          decoration: const InputDecoration(labelText: "AutoSync Interval"),
-                          initialValue: settings.syncInterval,
-                          onChanged: onChangedSyncInterval,
-                          validator: FormBuilderValidators.integer(),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: "This will cancel the current sync and disable AutoSync",
-                      onPressed: cancelling ? null : onCancelSync,
-                      icon: Icon(Icons.cancel),
-                    ),
-                  ],
+                Tooltip(
+                  message: "AutoSync interval in blocks, 0 for off. Accounts that are behind by more than this value will start synchronization",
+                  child: FormBuilderTextField(
+                    name: "autosync",
+                    decoration: const InputDecoration(labelText: "AutoSync Interval"),
+                    initialValue: settings.syncInterval,
+                    onChanged: onChangedSyncInterval,
+                    validator: FormBuilderValidators.integer(),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  ),
                 ),
-                if (cancelling)
-                  const Text("Cancelling Synchronization"),
                 Gap(8),
                 Tooltip(
                   message: "Ask for device pin when app opens",
@@ -449,13 +435,6 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
 
   void onOpenLog(BuildContext context) async {
     await GoRouter.of(context).push("/log");
-  }
-
-  void onCancelSync() async {
-    final confirmed = await confirmDialog(context, title: "Cancel Sync", message: "Do you want to cancel the current sync? AutoSync will be disabled too");
-    if (!confirmed) return;
-    formKey.currentState!.fields["autosync"]!.didChange("0");
-    await ref.read(synchronizerProvider.notifier).cancelSynchronization();
   }
 
   void onChangedDatabaseName(String? value) async {
@@ -1088,10 +1067,10 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       settings = settings.copyWith(syncInterval: value);
       widget.onChanged(settings);
     });
-    // Apply the interval at once: a positive one (re)starts autoSync, 0
-    // stops it. Pass the new interval explicitly: the appSettingsProvider
-    // still holds the previously saved value until the page is left.
+    // Apply the interval at once: saved, so the height poll reads it on its
+    // next tick, and a positive one (re)starts autoSync while 0 stops it.
     final interval = int.tryParse(value) ?? 0;
+    await ref.read(appSettingsProvider.notifier).setSyncInterval(value);
     ref.read(synchronizerProvider.notifier).autoSync(interval: interval);
   }
 

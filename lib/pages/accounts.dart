@@ -201,7 +201,14 @@ class AccountListPageState extends ConsumerState<AccountListPage> {
   List<Widget> _buildAppBarActions() {
     return [
       IconButton(onPressed: onSettings, tooltip: "Open Settings", icon: const Icon(Icons.settings)),
-      IconButton(onPressed: onSync, tooltip: "Synchronize all enabled accounts or the accounts currently selected", icon: const Icon(Icons.sync)),
+      if (ref.watch(synchronizerProvider).kind != null)
+        IconButton(
+          onPressed: () => cancelSyncFromPage(context, ref),
+          tooltip: "Cancel synchronization",
+          icon: const Icon(Icons.cancel),
+        )
+      else
+        IconButton(onPressed: onSync, tooltip: "Synchronize all enabled accounts or the accounts currently selected", icon: const Icon(Icons.sync)),
       PopupMenuButton<String>(
         onSelected: (String result) {
           switch (result) {

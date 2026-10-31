@@ -932,7 +932,7 @@ class Send2PageState extends ConsumerState<Send2Page> {
       if (syncChoice) {
         // User chose to sync — await completion, then continue
         showSnackbar("Please wait for wallet to synchronize");
-        await ref.read(synchronizerProvider.notifier).syncIfNeeded(currentHeight, now: true);
+        await ref.read(synchronizerProvider.notifier).syncIfNeeded(currentHeight, now: true, kind: SyncKind.manual);
         if (!mounted) return;
       }
     }

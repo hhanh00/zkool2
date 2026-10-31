@@ -73,6 +73,11 @@ final blockHeightService = BlockHeightService(
   fetchHeight: () => getCurrentHeight(c: coinContext.coin),
 );
 
+/// Who asked for a sync. The height poll starts auto syncs; the user starts
+/// manual ones. They fail differently: an auto sync stops and the next
+/// schedule retries, a manual sync retries with a growing delay (#1474).
+enum SyncKind { auto, manual }
+
 @freezed
 sealed class SyncState with _$SyncState {
   factory SyncState({
@@ -82,6 +87,12 @@ sealed class SyncState with _$SyncState {
     required int time,
     required List<Account> accounts,
     @Default(false) bool cancelling,
+    /// Null while nothing is running or waiting to retry.
+    SyncKind? kind,
+    /// The retry about to run, 1-based; 0 while a run is in progress.
+    @Default(0) int attempt,
+    /// How long the current backoff wait is, for the page to show.
+    @Default(0) int retryInSeconds,
   }) = _SyncState;
 }
 
@@ -461,6 +472,15 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
         ));
   }
 
+  /// The auto sync interval in blocks, "0" for off, saved at once: the
+  /// height poll reads it on every tick.
+  Future<void> setSyncInterval(String interval) async {
+    await putProp(key: "sync_interval", value: interval, c: coinContext.coin);
+    state = state.whenData((s) => s.copyWith(
+          syncInterval: interval,
+        ));
+  }
+
   /// Persist all settings to prefs/DB props and apply live coin changes
   /// (lwd/transport/proxy). Called once when leaving the settings page.
   Future<void> save(AppSettings settings) async {
@@ -753,16 +773,33 @@ void runLogListener() async {
 class _SyncRequest {
   final accounts = <int, Account>{};
   int? height;
+  /// Manual once any merged request was manual: a user asked.
+  SyncKind kind = SyncKind.auto;
 }
 
 @Riverpod(keepAlive: true)
 class SynchronizerNotifier extends _$SynchronizerNotifier {
+  /// Retries a manual sync makes before giving up.
+  static const maxRetries = 10;
+
+  /// True for the whole of a `startSynchronize` call: the run, its backoff
+  /// waits, and the queued requests after it. A request made meanwhile is
+  /// queued, never run alongside (V12 F-2).
   bool syncInProgress = false;
   StreamSubscription<int>? _autoSyncSubscription;
   /// A sync asked for while one was running; runs when the current one ends.
   _SyncRequest? _pending;
   StreamSubscription<SyncEvent>? syncProgressSubscription;
   int retryCount = 0;
+  /// Completes to end a backoff wait early, on cancel.
+  Completer<void>? _waiting;
+  /// The wait before manual retry number `attempt`. A field so tests can
+  /// shorten it.
+  Duration Function(int attempt) retryDelay = defaultRetryDelay;
+
+  /// 30 s plus a random part that doubles with each attempt, up to 2^10 s.
+  static Duration defaultRetryDelay(int attempt) =>
+      Duration(seconds: 30 + Random().nextInt(pow(2, min(attempt, 10)).toInt()));
 
   @override
   SyncState build() {
@@ -778,7 +815,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     );
   }
 
-  void begin(List<Account> accounts, int endHeight) {
+  void begin(List<Account> accounts, int endHeight, SyncKind kind) {
     final minAccount = accounts.fold((0, 0), (a, b) {
       if (b.height < a.$1) return (b.height, b.time);
       return a;
@@ -789,6 +826,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
       height: minAccount.$1,
       accounts: accounts,
       time: minAccount.$2,
+      kind: kind,
     );
   }
 
@@ -806,34 +844,46 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     );
   }
 
+  /// Stops the sync in progress, whatever its kind: the run in Rust is asked
+  /// to stop, a backoff wait ends now, and the queue is dropped. The kind
+  /// decides what the page does next; see `cancelSyncFromPage`.
   Future<void> cancelSynchronization() async {
     if (!syncInProgress || state.cancelling) return;
     state = state.copyWith(cancelling: true);
     _pending = null;
+    _waiting?.complete();
     // This signals Rust; the sync mutation owns cleanup once Rust exits.
     await cancelSync(c: coinContext.coin);
   }
 
   /// Sync `accounts`. While a sync is running the request is queued and runs
   /// when it ends, merged with any other request made meanwhile; a
-  /// cancellation drops the queue.
+  /// cancellation drops the queue. Manual unless the caller is the height
+  /// poll.
   Future<void> startSynchronize(
     List<Account> accounts, {
     int? currentHeight,
+    SyncKind kind = SyncKind.manual,
   }) async {
     if (syncInProgress) {
-      if (!state.cancelling) _queueRequest(accounts, currentHeight);
+      if (!state.cancelling) _queueRequest(accounts, currentHeight, kind);
       return;
     }
-    await _runSynchronize(accounts, currentHeight: currentHeight);
-    while (_pending != null) {
-      final next = _pending!;
-      _pending = null;
-      await _runSynchronize(next.accounts.values.toList(), currentHeight: next.height);
+    syncInProgress = true;
+    try {
+      await _runSynchronize(accounts, currentHeight: currentHeight, kind: kind);
+      while (_pending != null) {
+        final next = _pending!;
+        _pending = null;
+        await _runSynchronize(next.accounts.values.toList(), currentHeight: next.height, kind: next.kind);
+      }
+    } finally {
+      syncInProgress = false;
+      end();
     }
   }
 
-  void _queueRequest(List<Account> accounts, int? currentHeight) {
+  void _queueRequest(List<Account> accounts, int? currentHeight, SyncKind kind) {
     final pending = _pending ?? _SyncRequest();
     for (final account in accounts) {
       pending.accounts[account.id] = account;
@@ -841,24 +891,33 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
     if (currentHeight != null) {
       pending.height = max(pending.height ?? currentHeight, currentHeight);
     }
+    if (kind == SyncKind.manual) pending.kind = SyncKind.manual;
     _pending = pending;
+  }
+
+  /// Waits out a backoff unless a cancel ends it first; false when cancelled.
+  Future<bool> _wait(Duration delay) async {
+    final waiting = Completer<void>();
+    _waiting = waiting;
+    await Future.any([Future<void>.delayed(delay), waiting.future]);
+    _waiting = null;
+    return !state.cancelling;
   }
 
   Future<void> _runSynchronize(
     List<Account> accounts, {
     int? currentHeight,
+    required SyncKind kind,
   }) async {
     final c = coinContext.coin;
     final settings = ref.read(appSettingsProvider).requireValue;
     if (settings.offline) return;
 
     retryCount = 0;
-    final completer = Completer<void>();
     var requestedHeight = currentHeight;
 
     while (true) {
-      late int retryDelay;
-      syncInProgress = true;
+      late Duration delay;
       try {
         logger.i("Starting Synchronization");
         if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
@@ -868,7 +927,7 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
         requestedHeight = null;
         if (state.cancelling) return;
 
-        begin(accounts, syncHeight);
+        begin(accounts, syncHeight, kind);
 
         final progress = synchronize(
           accounts: accounts.map((a) => a.id).toList(),
@@ -910,12 +969,10 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
           case SyncOutcome_Skipped():
             // Another sync held the lock: nothing ran, nothing to report.
             logger.i("Synchronization skipped: another sync is running");
-            completer.complete();
-            return await completer.future;
+            return;
           case SyncOutcome_Cancelled():
             logger.i("Synchronization cancelled");
-            completer.complete();
-            return await completer.future;
+            return;
           default:
         }
         if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
@@ -934,31 +991,41 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
           }
         }));
 
-        completer.complete();
-        return await completer.future;
+        return;
       } on AnyhowException catch (e) {
-        retryCount++;
-        final maxDelay = pow(2, min(retryCount, 10)).toInt();
-        retryDelay = 30 + Random().nextInt(maxDelay);
-        logger.e("Sync error: $e\n\nRetrying in $retryDelay seconds (attempt $retryCount)");
-
-        final context = navigatorKey.currentContext;
-        if (context != null && context.mounted) {
-          await ErrorDialog.show(
-            context,
-            error: e,
-            customMessage: "Sync error (attempt $retryCount of ~10). Retrying in $retryDelay seconds...",
-          );
+        if (kind == SyncKind.auto) {
+          // Progress so far is committed; the next schedule picks it up.
+          logger.w("Auto sync interrupted: $e");
+          if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+            showSnackbar("Synchronization interrupted; it will retry at the next schedule");
+          }
+          return;
         }
+        retryCount++;
+        if (retryCount > maxRetries) {
+          logger.e("Sync error: $e\n\nGiving up after $maxRetries retries");
+          final context = navigatorKey.currentContext;
+          if (context != null && context.mounted) {
+            await ErrorDialog.show(
+              context,
+              error: e,
+              customMessage: "Synchronization failed $maxRetries times in a row. Check the server and try again.",
+            );
+          }
+          return;
+        }
+        delay = retryDelay(retryCount);
+        logger.e("Sync error: $e\n\nRetrying in ${delay.inSeconds} seconds (attempt $retryCount of $maxRetries)");
       } finally {
         end();
-        syncInProgress = false;
         ref.invalidate(getAccountsProvider);
         ref.invalidate(accountProvider);
         await syncProgressSubscription?.cancel();
         syncProgressSubscription = null;
       }
-      await Future.delayed(Duration(seconds: retryDelay));
+      // The wait is visible on the page, with its cancel button live.
+      state = state.copyWith(kind: kind, attempt: retryCount, retryInSeconds: delay.inSeconds);
+      if (!await _wait(delay)) return;
     }
   }
 
@@ -993,12 +1060,15 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
   /// Autosync requests go through the same queue as manual ones: a request
   /// made while a sync runs is merged and runs next.
   void _queueAutoSync(int height, {required bool force}) {
-    unawaited(syncIfNeeded(height, now: force).catchError((Object error, StackTrace stackTrace) {
+    unawaited(syncIfNeeded(height, now: force, kind: SyncKind.auto).catchError((Object error, StackTrace stackTrace) {
       logger.e("AutoSync failed", error: error, stackTrace: stackTrace);
     }));
   }
 
-  Future<void> syncIfNeeded(int currentHeight, {required bool now}) async {
+  /// Syncs the enabled accounts that are due, or all of them when `now`.
+  /// The kind defaults to manual for `now`, since a user asked, and to auto
+  /// otherwise.
+  Future<void> syncIfNeeded(int currentHeight, {required bool now, SyncKind? kind}) async {
     final settings = ref.read(appSettingsProvider).requireValue;
     // An interval of 0 means never, not "behind by at least 0 blocks",
     // which every account is: a block-height subscription that outlived
@@ -1017,9 +1087,33 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
       }
     }
     if (accountsToSync.isNotEmpty) {
-      await startSynchronize(accountsToSync, currentHeight: currentHeight);
+      await startSynchronize(
+        accountsToSync,
+        currentHeight: currentHeight,
+        kind: kind ?? (now ? SyncKind.manual : SyncKind.auto),
+      );
     }
   }
+}
+
+/// Cancels the sync in progress from a page. The run stops at once. An auto
+/// sync then asks whether to turn auto sync off, since the next schedule
+/// would otherwise start it again; a manual one just stops.
+Future<void> cancelSyncFromPage(BuildContext context, WidgetRef ref) async {
+  final kind = ref.read(synchronizerProvider).kind;
+  await ref.read(synchronizerProvider.notifier).cancelSynchronization();
+  if (kind != SyncKind.auto || !context.mounted) return;
+  final disable = await confirmDialog(
+    context,
+    title: "Disable auto sync?",
+    message: "This synchronization was started automatically and will start again at the next "
+        "schedule. Turn auto sync off? It can be turned back on in Settings by setting a sync interval.",
+    btnOkText: "Disable",
+    btnCancelText: "Keep",
+  );
+  if (!disable) return;
+  await ref.read(appSettingsProvider.notifier).setSyncInterval("0");
+  await ref.read(synchronizerProvider.notifier).autoSync(interval: 0);
 }
 
 @Riverpod(keepAlive: true)
