@@ -138,7 +138,16 @@ impl LwdServer for GRPCClient {
         tokio::spawn(async move {
             // A transport or decode error is the stream's last item.
             let forward = async {
-                while let Some(rtx) = txs.message().await? {
+                loop {
+                    // The consumer dropped the stream, on a cancel for one
+                    // (#1481): stop waiting on the server and end the task.
+                    let rtx = tokio::select! {
+                        _ = sender.closed() => break,
+                        message = txs.message() => match message? {
+                            Some(rtx) => rtx,
+                            None => break,
+                        },
+                    };
                     let len = rtx.data.len();
                     let branch_id =
                         BranchId::for_height(&network, BlockHeight::from_u32(rtx.height as u32));

@@ -91,9 +91,16 @@ pub(crate) async fn scan_transparent_addresses(
                     .taddress_txs(network, &addr.address, start_height, end_height)
                     => {
                     let mut txids = txids?;
-                    // A stream that fails before its first item is not an
-                    // unused address (V12 F-77).
-                    let used = match txids.next().await {
+                    // The first read is where a server that opens the stream
+                    // and never answers parks the scan; it is raced against
+                    // the token too, and dropping the stream ends the reader
+                    // (#1481). A stream that fails before its first item is
+                    // not an unused address (V12 F-77).
+                    let first = tokio::select! {
+                        _ = cancellation_token.cancelled() => return Ok(n_added),
+                        m = txids.next() => m,
+                    };
+                    let used = match first {
                         Some(Ok(_)) => true,
                         Some(Err(e)) => {
                             return Err(e.context(format!(
@@ -404,6 +411,92 @@ mod tests {
                 .fetch_one(&mut db)
                 .await?;
         assert_eq!(h, 1, "the checkpoint stays where the stream left it");
+        Ok(())
+    }
+
+    /// A server that opens every history stream and never answers on it.
+    struct SilentHistory;
+
+    #[async_trait]
+    impl LwdServer for SilentHistory {
+        type CompactBlockStream = ReceiverStream<Result<CompactBlock>>;
+        type TransactionStream = ReceiverStream<Result<(u32, Transaction, usize)>>;
+
+        async fn latest_height(&mut self) -> Result<u32> {
+            unimplemented!()
+        }
+        async fn block(&mut self, _: &Network, _: u32) -> Result<CompactBlock> {
+            unimplemented!()
+        }
+        async fn block_range(
+            &mut self,
+            _: &Network,
+            _: u32,
+            _: u32,
+        ) -> Result<Self::CompactBlockStream> {
+            unimplemented!()
+        }
+        async fn transaction(&mut self, _: &Network, _: &[u8]) -> Result<(u32, Transaction)> {
+            unimplemented!()
+        }
+        async fn post_transaction(&mut self, _: u32, _: &[u8]) -> Result<String> {
+            unimplemented!()
+        }
+        async fn taddress_txs(
+            &mut self,
+            _: &Network,
+            _: &str,
+            _: u32,
+            _: u32,
+        ) -> Result<Self::TransactionStream> {
+            let (tx, rx) = tokio::sync::mpsc::channel(1);
+            // The sender outlives the stream, never sending: a read waits
+            // for good.
+            tokio::spawn(async move {
+                let _keep = tx;
+                std::future::pending::<()>().await;
+            });
+            Ok(ReceiverStream::new(rx))
+        }
+        async fn mempool_stream(&mut self, _: &Network) -> Result<Self::TransactionStream> {
+            unimplemented!()
+        }
+        async fn tree_state(&mut self, _: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)> {
+            unimplemented!()
+        }
+    }
+
+    /// #1481: a sweep parked on a history stream that never answers ends
+    /// when it is cancelled.
+    #[tokio::test]
+    async fn a_cancel_ends_a_sweep_whose_stream_never_yields() -> Result<()> {
+        let mut db = test_db(false).await?;
+        let (xvk, xsk) = software_keys();
+        let source = TransparentKeySource::software(xvk, Some(xsk));
+        let token = CancellationToken::new();
+        let cancel = token.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            cancel.cancel();
+        });
+        let mut client: Client = Box::new(SilentHistory);
+        let scan = scan_transparent_addresses(
+            &Network::Main,
+            &mut db,
+            &mut client,
+            1,
+            &source,
+            1,
+            1000,
+            2,
+            false,
+            |_| {},
+            token,
+        );
+        let added = tokio::time::timeout(std::time::Duration::from_secs(5), scan)
+            .await
+            .expect("the cancelled sweep returns")?;
+        assert_eq!(added, 0);
         Ok(())
     }
 
