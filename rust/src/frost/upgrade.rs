@@ -15,7 +15,7 @@
 //! string.
 
 use anyhow::{bail, Context, Result};
-use sqlx::{Connection as _, SqliteConnection};
+use sqlx::SqliteConnection;
 
 use crate::{
     account::get_orchard_vk,
