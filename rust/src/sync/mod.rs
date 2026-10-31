@@ -64,6 +64,7 @@ pub async fn synchronize_within<S: Sink<SyncEvent> + Send + 'static>(
     skip_details: bool,
     c: &Coin,
 ) -> Result<SyncOutcome> {
+    let accounts = normalize_accounts(accounts);
     if accounts.is_empty() {
         return Ok(SyncOutcome::Synced {
             height: current_height,
@@ -82,6 +83,15 @@ pub async fn synchronize_within<S: Sink<SyncEvent> + Send + 'static>(
     // A user-requested stop is normal termination at the API boundary.
     let cancelled = run.was_cancelled();
     finish(result, cancelled, current_height)
+}
+
+/// The accounts to scan, each once: a repeated id scanned every address
+/// and every key once per occurrence, and the second copy of a note it
+/// found failed the range (#1510).
+fn normalize_accounts(mut accounts: Vec<u32>) -> Vec<u32> {
+    accounts.sort_unstable();
+    accounts.dedup();
+    accounts
 }
 
 /// Map the run's result and the cancel flag to the outcome the caller sees.
@@ -456,6 +466,13 @@ pub async fn get_heights_without_time(
 #[cfg(test)]
 mod outcome_tests {
     use super::*;
+
+    #[test]
+    fn accounts_are_scanned_once_however_the_list_was_built() {
+        assert_eq!(normalize_accounts(vec![1, 1, 1]), vec![1]);
+        assert_eq!(normalize_accounts(vec![3, 1, 2, 1]), vec![1, 2, 3]);
+        assert!(normalize_accounts(vec![]).is_empty());
+    }
 
     #[test]
     fn cancel_wins_over_both_success_and_error() {
