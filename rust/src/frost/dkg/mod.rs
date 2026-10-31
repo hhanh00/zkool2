@@ -721,13 +721,55 @@ pub async fn dkg_in_progress(connection: &mut SqliteConnection) -> Result<bool> 
     Ok(exists.is_some())
 }
 
-/// Refuses to set up a DKG while one is in progress: one at a time, said
-/// plainly rather than as a `dkg_params` primary key failure (#1546).
-async fn check_no_dkg(connection: &mut SqliteConnection) -> Result<()> {
+/// Refuses to set up a DKG while one is in progress, said plainly rather
+/// than as a `dkg_params` primary key failure (#1546), or while a signing
+/// session runs (#1549): one protocol at a time. The driver syncs one
+/// funding account per pass, and `delete_frost_state`, the teardown of
+/// both protocols, deletes the state of both.
+pub(crate) async fn check_no_dkg(connection: &mut SqliteConnection) -> Result<()> {
+    if crate::frost::sign::is_signing_in_progress(&mut *connection).await? {
+        anyhow::bail!("A signing session is in progress; a DKG cannot start until it ends");
+    }
     if dkg_in_progress(&mut *connection).await? {
         anyhow::bail!("A DKG is in progress; finish or cancel it first");
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod guard_tests {
+    use super::*;
+    use crate::db::create_schema;
+    use sqlx::Connection;
+
+    async fn wallet() -> SqliteConnection {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        create_schema(&mut db).await.unwrap();
+        db
+    }
+
+    #[tokio::test]
+    async fn a_dkg_cannot_start_during_a_signing_session() {
+        let mut db = wallet().await;
+        sqlx::query("INSERT INTO props(key, value) VALUES ('frost_pczt', x'00')")
+            .execute(&mut db)
+            .await
+            .unwrap();
+        let m = check_no_dkg(&mut db).await.unwrap_err().to_string();
+        assert!(m.contains("signing session is in progress"), "{m}");
+    }
+
+    #[tokio::test]
+    async fn a_second_dkg_is_an_error() {
+        let mut db = wallet().await;
+        sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_account', '2')")
+            .execute(&mut db)
+            .await
+            .unwrap();
+        let m = check_no_dkg(&mut db).await.unwrap_err().to_string();
+        assert!(m.contains("DKG is in progress"), "{m}");
+        assert!(check_no_dkg(&mut wallet().await).await.is_ok());
+    }
 }
 
 pub async fn set_dkg_address(
@@ -818,6 +860,11 @@ pub async fn cancel_dkg(connection: &mut SqliteConnection, account: u32) -> Resu
     delete_frost_state(&mut *connection).await
 }
 
+/// The teardown of both protocols: it deletes the signing tables, every
+/// `frost_%` and `dkg_%` prop and the helper accounts, whichever protocol
+/// is ending. That is safe because a DKG and a signing session never run
+/// at the same time (`check_no_dkg` and `init_sign` refuse the overlap,
+/// #1549), so the state it removes belongs to the one protocol in progress.
 pub async fn delete_frost_state(connection: &mut SqliteConnection) -> Result<()> {
     info!("delete_frost_state");
     sqlx::query("DELETE FROM frost_signatures")

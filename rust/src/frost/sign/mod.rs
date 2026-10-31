@@ -102,6 +102,7 @@ pub async fn init_sign(
         account, funding_account, coordinator
     );
     check_no_session(&mut *connection).await?;
+    check_no_dkg(&mut *connection).await?;
     check_group_pczt(&mut *connection, account, pczt).await?;
     let pczt_bytes = bincode::encode_to_vec(pczt, config::legacy()).unwrap();
     let params = FrostSignParams {
@@ -131,6 +132,16 @@ pub async fn init_sign(
 async fn check_no_session(connection: &mut SqliteConnection) -> Result<()> {
     if is_signing_in_progress(&mut *connection).await? {
         bail!("A signing session is in progress; finish or cancel it first");
+    }
+    Ok(())
+}
+
+/// Refuses to start a signing session while a DKG runs. One protocol at
+/// a time: the driver syncs one funding account per pass, and the
+/// teardown of either protocol deletes the state of both (#1549).
+async fn check_no_dkg(connection: &mut SqliteConnection) -> Result<()> {
+    if crate::frost::dkg::dkg_in_progress(&mut *connection).await? {
+        bail!("A DKG is in progress; finish or cancel it first");
     }
     Ok(())
 }
@@ -323,6 +334,19 @@ mod guard_tests {
         let m = message(init_sign(&mut db, 1, 2, 1, &pczt()).await).await;
         assert!(m.contains("signing session is in progress"), "{m}");
         assert!(in_sign(&mut db).await.unwrap());
+    }
+
+    /// #1549: a DKG and a signing session never run together.
+    #[tokio::test]
+    async fn a_signing_session_cannot_start_during_a_dkg() {
+        let mut db = wallet().await;
+        sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_account', '2')")
+            .execute(&mut db)
+            .await
+            .unwrap();
+        let m = message(init_sign(&mut db, 1, 2, 1, &pczt()).await).await;
+        assert!(m.contains("DKG is in progress"), "{m}");
+        assert!(!in_sign(&mut db).await.unwrap());
     }
 }
 
