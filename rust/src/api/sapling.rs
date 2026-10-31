@@ -3,6 +3,7 @@ use std::sync::OnceLock;
 #[cfg(not(feature = "bundled-sapling-params"))]
 use std::time::Duration;
 
+use crate::api::coin::Coin;
 use anyhow::Result;
 #[cfg(not(feature = "bundled-sapling-params"))]
 use anyhow::{anyhow, Context};
@@ -87,9 +88,18 @@ pub fn check_sapling_params() -> SaplingParamsStatus {
 /// With `bundled-sapling-params` the parameters are compiled into the binary
 /// and this is a no-op.
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn download_sapling_params() -> Result<()> {
+pub async fn download_sapling_params(c: &Coin) -> Result<()> {
+    download_sapling_params_over(&c.route(std::time::Duration::from_secs(300))?).await
+}
+
+/// Downloads the parameters over `route`. The wallet passes its selected
+/// transport; `get_sapling_prover` has no wallet handle in scope and
+/// downloads direct, the parameters being a public, fixed artifact.
+#[cfg_attr(feature = "flutter", frb(ignore))]
+pub async fn download_sapling_params_over(route: &crate::net::http::Route) -> Result<()> {
     #[cfg(feature = "bundled-sapling-params")]
     {
+        let _ = route;
         Ok(())
     }
     #[cfg(not(feature = "bundled-sapling-params"))]
@@ -102,6 +112,7 @@ pub async fn download_sapling_params() -> Result<()> {
             .with_context(|| format!("Failed to create params directory: {:?}", params_dir))?;
 
         download_and_verify(
+            route,
             &params_dir,
             SAPLING_SPEND_NAME,
             SAPLING_SPEND_HASH,
@@ -111,6 +122,7 @@ pub async fn download_sapling_params() -> Result<()> {
         .context("Failed to download/verify sapling-spend.params")?;
 
         download_and_verify(
+            route,
             &params_dir,
             SAPLING_OUTPUT_NAME,
             SAPLING_OUTPUT_HASH,
@@ -129,6 +141,7 @@ pub async fn download_sapling_params() -> Result<()> {
 /// Skips download if an already-validated file exists at the target location.
 #[cfg(not(feature = "bundled-sapling-params"))]
 async fn download_and_verify(
+    route: &crate::net::http::Route,
     dir: &PathBuf,
     name: &str,
     expected_hash: &str,
@@ -163,11 +176,10 @@ async fn download_and_verify(
 
     // Download the two parts and concatenate them.
     tracing::info!("Downloading Sapling parameter {} …", name);
-    // Parameter parts are tens of MB; the timeout must cover the whole body.
-    let route = crate::net::http::Route::Direct(crate::net::http::client("", Duration::from_secs(300))?);
+    // Parameter parts are tens of MB; the route's timeout covers the whole body.
 
     let part1_url = format!("{}/{}.part.1", DOWNLOAD_URL, name);
-    let part1_resp = crate::net::http::http_get(&route, &[&part1_url], crate::net::http::RetryPolicy::default())
+    let part1_resp = crate::net::http::http_get(route, &[&part1_url], crate::net::http::RetryPolicy::default())
         .await
         .with_context(|| format!("Failed to download {part1_url}"))?;
     let part1_bytes = part1_resp.bytes();
@@ -183,7 +195,7 @@ async fn download_and_verify(
             part2_url
         );
         let part2_resp =
-            crate::net::http::http_get(&route, &[&part2_url], crate::net::http::RetryPolicy::default())
+            crate::net::http::http_get(route, &[&part2_url], crate::net::http::RetryPolicy::default())
                 .await
                 .with_context(|| format!("Failed to download {part2_url}"))?;
         let part2_bytes = part2_resp.bytes();

@@ -4,9 +4,11 @@
 // ignore_for_file: invalid_use_of_internal_member, unused_import, unnecessary_import
 
 import '../frb_generated.dart';
+import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 // These functions are ignored because they are not marked as `pub`: `download_and_verify`, `resolve_params_dir`, `set_sapling_params_dir`
+// These functions are ignored (category: IgnoreBecauseExplicitAttribute): `download_sapling_params_over`
 
 /// Check whether Sapling parameters are available.
 ///
@@ -21,8 +23,8 @@ SaplingParamsStatus checkSaplingParams() =>
 /// Safe to call even if they are already downloaded (no-op if valid).
 /// With `bundled-sapling-params` the parameters are compiled into the binary
 /// and this is a no-op.
-Future<void> downloadSaplingParams() =>
-    RustLib.instance.api.crateApiSaplingDownloadSaplingParams();
+Future<void> downloadSaplingParams({required Coin c}) =>
+    RustLib.instance.api.crateApiSaplingDownloadSaplingParams(c: c);
 
 /// Status of the Sapling proving parameters on disk.
 class SaplingParamsStatus {

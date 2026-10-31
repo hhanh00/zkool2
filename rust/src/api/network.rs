@@ -122,8 +122,8 @@ pub async fn get_network_name(c: &Coin) -> String {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn query_lwd_list(coin: u8) -> Result<Vec<LWDInfo>> {
-    crate::net::lwd::query_lwd_list(coin).await
+pub async fn query_lwd_list(c: &Coin) -> Result<Vec<LWDInfo>> {
+    crate::net::lwd::query_lwd_list(c.coin, &c.route(Duration::from_secs(15))?).await
 }
 
 /// True when `url` is a mixnet-native server address

@@ -1459,8 +1459,11 @@ pub async fn get_sapling_prover() -> Result<&'static LocalTxProver> {
                 if spend_path.exists() && output_path.exists() {
                     return Ok(LocalTxProver::new(&spend_path, &output_path));
                 }
-                // Parameters not found on disk — download them.
-                crate::api::sapling::download_sapling_params().await?;
+                // Parameters not found on disk — download them. No wallet
+                // handle reaches here, so the download goes direct.
+                let route =
+                    crate::net::http::Route::new(0, "", std::time::Duration::from_secs(300))?;
+                crate::api::sapling::download_sapling_params_over(&route).await?;
                 Ok(LocalTxProver::new(&spend_path, &output_path))
             }
         })

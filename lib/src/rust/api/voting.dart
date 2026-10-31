@@ -9,7 +9,7 @@ import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:freezed_annotation/freezed_annotation.dart' hide protected;
 part 'voting.freezed.dart';
 
-// These functions are ignored because they are not marked as `pub`: `ensure_ballot_round`, `normalized_status`, `sidecar_wallet_id`, `voting_network`, `wallet_id`
+// These functions are ignored because they are not marked as `pub`: `ensure_ballot_round`, `normalized_status`, `sidecar_wallet_id`, `voting_network`, `voting_route`, `wallet_id`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `assert_fields_are_eq`, `clone`, `clone`, `clone`, `clone`, `eq`, `fmt`, `fmt`, `fmt`, `fmt`, `from`, `from`
 
 /// Fetches authenticated server rounds and combines them with sidecar state.

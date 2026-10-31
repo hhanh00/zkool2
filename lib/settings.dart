@@ -1090,7 +1090,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   Future<void> onDownloadSaplingParams() async {
     setState(() => saplingDownloading = true);
     try {
-      await downloadSaplingParams();
+      await downloadSaplingParams(c: coinContext.coin);
       if (mounted) {
         showSnackbar('Sapling parameters downloaded successfully');
         setState(() {

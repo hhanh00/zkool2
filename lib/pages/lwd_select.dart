@@ -131,7 +131,7 @@ class _LWDSelectPageState extends ConsumerState<LWDSelectPage> {
   Future<void> _loadServers() async {
     try {
       final coin = coinContext.coin;
-      final servers = await queryLwdList(coin: coin.coin);
+      final servers = await queryLwdList(c: coin);
       if (!mounted) return;
       setState(() {
         _servers = servers;

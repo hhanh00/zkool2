@@ -1,5 +1,4 @@
 use anyhow::Result;
-use std::time::Duration;
 use tracing::debug;
 use zcash_primitives::transaction::Transaction;
 
@@ -218,16 +217,17 @@ impl LwdServer for GRPCClient {
     }
 }
 
-pub async fn query_lwd_list(coin: u8) -> Result<Vec<LWDInfo>> {
+/// Lists the public lightwalletd servers over `route`, the wallet's selected
+/// transport, so the registry sees no more than the node connection does.
+pub async fn query_lwd_list(coin: u8, route: &crate::net::http::Route) -> Result<Vec<LWDInfo>> {
     // 0 = mainnet, 1 = testnet, 2 = regtest
     if coin == 2 {
         return Ok(Vec::new());
     }
     let chain = if coin == 1 { "test" } else { "main" };
     let url = format!("https://hosh.zec.rocks/api/v0/zec.json?chain={chain}");
-    let route = crate::net::http::Route::Direct(crate::net::http::client("", Duration::from_secs(15))?);
     let rep = crate::net::http::http_get(
-        &route,
+        route,
         &[&url],
         crate::net::http::RetryPolicy::default(),
     )

@@ -53,8 +53,8 @@ Future<List<Candle>> fetchCandles(
 Future<String> getNetworkName({required Coin c}) =>
     RustLib.instance.api.crateApiNetworkGetNetworkName(c: c);
 
-Future<List<LWDInfo>> queryLwdList({required int coin}) =>
-    RustLib.instance.api.crateApiNetworkQueryLwdList(coin: coin);
+Future<List<LWDInfo>> queryLwdList({required Coin c}) =>
+    RustLib.instance.api.crateApiNetworkQueryLwdList(c: c);
 
 /// True when `url` is a mixnet-native server address
 /// (`nym://<identity>.<encryption>@<gateway>`).
