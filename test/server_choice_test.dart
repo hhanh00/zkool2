@@ -77,6 +77,11 @@ void main() {
       expect(applied.proxy, 'socks5h://127.0.0.1:9050', reason: 'other settings are untouched');
     });
 
+    test('turns the light node switch on, since the list only has light nodes (#1557)', () {
+      expect(ServerChoice.forServer(server('zec.rocks:443')).applyTo(draft(isLightNode: false)).isLightNode, isTrue);
+      expect(ServerChoice.nym('nym://id.enc@gateway').applyTo(draft(isLightNode: false)).isLightNode, isTrue);
+    });
+
     test('sets the transport the choice carries', () {
       expect(ServerChoice.forServer(server('abc.onion', isTor: true)).applyTo(draft(transport: 3)).transport, 1);
       expect(ServerChoice.nym('nym://id.enc@gateway').applyTo(draft(transport: 1)).transport, 0);

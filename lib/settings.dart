@@ -463,7 +463,9 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   /// into the draft together and are saved when the user leaves the page,
   /// like every other setting. The list page itself changes nothing.
   void onSelectedServer(ServerChoice choice) {
-    formKey.currentState!.fields["lwd"]!.didChange(choice.url);
+    final fields = formKey.currentState!.fields;
+    fields["light"]!.didChange(true);
+    fields["lwd"]!.didChange(choice.url);
     setState(() {
       settings = choice.applyTo(settings);
       widget.onChanged(settings);

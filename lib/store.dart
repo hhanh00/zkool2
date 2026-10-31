@@ -636,9 +636,12 @@ sealed class ServerChoice with _$ServerChoice {
   /// transport setting is Direct.
   factory ServerChoice.nym(String url) => ServerChoice(url: url, transport: 0);
 
-  /// The draft with this choice applied.
+  /// The draft with this choice applied. The list only has light nodes, so
+  /// the light node switch goes on with the URL: a lightwalletd URL saved
+  /// with the switch off would be handed to the Zebra client (#1557).
   AppSettings applyTo(AppSettings settings) => settings.copyWith(
         lwd: url,
+        isLightNode: true,
         transport: transport ?? settings.transport,
       );
 }
