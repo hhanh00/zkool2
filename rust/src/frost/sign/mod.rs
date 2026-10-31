@@ -103,6 +103,9 @@ pub async fn init_sign(
     );
     check_no_session(&mut *connection).await?;
     check_no_dkg(&mut *connection).await?;
+    if !crate::frost::is_group_account(&mut *connection, account).await? {
+        bail!("Account {account} is not a FROST group");
+    }
     check_group_pczt(&mut *connection, account, pczt).await?;
     let pczt_bytes = bincode::encode_to_vec(pczt, config::legacy()).unwrap();
     let params = FrostSignParams {
@@ -334,6 +337,15 @@ mod guard_tests {
         let m = message(init_sign(&mut db, 1, 2, 1, &pczt()).await).await;
         assert!(m.contains("signing session is in progress"), "{m}");
         assert!(in_sign(&mut db).await.unwrap());
+    }
+
+    /// #1531: only a FROST group account can have a signing session.
+    #[tokio::test]
+    async fn a_session_for_an_ordinary_account_is_an_error() {
+        let mut db = wallet().await;
+        let m = message(init_sign(&mut db, 1, 2, 1, &pczt()).await).await;
+        assert!(m.contains("not a FROST group"), "{m}");
+        assert!(!in_sign(&mut db).await.unwrap());
     }
 
     /// #1549: a DKG and a signing session never run together.
