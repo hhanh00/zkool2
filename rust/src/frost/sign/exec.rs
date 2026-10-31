@@ -461,15 +461,19 @@ pub async fn aggregate_and_send(
     // Prove, finalize, extract.
     let sapling_prover = get_sapling_prover().await?;
     let orchard_pk = get_orchard_pk(*pczt.global().consensus_branch_id())?;
+    // A PCZT the session cannot finalize ends the pass with an error the
+    // UI shows, not a panic that stops the driver (#1548).
     let pczt = Prover::new(pczt)
         .create_sapling_proofs(rand_core::UnwrapErr(rand::rngs::SysRng), sapling_prover, sapling_prover)
-        .unwrap()
+        .map_err(|e| anyhow::anyhow!("Sapling proofs: {e:?}"))?
         .create_orchard_proof(rand_core::UnwrapErr(rand::rngs::SysRng), orchard_pk)
-        .unwrap()
+        .map_err(|e| anyhow::anyhow!("Orchard proof: {e:?}"))?
         .create_ironwood_proof(rand_core::UnwrapErr(rand::rngs::SysRng), orchard_pk)
-        .unwrap()
+        .map_err(|e| anyhow::anyhow!("Ironwood proof: {e:?}"))?
         .finish();
-    let pczt = SpendFinalizer::new(pczt).finalize_spends().unwrap();
+    let pczt = SpendFinalizer::new(pczt)
+        .finalize_spends()
+        .map_err(|e| anyhow::anyhow!("finalizing spends: {e:?}"))?;
     let sapling_prover = get_sapling_prover().await?;
     let (svk, ovk) = sapling_prover.verifying_keys();
     let tx = TransactionExtractor::new(pczt)

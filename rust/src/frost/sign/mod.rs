@@ -43,9 +43,10 @@ use task::SignTask;
 /// Checks that a transaction to sign is this group's. Every value-carrying
 /// shielded spend of a PCZT carries the full viewing key of the note it
 /// spends (a dummy spend has a random key and no value), so a file prepared
-/// for another account is one whose spends carry another key. Caught here,
-/// with a clear message, rather than minutes into a session that cannot
-/// sign.
+/// for another account is one whose spends carry another key. A group
+/// account is Orchard-only, so a Sapling spend or output is one the session
+/// could neither sign nor finalize (#1548). Caught here, with a clear
+/// message, rather than minutes into a session that cannot sign.
 pub async fn check_group_pczt(
     connection: &mut SqliteConnection,
     account: u32,
@@ -71,11 +72,20 @@ pub async fn check_group_pczt(
         }
         Ok::<_, pczt::roles::verifier::OrchardError<()>>(())
     };
+    let mut sapling = false;
     Verifier::new(parsed)
+        .with_sapling(|bundle| {
+            sapling = !bundle.spends().is_empty() || !bundle.outputs().is_empty();
+            Ok::<_, pczt::roles::verifier::SaplingError<()>>(())
+        })
+        .map_err(|e| anyhow!("invalid Sapling bundle: {e:?}"))?
         .with_orchard(&mut check)
         .map_err(|e| anyhow!("invalid Orchard bundle: {e:?}"))?
         .with_ironwood(&mut check)
         .map_err(|e| anyhow!("invalid Ironwood bundle: {e:?}"))?;
+    if sapling {
+        bail!("This transaction has Sapling inputs or outputs; a FROST group signs Orchard only");
+    }
     if foreign {
         bail!("This transaction does not spend from this group: it was prepared for another account");
     }
