@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use juniper::{FieldError, FieldResult, GraphQLInputObject, GraphQLObject};
 
@@ -147,6 +147,13 @@ pub async fn submission_status(
     Ok(status.into())
 }
 
+/// Drops the runs that have stopped. A stopped run keeps its last snapshot
+/// until the next submission so a status poll can still read how it ended;
+/// after that the sidecar answers for it (see `voting_drive_status`).
+fn evict_stopped(drives: &mut HashMap<(String, u32), VotingDrive>) {
+    drives.retain(|_, drive| drive.is_running());
+}
+
 pub async fn submit_vote(
     id_account: i32,
     round_id: String,
@@ -227,6 +234,7 @@ pub async fn submit_vote(
     .await?;
     {
         let mut drives = context.voting_drives.lock().await;
+        evict_stopped(&mut drives);
         let drive = drives
             .entry((round.round_id.clone(), account))
             .or_insert_with(VotingDrive::new);
@@ -238,4 +246,20 @@ pub async fn submit_vote(
     }
 
     submission_status(id_account, round.round_id, context).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::evict_stopped;
+    use crate::api::voting_drive::VotingDrive;
+    use std::collections::HashMap;
+
+    #[test]
+    fn a_run_that_never_started_is_evicted() {
+        let mut drives = HashMap::new();
+        drives.insert(("round-a".to_owned(), 1), VotingDrive::new());
+        drives.insert(("round-b".to_owned(), 2), VotingDrive::new());
+        evict_stopped(&mut drives);
+        assert!(drives.is_empty());
+    }
 }

@@ -28,8 +28,9 @@ pub struct Context {
     pub driver: Driver,
     /// The submission runs this server started, by round id and account:
     /// two accounts can take part in the same round, each with its own
-    /// run. A run stays until the server stops, so `votingSubmissionStatus`
-    /// can read it.
+    /// run. A stopped run stays until the next submission, so
+    /// `votingSubmissionStatus` can read how it ended; the sidecar answers
+    /// for it afterwards.
     pub voting_drives: Arc<tokio::sync::Mutex<HashMap<(String, u32), VotingDrive>>>,
 }
 
