@@ -39,7 +39,21 @@ import 'package:zkool/widgets/transaction_table.dart';
 /// PCZT is shared with the other members and the signing session starts.
 /// Every member must upgrade on their own device; all arrive at the same
 /// address.
+/// An upgrade in flight: a second tap while one runs is dropped, so two
+/// upgrades of one account never overlap (#1517).
+bool _upgrading = false;
+
 Future<void> upgradeFrostGroup(BuildContext context, WidgetRef ref, int account) async {
+  if (_upgrading) return;
+  _upgrading = true;
+  try {
+    await _upgradeFrostGroup(context, ref, account);
+  } finally {
+    _upgrading = false;
+  }
+}
+
+Future<void> _upgradeFrostGroup(BuildContext context, WidgetRef ref, int account) async {
   final c = coinContext.coin;
   final confirmed = await confirmDialog(
     context,
