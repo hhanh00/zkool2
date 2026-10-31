@@ -72,6 +72,10 @@ pub(crate) async fn transparent_sync(
         addresses.len()
     );
     for (account, address_row) in addresses.iter() {
+        if cancel.is_cancelled() {
+            debug!("Canceling sync");
+            anyhow::bail!("Sync canceled");
+        }
         let my_address = TransparentAddress::decode(&network, &address_row.1)?;
         debug!(
             "transparent_sync: scanning account {} address {} (decoded: {:?})",
@@ -87,6 +91,7 @@ pub(crate) async fn transparent_sync(
         let mut db_tx = connection.begin().await?;
         loop {
             tokio::select! {
+                biased;
                 _ = cancel.cancelled() => {
                     debug!("Canceling sync");
                     anyhow::bail!("Sync canceled");
