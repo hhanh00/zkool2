@@ -75,7 +75,9 @@ pub(crate) async fn scan_transparent_addresses(
     cancellation_token: CancellationToken,
 ) -> Result<usize> {
     let mut n_added = 0;
-    for scope in 0..2u32 {
+    // A cancel leaves both loops rather than the function, so the receiving
+    // index below still moves past the addresses stored so far (#1491).
+    'scan: for scope in 0..2u32 {
         let mut dindex = 0;
         let mut gap = 0;
         loop {
@@ -84,7 +86,7 @@ pub(crate) async fn scan_transparent_addresses(
 
             tokio::select! {
                 _ = cancellation_token.cancelled() => {
-                    return Ok(n_added)
+                    break 'scan;
                 }
 
                 txids = client
@@ -97,7 +99,7 @@ pub(crate) async fn scan_transparent_addresses(
                     // (#1481). A stream that fails before its first item is
                     // not an unused address (V12 F-77).
                     let first = tokio::select! {
-                        _ = cancellation_token.cancelled() => return Ok(n_added),
+                        _ = cancellation_token.cancelled() => break 'scan,
                         m = txids.next() => m,
                     };
                     let used = match first {
@@ -411,6 +413,100 @@ mod tests {
                 .fetch_one(&mut db)
                 .await?;
         assert_eq!(h, 1, "the checkpoint stays where the stream left it");
+        Ok(())
+    }
+
+    /// A lightwalletd that cancels the sweep when asked about one address,
+    /// as a Stop pressed at that moment would.
+    struct CancelAt {
+        used: HashSet<String>,
+        at: String,
+        token: CancellationToken,
+    }
+
+    #[async_trait]
+    impl LwdServer for CancelAt {
+        type CompactBlockStream = ReceiverStream<Result<CompactBlock>>;
+        type TransactionStream = ReceiverStream<Result<(u32, Transaction, usize)>>;
+
+        async fn latest_height(&mut self) -> Result<u32> {
+            unimplemented!()
+        }
+        async fn block(&mut self, _: &Network, _: u32) -> Result<CompactBlock> {
+            unimplemented!()
+        }
+        async fn block_range(
+            &mut self,
+            _: &Network,
+            _: u32,
+            _: u32,
+        ) -> Result<Self::CompactBlockStream> {
+            unimplemented!()
+        }
+        async fn transaction(&mut self, _: &Network, _: &[u8]) -> Result<(u32, Transaction)> {
+            unimplemented!()
+        }
+        async fn post_transaction(&mut self, _: u32, _: &[u8]) -> Result<String> {
+            unimplemented!()
+        }
+        async fn taddress_txs(
+            &mut self,
+            _: &Network,
+            taddress: &str,
+            _: u32,
+            _: u32,
+        ) -> Result<Self::TransactionStream> {
+            if taddress == self.at {
+                self.token.cancel();
+            }
+            let (tx, rx) = tokio::sync::mpsc::channel(1);
+            if self.used.contains(taddress) {
+                tx.send(Ok((100, empty_tx(), 0))).await.unwrap();
+            }
+            Ok(ReceiverStream::new(rx))
+        }
+        async fn mempool_stream(&mut self, _: &Network) -> Result<Self::TransactionStream> {
+            unimplemented!()
+        }
+        async fn tree_state(&mut self, _: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)> {
+            unimplemented!()
+        }
+    }
+
+    /// #1491: a cancelled sweep still moves the receiving index past the
+    /// used addresses it stored before the stop.
+    #[tokio::test]
+    async fn a_cancelled_sweep_still_moves_the_receiving_index() -> Result<()> {
+        let mut db = test_db(false).await?;
+        let (xvk, xsk) = software_keys();
+        let source = TransparentKeySource::software(xvk, Some(xsk));
+        let token = CancellationToken::new();
+        let used: HashSet<String> = [source.derive(&Network::Main, 0, 5).await?.address]
+            .into_iter()
+            .collect();
+        // Stop arrives while index 6 is being asked about, after 5 is stored.
+        let at = source.derive(&Network::Main, 0, 6).await?.address;
+        let mut client: Client = Box::new(CancelAt { used, at, token: token.clone() });
+        let added = scan_transparent_addresses(
+            &Network::Main,
+            &mut db,
+            &mut client,
+            1,
+            &source,
+            1,
+            1000,
+            10,
+            false,
+            |_| {},
+            token,
+        )
+        .await?;
+        assert_eq!(added, 1);
+        assert_eq!(stored(&mut db).await?, vec![(0, 5)]);
+        let (dindex,): (u32,) = sqlx::query_as("SELECT dindex FROM accounts WHERE id_account = 1")
+            .fetch_one(&mut db)
+            .await?;
+        assert_eq!(dindex, 5, "the receiving index moved up although the sweep was stopped");
         Ok(())
     }
 
