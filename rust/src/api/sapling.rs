@@ -1,7 +1,5 @@
 use std::path::PathBuf;
 use std::sync::OnceLock;
-#[cfg(not(feature = "bundled-sapling-params"))]
-use std::time::Duration;
 
 use crate::api::coin::Coin;
 use anyhow::Result;
