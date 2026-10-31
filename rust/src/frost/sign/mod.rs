@@ -106,6 +106,10 @@ pub async fn init_sign(
     if !crate::frost::is_group_account(&mut *connection, account).await? {
         bail!("Account {account} is not a FROST group");
     }
+    let n = crate::frost::dkg::get_dkg_params(&mut *connection, account).await?.n;
+    if !(1..=n).contains(&coordinator) {
+        bail!("The coordinator id must be between 1 and {n}, got {coordinator}");
+    }
     check_group_pczt(&mut *connection, account, pczt).await?;
     let pczt_bytes = bincode::encode_to_vec(pczt, config::legacy()).unwrap();
     let params = FrostSignParams {
@@ -345,6 +349,35 @@ mod guard_tests {
         let mut db = wallet().await;
         let m = message(init_sign(&mut db, 1, 2, 1, &pczt()).await).await;
         assert!(m.contains("not a FROST group"), "{m}");
+        assert!(!in_sign(&mut db).await.unwrap());
+    }
+
+    /// A group account of three, as the DKG leaves it.
+    async fn group(db: &mut SqliteConnection, account: u32) {
+        sqlx::query("INSERT INTO dkg_state(account, key_pkg) VALUES (?, x'00')")
+            .bind(account)
+            .execute(&mut *db)
+            .await
+            .unwrap();
+        sqlx::query(
+            "INSERT INTO dkg_params(account, id, n, t, seed, birth_height, name)
+             VALUES (?, 1, 3, 2, '', 0, 'group')",
+        )
+        .bind(account)
+        .execute(&mut *db)
+        .await
+        .unwrap();
+    }
+
+    /// #1552: the coordinator is one of the group's participants.
+    #[tokio::test]
+    async fn a_coordinator_outside_the_group_is_an_error() {
+        let mut db = wallet().await;
+        group(&mut db, 1).await;
+        for coordinator in [0, 4] {
+            let m = message(init_sign(&mut db, 1, 2, coordinator, &pczt()).await).await;
+            assert!(m.contains("coordinator id must be between 1 and 3"), "{m}");
+        }
         assert!(!in_sign(&mut db).await.unwrap());
     }
 
