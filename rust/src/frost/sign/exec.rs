@@ -228,7 +228,8 @@ pub async fn make_sigpackages(
         .context("broadcast address not set")?;
 
     let pczt_pkg = load_pczt_pkg(&mut *connection).await?;
-    let pczt = Pczt::parse(&pczt_pkg.pczt).expect("Failed to parse PCZT");
+    let pczt = Pczt::parse(&pczt_pkg.pczt).map_err(|e| anyhow::anyhow!("invalid PCZT: {e:?}"))?;
+    check_indices(&pczt_pkg)?;
 
     let commitments_vec = load_commitments(&mut *connection, state.account, &state.sighash, state.nsigs).await?;
 
@@ -239,32 +240,39 @@ pub async fn make_sigpackages(
     for (idx, commitment_map) in commitments_vec.iter().enumerate() {
         let sigpackage = SigningPackage::new(commitment_map.clone(), &state.sighash);
 
-        // Extract randomizer (alpha) from the PCZT for this input.
+        // Extract randomizer (alpha) from the PCZT for this input. A package
+        // whose index names no action ends the pass with an error, not a
+        // panic that stops the driver (#1482).
         let signer = LowLevelSigner::new(pczt.clone());
-        let mut alpha = Fq::zero();
-        if idx < pczt_pkg.orchard_indices.len() {
+        let mut alpha: Option<Fq> = None;
+        let action_index = if idx < pczt_pkg.orchard_indices.len() {
             let action_index = pczt_pkg.orchard_indices[idx];
             signer
                 .sign_orchard_with(|_, bundle, _| {
-                    alpha = bundle.actions()[action_index]
-                        .spend()
-                        .alpha()
-                        .expect("alpha missing");
+                    alpha = bundle
+                        .actions()
+                        .get(action_index)
+                        .and_then(|action| *action.spend().alpha());
                     Ok::<_, pczt::roles::low_level_signer::OrchardParseError>(())
                 })
-                .unwrap();
+                .map_err(|e| anyhow::anyhow!("invalid Orchard bundle: {e:?}"))?;
+            action_index
         } else {
             let action_index = pczt_pkg.ironwood_indices[idx - pczt_pkg.orchard_indices.len()];
             signer
                 .sign_ironwood_with(|_, bundle, _| {
-                    alpha = bundle.actions()[action_index]
-                        .spend()
-                        .alpha()
-                        .expect("alpha missing");
+                    alpha = bundle
+                        .actions()
+                        .get(action_index)
+                        .and_then(|action| *action.spend().alpha());
                     Ok::<_, pczt::roles::low_level_signer::OrchardParseError>(())
                 })
-                .unwrap();
-        }
+                .map_err(|e| anyhow::anyhow!("invalid Ironwood bundle: {e:?}"))?;
+            action_index
+        };
+        let alpha = alpha.with_context(|| {
+            format!("input {idx}: action {action_index} has no spend randomizer in the PCZT")
+        })?;
         let randomizer = Randomizer::from_scalar(
             pasta_curves_legacy::Fq::from_repr(alpha.to_repr())
                 .expect("same canonical Pallas scalar encoding"),
@@ -416,7 +424,8 @@ pub async fn aggregate_and_send(
     };
 
     let pczt_pkg = load_pczt_pkg(&mut *connection).await?;
-    let pczt = Pczt::parse(&pczt_pkg.pczt).expect("Failed to parse PCZT");
+    let pczt = Pczt::parse(&pczt_pkg.pczt).map_err(|e| anyhow::anyhow!("invalid PCZT: {e:?}"))?;
+    check_indices(&pczt_pkg)?;
 
     // Aggregate per input.
     let mut tx = connection.begin().await?;
@@ -427,7 +436,10 @@ pub async fn aggregate_and_send(
         let randomized_params = RandomizedParams::from_randomizer(ppkg.verifying_key(), *randomizer);
         let signature = aggregate(sigpackage, sigshares, &ppkg, &randomized_params)?;
         let sig_bytes = signature.serialize()?;
-        let sig_arr: [u8; 64] = sig_bytes.clone().try_into().unwrap();
+        let sig_arr: [u8; 64] = sig_bytes
+            .clone()
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("input {idx}: the aggregated signature is not 64 bytes"))?;
         signatures.push(orchard::primitives::redpallas::Signature::from(sig_arr));
         sqlx::query(
             "UPDATE frost_signatures SET signature = ?1
@@ -445,16 +457,19 @@ pub async fn aggregate_and_send(
     // Apply signatures to PCZT.
     let orchard_count = pczt_pkg.orchard_indices.len();
     let (orchard_sigs, ironwood_sigs) = signatures.split_at(orchard_count);
-    let mut signer = pczt::roles::signer::Signer::new(pczt).unwrap();
+    let mut signer = pczt::roles::signer::Signer::new(pczt)
+        .map_err(|e| anyhow::anyhow!("invalid PCZT: {e:?}"))?;
     for (idx, sig) in orchard_sigs.iter().enumerate() {
+        let action_index = pczt_pkg.orchard_indices[idx];
         signer
-            .apply_orchard_signature(pczt_pkg.orchard_indices[idx], sig.clone())
-            .expect("apply_orchard_signature");
+            .apply_orchard_signature(action_index, sig.clone())
+            .map_err(|e| anyhow::anyhow!("Orchard action {action_index}: {e:?}"))?;
     }
     for (idx, sig) in ironwood_sigs.iter().enumerate() {
+        let action_index = pczt_pkg.ironwood_indices[idx];
         signer
-            .apply_ironwood_signature(pczt_pkg.ironwood_indices[idx], sig.clone())
-            .expect("apply_ironwood_signature");
+            .apply_ironwood_signature(action_index, sig.clone())
+            .map_err(|e| anyhow::anyhow!("Ironwood action {action_index}: {e:?}"))?;
     }
     let pczt = signer.finish();
 
@@ -519,6 +534,24 @@ async fn transaction_recorded(
     .fetch_one(&mut *connection)
     .await?;
     Ok(known)
+}
+
+/// The package names each input's action once. A duplicate would sign one
+/// action twice and leave another unsigned, failing later and less clearly
+/// (#1482).
+fn check_indices(pczt_pkg: &crate::api::pay::PcztPackage) -> Result<()> {
+    let mut seen = std::collections::HashSet::new();
+    for (pool, indices) in [
+        ("Orchard", &pczt_pkg.orchard_indices),
+        ("Ironwood", &pczt_pkg.ironwood_indices),
+    ] {
+        for index in indices {
+            if !seen.insert((pool, *index)) {
+                anyhow::bail!("the signing package names {pool} action {index} twice");
+            }
+        }
+    }
+    Ok(())
 }
 
 // ── DB helpers ────────────────────────────────────────────────────────────────
@@ -730,4 +763,35 @@ async fn load_all_sigshares(
         maps.push(map);
     }
     Ok(maps)
+}
+
+#[cfg(test)]
+mod guard_tests {
+    use super::*;
+    use crate::api::pay::PcztPackage;
+
+    fn package(orchard: Vec<usize>, ironwood: Vec<usize>) -> PcztPackage {
+        PcztPackage {
+            pczt: vec![],
+            n_spends: [0; 4],
+            sapling_indices: vec![],
+            orchard_indices: orchard,
+            ironwood_indices: ironwood,
+            can_sign: true,
+            can_broadcast: true,
+            price: None,
+            category: None,
+            is_issuance: false,
+        }
+    }
+
+    /// #1482: a duplicate action index is refused.
+    #[test]
+    fn duplicate_indices_are_an_error() {
+        assert!(check_indices(&package(vec![0, 1], vec![0])).is_ok());
+        let m = check_indices(&package(vec![0, 0], vec![])).unwrap_err().to_string();
+        assert!(m.contains("Orchard action 0 twice"), "{m}");
+    }
+
+
 }
