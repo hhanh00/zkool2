@@ -341,14 +341,21 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
           ],
         ),
         actions: [
-          Tooltip(
-            message: "Synchronize only this account",
-            child: IconButton(
-              tooltip: "Sync this account",
-              onPressed: () => onSync(account),
-              icon: Icon(Icons.sync),
+          if (ref.watch(synchronizerProvider).kind != null)
+            IconButton(
+              tooltip: "Cancel synchronization",
+              onPressed: () => cancelSyncFromPage(context, ref),
+              icon: Icon(Icons.cancel),
+            )
+          else
+            Tooltip(
+              message: "Synchronize only this account",
+              child: IconButton(
+                tooltip: "Sync this account",
+                onPressed: () => onSync(account),
+                icon: Icon(Icons.sync),
+              ),
             ),
-          ),
           IconButton(
             tooltip: "Show the account receiving addresses",
             onPressed: onReceive,
@@ -455,8 +462,9 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
           final ss = fullData.syncState;
           if (ss == null) return const SizedBox.shrink();
 
-          final cancelling = ref.watch(synchronizerProvider).cancelling;
-          final syncing = ss.start != ss.end || cancelling;
+          final sync = ref.watch(synchronizerProvider);
+          // Shown while a run is in progress, waiting to retry, or stopping.
+          final syncing = ss.start != ss.end || sync.kind != null;
           final unconfirmedAmount = fullData.mempool.unconfirmedFunds[account.account.id];
 
           return Padding(
@@ -472,8 +480,21 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                             child: Column(children: [
                               ..._attentionBanners(context, account, b, ironwoodActive),
                               if (syncing) ...[
-                                if (cancelling) const Text("Cancelling Synchronization"),
-                                HeroProgressWidget(account.account),
+                                Row(children: [
+                                  Expanded(child: HeroProgressWidget(account.account)),
+                                  IconButton(
+                                    tooltip: "Cancel synchronization",
+                                    onPressed: sync.cancelling ? null : () => cancelSyncFromPage(context, ref),
+                                    icon: const Icon(Icons.cancel),
+                                  ),
+                                ]),
+                                if (sync.cancelling)
+                                  const Text("Cancelling Synchronization")
+                                else if (sync.attempt > 0)
+                                  Text(
+                                    "Synchronization failed. Retrying in ${sync.retryInSeconds} s "
+                                    "(attempt ${sync.attempt} of ${SynchronizerNotifier.maxRetries})",
+                                  ),
                                 Gap(8),
                               ],
                               DisplayPanel(
