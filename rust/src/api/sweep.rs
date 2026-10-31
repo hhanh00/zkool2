@@ -20,21 +20,25 @@ impl TransparentScanner {
         })
     }
 
+    /// Runs the scan to its end, or to a cancel, and returns its result:
+    /// a failure reaches the Dart side as the stream's error, and the
+    /// stream closes when the scan ends (#1502). Takes `&self` so that
+    /// `cancel` is not locked out while the scan runs.
     #[cfg(feature = "flutter")]
     pub async fn run(
-        &mut self,
+        &self,
         address_stream: StreamSink<String>,
         end_height: u32,
         gap_limit: u32,
         account: u32,
         c: &Coin,
     ) -> Result<()> {
-        let connection = c.get_connection().await?;
-        let client = c.client().await?;
+        let mut connection = c.get_connection().await?;
+        let mut client = c.client().await?;
         transparent_sweep(
             &c.network(),
-            connection,
-            client,
+            &mut connection,
+            &mut client,
             account,
             end_height,
             gap_limit,

@@ -1192,6 +1192,11 @@ class TransparentScan extends _$TransparentScan {
           onComplete();
         },
         onError: (e) {
+          // The scan's failure arrives here now (#1502); the dialog goes
+          // back to Run, as after a completed scan.
+          state = "";
+          scanner = null;
+          progressSubscription = null;
           final exception = e as AnyhowException;
           if (context.mounted) showException(context, exception.message);
         },

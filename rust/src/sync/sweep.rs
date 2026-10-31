@@ -2,8 +2,7 @@
 //! wallet knows and keep the used ones, within a gap limit.
 
 use anyhow::Result;
-use sqlx::pool::PoolConnection;
-use sqlx::{Sqlite, SqliteConnection};
+use sqlx::SqliteConnection;
 use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
@@ -13,44 +12,42 @@ use crate::db::store_account_transparent_addr;
 use crate::transparent_keys::{ensure_transparent_address, TransparentKeySource};
 use crate::Client;
 
-/// Scan the account's transparent address chains on a background task.
-/// Addresses are reported through `progress_fn` as they are tried.
+/// Scan the account's transparent address chains, reporting each address
+/// through `progress_fn` as it is tried, and return how many were added.
+/// Runs to the end, or to the cancel, in the caller's task: its error is
+/// the caller's to report, where a detached task dropped it (#1502).
 #[allow(clippy::too_many_arguments)]
 pub async fn transparent_sweep(
     network: &Network,
-    mut connection: PoolConnection<Sqlite>,
-    mut client: Client,
+    connection: &mut SqliteConnection,
+    client: &mut Client,
     account: u32,
     end_height: u32,
     gap_limit: u32,
-    progress_fn: impl Fn(String) + 'static + Send,
+    progress_fn: impl Fn(String),
     cancellation_token: CancellationToken,
-) -> Result<()> {
-    let network = *network;
-    let source = TransparentKeySource::load(&mut connection, account).await?;
+) -> Result<usize> {
+    let source = TransparentKeySource::load(&mut *connection, account).await?;
     let (use_internal,): (bool,) =
         sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
             .bind(account)
             .fetch_one(&mut *connection)
             .await?;
-    let start_height = get_birth_height(&mut connection, account).await?;
-    tokio::spawn(async move {
-        scan_transparent_addresses(
-            &network,
-            &mut connection,
-            &mut client,
-            account,
-            &source,
-            start_height,
-            end_height,
-            gap_limit,
-            use_internal,
-            progress_fn,
-            cancellation_token,
-        )
-        .await
-    });
-    Ok(())
+    let start_height = get_birth_height(&mut *connection, account).await?;
+    scan_transparent_addresses(
+        network,
+        connection,
+        client,
+        account,
+        &source,
+        start_height,
+        end_height,
+        gap_limit,
+        use_internal,
+        progress_fn,
+        cancellation_token,
+    )
+    .await
 }
 
 /// Walk the external and change chains from index 0, asking the server for
