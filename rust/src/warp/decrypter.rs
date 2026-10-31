@@ -5,7 +5,6 @@ use zcash_trees::types::Note;
 
 use anyhow::Result;
 use blake2b_simd::Params;
-use hex;
 
 use chacha20::{
     cipher::{KeyIvInit, StreamCipher, StreamCipherSeek},
@@ -218,29 +217,10 @@ pub fn try_orchard_decrypt(
     plaintext.copy_from_slice(&ca.ciphertext);
     keystream.apply_keystream(&mut plaintext);
 
-    if height == 4152337 {
-        tracing::info!(
-            "DEBUG 4152337: vout={} ivtx={} ct_len={} epk={} key={} raw_lb=0x{:02x} pt_lb=0x{:02x} nullifier={} cmx={} plaintext={}",
-            vout,
-            ivtx,
-            ciphertext_len,
-            hex::encode(&ca.ephemeral_key),
-            hex::encode(key.as_ref()),
-            ca.ciphertext.first().unwrap_or(&0),
-            plaintext[0],
-            hex::encode(&ca.nullifier),
-            hex::encode(&ca.cmx),
-            hex::encode(&plaintext),
-        );
-    }
-
     let is_ironwood = plaintext[0] == 0x03;
     let is_orchard = matches!(plaintext[0], 0x01 | 0x02)
         && plaintext_version_is_valid(zip212_enforcement, plaintext[0]);
     if is_ironwood || is_orchard {
-        if height == 4152337 {
-            tracing::info!("Valid leading byte");
-        }
         use zcash_note_encryption::Domain;
         let pivk = orchard::keys::PreparedIncomingViewingKey::new(ivk);
         let nullifier_bytes: [u8; 32] = ca
@@ -281,9 +261,6 @@ pub fn try_orchard_decrypt(
                 .parse_note_plaintext_without_memo_ivk(&pivk, plaintext.as_ref())
         };
         if let Some((note, recipient)) = parsed {
-            if height == 4152337 {
-                tracing::info!("Parse OK");
-            }
             let cmx = ExtractedNoteCommitment::from(note.commitment());
             let value = note.value().inner();
             if cmx.to_bytes() == *ca.cmx {
