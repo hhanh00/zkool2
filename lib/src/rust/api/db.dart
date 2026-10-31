@@ -7,6 +7,8 @@ import '../frb_generated.dart';
 import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
+// These functions are ignored because they are not marked as `pub`: `remove_companions`
+
 Future<List<DbAccountPreview>> listDbAccounts({required String dbFilepath}) =>
     RustLib.instance.api.crateApiDbListDbAccounts(dbFilepath: dbFilepath);
 
@@ -33,9 +35,25 @@ Future<void> putProp(
 /// The wallet file must exist; everything beside it is optional. The voting
 /// sidecar is one of those files, and leaving it behind would strand voting
 /// state that a wallet later recreated under the same name would inherit. The
-/// WAL companions of both only exist after an unclean shutdown.
+/// wallet itself runs in rollback-journal mode and never has WAL companions;
+/// the sidecar runs in WAL mode, so its `-wal`/`-shm` files exist after an
+/// unclean shutdown and are removed with it.
 Future<void> deleteDb({required String dbFilepath, required Coin c}) =>
     RustLib.instance.api.crateApiDbDeleteDb(dbFilepath: dbFilepath, c: c);
+
+/// Replaces a wallet database with `data`, the bytes of a saved database.
+///
+/// The voting sidecar describes the wallet it was created beside, so it goes
+/// with the old contents: keeping it would pair the restored wallet with
+/// ballots and share records that are not its own. The bytes land in a
+/// temporary file next to the wallet and are renamed over it, so a failed
+/// write leaves the old wallet in place rather than a truncated one.
+Future<void> restoreDb(
+        {required String dbFilepath,
+        required List<int> data,
+        required Coin c}) =>
+    RustLib.instance.api
+        .crateApiDbRestoreDb(dbFilepath: dbFilepath, data: data, c: c);
 
 /// Renames a wallet database and every file that belongs to it.
 ///

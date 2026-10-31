@@ -188,11 +188,12 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
     final confirmed = await confirmDialog(
       context,
       title: "Restore Database",
-      message: "Are you sure you want to restore the database? This file erase the contents of the selected database",
+      message:
+          "Are you sure you want to restore the database? This file erases the contents of the selected database and its voting data",
     );
     if (!confirmed) return;
-    final db = File(await getFullDatabasePath(databaseName));
-    await db.writeAsBytes(data);
+    final dbFilepath = await getFullDatabasePath(databaseName);
+    await restoreDb(dbFilepath: dbFilepath, data: data, c: coinContext.coin);
     if (!mounted) return;
     await showMessage(context, "Database restored");
   }

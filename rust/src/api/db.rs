@@ -89,7 +89,9 @@ pub async fn put_prop(key: &str, value: &str, c: &Coin) -> Result<()> {
 /// The wallet file must exist; everything beside it is optional. The voting
 /// sidecar is one of those files, and leaving it behind would strand voting
 /// state that a wallet later recreated under the same name would inherit. The
-/// WAL companions of both only exist after an unclean shutdown.
+/// wallet itself runs in rollback-journal mode and never has WAL companions;
+/// the sidecar runs in WAL mode, so its `-wal`/`-shm` files exist after an
+/// unclean shutdown and are removed with it.
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn delete_db(db_filepath: &str, c: &Coin) -> Result<()> {
     // Closing the pool first: on Windows an open handle blocks the delete,
@@ -97,19 +99,45 @@ pub async fn delete_db(db_filepath: &str, c: &Coin) -> Result<()> {
     c.close_pool_for(db_filepath).await;
 
     let wallet = std::path::Path::new(db_filepath);
-    let sidecar = crate::voting::sidecar::voting_db_path(wallet);
-
     fs::remove_file(wallet)?;
-    let _ = fs::remove_file(&sidecar);
-    for base in [wallet, sidecar.as_path()] {
-        for suffix in ["-wal", "-shm"] {
-            let mut companion = base.as_os_str().to_os_string();
-            companion.push(suffix);
-            let _ = fs::remove_file(std::path::PathBuf::from(companion));
-        }
-    }
+    remove_companions(wallet);
 
     Ok(())
+}
+
+/// Replaces a wallet database with `data`, the bytes of a saved database.
+///
+/// The voting sidecar describes the wallet it was created beside, so it goes
+/// with the old contents: keeping it would pair the restored wallet with
+/// ballots and share records that are not its own. The bytes land in a
+/// temporary file next to the wallet and are renamed over it, so a failed
+/// write leaves the old wallet in place rather than a truncated one.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn restore_db(db_filepath: &str, data: Vec<u8>, c: &Coin) -> Result<()> {
+    c.close_pool_for(db_filepath).await;
+
+    let wallet = std::path::Path::new(db_filepath);
+    let mut staged = wallet.as_os_str().to_os_string();
+    staged.push(".restore");
+    let staged = std::path::PathBuf::from(staged);
+
+    fs::write(&staged, &data)?;
+    remove_companions(wallet);
+    fs::rename(&staged, wallet)?;
+
+    Ok(())
+}
+
+/// Removes the files that belong to a wallet besides the wallet itself: the
+/// voting sidecar and its WAL companions. Missing files are fine.
+fn remove_companions(wallet: &std::path::Path) {
+    let sidecar = crate::voting::sidecar::voting_db_path(wallet);
+    let _ = fs::remove_file(&sidecar);
+    for suffix in ["-wal", "-shm"] {
+        let mut companion = sidecar.as_os_str().to_os_string();
+        companion.push(suffix);
+        let _ = fs::remove_file(std::path::PathBuf::from(companion));
+    }
 }
 
 /// Renames a wallet database and every file that belongs to it.
@@ -173,4 +201,67 @@ pub async fn list_db_names(dir: &str) -> Result<Vec<String>> {
     }
 
     Ok(db_names)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{remove_companions, restore_db};
+    use crate::api::coin::Coin;
+
+    /// A fresh directory under the system temp dir, removed on drop.
+    struct Scratch(std::path::PathBuf);
+
+    impl Scratch {
+        fn new(tag: &str) -> Self {
+            let nanos = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let dir = std::env::temp_dir().join(format!(
+                "zkool-{tag}-{}-{nanos}",
+                std::process::id()
+            ));
+            std::fs::create_dir_all(&dir).unwrap();
+            Self(dir)
+        }
+    }
+
+    impl Drop for Scratch {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[tokio::test]
+    async fn restore_replaces_the_wallet_and_drops_its_sidecar() {
+        let scratch = Scratch::new("restore");
+        let wallet = scratch.0.join("wallet.db");
+        std::fs::write(&wallet, b"old wallet").unwrap();
+        let sidecar = crate::voting::sidecar::voting_db_path(&wallet);
+        std::fs::write(&sidecar, b"old sidecar").unwrap();
+        let mut sidecar_wal = sidecar.as_os_str().to_os_string();
+        sidecar_wal.push("-wal");
+        let sidecar_wal = std::path::PathBuf::from(sidecar_wal);
+        std::fs::write(&sidecar_wal, b"frames").unwrap();
+
+        let coin = Coin::new(None);
+        restore_db(wallet.to_str().unwrap(), b"new wallet".to_vec(), &coin)
+            .await
+            .unwrap();
+
+        assert_eq!(std::fs::read(&wallet).unwrap(), b"new wallet");
+        assert!(!sidecar.exists());
+        assert!(!sidecar_wal.exists());
+        let leftovers: Vec<_> = std::fs::read_dir(&scratch.0)
+            .unwrap()
+            .map(|entry| entry.unwrap().file_name())
+            .collect();
+        assert_eq!(leftovers, vec![std::ffi::OsString::from("wallet.db")]);
+    }
+
+    #[test]
+    fn removing_companions_tolerates_their_absence() {
+        let scratch = Scratch::new("companions");
+        remove_companions(&scratch.0.join("missing.db"));
+    }
 }
