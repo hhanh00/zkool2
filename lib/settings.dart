@@ -159,10 +159,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                         tooltip: "Select from server list",
                         icon: const Icon(Icons.list),
                         onPressed: () async {
-                          final selected = await GoRouter.of(context).push<String>("/lwd_select");
-                          if (selected != null) {
-                            formKey.currentState!.fields["lwd"]!.didChange(selected);
-                          }
+                          final choice = await GoRouter.of(context).push<ServerChoice>("/lwd_select");
+                          if (choice != null) onSelectedServer(choice);
                         },
                       ),
                     ],
@@ -457,6 +455,17 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
         // Force Direct when a Nym service address is entered.
         transport: isValidNymUrl(url: value) ? 0 : settings.transport,
       );
+      widget.onChanged(settings);
+    });
+  }
+
+  /// A pick from the server list: the URL and the transport it implies go
+  /// into the draft together and are saved when the user leaves the page,
+  /// like every other setting. The list page itself changes nothing.
+  void onSelectedServer(ServerChoice choice) {
+    formKey.currentState!.fields["lwd"]!.didChange(choice.url);
+    setState(() {
+      settings = choice.applyTo(settings);
       widget.onChanged(settings);
     });
   }

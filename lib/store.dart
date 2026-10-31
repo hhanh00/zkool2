@@ -606,6 +606,43 @@ sealed class AppSettings with _$AppSettings {
   }) = _AppSettings;
 }
 
+/// A pick from the server list page: the server URL and, when the server
+/// dictates one, the transport to use with it. The list page returns it and
+/// changes nothing itself; the settings page applies it to its draft, which
+/// is saved when the user leaves, like every other setting (#1581).
+@freezed
+sealed class ServerChoice with _$ServerChoice {
+  const ServerChoice._();
+
+  const factory ServerChoice({
+    required String url,
+    /// 1 for a Tor (.onion) server, 0 for a Nym endpoint, null to keep the
+    /// draft's transport.
+    int? transport,
+  }) = _ServerChoice;
+
+  /// The choice for an entry of the public lightwalletd list.
+  factory ServerChoice.forServer(LWDInfo server) {
+    var url = server.url;
+    // Ensure the URL has a scheme (defense in depth).
+    if (!url.startsWith('https://') && !url.startsWith('http://')) {
+      final scheme = server.isTor ? 'http' : 'https';
+      url = '$scheme://$url';
+    }
+    return ServerChoice(url: url, transport: server.isTor ? 1 : null);
+  }
+
+  /// A mixnet-native (nym://) endpoint: the mixnet is the transport, so the
+  /// transport setting is Direct.
+  factory ServerChoice.nym(String url) => ServerChoice(url: url, transport: 0);
+
+  /// The draft with this choice applied.
+  AppSettings applyTo(AppSettings settings) => settings.copyWith(
+        lwd: url,
+        transport: transport ?? settings.transport,
+      );
+}
+
 @Riverpod(keepAlive: true)
 class LogNotifier extends _$LogNotifier {
   @override

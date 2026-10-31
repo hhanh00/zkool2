@@ -2502,6 +2502,311 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
 }
 
 /// @nodoc
+mixin _$ServerChoice {
+  String get url;
+
+  /// 1 for a Tor (.onion) server, 0 for a Nym endpoint, null to keep the
+  /// draft's transport.
+  int? get transport;
+
+  /// Create a copy of ServerChoice
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $ServerChoiceCopyWith<ServerChoice> get copyWith =>
+      _$ServerChoiceCopyWithImpl<ServerChoice>(
+          this as ServerChoice, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is ServerChoice &&
+            (identical(other.url, url) || other.url == url) &&
+            (identical(other.transport, transport) ||
+                other.transport == transport));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, url, transport);
+
+  @override
+  String toString() {
+    return 'ServerChoice(url: $url, transport: $transport)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $ServerChoiceCopyWith<$Res> {
+  factory $ServerChoiceCopyWith(
+          ServerChoice value, $Res Function(ServerChoice) _then) =
+      _$ServerChoiceCopyWithImpl;
+  @useResult
+  $Res call({String url, int? transport});
+}
+
+/// @nodoc
+class _$ServerChoiceCopyWithImpl<$Res> implements $ServerChoiceCopyWith<$Res> {
+  _$ServerChoiceCopyWithImpl(this._self, this._then);
+
+  final ServerChoice _self;
+  final $Res Function(ServerChoice) _then;
+
+  /// Create a copy of ServerChoice
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? url = null,
+    Object? transport = freezed,
+  }) {
+    return _then(_self.copyWith(
+      url: null == url
+          ? _self.url
+          : url // ignore: cast_nullable_to_non_nullable
+              as String,
+      transport: freezed == transport
+          ? _self.transport
+          : transport // ignore: cast_nullable_to_non_nullable
+              as int?,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [ServerChoice].
+extension ServerChoicePatterns on ServerChoice {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_ServerChoice value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _ServerChoice() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_ServerChoice value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _ServerChoice():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_ServerChoice value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _ServerChoice() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(String url, int? transport)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _ServerChoice() when $default != null:
+        return $default(_that.url, _that.transport);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(String url, int? transport) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _ServerChoice():
+        return $default(_that.url, _that.transport);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(String url, int? transport)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _ServerChoice() when $default != null:
+        return $default(_that.url, _that.transport);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _ServerChoice extends ServerChoice {
+  const _ServerChoice({required this.url, this.transport}) : super._();
+
+  @override
+  final String url;
+
+  /// 1 for a Tor (.onion) server, 0 for a Nym endpoint, null to keep the
+  /// draft's transport.
+  @override
+  final int? transport;
+
+  /// Create a copy of ServerChoice
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$ServerChoiceCopyWith<_ServerChoice> get copyWith =>
+      __$ServerChoiceCopyWithImpl<_ServerChoice>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _ServerChoice &&
+            (identical(other.url, url) || other.url == url) &&
+            (identical(other.transport, transport) ||
+                other.transport == transport));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, url, transport);
+
+  @override
+  String toString() {
+    return 'ServerChoice(url: $url, transport: $transport)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$ServerChoiceCopyWith<$Res>
+    implements $ServerChoiceCopyWith<$Res> {
+  factory _$ServerChoiceCopyWith(
+          _ServerChoice value, $Res Function(_ServerChoice) _then) =
+      __$ServerChoiceCopyWithImpl;
+  @override
+  @useResult
+  $Res call({String url, int? transport});
+}
+
+/// @nodoc
+class __$ServerChoiceCopyWithImpl<$Res>
+    implements _$ServerChoiceCopyWith<$Res> {
+  __$ServerChoiceCopyWithImpl(this._self, this._then);
+
+  final _ServerChoice _self;
+  final $Res Function(_ServerChoice) _then;
+
+  /// Create a copy of ServerChoice
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? url = null,
+    Object? transport = freezed,
+  }) {
+    return _then(_ServerChoice(
+      url: null == url
+          ? _self.url
+          : url // ignore: cast_nullable_to_non_nullable
+              as String,
+      transport: freezed == transport
+          ? _self.transport
+          : transport // ignore: cast_nullable_to_non_nullable
+              as int?,
+    ));
+  }
+}
+
+/// @nodoc
 mixin _$MempoolState {
   bool get running;
   Map<int, int> get unconfirmedFunds;

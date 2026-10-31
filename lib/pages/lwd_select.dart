@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:data_table_2/data_table_2.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/src/rust/api/network.dart';
 import 'package:gap/gap.dart';
 import 'package:zkool/store.dart';
@@ -28,39 +27,16 @@ class _LWDSelectPageState extends ConsumerState<LWDSelectPage> {
   bool _loading = true;
   String? _error;
 
-  Future<void> _onSelectServer(LWDInfo server) async {
-    var url = server.url;
-    // Ensure URL has a scheme (defense in depth)
-    if (!url.startsWith('https://') && !url.startsWith('http://')) {
-      final scheme = server.isTor ? 'http' : 'https';
-      url = '$scheme://$url';
-    }
-    // Enable Tor transport for onion addresses
-    if (server.isTor) {
-      final prefs = SharedPreferencesAsync();
-      await prefs.setInt("transport", 1);
-      coinContext.set(coin: coinContext.coin.setTransport(transport: 1));
-      ref.invalidate(appSettingsProvider);
-    }
-    if (mounted) {
-      Navigator.of(context).pop(url);
-    }
+  /// Tapping a server only returns the choice; the settings page applies it
+  /// to its draft and saves when the user leaves. Nothing is written here.
+  void _onSelectServer(LWDInfo server) {
+    Navigator.of(context).pop(ServerChoice.forServer(server));
   }
 
-  /// Select a mixnet-native (nym://) endpoint: the mixnet is the transport,
-  /// so the transport setting is forced to Direct.
-  Future<void> _onSelectNym(String url) async {
-    final prefs = SharedPreferencesAsync();
-    await prefs.setInt("transport", 0);
-    coinContext.set(coin: coinContext.coin.setTransport(transport: 0));
-    ref.invalidate(appSettingsProvider);
-    if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    Navigator.of(context).pop(url);
-    messenger.showSnackBar(const SnackBar(
-      content: Text("Nym service address selected — traffic is routed natively "
-          "through the mixnet; transport is forced to Direct."),
-    ));
+  /// A mixnet-native (nym://) endpoint: the choice carries the Direct
+  /// transport, since the mixnet is the transport.
+  void _onSelectNym(String url) {
+    Navigator.of(context).pop(ServerChoice.nym(url));
   }
 
   Future<void> _onPasteNym() async {
@@ -100,7 +76,7 @@ class _LWDSelectPageState extends ConsumerState<LWDSelectPage> {
         ),
       ),
     );
-    if (url != null) await _onSelectNym(url);
+    if (url != null && mounted) _onSelectNym(url);
   }
 
   Widget _nymSection(BuildContext context) {
