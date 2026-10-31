@@ -78,7 +78,6 @@ async fn synchronize(
     coin: &crate::api::coin::Coin,
     accounts: Vec<u32>,
     current_height: u32,
-    transparent_limit: u32,
     fast: bool,
 ) -> anyhow::Result<crate::api::sync::SyncOutcome> {
     let (progress, _) = tokio::sync::mpsc::channel(1);
@@ -89,7 +88,6 @@ async fn synchronize(
                 accounts,
                 current_height,
                 actions_per_sync: 100_000,
-                transparent_limit,
                 checkpoint_age: 10_000,
                 skip_details: fast,
             },
@@ -287,37 +285,30 @@ impl Mutation {
         Ok(true)
     }
 
+    /// Every stored transparent address is scanned on every range; the
+    /// former `transparentLimit` window is gone (#1501).
     async fn synchronize(
         id_accounts: Vec<i32>,
         fast: Option<bool>,
-        transparent_limit: Option<i32>,
         context: &Context,
     ) -> FieldResult<i32> {
         check_admin_auth(context)?;
         let fast = fast.unwrap_or_default();
-        let transparent_limit = transparent_limit
-            .map(|v| v as u32)
-            .unwrap_or(crate::sync::DEFAULT_TRANSPARENT_LIMIT);
         let id_accounts = id_accounts.into_iter().map(|v| v as u32).collect();
         let current_height = crate::api::network::get_current_height(&context.coin).await?;
-        let outcome = synchronize(&context.coin, id_accounts, current_height, transparent_limit, fast).await?;
+        let outcome = synchronize(&context.coin, id_accounts, current_height, fast).await?;
         synced_height(outcome, current_height)
     }
 
     async fn synchronize_account(
         id_account: i32,
         fast: Option<bool>,
-        transparent_limit: Option<i32>,
         context: &Context,
     ) -> FieldResult<i32> {
         check_auth(context, id_account, false)?;
         let fast = fast.unwrap_or_default();
-        let transparent_limit = transparent_limit
-            .map(|v| v as u32)
-            .unwrap_or(crate::sync::DEFAULT_TRANSPARENT_LIMIT);
         let current_height = crate::api::network::get_current_height(&context.coin).await?;
-        let outcome =
-            synchronize(&context.coin, vec![id_account as u32], current_height, transparent_limit, fast).await?;
+        let outcome = synchronize(&context.coin, vec![id_account as u32], current_height, fast).await?;
         synced_height(outcome, current_height)
     }
 

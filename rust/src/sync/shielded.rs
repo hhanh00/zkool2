@@ -6,7 +6,7 @@ use anyhow::Result;
 use sqlx::SqliteConnection;
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::broadcast;
+use tokio_util::sync::CancellationToken;
 use tokio::sync::mpsc::channel;
 use tracing::{debug, info};
 
@@ -159,7 +159,7 @@ pub async fn shielded_sync(
     actions_per_sync: u32,
     chunk_size: Option<u32>,
     tx_progress: Sender<SyncProgress>,
-    mut rx_cancel: broadcast::Receiver<()>,
+    cancel: CancellationToken,
 ) -> Result<()> {
     let activation_height: u32 = network
         .activation_height(NetworkUpgrade::Sapling)
@@ -187,7 +187,7 @@ pub async fn shielded_sync(
             chunk_end,
             actions_per_sync,
             tx_progress.clone(),
-            rx_cancel.resubscribe(),
+            cancel.clone(),
         )
         .await?
         {
@@ -214,15 +214,11 @@ pub async fn shielded_sync(
         if chunk_end >= end {
             break;
         }
-        // A cancel delivered during the finished chunk was consumed by that
-        // chunk's resubscribed receiver; check ours before starting the next.
-        match rx_cancel.try_recv() {
-            Err(broadcast::error::TryRecvError::Empty)
-            | Err(broadcast::error::TryRecvError::Closed) => {}
-            _ => {
-                debug!("Sync cancelled between chunks");
-                break;
-            }
+        // A cancel during the finished chunk ended that chunk; the token
+        // still says so, so the next chunk is not started.
+        if cancel.is_cancelled() {
+            debug!("Sync cancelled between chunks");
+            break;
         }
         chunk_start = chunk_end + 1;
     }
@@ -269,7 +265,7 @@ async fn shielded_sync_range(
     end: u32,
     actions_per_sync: u32,
     tx_progress: Sender<SyncProgress>,
-    rx_cancel: broadcast::Receiver<()>,
+    cancel: CancellationToken,
 ) -> Result<RangeEnd> {
     let accounts = accounts.to_vec();
     let account_ids: Vec<u32> = accounts.iter().map(|(a, _)| *a).collect();
@@ -371,7 +367,7 @@ async fn shielded_sync_range(
                 &o,
                 &i,
                 tx_messages.clone(),
-                rx_cancel,
+                cancel,
             )
             .await;
             if let Err(e) = &scan {
@@ -754,7 +750,6 @@ mod stream_tests {
             asked: asked.clone(),
         });
         let (progress, _rx_progress) = channel::<SyncProgress>(1024);
-        let (_cancel, rx_cancel) = broadcast::channel(1);
         let r = shielded_sync(
             &regtest(),
             pool,
@@ -765,7 +760,7 @@ mod stream_tests {
             1000,
             None,
             progress,
-            rx_cancel,
+            CancellationToken::new(),
         )
         .await;
         let asked = asked.lock().unwrap().clone();

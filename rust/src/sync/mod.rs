@@ -32,7 +32,6 @@ pub use sweep::transparent_sweep;
 pub(crate) use transparent::transparent_sync;
 
 pub const DEFAULT_ACTIONS_PER_SYNC: u32 = 10000u32;
-pub const DEFAULT_TRANSPARENT_LIMIT: u32 = 100u32;
 
 pub use zcash_trees::types::SyncError;
 pub use zcash_trees::types::{BlockHeader, Issuance, Note, Transaction, WarpSyncMessage, UTXO};
@@ -59,11 +58,11 @@ pub async fn synchronize_within<S: Sink<SyncEvent> + Send + 'static>(
     accounts: Vec<u32>,
     current_height: u32,
     actions_per_sync: u32,
-    transparent_limit: u32,
     checkpoint_age: u32,
     skip_details: bool,
     c: &Coin,
 ) -> Result<SyncOutcome> {
+    let accounts = normalize_accounts(accounts);
     if accounts.is_empty() {
         return Ok(SyncOutcome::Synced {
             height: current_height,
@@ -72,7 +71,6 @@ pub async fn synchronize_within<S: Sink<SyncEvent> + Send + 'static>(
     let params = SyncParams {
         current_height,
         actions_per_sync,
-        transparent_limit,
         checkpoint_age,
         skip_details,
     };
@@ -82,6 +80,15 @@ pub async fn synchronize_within<S: Sink<SyncEvent> + Send + 'static>(
     // A user-requested stop is normal termination at the API boundary.
     let cancelled = run.was_cancelled();
     finish(result, cancelled, current_height)
+}
+
+/// The accounts to scan, each once: a repeated id scanned every address
+/// and every key once per occurrence, and the second copy of a note it
+/// found failed the range (#1510).
+fn normalize_accounts(mut accounts: Vec<u32>) -> Vec<u32> {
+    accounts.sort_unstable();
+    accounts.dedup();
+    accounts
 }
 
 /// Map the run's result and the cancel flag to the outcome the caller sees.
@@ -102,7 +109,6 @@ fn finish(result: Result<()>, cancelled: bool, height: u32) -> Result<SyncOutcom
 struct SyncParams {
     current_height: u32,
     actions_per_sync: u32,
-    transparent_limit: u32,
     checkpoint_age: u32,
     skip_details: bool,
 }
@@ -218,6 +224,10 @@ async fn run_range(
     let pool = c.get_pool()?;
     let mut client = c.client().await?;
 
+    // A cancel is checked before every stage and inside the two loops that
+    // have no scanner of their own, so none of them runs to completion
+    // after the user asked to stop (#1571).
+    run.check_cancelled()?;
     transparent_sync(
         &network,
         connection,
@@ -225,7 +235,6 @@ async fn run_range(
         &account_ids,
         range.start,
         range.end,
-        params.transparent_limit,
         run.cancellation(),
     )
     .await?;
@@ -234,6 +243,7 @@ async fn run_range(
     // GetBlockRange stream fits in one nym-rpc session; elsewhere a
     // single stream for the whole range is cheaper.
     let chunk_size = c.is_mixnet().then_some(MIXNET_SYNC_CHUNK);
+    run.check_cancelled()?;
     shielded_sync(
         &network,
         &pool,
@@ -252,6 +262,7 @@ async fn run_range(
     let heights_without_time =
         get_heights_without_time(connection, &account_ids, range.start, range.end).await?;
     for h in heights_without_time {
+        run.check_cancelled()?;
         debug!("fetch block @{h}");
         let block = client.block(&network, h).await?;
         let time = block.time;
@@ -270,6 +281,7 @@ async fn run_range(
 
     if !params.skip_details {
         for account in &account_ids {
+            run.check_cancelled()?;
             crate::memo::fetch_tx_details(
                 &network,
                 &mut run.held(connection),
@@ -449,6 +461,13 @@ pub async fn get_heights_without_time(
 #[cfg(test)]
 mod outcome_tests {
     use super::*;
+
+    #[test]
+    fn accounts_are_scanned_once_however_the_list_was_built() {
+        assert_eq!(normalize_accounts(vec![1, 1, 1]), vec![1]);
+        assert_eq!(normalize_accounts(vec![3, 1, 2, 1]), vec![1, 2, 3]);
+        assert!(normalize_accounts(vec![]).is_empty());
+    }
 
     #[test]
     fn cancel_wins_over_both_success_and_error() {

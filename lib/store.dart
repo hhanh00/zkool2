@@ -980,7 +980,6 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
           accounts: accounts.map((a) => a.id).toList(),
           currentHeight: syncHeight,
           actionsPerSync: int.parse(settings.actionsPerSync),
-          transparentLimit: 100,
           checkpointAge: 500_000,
           fast: true,
           c: c,
@@ -1177,6 +1176,11 @@ class TransparentScan extends _$TransparentScan {
   bool get running => state.isNotEmpty;
 
   Future<void> run(BuildContext context, int account, int gapLimit, {required void Function() onComplete}) async {
+    // One scan at a time: a second Run while one is pending would create a
+    // second scanner and leave the first one beyond Stop's reach (#1578).
+    // The placeholder flips the dialog to Stop before the first await.
+    if (scanner != null || progressSubscription != null) return;
+    state = "Starting…";
     try {
       final c = coinContext.coin;
       final sc = await TransparentScanner.newInstance();
@@ -1192,12 +1196,19 @@ class TransparentScan extends _$TransparentScan {
           onComplete();
         },
         onError: (e) {
+          // The scan's failure arrives here now (#1502); the dialog goes
+          // back to Run, as after a completed scan.
+          state = "";
+          scanner = null;
+          progressSubscription = null;
           final exception = e as AnyhowException;
           if (context.mounted) showException(context, exception.message);
         },
         cancelOnError: true,
       );
     } on AnyhowException catch (e) {
+      state = "";
+      scanner = null;
       if (context.mounted) await showException(context, e.message);
     }
   }

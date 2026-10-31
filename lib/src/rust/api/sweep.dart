@@ -15,6 +15,10 @@ abstract class TransparentScanner implements RustOpaqueInterface {
   static Future<TransparentScanner> newInstance() =>
       RustLib.instance.api.crateApiSweepTransparentScannerNew();
 
+  /// Runs the scan to its end, or to a cancel, and returns its result:
+  /// a failure reaches the Dart side as the stream's error, and the
+  /// stream closes when the scan ends (#1502). Takes `&self` so that
+  /// `cancel` is not locked out while the scan runs.
   Stream<String> run(
       {required int endHeight,
       required int gapLimit,

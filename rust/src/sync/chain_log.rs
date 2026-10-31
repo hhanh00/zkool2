@@ -1016,6 +1016,10 @@ pub async fn delete_account_data(tx: &mut Transaction<'_, Sqlite>, account: u32)
         "transactions",
         "headers",
         "sync_heights",
+        // The price and category of a broadcast awaiting its mining; the
+        // only other purge is per synced account, which a deleted one
+        // never is again (#1524).
+        "pending_txs",
     ] {
         // Audited: `table` comes from the fixed list above.
         sqlx::query(sqlx::AssertSqlSafe(format!(
@@ -1449,6 +1453,26 @@ mod tests {
             count(&mut db, "SELECT COUNT(*) FROM notes WHERE account = 2").await?,
             1
         );
+        Ok(())
+    }
+
+    /// #1524: the pending metadata of a broadcast goes with the account.
+    #[tokio::test]
+    async fn deleting_an_account_removes_its_pending_metadata() -> Result<()> {
+        let mut db = db().await?;
+        for account in [1u32, 2] {
+            sqlx::query("INSERT INTO pending_txs(account, txid, height, price, category) VALUES (?, x'07', 100, 1.5, 3)")
+                .bind(account)
+                .execute(&mut db)
+                .await?;
+        }
+        let mut tx = db.begin().await?;
+        delete_account_data(&mut tx, 1).await?;
+        tx.commit().await?;
+        let left: Vec<(u32,)> = sqlx::query_as("SELECT account FROM pending_txs ORDER BY account")
+            .fetch_all(&mut db)
+            .await?;
+        assert_eq!(left, vec![(2,)]);
         Ok(())
     }
 

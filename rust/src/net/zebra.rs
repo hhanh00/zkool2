@@ -307,7 +307,11 @@ impl LwdServer for ZebraClient {
                     let mut txid_hex = hex::decode(txid)
                         .map_err(|e| anyhow::anyhow!("Invalid txid hex from node: {}", e))?;
                     txid_hex.reverse();
-                    let (height, tx) = client.transaction(&network, &txid_hex).await?;
+                    // The consumer dropped the stream (#1481): stop fetching.
+                    let (height, tx) = tokio::select! {
+                        _ = txs.closed() => break,
+                        fetched = client.transaction(&network, &txid_hex) => fetched?,
+                    };
                     if txs.send(Ok((height, tx, 0))).await.is_err() {
                         break;
                     }

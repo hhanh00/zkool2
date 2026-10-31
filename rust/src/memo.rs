@@ -38,11 +38,30 @@ pub async fn fetch_tx_details(
     account: u32,
 ) -> Result<()> {
     debug!("fetch_tx_details");
+    // One transaction whose details cannot be fetched does not block the
+    // ones after it (#1520): it is logged and retried on the next pass. An
+    // error is returned only when nothing succeeded, so a dead server is
+    // still reported.
+    let mut succeeded = 0;
+    let mut failed = None;
     for txid in pending_details(connection, account).await? {
-        let tx = decrypt_tx(network, connection, client, account, &txid).await?;
-        apply_tx_details(connection, account, &tx).await?;
+        let result = async {
+            let tx = decrypt_tx(network, connection, client, account, &txid).await?;
+            apply_tx_details(connection, account, &tx).await
+        }
+        .await;
+        match result {
+            Ok(_) => succeeded += 1,
+            Err(e) => {
+                tracing::warn!("details of {} not fetched: {e:#}", hex::encode(&txid));
+                failed = Some(e);
+            }
+        }
     }
-    Ok(())
+    match failed {
+        Some(e) if succeeded == 0 => Err(e.context("no transaction's details could be fetched")),
+        _ => Ok(()),
+    }
 }
 
 /// Txids of the account's transactions whose details are not stored yet.
@@ -56,6 +75,29 @@ pub async fn pending_details(
             .fetch_all(&mut *connection)
             .await?,
     )
+}
+
+/// The next `limit` transactions of the account whose details are not
+/// stored yet, by id after `after`: one batch of the app's background pass,
+/// which walks the backlog a batch at a time instead of loading it whole
+/// (#1514). The cursor, not the `details` flag, is what advances it, so a
+/// transaction whose details cannot be fetched does not hold it up.
+pub async fn pending_details_after(
+    connection: &mut SqliteConnection,
+    account: u32,
+    after: u32,
+    limit: u32,
+) -> Result<Vec<(u32, Vec<u8>)>> {
+    Ok(sqlx::query_as(
+        "SELECT id_tx, txid FROM transactions
+         WHERE account = ? AND details = FALSE AND id_tx > ?
+         ORDER BY id_tx LIMIT ?",
+    )
+    .bind(account)
+    .bind(after)
+    .bind(limit)
+    .fetch_all(&mut *connection)
+    .await?)
 }
 
 /// A transaction's details, decrypted and ready to store. Produced by
@@ -623,6 +665,100 @@ mod tests {
             self_transfer_type(-10_000, 10_000, true, true, false, false),
             12
         );
+    }
+
+    /// A server that cannot serve any transaction, remembering what it was
+    /// asked for.
+    struct NoTransactions(std::sync::Arc<std::sync::Mutex<Vec<Vec<u8>>>>);
+
+    #[tonic::async_trait]
+    impl crate::net::LwdServer for NoTransactions {
+        type CompactBlockStream =
+            tokio_stream::wrappers::ReceiverStream<Result<crate::lwd::CompactBlock>>;
+        type TransactionStream = tokio_stream::wrappers::ReceiverStream<
+            Result<(u32, zcash_primitives::transaction::Transaction, usize)>,
+        >;
+
+        async fn latest_height(&mut self) -> Result<u32> {
+            unimplemented!()
+        }
+        async fn block(&mut self, _: &Network, _: u32) -> Result<crate::lwd::CompactBlock> {
+            unimplemented!()
+        }
+        async fn block_range(
+            &mut self,
+            _: &Network,
+            _: u32,
+            _: u32,
+        ) -> Result<Self::CompactBlockStream> {
+            unimplemented!()
+        }
+        async fn transaction(
+            &mut self,
+            _: &Network,
+            txid: &[u8],
+        ) -> Result<(u32, zcash_primitives::transaction::Transaction)> {
+            self.0.lock().unwrap().push(txid.to_vec());
+            anyhow::bail!("not found")
+        }
+        async fn post_transaction(&mut self, _: u32, _: &[u8]) -> Result<String> {
+            unimplemented!()
+        }
+        async fn taddress_txs(
+            &mut self,
+            _: &Network,
+            _: &str,
+            _: u32,
+            _: u32,
+        ) -> Result<Self::TransactionStream> {
+            unimplemented!()
+        }
+        async fn mempool_stream(&mut self, _: &Network) -> Result<Self::TransactionStream> {
+            unimplemented!()
+        }
+        async fn tree_state(&mut self, _: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)> {
+            unimplemented!()
+        }
+    }
+
+    /// #1520: a transaction whose details cannot be fetched no longer stops
+    /// the pass; every pending transaction is asked for, and the error is
+    /// returned only because none of them succeeded.
+    #[tokio::test]
+    async fn a_failing_transaction_does_not_block_the_ones_after_it() -> Result<()> {
+        use crate::sync::chain_log::{record_transaction, TransactionRow};
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        crate::db::create_schema(&mut db).await?;
+        for txid in [7u8, 8] {
+            record_transaction(&mut db, 1, &TransactionRow::chain(&[txid], 100, 0)).await?;
+        }
+        let asked = std::sync::Arc::new(std::sync::Mutex::new(vec![]));
+        let mut client: Client = Box::new(NoTransactions(asked.clone()));
+        let session = crate::sync::session::SyncSession::new();
+        let run = session.try_begin().unwrap();
+        let r = fetch_tx_details(&Network::Main, &mut run.held(&mut db), &mut client, 1).await;
+        let err = format!("{:#}", r.unwrap_err());
+        assert!(err.contains("no transaction's details could be fetched"), "{err}");
+        assert_eq!(*asked.lock().unwrap(), vec![vec![7u8], vec![8]]);
+        Ok(())
+    }
+
+    /// #1514: the background pass reads its backlog a batch at a time.
+    #[tokio::test]
+    async fn pending_details_come_in_ordered_batches_after_a_cursor() -> Result<()> {
+        use crate::sync::chain_log::{record_transaction, TransactionRow};
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        crate::db::create_schema(&mut db).await?;
+        for txid in [7u8, 8, 9] {
+            record_transaction(&mut db, 1, &TransactionRow::chain(&[txid], 100, 0)).await?;
+        }
+        let first = pending_details_after(&mut db, 1, 0, 2).await?;
+        assert_eq!(first.iter().map(|(_, t)| t[0]).collect::<Vec<_>>(), [7, 8]);
+        let last = first.last().unwrap().0;
+        let second = pending_details_after(&mut db, 1, last, 2).await?;
+        assert_eq!(second.iter().map(|(_, t)| t[0]).collect::<Vec<_>>(), [9]);
+        assert!(pending_details_after(&mut db, 1, second[0].0, 2).await?.is_empty());
+        Ok(())
     }
 
     #[tokio::test]

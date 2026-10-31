@@ -23,7 +23,6 @@ Stream<SyncEvent> synchronize(
         {required List<int> accounts,
         required int currentHeight,
         required int actionsPerSync,
-        required int transparentLimit,
         required int checkpointAge,
         required bool fast,
         required Coin c}) =>
@@ -31,7 +30,6 @@ Stream<SyncEvent> synchronize(
         accounts: accounts,
         currentHeight: currentHeight,
         actionsPerSync: actionsPerSync,
-        transparentLimit: transparentLimit,
         checkpointAge: checkpointAge,
         fast: fast,
         c: c);

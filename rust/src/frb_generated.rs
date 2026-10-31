@@ -1552,7 +1552,7 @@ fn wire__crate__api__sweep__TransparentScanner_run_impl(
                             flutter_rust_bridge::for_generated::lockable_compute_decode_order(
                                 vec![
                                     flutter_rust_bridge::for_generated::LockableOrderInfo::new(
-                                        &api_that, 0, true,
+                                        &api_that, 0, false,
                                     ),
                                     flutter_rust_bridge::for_generated::LockableOrderInfo::new(
                                         &api_c, 1, false,
@@ -1563,16 +1563,16 @@ fn wire__crate__api__sweep__TransparentScanner_run_impl(
                             match i {
                                 0 => {
                                     api_that_guard =
-                                        Some(api_that.lockable_decode_async_ref_mut().await)
+                                        Some(api_that.lockable_decode_async_ref().await)
                                 }
                                 1 => api_c_guard = Some(api_c.lockable_decode_async_ref().await),
                                 _ => unreachable!(),
                             }
                         }
-                        let mut api_that_guard = api_that_guard.unwrap();
+                        let api_that_guard = api_that_guard.unwrap();
                         let api_c_guard = api_c_guard.unwrap();
                         let output_ok = crate::api::sweep::TransparentScanner::run(
-                            &mut *api_that_guard,
+                            &*api_that_guard,
                             api_address_stream,
                             api_end_height,
                             api_gap_limit,
@@ -9878,7 +9878,6 @@ fn wire__crate__api__sync__synchronize_impl(
             let api_accounts = <Vec<u32>>::sse_decode(&mut deserializer);
             let api_current_height = <u32>::sse_decode(&mut deserializer);
             let api_actions_per_sync = <u32>::sse_decode(&mut deserializer);
-            let api_transparent_limit = <u32>::sse_decode(&mut deserializer);
             let api_checkpoint_age = <u32>::sse_decode(&mut deserializer);
             let api_fast = <bool>::sse_decode(&mut deserializer);
             let api_c = <RustOpaqueMoi<
@@ -9907,7 +9906,6 @@ fn wire__crate__api__sync__synchronize_impl(
                             api_accounts,
                             api_current_height,
                             api_actions_per_sync,
-                            api_transparent_limit,
                             api_checkpoint_age,
                             api_fast,
                             &*api_c_guard,

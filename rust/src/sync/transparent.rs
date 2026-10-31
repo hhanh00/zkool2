@@ -5,7 +5,7 @@
 use anyhow::Result;
 use sqlx::SqliteConnection;
 use sqlx::{sqlite::SqliteRow, Row};
-use tokio::sync::broadcast;
+use tokio_util::sync::CancellationToken;
 use tokio_stream::StreamExt;
 use tracing::debug;
 use zcash_transparent::address::TransparentAddress;
@@ -27,24 +27,22 @@ pub(crate) async fn transparent_sync(
     accounts: &[u32],
     start_height: u32,
     end_height: u32,
-    limit: u32,
-    mut rx_cancel: broadcast::Receiver<()>,
+    cancel: CancellationToken,
 ) -> Result<()> {
     let mut addresses = vec![];
     debug!(
-        "transparent_sync: scanning accounts {:?} from height {} to {} with limit {}",
-        accounts, start_height, end_height, limit
+        "transparent_sync: scanning accounts {:?} from height {} to {}",
+        accounts, start_height, end_height
     );
     for account in accounts {
-        // scan the most recent receive and change addresses, bounded by `limit`
-        let mut rows = sqlx::query("
-                WITH receive AS
-                (SELECT * FROM transparent_address_accounts WHERE account = ?1 AND scope = 0 ORDER BY dindex DESC LIMIT ?2),
-                change AS
-                (SELECT * FROM transparent_address_accounts WHERE account = ?1 AND scope = 1 ORDER BY dindex DESC LIMIT ?2)
-                SELECT id_taddress, address FROM receive UNION ALL SELECT id_taddress, address FROM change")
-            .bind(account)
-            .bind(limit)
+        // Every stored address, receive and change. A window of the newest
+        // ones finalised the range for the rest, and a payment to an older
+        // address then stayed invisible with nothing to say why (#1501).
+        let mut rows = sqlx::query(
+            "SELECT id_taddress, address FROM transparent_address_accounts
+             WHERE account = ?1 ORDER BY scope, dindex",
+        )
+        .bind(account)
             .map(|row: SqliteRow| {
                 let id_taddress: u32 = row.get(0);
                 let address: String = row.get(1);
@@ -72,6 +70,10 @@ pub(crate) async fn transparent_sync(
         addresses.len()
     );
     for (account, address_row) in addresses.iter() {
+        if cancel.is_cancelled() {
+            debug!("Canceling sync");
+            anyhow::bail!("Sync canceled");
+        }
         let my_address = TransparentAddress::decode(&network, &address_row.1)?;
         debug!(
             "transparent_sync: scanning account {} address {} (decoded: {:?})",
@@ -87,7 +89,8 @@ pub(crate) async fn transparent_sync(
         let mut db_tx = connection.begin().await?;
         loop {
             tokio::select! {
-                _ = rx_cancel.recv() => {
+                biased;
+                _ = cancel.cancelled() => {
                     debug!("Canceling sync");
                     anyhow::bail!("Sync canceled");
                 }
