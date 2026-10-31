@@ -399,7 +399,6 @@ mod tests {
             &[1],
             1,
             500,
-            10,
             CancellationToken::new(),
         )
         .await;
@@ -593,6 +592,92 @@ mod tests {
         Ok(())
     }
 
+    /// A lightwalletd with no history that remembers which addresses it was
+    /// asked about.
+    struct AskedAddresses(std::sync::Arc<std::sync::Mutex<Vec<String>>>);
+
+    #[async_trait]
+    impl LwdServer for AskedAddresses {
+        type CompactBlockStream = ReceiverStream<Result<CompactBlock>>;
+        type TransactionStream = ReceiverStream<Result<(u32, Transaction, usize)>>;
+
+        async fn latest_height(&mut self) -> Result<u32> {
+            unimplemented!()
+        }
+        async fn block(&mut self, _: &Network, _: u32) -> Result<CompactBlock> {
+            unimplemented!()
+        }
+        async fn block_range(
+            &mut self,
+            _: &Network,
+            _: u32,
+            _: u32,
+        ) -> Result<Self::CompactBlockStream> {
+            unimplemented!()
+        }
+        async fn transaction(&mut self, _: &Network, _: &[u8]) -> Result<(u32, Transaction)> {
+            unimplemented!()
+        }
+        async fn post_transaction(&mut self, _: u32, _: &[u8]) -> Result<String> {
+            unimplemented!()
+        }
+        async fn taddress_txs(
+            &mut self,
+            _: &Network,
+            taddress: &str,
+            _: u32,
+            _: u32,
+        ) -> Result<Self::TransactionStream> {
+            self.0.lock().unwrap().push(taddress.to_string());
+            let (_tx, rx) = tokio::sync::mpsc::channel(1);
+            Ok(ReceiverStream::new(rx))
+        }
+        async fn mempool_stream(&mut self, _: &Network) -> Result<Self::TransactionStream> {
+            unimplemented!()
+        }
+        async fn tree_state(&mut self, _: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)> {
+            unimplemented!()
+        }
+    }
+
+    /// #1501: every stored address is queried on every range, so the
+    /// checkpoint the scan writes covers all of them.
+    #[tokio::test]
+    async fn the_transparent_scan_asks_about_every_stored_address() -> Result<()> {
+        let mut db = test_db(true).await?;
+        let (xvk, xsk) = software_keys();
+        let source = TransparentKeySource::software(xvk, Some(xsk));
+        let mut expected = vec![];
+        for (scope, dindex) in [(0u32, 0u32), (0, 1), (0, 2), (1, 0)] {
+            let addr = source.derive(&Network::Main, scope, dindex).await?;
+            crate::db::store_account_transparent_addr(&mut db, 1, scope, dindex, addr.sk, &addr.pk, &addr.address, false)
+                .await?;
+            expected.push(addr.address);
+        }
+        let asked = std::sync::Arc::new(std::sync::Mutex::new(vec![]));
+        let mut client: Client = Box::new(AskedAddresses(asked.clone()));
+        super::super::transparent::transparent_sync(
+            &Network::Main,
+            &mut db,
+            &mut client,
+            &[1],
+            1,
+            500,
+            CancellationToken::new(),
+        )
+        .await?;
+        let mut asked = asked.lock().unwrap().clone();
+        asked.sort();
+        expected.sort();
+        assert_eq!(asked, expected);
+        let (h,): (u32,) =
+            sqlx::query_as("SELECT height FROM sync_heights WHERE account = 1 AND pool = 0")
+                .fetch_one(&mut db)
+                .await?;
+        assert_eq!(h, 500);
+        Ok(())
+    }
+
     /// #1571: a cancel that landed before the scanner started is seen by
     /// it; nothing is asked of the server.
     #[tokio::test]
@@ -613,7 +698,6 @@ mod tests {
             &[1],
             1,
             500,
-            10,
             cancel,
         )
         .await;

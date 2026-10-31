@@ -32,7 +32,6 @@ pub use sweep::transparent_sweep;
 pub(crate) use transparent::transparent_sync;
 
 pub const DEFAULT_ACTIONS_PER_SYNC: u32 = 10000u32;
-pub const DEFAULT_TRANSPARENT_LIMIT: u32 = 100u32;
 
 pub use zcash_trees::types::SyncError;
 pub use zcash_trees::types::{BlockHeader, Issuance, Note, Transaction, WarpSyncMessage, UTXO};
@@ -59,7 +58,6 @@ pub async fn synchronize_within<S: Sink<SyncEvent> + Send + 'static>(
     accounts: Vec<u32>,
     current_height: u32,
     actions_per_sync: u32,
-    transparent_limit: u32,
     checkpoint_age: u32,
     skip_details: bool,
     c: &Coin,
@@ -73,7 +71,6 @@ pub async fn synchronize_within<S: Sink<SyncEvent> + Send + 'static>(
     let params = SyncParams {
         current_height,
         actions_per_sync,
-        transparent_limit,
         checkpoint_age,
         skip_details,
     };
@@ -112,7 +109,6 @@ fn finish(result: Result<()>, cancelled: bool, height: u32) -> Result<SyncOutcom
 struct SyncParams {
     current_height: u32,
     actions_per_sync: u32,
-    transparent_limit: u32,
     checkpoint_age: u32,
     skip_details: bool,
 }
@@ -239,7 +235,6 @@ async fn run_range(
         &account_ids,
         range.start,
         range.end,
-        params.transparent_limit,
         run.cancellation(),
     )
     .await?;

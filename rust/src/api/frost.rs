@@ -150,7 +150,6 @@ pub(crate) async fn sync_frost_accounts(
         accounts,
         height,
         DEFAULT_ACTIONS_PER_SYNC,
-        1,
         100,
         false,
         c,

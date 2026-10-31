@@ -980,7 +980,6 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
           accounts: accounts.map((a) => a.id).toList(),
           currentHeight: syncHeight,
           actionsPerSync: int.parse(settings.actionsPerSync),
-          transparentLimit: 100,
           checkpointAge: 500_000,
           fast: true,
           c: c,

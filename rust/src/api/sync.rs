@@ -30,7 +30,6 @@ pub async fn synchronize(
     accounts: Vec<u32>,
     current_height: u32,
     actions_per_sync: u32,
-    transparent_limit: u32,
     checkpoint_age: u32,
     fast: bool,
     c: &Coin,
@@ -47,7 +46,6 @@ pub async fn synchronize(
         accounts,
         current_height,
         actions_per_sync,
-        transparent_limit,
         checkpoint_age,
         skip_details: fast,
     };
