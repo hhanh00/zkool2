@@ -160,6 +160,10 @@ pub async fn observe_sign(
     if let Some(bc) = broadcast {
         ingest_coordinator_memos(&mut *connection, account, bc, &sighash, params.coordinator as u16)
             .await?;
+        let expected: Vec<Vec<u8>> = super::exec::input_randomizers(&pczt_pkg)?
+            .iter()
+            .map(|r| r.serialize())
+            .collect();
         ingest_sigpackage_memos(
             &mut *connection,
             account,
@@ -168,6 +172,7 @@ pub async fn observe_sign(
             nsigs,
             params.coordinator as u16,
             dkg_params.n as u16,
+            &expected,
         )
         .await?;
     }
@@ -518,6 +523,10 @@ async fn ingest_coordinator_memos(
 /// The coordinator's signing-package parts: each adds one signer's
 /// commitments to the input's rows and sets the input's randomizer. The
 /// package itself is built by `assemble_sigpackages` once every part is in.
+/// `expected` is the randomizer of each input as derived from our own PCZT:
+/// a part that carries another is dropped, so the coordinator's value is a
+/// consistency check and never what we sign with (#1535).
+#[allow(clippy::too_many_arguments)]
 async fn ingest_sigpackage_memos(
     connection: &mut SqliteConnection,
     account: u32,
@@ -526,8 +535,10 @@ async fn ingest_sigpackage_memos(
     nsigs: u32,
     coordinator: u16,
     participant_count: u16,
+    expected: &[Vec<u8>],
 ) -> Result<()> {
     let sighash = sighash.to_vec();
+    let expected = expected.to_vec();
     decode_frost_memos(
         connection,
         account,
@@ -549,6 +560,15 @@ async fn ingest_sigpackage_memos(
                 || SigningCommitments::<P>::deserialize(&part.commitment).is_err()
                 || Randomizer::deserialize(&part.randomizer).is_err()
             {
+                return Ok(());
+            }
+            if expected.get(pkg.idx as usize) != Some(&part.randomizer) {
+                tracing::warn!(
+                    "dropping a signing package part for input {} from {}: its randomizer \
+                     is not the one our PCZT derives",
+                    pkg.idx,
+                    pkg.from_id
+                );
                 return Ok(());
             }
             sqlx::query(
@@ -765,9 +785,15 @@ mod sigpackage_tests {
         .unwrap();
     }
 
-    /// What `observe_sign` does with the parts, in its order.
+    /// What `observe_sign` does with the parts, in its order; the session's
+    /// randomizer stands for the one the member derives from its PCZT.
     async fn observe_parts(db: &mut SqliteConnection, s: &Session) {
-        ingest_sigpackage_memos(db, ACCOUNT, BROADCAST, &s.sighash, 1, COORDINATOR, s.t)
+        observe_parts_expecting(db, s, &s.randomizer).await;
+    }
+
+    async fn observe_parts_expecting(db: &mut SqliteConnection, s: &Session, expected: &[u8]) {
+        let expected = vec![expected.to_vec()];
+        ingest_sigpackage_memos(db, ACCOUNT, BROADCAST, &s.sighash, 1, COORDINATOR, s.t, &expected)
             .await
             .unwrap();
         assemble_sigpackages(db, ACCOUNT, &s.sighash, 1, s.t as usize)
@@ -819,6 +845,30 @@ mod sigpackage_tests {
         // Another pass over the same memos changes nothing.
         observe_parts(&mut db, &s).await;
         assert_eq!(stored(&mut db).await, (package, randomizer, rows));
+    }
+
+    /// #1535: a part whose randomizer is not the one the member's PCZT
+    /// derives is dropped, commitment and all; the member never signs with
+    /// a coordinator-chosen value.
+    #[tokio::test]
+    async fn a_part_with_another_randomizer_is_dropped() {
+        let s = session(2);
+        let mut db = member_db(&s).await;
+        for (vout, id) in s.commitments.keys().enumerate() {
+            deliver(&mut db, vout as u32, &part_memo(&s, id, false)).await;
+        }
+        let other = Randomizer::new(OsRng, &SigningPackage::<P>::deserialize(&s.package).unwrap())
+            .unwrap()
+            .serialize();
+        observe_parts_expecting(&mut db, &s, &other).await;
+        let (package, randomizer, rows) = stored(&mut db).await;
+        assert_eq!(package, None);
+        assert_eq!(randomizer, None);
+        assert_eq!(rows, 1, "only the member's own commitment row");
+
+        // The same parts, checked against the right value, are taken.
+        observe_parts(&mut db, &s).await;
+        assert_eq!(stored(&mut db).await.0.as_deref(), Some(s.package.as_slice()));
     }
 
     /// With a part still in flight the member keeps waiting: the

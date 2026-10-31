@@ -234,7 +234,6 @@ pub async fn make_sigpackages(
         .context("broadcast address not set")?;
 
     let pczt_pkg = load_pczt_pkg(&mut *connection).await?;
-    let pczt = Pczt::parse(&pczt_pkg.pczt).map_err(|e| anyhow::anyhow!("invalid PCZT: {e:?}"))?;
     check_indices(&pczt_pkg)?;
 
     let commitments_vec = load_commitments(&mut *connection, state.account, &state.sighash, state.nsigs).await?;
@@ -243,46 +242,10 @@ pub async fn make_sigpackages(
     let signing_key = load_signing_key(&mut *tx, state.account).await?;
     let mut recipients = vec![];
 
+    let randomizers = input_randomizers(&pczt_pkg)?;
     for (idx, commitment_map) in commitments_vec.iter().enumerate() {
         let sigpackage = SigningPackage::new(commitment_map.clone(), &state.sighash);
-
-        // Extract randomizer (alpha) from the PCZT for this input. A package
-        // whose index names no action ends the pass with an error, not a
-        // panic that stops the driver (#1482).
-        let signer = LowLevelSigner::new(pczt.clone());
-        let mut alpha: Option<Fq> = None;
-        let action_index = if idx < pczt_pkg.orchard_indices.len() {
-            let action_index = pczt_pkg.orchard_indices[idx];
-            signer
-                .sign_orchard_with(|_, bundle, _| {
-                    alpha = bundle
-                        .actions()
-                        .get(action_index)
-                        .and_then(|action| *action.spend().alpha());
-                    Ok::<_, pczt::roles::low_level_signer::OrchardParseError>(())
-                })
-                .map_err(|e| anyhow::anyhow!("invalid Orchard bundle: {e:?}"))?;
-            action_index
-        } else {
-            let action_index = pczt_pkg.ironwood_indices[idx - pczt_pkg.orchard_indices.len()];
-            signer
-                .sign_ironwood_with(|_, bundle, _| {
-                    alpha = bundle
-                        .actions()
-                        .get(action_index)
-                        .and_then(|action| *action.spend().alpha());
-                    Ok::<_, pczt::roles::low_level_signer::OrchardParseError>(())
-                })
-                .map_err(|e| anyhow::anyhow!("invalid Ironwood bundle: {e:?}"))?;
-            action_index
-        };
-        let alpha = alpha.with_context(|| {
-            format!("input {idx}: action {action_index} has no spend randomizer in the PCZT")
-        })?;
-        let randomizer = Randomizer::from_scalar(
-            pasta_curves_legacy::Fq::from_repr(alpha.to_repr())
-                .expect("same canonical Pallas scalar encoding"),
-        );
+        let randomizer = randomizers[idx];
 
         let sigpackage_bytes = sigpackage.serialize()?;
         sqlx::query(
@@ -354,16 +317,20 @@ pub async fn send_sigshares(
     let spkg = load_key_package(&mut *connection, state.account).await?;
     let nonces = load_nonces(&mut *connection, state.account, &state.sighash).await?;
     let sigpackages = load_sigpackages(&mut *connection, state.account, &state.sighash).await?;
+    // The randomizer comes from our own PCZT, never from the coordinator's
+    // parts (#1535); the ingest dropped any part that disagreed with it.
+    let randomizers = input_randomizers(&load_pczt_pkg(&mut *connection).await?)?;
 
     let mut tx = connection.begin().await?;
     let signing_key = load_signing_key(&mut *tx, state.account).await?;
     let mut recipients = vec![];
 
-    for (idx, ((sigpackage, randomizer), nonce)) in
-        sigpackages.iter().zip(nonces.iter()).enumerate()
-    {
+    for (idx, ((sigpackage, _), nonce)) in sigpackages.iter().zip(nonces.iter()).enumerate() {
+        let randomizer = *randomizers
+            .get(idx)
+            .with_context(|| format!("input {idx} has no randomizer in the PCZT"))?;
         let share =
-            sign(sigpackage, nonce, &spkg, *randomizer).context("Failed to produce sigshare")?;
+            sign(sigpackage, nonce, &spkg, randomizer).context("Failed to produce sigshare")?;
         let share_bytes = share.serialize();
 
         sqlx::query(
@@ -574,6 +541,55 @@ async fn transaction_recorded(
     .fetch_one(&mut *connection)
     .await?;
     Ok(known)
+}
+
+/// The randomizer of every input, from the PCZT: the spend's `alpha`, which
+/// the transaction's `rk` and sighash commit to, so it is the one value
+/// that can be right. Every participant holds the PCZT and derives it
+/// here; the coordinator sends it in its parts only as a consistency
+/// check (#1535). A package whose index names no action is an error, not
+/// a panic that stops the driver (#1482).
+pub(super) fn input_randomizers(pczt_pkg: &crate::api::pay::PcztPackage) -> Result<Vec<Randomizer>> {
+    let pczt = Pczt::parse(&pczt_pkg.pczt).map_err(|e| anyhow::anyhow!("invalid PCZT: {e:?}"))?;
+    let mut randomizers = Vec::with_capacity(pczt_pkg.orchard_indices.len() + pczt_pkg.ironwood_indices.len());
+    let inputs = pczt_pkg
+        .orchard_indices
+        .iter()
+        .map(|&i| (false, i))
+        .chain(pczt_pkg.ironwood_indices.iter().map(|&i| (true, i)));
+    for (idx, (ironwood, action_index)) in inputs.enumerate() {
+        let signer = LowLevelSigner::new(pczt.clone());
+        let mut alpha: Option<Fq> = None;
+        if ironwood {
+            signer
+                .sign_ironwood_with(|_, bundle, _| {
+                    alpha = bundle
+                        .actions()
+                        .get(action_index)
+                        .and_then(|action| *action.spend().alpha());
+                    Ok::<_, pczt::roles::low_level_signer::OrchardParseError>(())
+                })
+                .map_err(|e| anyhow::anyhow!("invalid Ironwood bundle: {e:?}"))?;
+        } else {
+            signer
+                .sign_orchard_with(|_, bundle, _| {
+                    alpha = bundle
+                        .actions()
+                        .get(action_index)
+                        .and_then(|action| *action.spend().alpha());
+                    Ok::<_, pczt::roles::low_level_signer::OrchardParseError>(())
+                })
+                .map_err(|e| anyhow::anyhow!("invalid Orchard bundle: {e:?}"))?;
+        }
+        let alpha = alpha.with_context(|| {
+            format!("input {idx}: action {action_index} has no spend randomizer in the PCZT")
+        })?;
+        randomizers.push(Randomizer::from_scalar(
+            pasta_curves_legacy::Fq::from_repr(alpha.to_repr())
+                .expect("same canonical Pallas scalar encoding"),
+        ));
+    }
+    Ok(randomizers)
 }
 
 /// The package names each input's action once. A duplicate would sign one
