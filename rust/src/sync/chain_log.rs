@@ -657,6 +657,23 @@ pub async fn lock_notes(
     Ok(())
 }
 
+/// Clear the lock on the notes with these input keys: the transaction that
+/// spent them will not be mined.
+pub async fn unlock_notes(
+    conn: &mut SqliteConnection,
+    account: u32,
+    nullifiers: &[Vec<u8>],
+) -> Result<()> {
+    for nf in nullifiers {
+        sqlx::query("UPDATE notes SET locked = FALSE WHERE account = ? AND nullifier = ?")
+            .bind(account)
+            .bind(nf)
+            .execute(&mut *conn)
+            .await?;
+    }
+    Ok(())
+}
+
 /// Record a note's witness at a checkpoint height.
 pub async fn record_witness(
     conn: &mut SqliteConnection,

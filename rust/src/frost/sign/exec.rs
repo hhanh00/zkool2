@@ -40,10 +40,11 @@ use crate::{
     api::coin::Network,
     db::put_prop,
     frost::{
-        dkg::{delete_frost_state, publish},
+        dkg::delete_frost_state,
         protocol::{
             ensure_broadcast_account_from_sk, ensure_mailbox_from_seed, group_sk,
-            record_publish, session_broadcast_sk, SIGN_LAST_TXID_PROP,
+            publish_expired, resend_publish, send_staged, session_broadcast_sk,
+            stage_publish, SIGN_LAST_TXID_PROP,
         },
         FrostSigMessage, P,
     },
@@ -123,14 +124,15 @@ pub async fn announce_coordinator(
     }
     put_prop(&mut *tx, COORDINATOR_ADDRESS_PROP, address).await?;
     let recipients = [(broadcast_address, msg.encode_with_prefix(COORDINATOR_PREFIX)?)];
-    match publish(network, &mut tx, state.funding_account, client, &recipients).await {
-        Ok(txid) => record_publish(&mut tx, SIGN_LAST_TXID_PROP, &txid).await?,
+    let staged = match stage_publish(network, &mut tx, state.funding_account, client, &recipients, SIGN_LAST_TXID_PROP).await {
+        Ok(staged) => staged,
         Err(e) if crate::pay::plan::is_no_feasible_selection(&e) => {
             return Ok(SendResult::WaitingForFunds);
         }
         Err(e) => return Err(e),
-    }
+    };
     tx.commit().await?;
+    send_staged(client, &staged).await?;
     Ok(SendResult::Sent)
 }
 
@@ -199,18 +201,22 @@ pub async fn send_commitments(
     }
 
     // Coordinator does not send to itself — its rows are already in the DB.
+    let mut staged = None;
     if !state.is_coordinator() {
         let refs: Vec<(&str, Vec<u8>)> =
             recipients.iter().map(|(a, d)| (a.as_str(), d.clone())).collect();
-        match publish(network, &mut tx, state.funding_account, client, &refs).await {
-            Ok(txid) => record_publish(&mut tx, SIGN_LAST_TXID_PROP, &txid).await?,
+        staged = match stage_publish(network, &mut tx, state.funding_account, client, &refs, SIGN_LAST_TXID_PROP).await {
+            Ok(staged) => Some(staged),
             Err(e) if crate::pay::plan::is_no_feasible_selection(&e) => {
                 return Ok(SendResult::WaitingForFunds);
             }
             Err(e) => return Err(e),
-        }
+        };
     }
     tx.commit().await?;
+    if let Some(staged) = staged {
+        send_staged(client, &staged).await?;
+    }
     Ok(SendResult::Sent)
 }
 
@@ -320,14 +326,15 @@ pub async fn make_sigpackages(
 
     let refs: Vec<(&str, Vec<u8>)> =
         recipients.iter().map(|(a, d)| (a.as_str(), d.clone())).collect();
-    match publish(network, &mut tx, state.funding_account, client, &refs).await {
-        Ok(txid) => record_publish(&mut tx, SIGN_LAST_TXID_PROP, &txid).await?,
+    let staged = match stage_publish(network, &mut tx, state.funding_account, client, &refs, SIGN_LAST_TXID_PROP).await {
+        Ok(staged) => staged,
         Err(e) if crate::pay::plan::is_no_feasible_selection(&e) => {
             return Ok(SendResult::WaitingForFunds);
         }
         Err(e) => return Err(e),
-    }
+    };
     tx.commit().await?;
+    send_staged(client, &staged).await?;
     Ok(SendResult::Sent)
 }
 
@@ -384,19 +391,52 @@ pub async fn send_sigshares(
         recipients.push((coordinator_address.to_string(), msg.encode_with_prefix(SIGSHARE_PREFIX)?));
     }
 
+    let mut staged = None;
     if !state.is_coordinator() {
         let refs: Vec<(&str, Vec<u8>)> =
             recipients.iter().map(|(a, d)| (a.as_str(), d.clone())).collect();
-        match publish(network, &mut tx, state.funding_account, client, &refs).await {
-            Ok(txid) => record_publish(&mut tx, SIGN_LAST_TXID_PROP, &txid).await?,
+        staged = match stage_publish(network, &mut tx, state.funding_account, client, &refs, SIGN_LAST_TXID_PROP).await {
+            Ok(staged) => Some(staged),
             Err(e) if crate::pay::plan::is_no_feasible_selection(&e) => {
                 return Ok(SendResult::WaitingForFunds);
             }
             Err(e) => return Err(e),
-        }
+        };
     }
     tx.commit().await?;
+    if let Some(staged) = staged {
+        send_staged(client, &staged).await?;
+    }
     Ok(SendResult::Sent)
+}
+
+// ── WaitOwnPublish ────────────────────────────────────────────────────────────
+
+/// What a pass found when it met its own unmined message.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OwnPublish {
+    /// Past the message's expiry: the marker is cleared and its notes
+    /// unlocked, so the planner sends the message afresh.
+    Expired,
+    /// Resent; the pass waits for the block that mines it.
+    Waiting,
+}
+
+/// The wait on our own message is not idle (#1565): the staged transaction
+/// is resent, which repairs a broadcast lost to a crash or a dropped
+/// mempool entry and is a no-op for a node that has it; and once the tip
+/// passes its expiry the message is given up so the next pass rebuilds it.
+pub async fn own_publish(
+    connection: &mut SqliteConnection,
+    client: &mut Client,
+    state: &SignState,
+    height: u32,
+) -> Result<OwnPublish> {
+    if publish_expired(connection, SIGN_LAST_TXID_PROP, state.funding_account, height).await? {
+        return Ok(OwnPublish::Expired);
+    }
+    resend_publish(connection, client, SIGN_LAST_TXID_PROP).await?;
+    Ok(OwnPublish::Waiting)
 }
 
 // ── Aggregate (Phase 4, coordinator) ─────────────────────────────────────────

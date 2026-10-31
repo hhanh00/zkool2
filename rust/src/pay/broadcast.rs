@@ -135,16 +135,44 @@ pub async fn lock_spent_notes(
     account: u32,
     tx_bytes: &[u8],
 ) -> Result<()> {
-    let Some(tx) = [
+    let Some(nullifiers) = spent_nullifiers(tx_bytes)? else {
+        info!("lock_spent_notes: could not parse transaction; locking nothing");
+        return Ok(());
+    };
+    crate::sync::chain_log::lock_notes(conn, account, &nullifiers).await
+}
+
+/// The inverse of [`lock_spent_notes`], for a transaction the network will
+/// not mine any more: its inputs are spendable again.
+pub async fn unlock_spent_notes(
+    conn: &mut SqliteConnection,
+    account: u32,
+    tx_bytes: &[u8],
+) -> Result<()> {
+    let Some(nullifiers) = spent_nullifiers(tx_bytes)? else {
+        info!("unlock_spent_notes: could not parse transaction; unlocking nothing");
+        return Ok(());
+    };
+    crate::sync::chain_log::unlock_notes(conn, account, &nullifiers).await
+}
+
+/// A serialized transaction, under whichever network upgrade it parses.
+pub fn parse_transaction(tx_bytes: &[u8]) -> Option<Transaction> {
+    [
         BranchId::Nu6_3,
         BranchId::Nu6_2,
         BranchId::Nu6,
         BranchId::Nu5,
     ]
     .into_iter()
-    .find_map(|branch| Transaction::read(&mut &tx_bytes[..], branch).ok()) else {
-        info!("lock_spent_notes: could not parse transaction; locking nothing");
-        return Ok(());
+    .find_map(|branch| Transaction::read(&mut &tx_bytes[..], branch).ok())
+}
+
+/// The input keys of a transaction, as the `nullifier` column stores them;
+/// `None` when the bytes do not parse.
+fn spent_nullifiers(tx_bytes: &[u8]) -> Result<Option<Vec<Vec<u8>>>> {
+    let Some(tx) = parse_transaction(tx_bytes) else {
+        return Ok(None);
     };
     let tx_data = tx.into_data();
 
@@ -182,8 +210,7 @@ pub async fn lock_spent_notes(
             nullifiers.push(v.nullifier().to_bytes().to_vec());
         }
     }
-
-    crate::sync::chain_log::lock_notes(conn, account, &nullifiers).await
+    Ok(Some(nullifiers))
 }
 
 #[cfg(test)]

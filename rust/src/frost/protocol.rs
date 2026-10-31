@@ -787,51 +787,39 @@ pub fn to_arb_memo(data: &[u8]) -> Vec<u8> {
 pub const DKG_LAST_TXID_PROP: &str = "dkg_last_txid";
 pub const SIGN_LAST_TXID_PROP: &str = "frost_last_txid";
 
-/// Remembers the txid of a message we just published, under [key].
-pub async fn record_publish(
-    connection: &mut SqliteConnection,
-    key: &str,
-    txid_hex: &str,
-) -> Result<()> {
-    crate::db::put_prop(connection, key, txid_hex).await
+/// A protocol message is published write-ahead (#1565): the signed
+/// transaction, its txid and its expiry height are committed under [key],
+/// with the locks on the notes it spends, before it is broadcast. From then
+/// on the wallet can always resend exactly those bytes, so a crash between
+/// the commit and the broadcast, or a transaction the mempool dropped, is
+/// repaired by the next pass rather than waited on. A resend of a
+/// transaction the node already has is a no-op.
+///
+/// The marker is cleared when the funding account's scan records the
+/// transaction ([`publish_unmined`]), or when the tip passes its expiry
+/// height ([`publish_expired`]), which also unlocks its inputs so the next
+/// message is planned afresh.
+fn publish_tx_prop(key: &str) -> String {
+    format!("{key}_tx")
 }
 
-/// Whether the message recorded under [key] is still unmined: the funding
-/// account's scan has not recorded its transaction yet. A protocol publishes
-/// its next message only once the last one is mined, so that two messages
-/// never compete for the same note and a funds wait means short funds.
-pub async fn publish_unmined(
-    connection: &mut SqliteConnection,
-    key: &str,
-    funding_account: u32,
-) -> Result<bool> {
-    let Some(txid_hex) = crate::db::get_prop(connection, key).await? else {
-        return Ok(false);
-    };
-    let Ok(txid) = hex::decode(&txid_hex) else {
-        return Ok(false);
-    };
-    // The server reports a txid in display order, the scan stores it in
-    // internal order; accept either.
-    let reversed: Vec<u8> = txid.iter().rev().copied().collect();
-    let (mined,): (bool,) = sqlx::query_as(
-        "SELECT EXISTS(SELECT 1 FROM transactions WHERE account = ? AND (txid = ? OR txid = ?))",
-    )
-    .bind(funding_account)
-    .bind(&txid)
-    .bind(&reversed)
-    .fetch_one(&mut *connection)
-    .await?;
-    Ok(!mined)
+fn publish_expiry_prop(key: &str) -> String {
+    format!("{key}_expiry")
 }
 
-pub async fn publish(
+/// Plans, signs and stages the message transaction for [recipients] from
+/// [account], in the caller's transaction: the notes it spends are locked
+/// and the marker is written, nothing is sent. Returns the transaction
+/// bytes for [`send_staged`]. An unfundable message fails with the
+/// planner's `NoFeasibleSelection`, as before.
+pub async fn stage_publish(
     network: &Network,
     connection: &mut SqliteConnection,
     account: u32,
     client: &mut Client,
     recipients: &[(&str, Vec<u8>)],
-) -> Result<String, anyhow::Error> {
+    key: &str,
+) -> Result<Vec<u8>> {
     let recipients = recipients
         .iter()
         .map(|(address, data)| Recipient {
@@ -859,15 +847,187 @@ pub async fn publish(
         &PlanMode::Standard,
     )
     .await
-    .context("plan_transaction in DKG publish")?;
+    .context("plan_transaction in protocol publish")?;
+    let expiry = *pczt::Pczt::parse(&pczt.pczt)
+        .map_err(|e| anyhow::anyhow!("invalid PCZT: {e:?}"))?
+        .global()
+        .expiry_height();
     let pczt = sign(network, connection, account, pczt, &())
         .await
-        .context("sign_transaction in DKG publish")?;
-    // Broadcasting locks the funding notes this transaction spent so the
-    // next round does not re-select them before the spend is mined.
-    crate::pay::broadcast_package_under_session(connection, client, account, &pczt)
+        .context("sign_transaction in protocol publish")?;
+    let tx_bytes = crate::pay::plan::extract_transaction(&pczt)
         .await
-        .context("broadcast in DKG publish")
+        .context("extract_transaction in protocol publish")?;
+    let txid = crate::pay::broadcast::parse_transaction(&tx_bytes)
+        .context("the signed message transaction does not parse")?
+        .txid();
+
+    crate::pay::broadcast::lock_spent_notes(connection, account, &tx_bytes).await?;
+    crate::db::put_prop(connection, key, &hex::encode(txid.as_ref())).await?;
+    crate::db::put_prop(connection, &publish_tx_prop(key), &hex::encode(&tx_bytes)).await?;
+    crate::db::put_prop(connection, &publish_expiry_prop(key), &expiry.to_string()).await?;
+    Ok(tx_bytes)
+}
+
+/// Broadcasts staged bytes. A failure is the caller's to report; the marker
+/// stays, and the next pass resends.
+pub async fn send_staged(client: &mut Client, tx_bytes: &[u8]) -> Result<String> {
+    let sent = crate::pay::broadcast::post(client, tx_bytes).await?;
+    Ok(sent.response)
+}
+
+/// Resends the transaction staged under [key], if any. A rejection is
+/// logged, not returned: the node already holding the transaction answers
+/// one, and so does a transaction the scan is about to record.
+pub async fn resend_publish(
+    connection: &mut SqliteConnection,
+    client: &mut Client,
+    key: &str,
+) -> Result<()> {
+    let Some(tx_hex) = crate::db::get_prop(connection, &publish_tx_prop(key)).await? else {
+        return Ok(());
+    };
+    let tx_bytes = hex::decode(&tx_hex).context("the staged message transaction is not hex")?;
+    match crate::pay::broadcast::post(client, &tx_bytes).await {
+        Ok(sent) => info!("resent protocol message {}", sent.response),
+        Err(e) => warn!("resending the protocol message: {e}"),
+    }
+    Ok(())
+}
+
+/// Forgets the message staged under [key].
+pub async fn clear_publish(connection: &mut SqliteConnection, key: &str) -> Result<()> {
+    for prop in [key.to_string(), publish_tx_prop(key), publish_expiry_prop(key)] {
+        sqlx::query("DELETE FROM props WHERE key = ?")
+            .bind(prop)
+            .execute(&mut *connection)
+            .await?;
+    }
+    Ok(())
+}
+
+/// Whether the message recorded under [key] is still unmined: the funding
+/// account's scan has not recorded its transaction yet. A protocol publishes
+/// its next message only once the last one is mined, so that two messages
+/// never compete for the same note and a funds wait means short funds. A
+/// marker whose transaction is recorded is cleared here. A marker that is
+/// not a txid is an error: only a write to `props` produces one, and it
+/// must not pass for "nothing pending".
+pub async fn publish_unmined(
+    connection: &mut SqliteConnection,
+    key: &str,
+    funding_account: u32,
+) -> Result<bool> {
+    let Some(txid_hex) = crate::db::get_prop(connection, key).await? else {
+        return Ok(false);
+    };
+    let txid = hex::decode(&txid_hex)
+        .ok()
+        .filter(|txid| txid.len() == 32)
+        .with_context(|| format!("the {key} marker is not a transaction id: {txid_hex}"))?;
+    // The server reports a txid in display order, the scan stores it in
+    // internal order; accept either.
+    let reversed: Vec<u8> = txid.iter().rev().copied().collect();
+    let (mined,): (bool,) = sqlx::query_as(
+        "SELECT EXISTS(SELECT 1 FROM transactions WHERE account = ? AND (txid = ? OR txid = ?))",
+    )
+    .bind(funding_account)
+    .bind(&txid)
+    .bind(&reversed)
+    .fetch_one(&mut *connection)
+    .await?;
+    if mined {
+        clear_publish(connection, key).await?;
+    }
+    Ok(!mined)
+}
+
+/// Whether the tip has passed the expiry of the message staged under [key].
+/// Then the network will never mine it: the marker is cleared and the notes
+/// it locked are released, so the next pass plans the message afresh.
+pub async fn publish_expired(
+    connection: &mut SqliteConnection,
+    key: &str,
+    funding_account: u32,
+    height: u32,
+) -> Result<bool> {
+    let Some(expiry) = crate::db::get_prop(connection, &publish_expiry_prop(key)).await? else {
+        return Ok(false);
+    };
+    let expiry: u32 = expiry
+        .parse()
+        .with_context(|| format!("the {key} expiry marker is not a height: {expiry}"))?;
+    if expiry == 0 || height < expiry {
+        return Ok(false);
+    }
+    warn!("protocol message under {key} expired at {expiry}, tip is {height}; it will be rebuilt");
+    if let Some(tx_hex) = crate::db::get_prop(connection, &publish_tx_prop(key)).await? {
+        let tx_bytes = hex::decode(&tx_hex).context("the staged message transaction is not hex")?;
+        crate::pay::broadcast::unlock_spent_notes(connection, funding_account, &tx_bytes).await?;
+    }
+    clear_publish(connection, key).await?;
+    Ok(true)
+}
+
+#[cfg(test)]
+mod publish_tests {
+    use super::*;
+    use crate::db::create_schema;
+
+    async fn wallet() -> SqliteConnection {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        create_schema(&mut db).await.unwrap();
+        db
+    }
+
+    async fn stage(db: &mut SqliteConnection, key: &str, txid: &str, expiry: u32) {
+        crate::db::put_prop(db, key, txid).await.unwrap();
+        crate::db::put_prop(db, &publish_tx_prop(key), "00").await.unwrap();
+        crate::db::put_prop(db, &publish_expiry_prop(key), &expiry.to_string()).await.unwrap();
+    }
+
+    const TXID: &str = "0101010101010101010101010101010101010101010101010101010101010101";
+
+    #[tokio::test]
+    async fn the_marker_clears_once_the_scan_records_the_transaction() {
+        let mut db = wallet().await;
+        assert!(!publish_unmined(&mut db, SIGN_LAST_TXID_PROP, 2).await.unwrap());
+        stage(&mut db, SIGN_LAST_TXID_PROP, TXID, 1000).await;
+        assert!(publish_unmined(&mut db, SIGN_LAST_TXID_PROP, 2).await.unwrap());
+        sqlx::query("INSERT INTO transactions(txid, height, account) VALUES (?, 900, 2)")
+            .bind(hex::decode(TXID).unwrap())
+            .execute(&mut db)
+            .await
+            .unwrap();
+        assert!(!publish_unmined(&mut db, SIGN_LAST_TXID_PROP, 2).await.unwrap());
+        assert!(crate::db::get_prop(&mut db, SIGN_LAST_TXID_PROP).await.unwrap().is_none());
+        assert!(crate::db::get_prop(&mut db, &publish_tx_prop(SIGN_LAST_TXID_PROP))
+            .await
+            .unwrap()
+            .is_none());
+    }
+
+    #[tokio::test]
+    async fn the_marker_clears_past_its_expiry_and_not_before() {
+        let mut db = wallet().await;
+        stage(&mut db, DKG_LAST_TXID_PROP, TXID, 1000).await;
+        assert!(!publish_expired(&mut db, DKG_LAST_TXID_PROP, 2, 999).await.unwrap());
+        assert!(publish_unmined(&mut db, DKG_LAST_TXID_PROP, 2).await.unwrap());
+        assert!(publish_expired(&mut db, DKG_LAST_TXID_PROP, 2, 1000).await.unwrap());
+        assert!(!publish_unmined(&mut db, DKG_LAST_TXID_PROP, 2).await.unwrap());
+        assert!(!publish_expired(&mut db, DKG_LAST_TXID_PROP, 2, 5000).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn a_malformed_marker_is_an_error() {
+        let mut db = wallet().await;
+        crate::db::put_prop(&mut db, SIGN_LAST_TXID_PROP, "not a txid").await.unwrap();
+        let m = publish_unmined(&mut db, SIGN_LAST_TXID_PROP, 2)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(m.contains("not a transaction id"), "{m}");
+    }
 }
 
 /// The participant's private DKG mailbox: an internal account whose seed

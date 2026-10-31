@@ -40,7 +40,7 @@ use crate::{
 use super::state::{DkgState, PendingPublish};
 use super::{
     delete_frost_state, get_addresses, get_coordinator_broadcast_account, get_mailbox_account,
-    publish, DkgInit, DkgRound0, DkgRound1, DkgRound2, Round,
+    DkgInit, DkgRound0, DkgRound1, DkgRound2, Round,
 };
 
 /// EnsureAccounts: create the private mailbox and the shared broadcast
@@ -167,8 +167,12 @@ async fn store_pending(
     Ok(())
 }
 
-/// Send the staged bytes, if any, and clear the marker only afterwards. A
-/// crash in between retries the identical bytes; peers dedup them.
+/// Plan, sign and stage the transaction for the staged bytes, if any, then
+/// send it. The signed transaction, its marker and the note locks commit
+/// together with the clearing of the staged bytes, before the broadcast
+/// (#1565): a crash in between is repaired by the resend in the publish
+/// wait, and a message that could not be funded keeps its bytes staged for
+/// the next pass.
 async fn publish_staged(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -197,20 +201,51 @@ async fn publish_staged(
             Ok((addr.as_str(), msg.encode_with_prefix(&prefix)?))
         })
         .collect::<Result<_>>()?;
-    let txid = publish(network, connection, account, client, &refs)
-        .await
-        .context("publish DKG package")?;
-    crate::frost::protocol::record_publish(
-        connection,
+    let mut tx = connection.begin().await?;
+    let staged = crate::frost::protocol::stage_publish(
+        network,
+        &mut tx,
+        account,
+        client,
+        &refs,
         crate::frost::protocol::DKG_LAST_TXID_PROP,
-        &txid,
     )
-    .await?;
+    .await
+    .context("publish DKG package")?;
     sqlx::query("UPDATE dkg_state SET pending_publish = NULL WHERE account = ?")
         .bind(account)
-        .execute(&mut *connection)
+        .execute(&mut *tx)
         .await?;
+    tx.commit().await?;
+    crate::frost::protocol::send_staged(client, &staged).await?;
     Ok(())
+}
+
+/// The wait on our own DKG message, as in signing (#1565): resend it, or
+/// give it up past its expiry so the round is published afresh.
+pub async fn own_publish(
+    connection: &mut SqliteConnection,
+    client: &mut Client,
+    funding_account: u32,
+    height: u32,
+) -> Result<bool> {
+    if crate::frost::protocol::publish_expired(
+        connection,
+        crate::frost::protocol::DKG_LAST_TXID_PROP,
+        funding_account,
+        height,
+    )
+    .await?
+    {
+        return Ok(true);
+    }
+    crate::frost::protocol::resend_publish(
+        connection,
+        client,
+        crate::frost::protocol::DKG_LAST_TXID_PROP,
+    )
+    .await?;
+    Ok(false)
 }
 
 async fn load_pending(

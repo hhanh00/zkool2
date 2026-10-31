@@ -109,6 +109,15 @@ pub async fn dkg_step(
         let state = observe(network, connection, account).await?;
         let task = next_task(&state);
 
+        // Our own unmined message is resent while it is waited on, and
+        // given up past its expiry, in which case the pass replans.
+        if task == DkgTask::WaitOwnPublish
+            && exec::own_publish(connection, client, account, height).await?
+        {
+            tracing::info!("DKG: the last message expired unmined; replanning");
+            continue;
+        }
+
         if !matches!(task.kind(), TaskKind::Effect) {
             let progress = match task {
                 DkgTask::WaitRound { round } => Some((

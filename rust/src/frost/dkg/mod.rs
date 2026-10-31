@@ -26,9 +26,7 @@ pub mod state;
 pub mod step;
 pub mod task;
 
-pub use super::protocol::{
-    get_addresses, get_coordinator_broadcast_account, get_mailbox_account, publish,
-};
+pub use super::protocol::{get_addresses, get_coordinator_broadcast_account, get_mailbox_account};
 
 /// The highest threshold a group can be formed with. The round-1 DKG
 /// package carries one coefficient commitment per unit of threshold and is

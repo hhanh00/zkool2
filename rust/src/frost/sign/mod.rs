@@ -121,6 +121,16 @@ pub async fn init_sign(
         bail!("The coordinator id must be between 1 and {n}, got {coordinator}");
     }
     check_group_pczt(&mut *connection, account, pczt).await?;
+    // The session's exits, the expiry of the transaction and of its own
+    // messages, need an expiry height; a PCZT built elsewhere with none
+    // would have no way to end (#1565).
+    let expiry = *Pczt::parse(&pczt.pczt)
+        .map_err(|e| anyhow!("invalid transaction: {e:?}"))?
+        .global()
+        .expiry_height();
+    if expiry == 0 {
+        bail!("This transaction has no expiry height; a FROST session needs one");
+    }
     let pczt_bytes = bincode::encode_to_vec(pczt, config::legacy()).unwrap();
     let params = FrostSignParams {
         account,

@@ -63,6 +63,15 @@ pub async fn sign_step(
             }
         };
 
+        // Our own unmined message is resent while it is waited on, and
+        // given up past its expiry, in which case the pass replans.
+        if task == SignTask::WaitOwnPublish
+            && exec::own_publish(connection, client, &state, height).await? == exec::OwnPublish::Expired
+        {
+            info!("sign: the last message expired unmined; replanning");
+            continue;
+        }
+
         if !matches!(task.kind(), TaskKind::Effect) {
             let least = |counts: &[usize]| counts.iter().copied().min().unwrap_or(0) as u8;
             let progress = match task {
