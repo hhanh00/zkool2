@@ -1,6 +1,71 @@
 # Changelog
 
 
+## [6.36.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.35.0...zkool-v6.36.0) (2026-10-31)
+
+
+### Features
+
+* **sync:** auto and manual sync are distinct, with cancel controls and a per-kind failure policy ([#1587](https://github.com/hhanh00/zkool2/issues/1587)) ([f9944e1](https://github.com/hhanh00/zkool2/commit/f9944e19481240f67b79f2311178252037479cac))
+
+
+### Bug Fixes
+
+* **account:** the new account page fetches the tip instead of reading the autosync cache ([#1475](https://github.com/hhanh00/zkool2/issues/1475)) ([c2ca370](https://github.com/hhanh00/zkool2/commit/c2ca3707f74946c7be7dbbeac26844e9beb89a6f)), closes [#1473](https://github.com/hhanh00/zkool2/issues/1473)
+* **android:** no App Link for hhanh00.github.io, passkeys keep the asset statement ([#1463](https://github.com/hhanh00/zkool2/issues/1463)) ([9b50ec7](https://github.com/hhanh00/zkool2/commit/9b50ec7da952c1a3f5ef889acf1c7b056d4396d9))
+* **db:** a wallet keeps the network it was created with ([0b6d0e9](https://github.com/hhanh00/zkool2/commit/0b6d0e936acadb84fc15ef94e599650688716caf)), closes [#1415](https://github.com/hhanh00/zkool2/issues/1415)
+* **db:** newAddresses and newAccount take the write lock up front ([#1459](https://github.com/hhanh00/zkool2/issues/1459)) ([65c2b07](https://github.com/hhanh00/zkool2/commit/65c2b076d453856c14159d6900cfd841e375995a))
+* **db:** restoring a database also removes its voting sidecar ([ab12a3a](https://github.com/hhanh00/zkool2/commit/ab12a3ac0c4690eab49de4565f2b192cc1cd9780)), closes [#1509](https://github.com/hhanh00/zkool2/issues/1509)
+* **db:** the startup database preference follows a rename or delete, and the splash does not create a missing one ([#1461](https://github.com/hhanh00/zkool2/issues/1461)) ([788dc0a](https://github.com/hhanh00/zkool2/commit/788dc0a5f0d8e50c0ca682745357e37d5e9aa733))
+* **frost:** a DKG and a signing session never run at the same time ([11c8b4c](https://github.com/hhanh00/zkool2/commit/11c8b4ce2371c7e9bafd3346d82d66b188d5fb71)), closes [#1549](https://github.com/hhanh00/zkool2/issues/1549)
+* **frost:** a group PCZT with Sapling inputs or outputs is refused ([2a59ef9](https://github.com/hhanh00/zkool2/commit/2a59ef9a72e8a248f3d520b123cf89674ecd8ae0)), closes [#1548](https://github.com/hhanh00/zkool2/issues/1548)
+* **frost:** a signing key of the wrong length is an error, not a panic ([504fc7a](https://github.com/hhanh00/zkool2/commit/504fc7a3347d80b274f7caeb26163ef3fcb2370c)), closes [#1495](https://github.com/hhanh00/zkool2/issues/1495)
+* **frost:** bech32 decoders reject non-canonical padding ([e5e0095](https://github.com/hhanh00/zkool2/commit/e5e009576ccf6e66b21ab165642fcb6f1487d117)), closes [#1466](https://github.com/hhanh00/zkool2/issues/1466)
+* **frost:** create the DKG mailbox in one transaction ([9b9047a](https://github.com/hhanh00/zkool2/commit/9b9047ad8ef0e38358021985ff37752b25783d1c)), closes [#1430](https://github.com/hhanh00/zkool2/issues/1430)
+* **frost:** drop the Connection import the immediate transaction no longer needs ([07464c3](https://github.com/hhanh00/zkool2/commit/07464c3ce3adb7d04c9cd4cb25fe68a615a0eea8))
+* **frost:** init_sign refuses a coordinator id outside the group ([710b686](https://github.com/hhanh00/zkool2/commit/710b686fd7bccdc28539f270669a4605a1f3ceab)), closes [#1552](https://github.com/hhanh00/zkool2/issues/1552)
+* **frost:** init_sign refuses an account that is not a FROST group ([886e0ca](https://github.com/hhanh00/zkool2/commit/886e0ca951b3398b852f592a84cb9d46553a6dac)), closes [#1531](https://github.com/hhanh00/zkool2/issues/1531)
+* **frost:** keep the Connection trait in scope for the upgrade tests ([4a771db](https://github.com/hhanh00/zkool2/commit/4a771db1209c8868eabda6fbf5376c9beffea77e))
+* **frost:** members derive each input's randomizer from their own PCZT ([0b23343](https://github.com/hhanh00/zkool2/commit/0b23343a79cc2282c53578cb5bd1d3cf6f752957)), closes [#1535](https://github.com/hhanh00/zkool2/issues/1535)
+* **frost:** protocol messages are published write-ahead and resent until mined ([9690c3d](https://github.com/hhanh00/zkool2/commit/9690c3d4fb9c6a4b3105853d14eb69451a240d86)), closes [#1565](https://github.com/hhanh00/zkool2/issues/1565) [#1500](https://github.com/hhanh00/zkool2/issues/1500)
+* **frost:** queue cancels to the protocol driver ([4f962ec](https://github.com/hhanh00/zkool2/commit/4f962ec0f46eb92fec8c6744aec9a6c8c0ba421d)), closes [#1410](https://github.com/hhanh00/zkool2/issues/1410)
+* **frost:** starting a session while one exists is an error, for signing and DKG alike ([1af9f19](https://github.com/hhanh00/zkool2/commit/1af9f197e8c28defee8f274b451279602b9621f8)), closes [#1546](https://github.com/hhanh00/zkool2/issues/1546)
+* **frost:** the backup decoder applies the DKG's parameter rule ([f632b82](https://github.com/hhanh00/zkool2/commit/f632b82e70a762153195f806834a12ea8cef324f)), closes [#1526](https://github.com/hhanh00/zkool2/issues/1526)
+* **frost:** the coordinator's package steps fail with an error on a bad action index ([a199c71](https://github.com/hhanh00/zkool2/commit/a199c71853ca7c9e257f2793390c0f3391764573)), closes [#1482](https://github.com/hhanh00/zkool2/issues/1482)
+* **frost:** the sweep asks for what the planner can fund ([2fcc4d5](https://github.com/hhanh00/zkool2/commit/2fcc4d5a2e544026931681e782dc4dfc2cc44e9a)), closes [#1432](https://github.com/hhanh00/zkool2/issues/1432)
+* **frost:** two upgrades of one legacy account cannot both create a sibling ([9113026](https://github.com/hhanh00/zkool2/commit/9113026a0506e066b15b24708f761f59af6b1323)), closes [#1517](https://github.com/hhanh00/zkool2/issues/1517)
+* **graphql:** a WebSocket's token expires with it ([863d1a0](https://github.com/hhanh00/zkool2/commit/863d1a013d65c35b1cd618112dd55474e38a130b)), closes [#1435](https://github.com/hhanh00/zkool2/issues/1435)
+* **graphql:** event subscriptions leave SUBS when dropped, and never block the mempool ([39f71fa](https://github.com/hhanh00/zkool2/commit/39f71faa92f12e4c48018255624ceb8ab59c0569)), closes [#1421](https://github.com/hhanh00/zkool2/issues/1421)
+* **graphql:** FROST and DKG are disabled on a token-authenticated server ([92c0c4a](https://github.com/hhanh00/zkool2/commit/92c0c4a173868fd443466ecd0d3b6d30d82aee58)), closes [#1529](https://github.com/hhanh00/zkool2/issues/1529)
+* **graphql:** stopped voting submission runs are evicted on the next submission ([09e34fa](https://github.com/hhanh00/zkool2/commit/09e34fa44c76f0750c2eb11f55c0cccd2befc5fc)), closes [#1505](https://github.com/hhanh00/zkool2/issues/1505)
+* **io:** account import keeps the uncompressed flag of transparent keys ([#1452](https://github.com/hhanh00/zkool2/issues/1452)) ([4fffa4f](https://github.com/hhanh00/zkool2/commit/4fffa4f6c0d69ace04410b4e4d0e56cfd768fa93)), closes [#1418](https://github.com/hhanh00/zkool2/issues/1418)
+* **net:** GETs follow the selected transport, so voting discovery no longer bypasses Tor ([2a7dfab](https://github.com/hhanh00/zkool2/commit/2a7dfabb60c33b1f679c74125bbe880eea6ebf0d)), closes [#1580](https://github.com/hhanh00/zkool2/issues/1580)
+* **net:** HTTP GET retries and failover cover the body read ([#1462](https://github.com/hhanh00/zkool2/issues/1462)) ([2514900](https://github.com/hhanh00/zkool2/commit/251490094e07ff54f9475caadf76a91d695b9cf1))
+* **net:** the server list, Sapling parameters and plugin downloads follow the selected transport ([475b7d7](https://github.com/hhanh00/zkool2/commit/475b7d7a3040f2883ce713f6b6071c16d2172d1a)), closes [#1489](https://github.com/hhanh00/zkool2/issues/1489)
+* **plugin:** memo readers check their range, and a plugin's panic is its own failure ([#1464](https://github.com/hhanh00/zkool2/issues/1464)) ([6cd5e1f](https://github.com/hhanh00/zkool2/commit/6cd5e1fe99b0a0a48b3444d8938c634bd9aed09b))
+* **send:** [@name](https://github.com/name) and !name resolve exactly; suggestions resolve by the item picked ([49ba07b](https://github.com/hhanh00/zkool2/commit/49ba07bfbb6e709c19cab27e7f2dba3b2ff9056e)), closes [#1424](https://github.com/hhanh00/zkool2/issues/1424)
+* **send:** deleting a queued recipient while editing does not resurrect or duplicate it ([#1460](https://github.com/hhanh00/zkool2/issues/1460)) ([bec8249](https://github.com/hhanh00/zkool2/commit/bec8249b2006072e185608f6af57d35980312cdb))
+* **send:** the page runs one lookup at a time and is locked while it is pending ([#1465](https://github.com/hhanh00/zkool2/issues/1465)) ([acebc5b](https://github.com/hhanh00/zkool2/commit/acebc5b8454159449973240a22471b64f1edf639))
+* **settings:** a server picked from the list turns the light node switch on ([ae77d0d](https://github.com/hhanh00/zkool2/commit/ae77d0d6b328410a9346b20288da85838fa7e9d4)), closes [#1557](https://github.com/hhanh00/zkool2/issues/1557)
+* **settings:** the save on leaving the page is awaited and a failure is reported ([0346534](https://github.com/hhanh00/zkool2/commit/0346534109d468ab1116bfe8cc4ca1f08e9ea96e)), closes [#1511](https://github.com/hhanh00/zkool2/issues/1511)
+* **settings:** the server list returns a choice to the settings draft instead of applying the transport on tap ([98021a7](https://github.com/hhanh00/zkool2/commit/98021a7251fa77040cc59343e9f4e73a992b3576)), closes [#1581](https://github.com/hhanh00/zkool2/issues/1581)
+* **sync:** a run that does not reach its target fails instead of reporting Synced ([2bc71ae](https://github.com/hhanh00/zkool2/commit/2bc71ae62c3fcce66765349eb77992f159dcc005))
+* **sync:** account delete goes through the sync driver ([16d2971](https://github.com/hhanh00/zkool2/commit/16d29710620b4687447bf0e9c5ee76bde1642953))
+* **sync:** account import goes through the sync driver ([cc077b6](https://github.com/hhanh00/zkool2/commit/cc077b6497f66752519d5820facba2ba08ad638e))
+* **sync:** drop the debug logging of a decrypted note at one hard-coded height ([7ef6127](https://github.com/hhanh00/zkool2/commit/7ef6127a928511ac1afcdc186a3baa45cd598784))
+* **sync:** name the transaction of a user memo by txid ([0bbef6a](https://github.com/hhanh00/zkool2/commit/0bbef6a482f9cb94dff36c8f966637963e0f71c9))
+* **sync:** note locks and post-broadcast writes go through the sync driver ([575f413](https://github.com/hhanh00/zkool2/commit/575f4136b4e3e984a33532b12b88d130443ee612))
+* **sync:** route rewinds and detail writes through a sync driver ([361b7e9](https://github.com/hhanh00/zkool2/commit/361b7e9f04286865e9819c0496978fbd9aab8a36))
+* **ui:** a second tap on the FROST upgrade while one runs is dropped ([ad46658](https://github.com/hhanh00/zkool2/commit/ad46658af6634418e353f30f4f3ff1757024f837)), closes [#1517](https://github.com/hhanh00/zkool2/issues/1517)
+* **ui:** the account list selects accounts, not row positions ([37453e1](https://github.com/hhanh00/zkool2/commit/37453e1d1b35f712748649f756aa1b3897073a81)), closes [#1433](https://github.com/hhanh00/zkool2/issues/1433)
+* **ui:** the FROST key match runs under the new account page's gate ([4586fd3](https://github.com/hhanh00/zkool2/commit/4586fd3e1ef3efc2a08865f20f3eca914ffb18fe)), closes [#1523](https://github.com/hhanh00/zkool2/issues/1523)
+* **ui:** the viewing key page's selectors follow the key shown ([e9a9794](https://github.com/hhanh00/zkool2/commit/e9a979406770c0bbd2a061f8f376cd8953c56f9e)), closes [#1427](https://github.com/hhanh00/zkool2/issues/1427)
+* **ui:** ZSA, migrate and voting pages honour the PIN lock; editing a queued recipient keeps its asset ([#1469](https://github.com/hhanh00/zkool2/issues/1469)) ([a44f37c](https://github.com/hhanh00/zkool2/commit/a44f37c1b8180b2f98fa5474b1ada56c316d12df)), closes [#1416](https://github.com/hhanh00/zkool2/issues/1416) [#1417](https://github.com/hhanh00/zkool2/issues/1417)
+* **vault:** seed a device's log from its own part, merged with the local file ([81ff0c6](https://github.com/hhanh00/zkool2/commit/81ff0c6440edc197e884a06f86d6cf679edeaed2)), closes [#1408](https://github.com/hhanh00/zkool2/issues/1408)
+* **vault:** stop append when the first device-part download fails ([b4978fc](https://github.com/hhanh00/zkool2/commit/b4978fc3762859c571f841707b37e4adb96eb02e)), closes [#1409](https://github.com/hhanh00/zkool2/issues/1409)
+* **voting:** key the sidecar by seed fingerprint and account index ([fc222ce](https://github.com/hhanh00/zkool2/commit/fc222cef172314216a9435018a407914e7b90311)), closes [#1567](https://github.com/hhanh00/zkool2/issues/1567)
+* **voting:** track live submission runs by round and account ([6278948](https://github.com/hhanh00/zkool2/commit/62789489c5616b85ce215676ee003b675142590f)), closes [#1425](https://github.com/hhanh00/zkool2/issues/1425)
+
 ## [6.35.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.34.0...zkool-v6.35.0) (2026-10-25)
 
 
