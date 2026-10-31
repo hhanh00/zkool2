@@ -70,7 +70,9 @@ impl FrostBackup {
     }
 
     /// Rejects a wrong prefix, a bad checksum, non-canonical padding, a
-    /// wrong length and an unknown format version.
+    /// wrong length, an unknown format version, and parameters the DKG
+    /// would refuse (#1526): a restored account with a threshold outside
+    /// `2..=MAX_THRESHOLD` could never complete a signing session.
     pub fn decode(s: &str) -> Result<Self> {
         let (hrp, payload) = crate::key::decode_bech32::<Bech32m>(s.trim())
             .map_err(|e| anyhow!("not a valid zkfrost backup string: {e}"))?;
@@ -90,9 +92,8 @@ impl FrostBackup {
             );
         }
         let (id, t, n) = (payload[1], payload[2], payload[3]);
-        if n == 0 || id == 0 || id > n || t == 0 || t > n {
-            bail!("invalid zkfrost backup string: participant {id}, threshold {t} of {n}");
-        }
+        crate::frost::dkg::check_dkg_params(id, n, t)
+            .map_err(|e| anyhow!("invalid zkfrost backup string: {e}"))?;
         Ok(Self {
             id,
             t,
@@ -311,6 +312,27 @@ mod tests {
             .unwrap()
             .encode(&Network::Main)
             .unwrap()
+    }
+
+    /// #1526: the decoder applies the DKG's parameter rule, so a restore
+    /// cannot create an account whose sessions could never complete.
+    #[test]
+    fn parameters_the_dkg_would_refuse_are_rejected() {
+        let encode = |id, t, n| {
+            FrostBackup {
+                id,
+                t,
+                n,
+                ..backup(SK)
+            }
+            .encode()
+            .unwrap()
+        };
+        assert_eq!(FrostBackup::decode(&encode(2, 2, 3)).unwrap().t, 2);
+        for (id, t, n) in [(2, 1, 3), (2, 255, 255), (2, 14, 20), (4, 2, 3), (0, 2, 3)] {
+            let m = FrostBackup::decode(&encode(id, t, n)).unwrap_err().to_string();
+            assert!(m.starts_with("invalid zkfrost backup string"), "{id} {t} {n}: {m}");
+        }
     }
 
     #[test]
