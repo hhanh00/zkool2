@@ -370,10 +370,21 @@ impl AssetRecord {
 
 /// Record an asset; an asset already known by description hash and issuer
 /// key is left unchanged.
+/// Records an asset's identity. A row that `asset_id_for_base` created as a
+/// placeholder (a transfer seen before the issuance: description hash equal
+/// to the asset base, a made-up issuer key) is reconciled in place, keeping
+/// its id, first-seen height and any name the user gave it; a real row is
+/// left as it is (#1566).
 pub async fn record_asset(conn: &mut SqliteConnection, asset: &AssetRow<'_>) -> Result<()> {
     sqlx::query(
-        "INSERT OR IGNORE INTO assets(asset_desc_hash, ik, asset_base, asset_name, finalized, first_seen_height)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        "INSERT INTO assets(asset_desc_hash, ik, asset_base, asset_name, finalized, first_seen_height)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+         ON CONFLICT(asset_base) DO UPDATE SET
+            asset_desc_hash = excluded.asset_desc_hash,
+            ik = excluded.ik,
+            asset_name = COALESCE(assets.asset_name, excluded.asset_name),
+            finalized = excluded.finalized
+         WHERE assets.asset_desc_hash = assets.asset_base",
     )
     .bind(asset.desc_hash)
     .bind(asset.ik)
@@ -1498,4 +1509,63 @@ mod tests {
         assert_eq!(rows, vec![(0, 100), (1, sapling), (2, nu5)]);
         Ok(())
     }
+
+    /// An asset first seen through a transfer has a placeholder row keyed
+    /// by its base; the issuance that arrives later reconciles that row in
+    /// place, keeping its id, first-seen height and user-given name (#1566).
+    #[tokio::test]
+    async fn an_issuance_reconciles_the_placeholder_of_a_transfer_seen_first() -> Result<()> {
+        let mut db = db().await?;
+        let base = [7u8; 32];
+        let placeholder = asset_id_for_base(&mut db, &base, 50).await?.unwrap();
+        set_asset_name(&mut db, placeholder as i64, "EARLY").await?;
+        assert!(asset_id(&mut db, b"real-hash", b"real-ik").await?.is_none());
+
+        let issuance = Issuance {
+            asset_desc_hash: b"real-hash".to_vec(),
+            ik: b"real-ik".to_vec(),
+            asset_base: base.to_vec(),
+            finalized: true,
+            height: 60,
+        };
+        record_issuance(&mut db, &issuance).await?;
+        record_issuance(&mut db, &issuance).await?;
+
+        let rows: Vec<(u32, Vec<u8>, Vec<u8>, Option<String>, bool, u32)> = sqlx::query_as(
+            "SELECT id_asset, asset_desc_hash, ik, asset_name, finalized, first_seen_height
+             FROM assets WHERE asset_base = ?",
+        )
+        .bind(&base[..])
+        .fetch_all(&mut db)
+        .await?;
+        assert_eq!(
+            rows,
+            vec![(
+                placeholder,
+                b"real-hash".to_vec(),
+                b"real-ik".to_vec(),
+                Some("EARLY".to_string()),
+                true,
+                50
+            )]
+        );
+        assert_eq!(asset_id(&mut db, b"real-hash", b"real-ik").await?, Some(placeholder));
+
+        // A real row is never rewritten by a later record_asset.
+        record_asset(
+            &mut db,
+            &AssetRow {
+                desc_hash: b"other-hash",
+                ik: b"other-ik",
+                base: &base,
+                name: None,
+                finalized: false,
+                first_seen_height: 70,
+            },
+        )
+        .await?;
+        assert_eq!(asset_id(&mut db, b"real-hash", b"real-ik").await?, Some(placeholder));
+        Ok(())
+    }
+
 }
