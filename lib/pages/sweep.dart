@@ -92,8 +92,12 @@ Future<void> showTransparentScan(WidgetRef ref, BuildContext context, int accoun
       },
     ),
     btnCancelText: "Close",
-    onDismissCallback: (type) {
-      GoRouter.of(context).pop();
+    onDismissCallback: (type) async {
+      // Close and the back key both land here: a scan still running is
+      // stopped, as Stop does, so it cannot outlive its dialog and keep
+      // writing addresses while the account is edited (#1545).
+      if (scanner.running) await scanner.cancel();
+      if (context.mounted) GoRouter.of(context).pop();
     },
     dismissOnTouchOutside: false,
     autoDismiss: false,
