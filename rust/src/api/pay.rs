@@ -1,5 +1,8 @@
 use anyhow::Result;
-use bincode::{config::standard, Decode, Encode};
+use bincode::{
+    config::{Configuration, Limit, LittleEndian, Varint},
+    Decode, Encode,
+};
 
 use crate::{
     api::coin::Coin,
@@ -113,21 +116,35 @@ pub struct PcztPackage {
     pub is_issuance: bool,
 }
 
+/// The largest PCZT package the wallet decodes from outside: a file, an
+/// animated QR, or a zkool_graphql request. A real package weighs a few KB
+/// to a few hundred KB. bincode allocates a byte vector at the length its
+/// prefix claims before reading it, so without a limit a ten-byte input can
+/// ask for gigabytes (#1540).
+pub const PCZT_MAX_BYTES: usize = 8 << 20;
+
+/// bincode config for `PcztPackage` transport: the `standard()` encoding,
+/// so the bytes are interchangeable with zkool_graphql, whose `prepareSend`
+/// / `frostSign` use the same config, bounded by [`PCZT_MAX_BYTES`]. The two
+/// used to disagree (`legacy()` here), which made it impossible for an app
+/// user and a zkool_graphql user to co-sign a FROST transaction.
+#[cfg_attr(feature = "flutter", frb(ignore))]
+pub fn pczt_config() -> Configuration<LittleEndian, Varint, Limit<PCZT_MAX_BYTES>> {
+    bincode::config::standard().with_limit::<PCZT_MAX_BYTES>()
+}
+
 #[cfg_attr(feature = "flutter", frb)]
 /// Serialize a PCZT for transport between participants.
-///
-/// Uses bincode's `standard()` config so the bytes are interchangeable with
-/// zkool_graphql, whose `prepareSend` / `frostSign` use the same config. The
-/// two used to disagree (`legacy()` here), which made it impossible for an app
-/// user and a zkool_graphql user to co-sign a FROST transaction.
 pub fn pack_transaction(pczt: &PcztPackage) -> Result<Vec<u8>> {
-    let pkg = bincode::encode_to_vec(pczt, standard())?;
+    let pkg = bincode::encode_to_vec(pczt, pczt_config())?;
     Ok(pkg)
 }
 
 #[cfg_attr(feature = "flutter", frb)]
+/// Deserialize a PCZT package received from outside. A length prefix above
+/// [`PCZT_MAX_BYTES`] is an error before anything is allocated.
 pub fn unpack_transaction(bytes: &[u8]) -> Result<PcztPackage> {
-    let (pkg, _) = bincode::decode_from_slice(bytes, standard())?;
+    let (pkg, _) = bincode::decode_from_slice(bytes, pczt_config())?;
     Ok(pkg)
 }
 
@@ -179,4 +196,46 @@ pub fn to_plan(package: &PcztPackage, c: &Coin) -> Result<TxPlan> {
 #[cfg_attr(feature = "flutter", frb(sync))]
 pub fn parse_payment_uri(uri: &str) -> Option<Vec<Recipient>> {
     crate::pay::prepare::parse_payment_uri(uri).ok()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn package() -> PcztPackage {
+        PcztPackage {
+            pczt: vec![1, 2, 3],
+            n_spends: [1, 0, 2, 0],
+            sapling_indices: vec![],
+            orchard_indices: vec![0, 1],
+            ironwood_indices: vec![],
+            can_sign: true,
+            can_broadcast: false,
+            price: Some(1.5),
+            category: Some(3),
+            is_issuance: false,
+        }
+    }
+
+    #[test]
+    fn a_package_round_trips_through_the_limited_config() {
+        let packed = pack_transaction(&package()).unwrap();
+        let unpacked = unpack_transaction(&packed).unwrap();
+        assert_eq!(unpacked.pczt, vec![1, 2, 3]);
+        assert_eq!(unpacked.orchard_indices, vec![0, 1]);
+        assert_eq!(unpacked.n_spends, [1, 0, 2, 0]);
+    }
+
+    #[test]
+    fn a_length_prefix_above_the_limit_is_an_error_before_allocating() {
+        // `pczt` is the first field; its varint length says 16 GB.
+        let mut bytes = vec![0xFD];
+        bytes.extend_from_slice(&(16u64 << 30).to_le_bytes());
+        bytes.push(0);
+        let err = unpack_transaction(&bytes).unwrap_err();
+        assert!(
+            err.to_string().to_lowercase().contains("limit"),
+            "expected a limit error, got: {err}"
+        );
+    }
 }

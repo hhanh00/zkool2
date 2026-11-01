@@ -1,7 +1,10 @@
 use std::{collections::BTreeMap, str::FromStr};
 
 use anyhow::{Context, Result};
-use bincode::{config, Decode, Encode};
+use bincode::{
+    config::{self, Configuration, Fixint, Limit, LittleEndian},
+    Decode, Encode,
+};
 use bip39::Mnemonic;
 use ed25519_dalek::{Signature, Signer, SigningKey, VerifyingKey};
 use futures::TryStreamExt;
@@ -381,7 +384,7 @@ pub async fn decode_dkg_memos<R: Round>(
                 if pkg_bytes.len() < 4 || pkg_bytes[0..4] != R::PREFIX {
                     return None;
                 }
-                bincode::decode_from_slice::<FrostMessage, _>(&pkg_bytes[4..], config::legacy())
+                bincode::decode_from_slice::<FrostMessage, _>(&pkg_bytes[4..], memo_config())
                     .ok()
                     .map(|(msg, _)| msg)
             } else {
@@ -487,6 +490,27 @@ impl FrostSigMessage {
 mod sig_message_tests {
     use super::*;
     use rand_core_legacy::OsRng;
+
+    #[test]
+    fn a_memo_whose_length_prefix_exceeds_a_memo_is_rejected_before_allocating() {
+        // FrostMessage: `from_id` u8, then `data` with a fixed u64 length
+        // (legacy encoding) claiming 16 GB.
+        let mut bytes = vec![1u8];
+        bytes.extend_from_slice(&(16u64 << 30).to_le_bytes());
+        bytes.push(0);
+        let err = match bincode::decode_from_slice::<FrostMessage, _>(&bytes, memo_config()) {
+            Ok(_) => panic!("decoded a 16 GB length prefix"),
+            Err(e) => e,
+        };
+        assert!(matches!(err, bincode::error::DecodeError::LimitExceeded), "{err:?}");
+
+        // A genuine message still decodes.
+        let msg = FrostMessage { from_id: 1, data: vec![9, 8, 7] };
+        let encoded = msg.encode_with_prefix(b"TEST").unwrap();
+        let (decoded, _) =
+            bincode::decode_from_slice::<FrostMessage, _>(&encoded[4..], memo_config()).unwrap();
+        assert_eq!(decoded.data, vec![9, 8, 7]);
+    }
 
     #[test]
     fn the_signature_covers_the_verifying_share() {
@@ -772,6 +796,17 @@ pub async fn mailbox_address(
 /// the 0xFF marker `to_arb_memo` prepends. Every protocol message, prefix
 /// included, has to fit in this.
 pub const ARB_MEMO_CAPACITY: usize = 511;
+
+/// bincode config for decoding a protocol message read from a memo: the
+/// `legacy()` encoding the messages are written with, bounded by one memo.
+/// A memo is written by whoever pays the mailbox, and bincode allocates a
+/// byte vector at the length its prefix claims before reading it, so an
+/// unbounded decode lets a crafted memo ask for gigabytes (#1540). Encoding
+/// keeps the plain `legacy()` config: the limit changes no byte on the wire,
+/// and the size tests measure messages past the capacity.
+pub fn memo_config() -> Configuration<LittleEndian, Fixint, Limit<ARB_MEMO_CAPACITY>> {
+    config::legacy().with_limit::<ARB_MEMO_CAPACITY>()
+}
 
 /// Wrap raw bytes as a Zcash arbitrary memo (0xFF prefix).
 pub fn to_arb_memo(data: &[u8]) -> Vec<u8> {

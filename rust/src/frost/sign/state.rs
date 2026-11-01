@@ -395,7 +395,7 @@ async fn decode_frost_memos(
         }
         if let Ok((msg, _)) = bincode::decode_from_slice::<FrostSigMessage, _>(
             &pkg_bytes[4..],
-            config::legacy(),
+            crate::frost::protocol::memo_config(),
         ) {
             messages.push(msg);
         }
@@ -551,9 +551,10 @@ async fn ingest_sigpackage_memos(
             {
                 return Ok(());
             }
-            let Ok((part, _)) =
-                bincode::decode_from_slice::<SigPackagePart, _>(&pkg.data, config::legacy())
-            else {
+            let Ok((part, _)) = bincode::decode_from_slice::<SigPackagePart, _>(
+                &pkg.data,
+                crate::frost::protocol::memo_config(),
+            ) else {
                 return Ok(());
             };
             if !(1..=participant_count).contains(&part.signer_id)

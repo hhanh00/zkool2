@@ -367,7 +367,7 @@ impl Query {
     async fn decode_pczt(pczt: String, context: &Context) -> FieldResult<UnsignedTx> {
         let pczt = hex::decode(&pczt)?;
         let (pczt, _) =
-            bincode::decode_from_slice::<PcztPackage, _>(&pczt, bincode::config::standard())?;
+            bincode::decode_from_slice::<PcztPackage, _>(&pczt, crate::api::pay::pczt_config())?;
         let tx_plan = TxPlan::from_package(&context.coin.network(), &pczt)?;
         let unsigned = tx_plan.to_unsigned_tx();
         Ok(unsigned)
@@ -378,7 +378,7 @@ impl Query {
         let mut connection = context.coin.get_connection().await?;
         let pczt = hex::decode(&pczt)?;
         let (pczt, _) =
-            bincode::decode_from_slice::<PcztPackage, _>(&pczt, bincode::config::standard())?;
+            bincode::decode_from_slice::<PcztPackage, _>(&pczt, crate::api::pay::pczt_config())?;
         let network = context.coin.network();
         let signed =
             crate::pay::sign::sign(&network, &mut connection, id_account as u32, pczt, &()).await?;

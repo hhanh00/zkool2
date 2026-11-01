@@ -157,7 +157,7 @@ pub async fn frost_sweep(
     let mut connection = coin.get_connection().await?;
     crate::frost::sign::init_sign(&mut connection, account, message_account, id_coordinator, &pczt)
         .await?;
-    Ok(hex::encode(bincode::encode_to_vec(&pczt, config::standard())?))
+    Ok(hex::encode(bincode::encode_to_vec(&pczt, crate::api::pay::pczt_config())?))
 }
 
 /// The member's `zkfrost` backup string for a frost account.
@@ -230,7 +230,7 @@ pub async fn frost_sign(
         .try_into()
         .map_err(|_| invalid_integer("id_coordinator"))?;
     let pczt = hex::decode(&pczt)?;
-    let (pczt, _) = bincode::decode_from_slice(&pczt, config::standard())?;
+    let (pczt, _) = bincode::decode_from_slice(&pczt, crate::api::pay::pczt_config())?;
     crate::frost::sign::init_sign(
         &mut connection,
         id_account,
