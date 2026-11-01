@@ -135,9 +135,6 @@ Future<void> importAccount(
     RustLib.instance.api
         .crateApiAccountImportAccount(passphrase: passphrase, data: data, c: c);
 
-Future<void> printKeys({required int id, required Coin c}) =>
-    RustLib.instance.api.crateApiAccountPrintKeys(id: id, c: c);
-
 Future<FrostParams?> getAccountFrostParams(
         {required int account, required Coin c}) =>
     RustLib.instance.api

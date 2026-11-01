@@ -1,24 +1,21 @@
-use std::str::FromStr;
 
 use crate::pay::pool::{POOL_IRONWOOD, POOL_ORCHARD, POOL_SAPLING, POOL_TRANSPARENT};
 use anyhow::{anyhow, Result};
 
 use crate::sync::chain_log::LockOp;
-use bip39::Mnemonic;
 use csv_async::AsyncWriter;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 use sapling_crypto::PaymentAddress;
-use sqlx::{sqlite::SqliteRow, Connection, Row, SqliteConnection};
+use sqlx::{Connection, SqliteConnection};
 use zcash_address::unified::{Container, Encoding};
 use zcash_keys::{
     address::UnifiedAddress,
     encoding::AddressCodec,
-    keys::{UnifiedAddressRequest, UnifiedFullViewingKey, UnifiedSpendingKey},
+    keys::{UnifiedAddressRequest, UnifiedFullViewingKey},
 };
 use zcash_protocol::consensus::Parameters as ZkParams;
 use zcash_transparent::address::TransparentAddress;
-use zip32::AccountId;
 
 #[cfg(feature = "flutter")]
 use crate::api::pay::SigningEvent;
@@ -489,48 +486,6 @@ pub async fn import_account(passphrase: &str, data: &[u8], c: &Coin) -> Result<(
     c.driver()?
         .apply(c, crate::sync::driver::Apply::ImportAccount { data: decrypted })
         .await
-}
-
-#[cfg_attr(feature = "flutter", frb)]
-pub async fn print_keys(id: u32, c: &Coin) -> Result<()> {
-    let network = c.network();
-    let mut connection = c.get_connection().await?;
-
-    let (seed, aindex) = sqlx::query(
-        "SELECT name, seed, seed_fingerprint, aindex, dindex,
-        def_dindex, birth FROM accounts WHERE id_account = ?",
-    )
-    .bind(id)
-    .map(|row: SqliteRow| {
-        let _name: String = row.get(0);
-        let seed: Option<String> = row.get(1);
-        let _seed_fingerprint: Vec<u8> = row.get(2);
-        let aindex: u32 = row.get(3);
-        let _dindex: u32 = row.get(4);
-        let _def_dindex: u32 = row.get(5);
-        let _birth: u32 = row.get(6);
-
-        (seed, aindex)
-    })
-    .fetch_one(&mut *connection)
-    .await?;
-
-    let seed = seed.unwrap();
-    let memo = Mnemonic::from_str(&seed).unwrap();
-    let seed = memo.to_seed("");
-
-    let usk = UnifiedSpendingKey::from_seed(&network, &seed, AccountId::try_from(aindex).unwrap())?;
-    let uvk = usk.to_unified_full_viewing_key();
-    if uvk.sapling().is_some() {
-        println!("Has Sapling");
-    }
-    if uvk.orchard().is_some() {
-        println!("Has Orchard");
-    }
-    let uvk = uvk.encode(&network)?;
-    println!("Unified Full Viewing Key: {}", uvk);
-
-    Ok(())
 }
 
 #[cfg_attr(feature = "flutter", frb)]
