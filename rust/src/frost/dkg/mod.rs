@@ -774,6 +774,27 @@ mod guard_tests {
         assert!(check_no_dkg(&mut wallet().await).await.is_ok());
     }
 
+    /// A participant id outside the group's 1..=n is refused at the
+    /// writer, since get_addresses indexes by it (#1574).
+    #[tokio::test]
+    async fn an_address_for_a_participant_outside_the_group_is_refused() {
+        let mut db = wallet().await;
+        set_dkg_address(&mut db, 1, 2, 1, 2, "t1peer").await.unwrap();
+        set_dkg_address(&mut db, 1, 1, 1, 2, "t1self").await.unwrap();
+        for bad in [0u8, 3] {
+            let m = set_dkg_address(&mut db, 1, bad, 1, 2, "t1bad")
+                .await
+                .unwrap_err()
+                .to_string();
+            assert!(m.contains(&format!("participant id {bad} is outside 1..=2")), "{m}");
+        }
+        assert_eq!(
+            get_addresses(&mut db, 1, 2).await.unwrap(),
+            vec![String::new(), "t1peer".to_string()],
+            "the own id is skipped, the peer stored, the bad ones absent"
+        );
+    }
+
     /// A server that only knows the tip.
     struct Tip;
 
@@ -857,13 +878,22 @@ mod guard_tests {
     }
 }
 
+/// Records participant `id`'s mailbox address. The id must be one of
+/// the group's `1..=n`: `get_addresses` places each row at `id - 1` in a
+/// vector of `n`, so an id outside that range would panic every protocol
+/// pass instead of failing this one call (#1574).
 pub async fn set_dkg_address(
     connection: &mut SqliteConnection,
     account: u32,
     id: u8,
     my_id: u8,
+    n: u8,
     address: &str,
 ) -> Result<()> {
+    anyhow::ensure!(
+        (1..=n).contains(&id),
+        "participant id {id} is outside 1..={n}"
+    );
     if id == my_id {
         return Ok(());
     }

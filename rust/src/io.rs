@@ -1026,7 +1026,12 @@ pub async fn import_account(
         .await?;
     }
 
+    // A participant id outside the group's 1..=n would panic every
+    // protocol pass once stored (#1574); a backup without parameters has
+    // nothing to check against and its addresses never load.
+    let participants = io_account.dkg_params.as_ref().map(|p| p.n);
     for address in io_account.dkg_addresses.iter() {
+        check_participant_id(participants, u16::from(address.from_id))?;
         sqlx::query(
             "INSERT OR IGNORE INTO dkg_addresses (account, from_id, address)
             VALUES (?, ?, ?)",
@@ -1043,15 +1048,29 @@ pub async fn import_account(
     // public rows are peer packages, private rows 1/2/3 are the state
     // columns. OR IGNORE keeps the sections above authoritative when a file
     // has both.
-    import_legacy_dkg_packages(&mut tx, new_id_account, &io_account.dkg_packages).await?;
+    import_legacy_dkg_packages(&mut tx, new_id_account, participants, &io_account.dkg_packages)
+        .await?;
     tx.commit().await?;
 
+    Ok(())
+}
+
+/// A DKG participant id in a backup must lie in the group's `1..=n`
+/// (#1574). `None` for `n` when the backup carries no parameters.
+fn check_participant_id(participants: Option<u8>, from_id: u16) -> Result<()> {
+    if let Some(n) = participants {
+        anyhow::ensure!(
+            (1..=u16::from(n)).contains(&from_id),
+            "participant id {from_id} in the account backup is outside 1..={n}"
+        );
+    }
     Ok(())
 }
 
 async fn import_legacy_dkg_packages(
     tx: &mut SqliteConnection,
     account: u32,
+    participants: Option<u8>,
     packages: &[DKGPackage],
 ) -> Result<()> {
     if packages.is_empty() {
@@ -1069,6 +1088,7 @@ async fn import_legacy_dkg_packages(
     for p in packages {
         match (p.public, p.round) {
             (true, 0) => {
+                check_participant_id(participants, p.from_id)?;
                 let address = String::from_utf8(p.data.0.clone())
                     .context("legacy dkg address is not UTF-8")?;
                 sqlx::query(
@@ -1633,6 +1653,69 @@ mod dkg_export_tests {
             .fetch_one(&mut *db)
             .await?;
         Ok(id)
+    }
+
+    /// A backup whose DKG address names a participant outside the group's
+    /// 1..=n is refused by name before anything is written, in the current
+    /// layout and in a legacy round-0 package (#1574).
+    #[tokio::test]
+    async fn a_backup_with_a_participant_outside_the_group_is_refused() -> Result<()> {
+        let params = DKGParams {
+            id: 1,
+            n: 2,
+            t: 2,
+            seed: "mailbox words".to_string(),
+            birth: 100,
+            name: String::new(),
+            dkg_version: None,
+            sk: None,
+        };
+        let current = IOAccount {
+            version: DB_VERSION,
+            name: "frost".to_string(),
+            dkg_params: Some(params.clone()),
+            dkg_addresses: vec![DKGAddress {
+                from_id: 3,
+                address: "uregtest1ccc".to_string(),
+            }],
+            ..Default::default()
+        };
+        let legacy = IOAccount {
+            version: DB_VERSION,
+            name: "frost-legacy".to_string(),
+            dkg_params: Some(params),
+            dkg_packages: vec![DKGPackage {
+                account: 7,
+                public: true,
+                round: 0,
+                from_id: 0,
+                data: HexBytes(b"uregtest1aaa".to_vec()),
+            }],
+            ..Default::default()
+        };
+        for (io_account, bad) in [(current, 3), (legacy, 0)] {
+            let json = serde_json::to_string(&io_account)?;
+            let mut encoder = zstd::Encoder::new(Vec::new(), DEFAULT_COMPRESSION_LEVEL)?;
+            encoder.write_all(json.as_bytes())?;
+            let data = encoder.finish()?;
+
+            let mut dst = fresh_db().await?;
+            let session = crate::sync::session::SyncSession::new();
+            let run = session.try_begin().unwrap();
+            let err = import_account(&Network::Main, &mut run.held(&mut dst), &data)
+                .await
+                .unwrap_err()
+                .to_string();
+            assert!(
+                err.contains(&format!("participant id {bad} in the account backup is outside 1..=2")),
+                "{err}"
+            );
+            let (accounts,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM accounts")
+                .fetch_one(&mut dst)
+                .await?;
+            assert_eq!(accounts, 0, "nothing of the refused backup was written");
+        }
+        Ok(())
     }
 
     /// A FROST account completed on the V9 tables exports and imports every
