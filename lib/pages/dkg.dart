@@ -86,9 +86,13 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
     Future(() async {
       // Message accounts of other groups are internal: not a funding choice.
       final accounts = (await ref.read(getAccountsProvider.future)).where((e) => !e.hidden && !e.internal && !e.frost).toList();
+      if (!mounted) return;
       final dkgInProgress = await hasDkgParams(c: c);
-      if (dkgInProgress && mounted) {
+      // The page may have been left while the setup was pending (#1605).
+      if (!mounted) return;
+      if (dkgInProgress) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
           GoRouter.of(context).pushReplacement("/dkg2");
         });
       }
@@ -255,13 +259,17 @@ class DKGPage2State extends ConsumerState<DKGPage2> {
     super.initState();
     Future(() async {
       await initDkg(c: c);
+      if (!mounted) return;
       final addresses = await getDkgAddresses(c: c);
+      // The page may have been left while the setup was pending (#1605).
+      if (!mounted) return;
       setState(() => this.addresses = addresses);
-      if (await hasDkgAddresses(c: c)) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          GoRouter.of(context).pushReplacement("/dkg3");
-        });
-      }
+      final ready = await hasDkgAddresses(c: c);
+      if (!mounted || !ready) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        GoRouter.of(context).pushReplacement("/dkg3");
+      });
     });
   }
 
