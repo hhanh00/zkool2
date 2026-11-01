@@ -173,11 +173,36 @@ pub async fn near_intents_record_deposit(
             .await?
             .0
     };
-    near_intents_submit_deposit(address, tx_hash, c).await?;
+    near_intents_submit_deposit(address, tx_hash.clone(), c).await?;
     let mut connection = c.get_connection().await?;
-    sqlx::query("UPDATE swaps SET deposit_submitted_at = COALESCE(deposit_submitted_at, unixepoch()), updated_at = unixepoch() WHERE id_swap = ? AND account = ?")
-        .bind(id_swap).bind(account).execute(&mut *connection).await?;
+    if !stamp_deposit_submitted(&mut connection, id_swap, account, &tx_hash).await? {
+        // The row was deleted and its id reused by a new swap while the
+        // notification was in flight (#1512): that swap's own notification
+        // stamps it; this deposit was broadcast and notified either way.
+        tracing::warn!("swap {id_swap} was replaced while its deposit {tx_hash} was being notified");
+    }
     Ok(())
+}
+
+/// Records that the provider was told about `tx_hash`, on the row that
+/// still carries that hash. False when no such row exists any more.
+pub(crate) async fn stamp_deposit_submitted(
+    connection: &mut sqlx::SqliteConnection,
+    id_swap: i64,
+    account: u32,
+    tx_hash: &str,
+) -> Result<bool> {
+    let result = sqlx::query(
+        "UPDATE swaps SET deposit_submitted_at = COALESCE(deposit_submitted_at, unixepoch()),
+        updated_at = unixepoch()
+        WHERE id_swap = ? AND account = ? AND deposit_tx_hash = ?",
+    )
+    .bind(id_swap)
+    .bind(account)
+    .bind(tx_hash)
+    .execute(&mut *connection)
+    .await?;
+    Ok(result.rows_affected() == 1)
 }
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -279,6 +304,72 @@ mod tests {
         swap.status = None;
         swap.origin_asset = "usdt".into();
         assert!(funding_recipient(&swap).is_err());
+        Ok(())
+    }
+
+    /// The submitted stamp lands only on the row that still carries the
+    /// notified hash: a replacement swap under a reused id is left alone
+    /// (#1512).
+    #[tokio::test]
+    async fn the_submitted_stamp_is_tied_to_the_notified_hash() -> Result<()> {
+        let mut db = sqlx::SqliteConnection::connect("sqlite::memory:").await?;
+        sqlx::raw_sql("CREATE TABLE accounts(id_account INTEGER PRIMARY KEY); INSERT INTO accounts VALUES (1);")
+            .execute(&mut db).await?;
+        sqlx::raw_sql(include_str!("../db/swaps.sql")).execute(&mut db).await?;
+        let request = SwapRequest {
+            dry: false,
+            swap_type: SwapType::ExactOutput,
+            origin_asset: crate::near_intents::ZEC_ASSET.into(),
+            destination_asset: "usdt".into(),
+            amount: "5000000".into(),
+            slippage_tolerance: 100,
+            recipient: "external".into(),
+            refund_to: "wallet".into(),
+            deadline: "2099-01-01T00:00:00Z".into(),
+        };
+        for deposit in ["t1a", "t1b"] {
+            let quote: SwapQuote = serde_json::from_str(&format!(
+                r#"{{"amountIn":"437166","amountOut":"5000000","depositAddress":"{deposit}"}}"#
+            ))?;
+            crate::near_intents::save_swap(
+                &mut db,
+                1,
+                &request,
+                &SwapQuoteResponse {
+                    api_key_configured: true,
+                    quote,
+                    raw_response: "{}".into(),
+                },
+            )
+            .await?;
+        }
+        let (hash_a, hash_b, stale) = (
+            "a".repeat(64),
+            "b".repeat(64),
+            "f".repeat(64),
+        );
+        for (id, hash) in [(1i64, &hash_a), (2, &hash_b)] {
+            sqlx::query("UPDATE swaps SET deposit_tx_hash = ? WHERE id_swap = ?")
+                .bind(hash)
+                .bind(id)
+                .execute(&mut db)
+                .await?;
+        }
+        async fn stamped(db: &mut sqlx::SqliteConnection, id: i64) -> Result<bool> {
+            let at: Option<i64> =
+                sqlx::query_scalar("SELECT deposit_submitted_at FROM swaps WHERE id_swap = ?")
+                    .bind(id)
+                    .fetch_one(db)
+                    .await?;
+            Ok(at.is_some())
+        }
+        assert!(stamp_deposit_submitted(&mut db, 1, 1, &hash_a).await?);
+        assert!(stamped(&mut db, 1).await?);
+        // Swap 2 reused an id whose earlier row was notified with another hash.
+        assert!(!stamp_deposit_submitted(&mut db, 2, 1, &stale).await?);
+        assert!(!stamped(&mut db, 2).await?, "the replacement keeps its own retry");
+        assert!(stamp_deposit_submitted(&mut db, 2, 1, &hash_b).await?);
+        assert!(stamped(&mut db, 2).await?);
         Ok(())
     }
 }
