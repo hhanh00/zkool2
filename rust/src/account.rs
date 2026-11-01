@@ -1187,6 +1187,49 @@ mod new_account_tests {
             .encode(&NETWORK)
     }
 
+    /// The address browser lists an incoming-only account's external
+    /// addresses per pool, derived from its incoming keys, and nothing for
+    /// the internal scope it cannot derive (#1568).
+    #[tokio::test]
+    async fn the_address_browser_lists_an_incoming_only_accounts_external_rows() {
+        let mut db = sqlx::SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        crate::db::create_schema(&mut db).await.unwrap();
+        let ufvk = usk().to_unified_full_viewing_key();
+        let full = watch_account(&mut db, ufvk.encode(&NETWORK).unwrap(), "full").await;
+        let uivk = ufvk.to_unified_incoming_viewing_key().encode(&NETWORK).unwrap();
+        let incoming = watch_account(&mut db, uivk, "incoming").await;
+        for account in [full, incoming] {
+            generate_next_dindex(&NETWORK, &mut db, account).await.unwrap();
+        }
+
+        let rows_of = |rows: &[TAddressTxCount], scope: u8| -> Vec<(u8, u32, String)> {
+            let mut v: Vec<_> = rows
+                .iter()
+                .filter(|r| r.scope == scope)
+                .map(|r| (r.pool, r.dindex, r.address.clone()))
+                .collect();
+            v.sort();
+            v
+        };
+        let full_rows = fetch_address_tx_count(&NETWORK, &mut db, full, false, ALL_POOLS)
+            .await
+            .unwrap();
+        let incoming_rows = fetch_address_tx_count(&NETWORK, &mut db, incoming, false, ALL_POOLS)
+            .await
+            .unwrap();
+        assert!(!rows_of(&full_rows, 1).is_empty(), "the full account lists its internal scope");
+        assert!(rows_of(&incoming_rows, 1).is_empty(), "an incoming key cannot derive the internal scope");
+        assert_eq!(
+            rows_of(&incoming_rows, 0),
+            rows_of(&full_rows, 0),
+            "the external rows are the ones the full key gives"
+        );
+        assert!(
+            [0u8, 1, 2].iter().all(|p| incoming_rows.iter().any(|r| r.pool == *p)),
+            "every pool the account has is listed"
+        );
+    }
+
     /// The full change address carries the transparent receiver of the
     /// requested scope, and the external one when the account has no
     /// internal row at its index (#1486).
@@ -2440,19 +2483,29 @@ pub async fn fetch_address_tx_count(
     let s_pool = crate::db::select_account_sapling(network, connection, account).await;
     let o_pool = crate::db::select_account_orchard(connection, account).await;
 
+    // A pool counts with its full key or, for an incoming-only account,
+    // its incoming key, as get_addresses derives them (#1568).
     let enabled_pools = (if t_pool
         .as_ref()
-        .map(|t| t.xvk.is_some() || t.address.is_some())
+        .map(|t| t.xvk.is_some() || t.ivk.is_some() || t.address.is_some())
         .unwrap_or(false)
     {
         1u8
     } else {
         0u8
-    }) | (if s_pool.as_ref().map(|s| s.xvk.is_some()).unwrap_or(false) {
+    }) | (if s_pool
+        .as_ref()
+        .map(|s| s.xvk.is_some() || s.ivk.is_some())
+        .unwrap_or(false)
+    {
         2u8
     } else {
         0u8
-    }) | (if o_pool.as_ref().map(|o| o.xvk.is_some()).unwrap_or(false) {
+    }) | (if o_pool
+        .as_ref()
+        .map(|o| o.xvk.is_some() || o.ivk.is_some())
+        .unwrap_or(false)
+    {
         4u8
     } else {
         0u8
@@ -2495,16 +2548,24 @@ pub async fn fetch_address_tx_count(
 
     let mut results = Vec::new();
 
-    for scope in [0u8, 1u8] {
+    // An incoming key derives the external scope only, so an account with
+    // no full key for any pool lists external rows alone (#1568).
+    let has_full_key = tkeys.xvk.is_some() || skeys.xvk.is_some() || okeys.xvk.is_some();
+    let scopes: &[u8] = if has_full_key { &[0, 1] } else { &[0] };
+
+    for &scope in scopes {
         for d in 0..=dindex {
             // Determine if this (scope, d) slot is valid.
             // Sapling diversifier validity gates the entire slot — if the
             // account has sapling keys and the address at this diversifier
             // index is invalid, only the transparent fallback at d=0 applies.
             let mut valid_dindex = true;
-            if skeys.xvk.is_some() {
-                let dfvk = skeys.xvk.as_ref().unwrap();
+            if let Some(dfvk) = skeys.xvk.as_ref() {
                 if !dfvk.has_sapling_address(scope, d as u64, internal_sap_ivk.as_ref()) {
+                    valid_dindex = false;
+                }
+            } else if let Some(ivk) = skeys.ivk.as_ref() {
+                if ivk.address_at(d as u64).is_none() {
                     valid_dindex = false;
                 }
             }
@@ -2518,49 +2579,45 @@ pub async fn fetch_address_tx_count(
                 // Derive addresses for selected pools
                 let mut t_addr_raw: Option<TransparentAddress> = None;
                 let t_str = if selected.has_pool(0) {
-                    if let Some(tvk) = &tkeys.xvk {
-                        let (_, taddr) = crate::account::derive_transparent_address(
-                            tvk,
-                            scope as u32,
-                            d,
-                            false,
-                        )?;
-                        t_addr_raw = Some(taddr);
-                        Some(taddr.encode(network))
-                    } else {
-                        None
-                    }
+                    let taddr = match (&tkeys.xvk, &tkeys.ivk) {
+                        (Some(tvk), _) => Some(
+                            crate::account::derive_transparent_address(tvk, scope as u32, d, false)?.1,
+                        ),
+                        (None, Some(ivk)) => Some(derive_transparent_address_from_ivk(ivk, d)?.1),
+                        (None, None) => None,
+                    };
+                    t_addr_raw = taddr;
+                    taddr.map(|taddr| taddr.encode(network))
                 } else {
                     None
                 };
 
                 let mut s_addr_raw: Option<sapling_crypto::PaymentAddress> = None;
                 let s_str = if selected.has_pool(1) {
-                    if let Some(dfvk) = &skeys.xvk {
-                        s_addr_raw =
-                            dfvk.sapling_address_at(scope, d as u64, internal_sap_ivk.as_ref());
-                        s_addr_raw.as_ref().map(|pa| pa.encode(network))
-                    } else {
-                        None
-                    }
+                    s_addr_raw = match (&skeys.xvk, &skeys.ivk) {
+                        (Some(dfvk), _) => {
+                            dfvk.sapling_address_at(scope, d as u64, internal_sap_ivk.as_ref())
+                        }
+                        (None, Some(ivk)) => ivk.address_at(d as u64),
+                        (None, None) => None,
+                    };
+                    s_addr_raw.as_ref().map(|pa| pa.encode(network))
                 } else {
                     None
                 };
 
                 let mut o_addr_raw: Option<orchard::Address> = None;
                 let o_str = if selected.has_pool(2) {
-                    if let Some(fvk) = &okeys.xvk {
-                        let s = scope.orchard_scope();
-                        let addr = fvk.address_at(d as u64, s);
-                        o_addr_raw = Some(addr);
-                        Some(
-                            UnifiedAddress::from_receivers(Some(addr), None, None, None, None)
-                                .unwrap()
-                                .encode(network),
-                        )
-                    } else {
-                        None
-                    }
+                    o_addr_raw = match (&okeys.xvk, &okeys.ivk) {
+                        (Some(fvk), _) => Some(fvk.address_at(d as u64, scope.orchard_scope())),
+                        (None, Some(ivk)) => Some(ivk.address_at(d as u64)),
+                        (None, None) => None,
+                    };
+                    o_addr_raw.map(|addr| {
+                        UnifiedAddress::from_receivers(Some(addr), None, None, None, None)
+                            .unwrap()
+                            .encode(network)
+                    })
                 } else {
                     None
                 };
@@ -2619,12 +2676,16 @@ pub async fn fetch_address_tx_count(
                 // always produces a valid transparent address.
                 let t_st = t_stats.get(&(scope, 0)).copied().unwrap_or((0, 0, 0));
 
-                let t_str = if let Some(tvk) = &tkeys.xvk {
-                    let (_, taddr) =
-                        crate::account::derive_transparent_address(tvk, scope as u32, 0, false)?;
-                    Some(taddr.encode(network))
-                } else {
-                    None
+                let t_str = match (&tkeys.xvk, &tkeys.ivk) {
+                    (Some(tvk), _) => Some(
+                        crate::account::derive_transparent_address(tvk, scope as u32, 0, false)?
+                            .1
+                            .encode(network),
+                    ),
+                    (None, Some(ivk)) => {
+                        Some(derive_transparent_address_from_ivk(ivk, 0)?.1.encode(network))
+                    }
+                    (None, None) => None,
                 };
 
                 // Aggregate of 1 taddr is the taddr itself.
