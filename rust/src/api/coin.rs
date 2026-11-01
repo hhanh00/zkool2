@@ -508,11 +508,18 @@ async fn connect_over_proxy(url: &str, proxy: &str) -> anyhow::Result<Channel> {
 
 /// Open a TCP stream to (`target_host`, `target_port`) through `proxy`.
 /// Returns a tokio stream usable as the transport for a single connection.
+/// A stream to the target through the proxy: plain TCP, or TLS to an
+/// `https://` proxy (#1561).
+pub(crate) type ProxiedStream = Box<dyn ProxiedIo>;
+
+pub(crate) trait ProxiedIo: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send + Unpin {}
+impl<T: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send + Unpin> ProxiedIo for T {}
+
 pub(crate) async fn open_proxied_stream(
     proxy: &str,
     target_host: &str,
     target_port: u16,
-) -> anyhow::Result<tokio::net::TcpStream> {
+) -> anyhow::Result<ProxiedStream> {
     let puri = proxy.parse::<Uri>()?;
     let scheme = puri.scheme_str().unwrap_or("").to_lowercase();
     let phost = puri
@@ -560,7 +567,7 @@ pub(crate) async fn open_proxied_stream(
                     .await?
                 }
             };
-            Ok(stream.into_inner())
+            Ok(Box::new(stream.into_inner()))
         }
         // socks5 => resolve the target hostname locally and send the IP to the
         // proxy. We resolve here explicitly so the distinction from socks5h is
@@ -584,29 +591,86 @@ pub(crate) async fn open_proxied_stream(
                     tokio_socks::tcp::Socks5Stream::connect((phost, pport), target_addr).await?
                 }
             };
-            Ok(stream.into_inner())
+            Ok(Box::new(stream.into_inner()))
         }
-        "http" | "https" => http_connect_tunnel(phost, pport, target_host, target_port).await,
+        "http" | "https" => {
+            http_connect_tunnel(
+                phost,
+                pport,
+                scheme == "https",
+                creds.as_ref(),
+                target_host,
+                target_port,
+            )
+            .await
+        }
         other => anyhow::bail!("unsupported proxy scheme: {other}"),
     }
 }
 
 /// Establish an HTTP CONNECT tunnel through an http(s) proxy and return the
-/// raw TCP stream (post-handshake) ready for TLS/HTTP2 to run over.
+/// stream (post-handshake) ready for TLS/HTTP2 to run over. An `https://`
+/// proxy is spoken to over TLS, so the CONNECT line and the target host
+/// are not in the clear on the hop to the proxy; credentials in the proxy
+/// URL go in a Proxy-Authorization header (#1561).
 async fn http_connect_tunnel(
     proxy_host: &str,
     proxy_port: u16,
+    tls: bool,
+    creds: Option<&(String, String)>,
     target_host: &str,
     target_port: u16,
-) -> anyhow::Result<tokio::net::TcpStream> {
+) -> anyhow::Result<ProxiedStream> {
+    let tcp = tokio::net::TcpStream::connect((proxy_host, proxy_port)).await?;
+    if tls {
+        let roots = rustls::RootCertStore::from_iter(webpki_roots::TLS_SERVER_ROOTS.iter().cloned());
+        // The provider is named: the dependency graph enables more than one
+        // rustls backend, so the default cannot be inferred.
+        let config = rustls::ClientConfig::builder_with_provider(std::sync::Arc::new(
+            rustls::crypto::ring::default_provider(),
+        ))
+        .with_safe_default_protocol_versions()?
+        .with_root_certificates(roots)
+        .with_no_client_auth();
+        let server_name = rustls::pki_types::ServerName::try_from(proxy_host.to_string())?;
+        let mut stream = tokio_rustls::TlsConnector::from(std::sync::Arc::new(config))
+            .connect(server_name, tcp)
+            .await
+            .map_err(|e| anyhow::anyhow!("TLS handshake with the proxy failed: {e}"))?;
+        connect_through(&mut stream, creds, target_host, target_port).await?;
+        Ok(Box::new(stream))
+    } else {
+        let mut stream = tcp;
+        connect_through(&mut stream, creds, target_host, target_port).await?;
+        Ok(Box::new(stream))
+    }
+}
+
+/// The CONNECT request to the target over an open proxy connection.
+pub(crate) fn connect_request(
+    creds: Option<&(String, String)>,
+    target_host: &str,
+    target_port: u16,
+) -> String {
+    use base64::Engine as _;
+    let auth = creds
+        .map(|(u, p)| {
+            let token = base64::engine::general_purpose::STANDARD.encode(format!("{u}:{p}"));
+            format!("Proxy-Authorization: Basic {token}\r\n")
+        })
+        .unwrap_or_default();
+    format!("CONNECT {target_host}:{target_port} HTTP/1.1\r\nHost: {target_host}:{target_port}\r\n{auth}\r\n")
+}
+
+async fn connect_through<S: tokio::io::AsyncRead + tokio::io::AsyncWrite + Unpin>(
+    stream: &mut S,
+    creds: Option<&(String, String)>,
+    target_host: &str,
+    target_port: u16,
+) -> anyhow::Result<()> {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-    let mut stream = tokio::net::TcpStream::connect((proxy_host, proxy_port)).await?;
-    let req = format!(
-        "CONNECT {host}:{port} HTTP/1.1\r\nHost: {host}:{port}\r\n\r\n",
-        host = target_host,
-        port = target_port
-    );
+    let req = connect_request(creds, target_host, target_port);
     stream.write_all(req.as_bytes()).await?;
     stream.flush().await?;
 
@@ -639,7 +703,61 @@ async fn http_connect_tunnel(
     if !ok {
         anyhow::bail!("proxy CONNECT failed: {status_line}");
     }
-    Ok(stream)
+    Ok(())
+}
+
+#[cfg(test)]
+mod proxy_tests {
+    use super::*;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+    /// A local "proxy" that records the request head it receives and
+    /// answers `reply`.
+    async fn fake_proxy(reply: &'static str) -> (u16, tokio::sync::oneshot::Receiver<String>) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let (tx, rx) = tokio::sync::oneshot::channel();
+        tokio::spawn(async move {
+            let (mut socket, _) = listener.accept().await.unwrap();
+            let mut buf = vec![0u8; 1024];
+            let n = socket.read(&mut buf).await.unwrap();
+            let _ = tx.send(String::from_utf8_lossy(&buf[..n]).into_owned());
+            socket.write_all(reply.as_bytes()).await.unwrap();
+        });
+        (port, rx)
+    }
+
+    #[tokio::test]
+    async fn an_http_proxy_gets_connect_with_the_urls_credentials() {
+        let (port, head) = fake_proxy("HTTP/1.1 200 Connection established\r\n\r\n").await;
+        let proxy = format!("http://user:s3cret@127.0.0.1:{port}");
+        open_proxied_stream(&proxy, "lwd.example", 9067).await.unwrap();
+        let head = head.await.unwrap();
+        assert!(head.starts_with("CONNECT lwd.example:9067 HTTP/1.1\r\n"), "{head}");
+        assert!(head.contains("Proxy-Authorization: Basic dXNlcjpzM2NyZXQ=\r\n"), "{head}");
+    }
+
+    #[tokio::test]
+    async fn an_https_proxy_is_spoken_to_over_tls() {
+        // A listener that does not speak TLS: the handshake fails before
+        // any CONNECT line could be written in the clear.
+        let (port, head) = fake_proxy("HTTP/1.1 200 Connection established\r\n\r\n").await;
+        let proxy = format!("https://127.0.0.1:{port}");
+        let err = open_proxied_stream(&proxy, "lwd.example", 9067)
+            .await
+            .err()
+            .expect("a plain-TCP listener cannot pass the TLS handshake")
+            .to_string();
+        assert!(err.contains("TLS handshake"), "{err}");
+        let head = head.await.unwrap_or_default();
+        assert!(!head.contains("CONNECT"), "the CONNECT line went out in the clear: {head}");
+    }
+
+    #[test]
+    fn a_proxy_without_credentials_sends_no_authorization() {
+        let req = connect_request(None, "h", 1);
+        assert_eq!(req, "CONNECT h:1 HTTP/1.1\r\nHost: h:1\r\n\r\n");
+    }
 }
 
 impl Coin {
