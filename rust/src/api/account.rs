@@ -302,7 +302,7 @@ pub struct Account {
     pub use_internal: bool,
     pub birth: u32,
     pub folder: Folder,
-    pub position: u8,
+    pub position: u32,
     pub hidden: bool,
     pub saved: bool,
     pub enabled: bool,

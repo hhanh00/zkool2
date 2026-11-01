@@ -2774,6 +2774,34 @@ mod swap_schema_tests {
         assert_eq!(remaining, vec![(2,)]);
         Ok(())
     }
+
+    /// `accounts.position` is an unbounded integer: a wallet that creates
+    /// and deletes accounts creeps past 255, and the listing must keep
+    /// decoding it (#1519).
+    #[tokio::test]
+    async fn a_position_above_255_lists_and_reorders() -> Result<()> {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        create_schema(&mut db).await?;
+        sqlx::query(
+            "INSERT INTO accounts(id_account, name, aindex, dindex, def_dindex,
+            birth, position, use_internal, hidden, saved) VALUES
+            (1, 'low', 0, 0, 0, 0, 0, 0, 0, 0), (2, 'high', 1, 0, 0, 0, 300, 0, 0, 0)",
+        )
+        .execute(&mut db)
+        .await?;
+        sqlx::query("INSERT INTO sync_heights(account, pool, height) VALUES (1, 0, 0), (2, 0, 0)")
+            .execute(&mut db)
+            .await?;
+        let accounts = list_accounts(&mut db, 0).await?;
+        let positions: Vec<(u32, u32)> = accounts.iter().map(|a| (a.id, a.position)).collect();
+        assert_eq!(positions, vec![(1, 0), (2, 300)]);
+
+        reorder_account(&mut db, 300, 0).await?;
+        let accounts = list_accounts(&mut db, 0).await?;
+        let positions: Vec<(u32, u32)> = accounts.iter().map(|a| (a.id, a.position)).collect();
+        assert_eq!(positions, vec![(2, 0), (1, 1)]);
+        Ok(())
+    }
 }
 
 #[cfg(test)]

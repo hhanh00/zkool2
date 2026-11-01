@@ -11373,7 +11373,7 @@ impl SseDecode for crate::api::account::Account {
         let mut var_useInternal = <bool>::sse_decode(deserializer);
         let mut var_birth = <u32>::sse_decode(deserializer);
         let mut var_folder = <crate::api::account::Folder>::sse_decode(deserializer);
-        let mut var_position = <u8>::sse_decode(deserializer);
+        let mut var_position = <u32>::sse_decode(deserializer);
         let mut var_hidden = <bool>::sse_decode(deserializer);
         let mut var_saved = <bool>::sse_decode(deserializer);
         let mut var_enabled = <bool>::sse_decode(deserializer);
@@ -16372,7 +16372,7 @@ impl SseEncode for crate::api::account::Account {
         <bool>::sse_encode(self.use_internal, serializer);
         <u32>::sse_encode(self.birth, serializer);
         <crate::api::account::Folder>::sse_encode(self.folder, serializer);
-        <u8>::sse_encode(self.position, serializer);
+        <u32>::sse_encode(self.position, serializer);
         <bool>::sse_encode(self.hidden, serializer);
         <bool>::sse_encode(self.saved, serializer);
         <bool>::sse_encode(self.enabled, serializer);

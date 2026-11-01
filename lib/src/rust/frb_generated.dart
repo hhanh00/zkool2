@@ -7227,7 +7227,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       useInternal: dco_decode_bool(arr[8]),
       birth: dco_decode_u_32(arr[9]),
       folder: dco_decode_folder(arr[10]),
-      position: dco_decode_u_8(arr[11]),
+      position: dco_decode_u_32(arr[11]),
       hidden: dco_decode_bool(arr[12]),
       saved: dco_decode_bool(arr[13]),
       enabled: dco_decode_bool(arr[14]),
@@ -9369,7 +9369,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_useInternal = sse_decode_bool(deserializer);
     var var_birth = sse_decode_u_32(deserializer);
     var var_folder = sse_decode_folder(deserializer);
-    var var_position = sse_decode_u_8(deserializer);
+    var var_position = sse_decode_u_32(deserializer);
     var var_hidden = sse_decode_bool(deserializer);
     var var_saved = sse_decode_bool(deserializer);
     var var_enabled = sse_decode_bool(deserializer);
@@ -11996,7 +11996,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_bool(self.useInternal, serializer);
     sse_encode_u_32(self.birth, serializer);
     sse_encode_folder(self.folder, serializer);
-    sse_encode_u_8(self.position, serializer);
+    sse_encode_u_32(self.position, serializer);
     sse_encode_bool(self.hidden, serializer);
     sse_encode_bool(self.saved, serializer);
     sse_encode_bool(self.enabled, serializer);
