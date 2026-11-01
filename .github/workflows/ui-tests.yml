@@ -44,7 +44,6 @@ jobs:
     uses: ./.github/workflows/zkool-graphql-build.yml
     with:
       ledger-transport: zemu
-      cache-dependencies: true
     concurrency:
       group: zkool-graphql-zemu-${{ github.repository }}-${{ github.event.pull_request.head.sha || github.sha }}
       cancel-in-progress: false
