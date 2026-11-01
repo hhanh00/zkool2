@@ -387,12 +387,32 @@ impl Query {
         Ok(tx)
     }
 
-    async fn broadcast_tx(tx_bytes: String, context: &Context) -> FieldResult<String> {
+    /// Posts a raw transaction and returns the server's answer, the txid
+    /// on acceptance. With `idAccount`, the caller must hold that account's
+    /// write grant, and the notes the transaction spends are locked on
+    /// acceptance so a later plan cannot select them before the spend is
+    /// mined, as `pay` does. Without it the post is network only: the
+    /// spent notes stay selectable until the next sync records the spend.
+    async fn broadcast_tx(
+        tx_bytes: String,
+        id_account: Option<i32>,
+        context: &Context,
+    ) -> FieldResult<String> {
         let tx = hex::decode(&tx_bytes)?;
-        let mut client = context.coin.client().await?;
-        let height = client.latest_height().await?;
-        let result = client.post_transaction(height, &tx).await?;
-        Ok(result)
+        match id_account {
+            Some(id_account) => {
+                check_auth(context, id_account, true)?;
+                let txid =
+                    crate::api::pay::broadcast_bytes(&tx, id_account as u32, &context.coin).await?;
+                Ok(txid)
+            }
+            None => {
+                let mut client = context.coin.client().await?;
+                let height = client.latest_height().await?;
+                let result = client.post_transaction(height, &tx).await?;
+                Ok(result)
+            }
+        }
     }
 }
 
