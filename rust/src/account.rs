@@ -2173,12 +2173,18 @@ pub async fn get_addresses(
     account: u32,
     ua_pools: u8,
 ) -> Result<Addresses> {
-    let dindex = crate::db::get_account_dindex(connection, account).await?;
+    // One snapshot for the four reads: a rotation (generate_next_dindex,
+    // under BEGIN IMMEDIATE) that commits between them would otherwise
+    // mix the stored Sapling address of one generation with the index of
+    // the previous one (#1555).
+    let mut tx = connection.begin().await?;
+    let dindex = crate::db::get_account_dindex(&mut tx, account).await?;
     let diversifier_index = dindex;
 
-    let tkeys = crate::db::select_account_transparent(connection, account, dindex).await?;
-    let skeys = crate::db::select_account_sapling(network, connection, account).await?;
-    let okeys = crate::db::select_account_orchard(connection, account).await?;
+    let tkeys = crate::db::select_account_transparent(&mut tx, account, dindex).await?;
+    let skeys = crate::db::select_account_sapling(network, &mut tx, account).await?;
+    let okeys = crate::db::select_account_orchard(&mut tx, account).await?;
+    tx.commit().await?;
 
     // An incoming-only account derives its receiving addresses from its
     // incoming keys; they are the ones the full key would give.
