@@ -18,8 +18,11 @@ bool isValidFvk({required String fvk, required Coin c}) =>
 bool isValidKey({required String key, required Coin c}) =>
     RustLib.instance.api.crateApiKeyIsValidKey(key: key, c: c);
 
-bool isValidAddress({required String address}) =>
-    RustLib.instance.api.crateApiKeyIsValidAddress(address: address);
+/// Whether `address` can be paid from the wallet's network: it parses, it
+/// is for this network and it is not Sprout (#1542). The same test the
+/// OpenAlias resolver applies to a published address.
+bool isValidAddress({required String address, required Coin c}) =>
+    RustLib.instance.api.crateApiKeyIsValidAddress(address: address, c: c);
 
 bool isValidTransparentAddress({required String address, required Coin c}) =>
     RustLib.instance.api

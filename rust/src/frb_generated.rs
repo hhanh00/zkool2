@@ -5995,10 +5995,29 @@ fn wire__crate__api__key__is_valid_address_impl(
             let mut deserializer =
                 flutter_rust_bridge::for_generated::SseDeserializer::new(message);
             let api_address = <String>::sse_decode(&mut deserializer);
+            let api_c = <RustOpaqueMoi<
+                flutter_rust_bridge::for_generated::RustAutoOpaqueInner<Coin>,
+            >>::sse_decode(&mut deserializer);
             deserializer.end();
             transform_result_sse::<_, ()>((move || {
-                let output_ok =
-                    Result::<_, ()>::Ok(crate::api::key::is_valid_address(&api_address))?;
+                let mut api_c_guard = None;
+                let decode_indices_ =
+                    flutter_rust_bridge::for_generated::lockable_compute_decode_order(vec![
+                        flutter_rust_bridge::for_generated::LockableOrderInfo::new(
+                            &api_c, 0, false,
+                        ),
+                    ]);
+                for i in decode_indices_ {
+                    match i {
+                        0 => api_c_guard = Some(api_c.lockable_decode_sync_ref()),
+                        _ => unreachable!(),
+                    }
+                }
+                let api_c_guard = api_c_guard.unwrap();
+                let output_ok = Result::<_, ()>::Ok(crate::api::key::is_valid_address(
+                    &api_address,
+                    &*api_c_guard,
+                ))?;
                 Ok(output_ok)
             })())
         },

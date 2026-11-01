@@ -58,7 +58,7 @@ class _Api implements RustLibApi {
   Future<List<ZsaHolding>> crateApiZsaListZsaHoldings({required int account, required Coin c}) async => [_token()];
 
   @override
-  bool crateApiKeyIsValidAddress({required String address}) => true;
+  bool crateApiKeyIsValidAddress({required String address, required Coin c}) => true;
 
   @override
   bool crateApiKeyIsValidTransparentAddress({required String address, required Coin c}) => false;

@@ -3,6 +3,7 @@ import 'package:fixed/fixed.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/key.dart';
 import 'package:zkool/src/rust/api/pay.dart';
+import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
 /// A `zkfrost` member backup string (bech32m, case-insensitive).
@@ -23,7 +24,7 @@ String? validAddress(String? address) {
   if ((address == null || address.isEmpty)) {
     return null;
   }
-  if (!isValidAddress(address: address)) {
+  if (!isValidAddress(address: address, c: coinContext.coin)) {
     return "Invalid Address";
   }
   return null;

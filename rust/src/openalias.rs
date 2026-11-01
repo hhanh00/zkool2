@@ -170,7 +170,8 @@ fn alias_to_fqdn(alias: &str) -> Option<String> {
 // ---------------------------------------------------------------------------
 // Marker type for network validation via `convert_if_network`.
 // All `TryFromAddress` methods use the default (return `Unsupported`),
-// because we only care whether the network check passes.
+// because we only care whether the network check passes; the receiver
+// kinds are left to the planner (see `try_validate_zcash_address`).
 // ---------------------------------------------------------------------------
 
 struct NetCheck;
@@ -336,18 +337,30 @@ pub async fn resolve_zcash(alias: &str) -> Result<(Vec<Recipient>, DnssecStatus)
 /// address for the given network type.
 ///
 /// Uses `ZcashAddress::try_from_encoded` for structural validation and
-/// `convert_if_network` for the network check. Returns `Ok(())` if the
-/// address is valid for the given network, or an error with details.
+/// `convert_if_network` for the network check, and refuses Sprout, which
+/// has not been able to receive funds since Canopy and has no receiver in
+/// the planner. Every other kind passes: the planner judges the receivers
+/// it can pay, so a receiver kind added later needs no change here (#1542).
+/// Returns `Ok(())` if the address is valid for the given network, or an
+/// error with details.
 pub fn try_validate_zcash_address(address: &str, net: NetworkType) -> Result<()> {
     let addr = ZcashAddress::try_from_encoded(address)
         .map_err(|e| anyhow!("Invalid Zcash address: {e}"))?;
+    let is_sprout = addr.is_sprout();
 
-    match addr.convert_if_network::<NetCheck>(net) {
-        Err(ConversionError::IncorrectNetwork { expected, actual }) => Err(anyhow!(
+    if let Err(ConversionError::IncorrectNetwork { expected, actual }) =
+        addr.convert_if_network::<NetCheck>(net)
+    {
+        return Err(anyhow!(
             "Address {address} is for {actual:?} but we expected {expected:?}"
-        )),
-        _ => Ok(()),
+        ));
     }
+    if is_sprout {
+        return Err(anyhow!(
+            "Address {address} is a Sprout address, which cannot receive funds"
+        ));
+    }
+    Ok(())
 }
 
 /// Validate that an address string is a syntactically valid Zcash address
@@ -442,6 +455,45 @@ mod tests {
             "not-a-zcash-address",
             NetworkType::Regtest
         ));
+    }
+
+    /// A base58check address with the given version bytes and payload.
+    fn b58(version: [u8; 2], payload: &[u8]) -> String {
+        let mut bytes = version.to_vec();
+        bytes.extend_from_slice(payload);
+        bs58::encode(bytes).with_check().into_string()
+    }
+
+    const MAIN_SAPLING: &str =
+        "zs1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqpq6d8g";
+    const MAIN_UNIFIED: &str =
+        "u1qpatys4zruk99pg59gcscrt7y6akvl9vrhcfyhm9yxvxz7h87q6n8cgrzzpe9zru68uq39uhmlpp5uefxu0su5uqyqfe5zp3tycn0ecl";
+
+    #[test]
+    fn a_sprout_address_is_refused_with_its_own_message() {
+        let sprout = b58([0x16, 0x9a], &[0u8; 64]);
+        let err = try_validate_zcash_address(&sprout, NetworkType::Main).unwrap_err();
+        assert!(err.to_string().contains("Sprout"), "{err}");
+        assert!(!validate_zcash_address(&sprout, NetworkType::Main));
+    }
+
+    #[test]
+    fn a_wrong_network_address_keeps_the_network_message() {
+        let err = try_validate_zcash_address(MAIN_SAPLING, NetworkType::Test).unwrap_err();
+        assert!(err.to_string().contains("expected Test"), "{err}");
+        // A Sprout address on the wrong network is reported for its network first.
+        let sprout = b58([0x16, 0x9a], &[0u8; 64]);
+        let err = try_validate_zcash_address(&sprout, NetworkType::Test).unwrap_err();
+        assert!(err.to_string().contains("expected Test"), "{err}");
+    }
+
+    #[test]
+    fn supported_mainnet_forms_pass() {
+        let p2pkh = b58([0x1c, 0xb8], &[0u8; 20]);
+        for address in [p2pkh.as_str(), MAIN_SAPLING, MAIN_UNIFIED] {
+            try_validate_zcash_address(address, NetworkType::Main)
+                .unwrap_or_else(|e| panic!("{address}: {e}"));
+        }
     }
 
     #[test]

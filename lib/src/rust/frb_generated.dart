@@ -464,7 +464,7 @@ abstract class RustLibApi extends BaseApi {
 
   bool crateApiKeyIsTexAddress({required String address, required Coin c});
 
-  bool crateApiKeyIsValidAddress({required String address});
+  bool crateApiKeyIsValidAddress({required String address, required Coin c});
 
   bool crateApiKeyIsValidFvk({required String fvk, required Coin c});
 
@@ -4063,11 +4063,13 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  bool crateApiKeyIsValidAddress({required String address}) {
+  bool crateApiKeyIsValidAddress({required String address, required Coin c}) {
     return handler.executeSync(SyncTask(
       callFfi: () {
         final serializer = SseSerializer(generalizedFrbRustBinding);
         sse_encode_String(address, serializer);
+        sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
+            c, serializer);
         return pdeCallFfi(generalizedFrbRustBinding, serializer, funcId: 115)!;
       },
       codec: SseCodec(
@@ -4075,14 +4077,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: null,
       ),
       constMeta: kCrateApiKeyIsValidAddressConstMeta,
-      argValues: [address],
+      argValues: [address, c],
       apiImpl: this,
     ));
   }
 
   TaskConstMeta get kCrateApiKeyIsValidAddressConstMeta => const TaskConstMeta(
         debugName: "is_valid_address",
-        argNames: ["address"],
+        argNames: ["address", "c"],
       );
 
   @override

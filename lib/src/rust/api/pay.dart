@@ -13,6 +13,7 @@ part 'pay.freezed.dart';
 
 // These functions are ignored because they are not marked as `pub`: `send`
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `borrow_decode`, `clone`, `clone`, `decode`, `encode`, `fmt`, `fmt`
+// These functions are ignored (category: IgnoreBecauseExplicitAttribute): `pczt_config`
 
 Future<String> buildPuri({required List<Recipient> recipients}) =>
     RustLib.instance.api.crateApiPayBuildPuri(recipients: recipients);
@@ -45,14 +46,11 @@ Future<Uint8List> extractTransaction({required PcztPackage package}) =>
     RustLib.instance.api.crateApiPayExtractTransaction(package: package);
 
 /// Serialize a PCZT for transport between participants.
-///
-/// Uses bincode's `standard()` config so the bytes are interchangeable with
-/// zkool_graphql, whose `prepareSend` / `frostSign` use the same config. The
-/// two used to disagree (`legacy()` here), which made it impossible for an app
-/// user and a zkool_graphql user to co-sign a FROST transaction.
 Future<Uint8List> packTransaction({required PcztPackage pczt}) =>
     RustLib.instance.api.crateApiPayPackTransaction(pczt: pczt);
 
+/// Deserialize a PCZT package received from outside. A length prefix above
+/// [`PCZT_MAX_BYTES`] is an error before anything is allocated.
 Future<PcztPackage> unpackTransaction({required List<int> bytes}) =>
     RustLib.instance.api.crateApiPayUnpackTransaction(bytes: bytes);
 

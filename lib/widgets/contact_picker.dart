@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_contacts/flutter_contacts.dart' as fc;
 import 'package:gap/gap.dart';
 import 'package:zkool/src/rust/api/key.dart';
+import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 
 class ContactCandidate {
@@ -82,7 +83,7 @@ Future<List<ContactCandidate>?> showContactPicker(
       }
       if (trimmed.isEmpty) return;
       debugPrint('[contact_picker] $dcName scanning: "$trimmed"');
-      if (isValidAddress(address: trimmed)) {
+      if (isValidAddress(address: trimmed, c: coinContext.coin)) {
         debugPrint('[contact_picker]   -> valid Zcash address');
         addresses.add(trimmed);
       } else {

@@ -44,7 +44,7 @@ class _Api implements RustLibApi {
 
   // Any address the tests type is a valid shielded address.
   @override
-  bool crateApiKeyIsValidAddress({required String address}) => true;
+  bool crateApiKeyIsValidAddress({required String address, required Coin c}) => true;
 
   @override
   bool crateApiKeyIsValidTransparentAddress({required String address, required Coin c}) => false;

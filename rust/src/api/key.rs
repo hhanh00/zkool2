@@ -5,6 +5,7 @@ use rand::rngs::SysRng;
 use rand_core::Rng as _;
 use rand_core::UnwrapErr;
 use zcash_keys::keys::{UnifiedFullViewingKey, UnifiedIncomingViewingKey};
+use zcash_protocol::consensus::Parameters as _;
 
 use crate::{
     api::coin::Coin,
@@ -56,10 +57,12 @@ pub fn is_valid_key(key: &str, c: &Coin) -> bool {
     false
 }
 
+/// Whether `address` can be paid from the wallet's network: it parses, it
+/// is for this network and it is not Sprout (#1542). The same test the
+/// OpenAlias resolver applies to a published address.
 #[cfg_attr(feature = "flutter", frb(sync))]
-pub fn is_valid_address(address: &str) -> bool {
-    let r = zcash_address::ZcashAddress::try_from_encoded(address);
-    r.is_ok()
+pub fn is_valid_address(address: &str, c: &Coin) -> bool {
+    crate::openalias::validate_zcash_address(address, c.network().network_type())
 }
 
 #[cfg_attr(feature = "flutter", frb(sync))]
