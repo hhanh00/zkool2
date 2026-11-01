@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/contacts.dart';
 import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
@@ -35,6 +36,7 @@ class ContactListPageState extends ConsumerState<ContactListPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (ref.watch(lifecycleProvider).value ?? false) return PinLock();
     return Scaffold(
       appBar: AppBar(
         title: Text("Contacts"),

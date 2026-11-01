@@ -1,9 +1,14 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:zkool/main.dart' show PinLock;
+import 'package:zkool/pages/contact_editor.dart';
+import 'package:zkool/pages/contacts.dart';
 import 'package:zkool/pages/migrate.dart';
+import 'package:zkool/pages/tx.dart';
 import 'package:zkool/pages/voting.dart';
 import 'package:zkool/pages/voting_round.dart';
 import 'package:zkool/pages/zsa.dart';
@@ -126,6 +131,7 @@ void main() {
         appSettingsProvider.overrideWith(_Settings.new),
         votingDriveJobProvider.overrideWith(_IdleJob.new),
         getAccountsProvider.overrideWith((ref) async => []),
+        getContactsProvider.overrideWith((ref) async => []),
       ],
       child: MaterialApp.router(routerConfig: router),
     ));
@@ -138,6 +144,11 @@ void main() {
     'Migrate': const MigratePage(account: 1),
     'Voting': const VotingPage(account: 1),
     'Voting round': const VotingRoundPage(round: _round, account: 1),
+    // Pushed over guarded pages, or reachable from the drawer; they used to
+    // stay readable when the wallet locked on top of them (#1572).
+    'Mempool transaction': MempoolTxViewPage(Uint8List.fromList([1, 2, 3])),
+    'Contacts': const ContactListPage(),
+    'Contact editor': const ContactEditPage(),
   };
 
   for (final MapEntry(key: name, value: page) in pages.entries) {

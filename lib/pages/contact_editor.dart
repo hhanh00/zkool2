@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:gap/gap.dart';
 import 'package:go_router/go_router.dart';
+import 'package:zkool/main.dart';
 import 'package:zkool/src/rust/api/contacts.dart';
 import 'package:zkool/src/rust/api/openalias.dart';
 import 'package:zkool/store.dart';
@@ -110,6 +111,7 @@ class ContactEditPageState extends ConsumerState<ContactEditPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (ref.watch(lifecycleProvider).value ?? false) return PinLock();
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {

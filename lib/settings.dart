@@ -125,6 +125,10 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    // The page stays usable while locked, but the controls that could
+    // defeat the lock or reach seeds and the wallet file refuse input, and
+    // a proxy credential is not readable (#1572).
+    final locked = ref.watch(lifecycleProvider).value ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -136,7 +140,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
           ),
           IconButton(tooltip: "Lock", onPressed: () => lockApp(ref), icon: Icon(Icons.lock)),
           IconButton(tooltip: "Theme", onPressed: onTheme, icon: Icon(Icons.palette)),
-          IconButton(tooltip: "Database Manager", onPressed: onDatabaseManager, icon: Icon(Icons.folder)),
+          IconButton(tooltip: "Database Manager", onPressed: locked ? null : onDatabaseManager, icon: Icon(Icons.folder)),
         ],
       ),
       body: SingleChildScrollView(
@@ -227,7 +231,8 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                       hintText: "socks5h://127.0.0.1:9050",
                     ),
                     initialValue: settings.proxy,
-                    enabled: !isNymServer && settings.transport == 3,
+                    enabled: !isNymServer && settings.transport == 3 && !locked,
+                    obscureText: locked,
                     onChanged: onChangedProxy,
                   ),
                 ),
@@ -282,7 +287,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   child: Row(
                     children: [
                       Expanded(child: Text("Pin Lock")),
-                      Switch(value: settings.needPin, onChanged: onPinLockChanged),
+                      Switch(value: settings.needPin, onChanged: locked ? null : onPinLockChanged),
                     ],
                   ),
                 ),
@@ -345,7 +350,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                   Row(
                     children: [
                       Expanded(child: Text("Cloud Vault")),
-                      Switch(value: settings.vault, onChanged: onChangedVault),
+                      Switch(value: settings.vault, onChanged: locked ? null : onChangedVault),
                     ],
                   ),
                 if (settings.expertMode && settings.vault)
@@ -354,7 +359,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     SizedBox(
                       width: 40,
                       child: IconButton(
-                        onPressed: onVaultRecover,
+                        onPressed: locked ? null : onVaultRecover,
                         icon: Icon(Icons.chevron_right),
                       ),
                     ),
@@ -365,7 +370,7 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     SizedBox(
                       width: 40,
                       child: IconButton(
-                        onPressed: onVaultCompress,
+                        onPressed: locked ? null : onVaultCompress,
                         icon: Icon(Icons.auto_fix_high),
                       ),
                     ),

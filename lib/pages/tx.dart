@@ -435,12 +435,15 @@ class MempoolPage extends ConsumerWidget {
   }
 }
 
-class MempoolTxViewPage extends StatelessWidget {
+class MempoolTxViewPage extends ConsumerWidget {
   final Uint8List rawTx;
   const MempoolTxViewPage(this.rawTx, {super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Pushed over the guarded mempool list; it needs the guard itself,
+    // or it stays readable when the wallet locks on top of it (#1572).
+    if (ref.watch(lifecycleProvider).value ?? false) return PinLock();
     return Scaffold(
       appBar: AppBar(title: Text("Mempool Transaction")),
       body: Padding(
