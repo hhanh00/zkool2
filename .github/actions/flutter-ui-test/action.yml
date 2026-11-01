@@ -58,6 +58,16 @@ runs:
         restore-keys: |
           ${{ runner.os }}-flutter-ui-app-
 
+    # cargokit compiles the crate into build/rlz/build/cargokit, outside the
+    # app bundle above: keep its dependency artifacts between runs.
+    - name: Cache the app's compiled Rust dependencies
+      if: steps.app-cache.outputs.cache-hit != 'true'
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: ". -> build/rlz/build/cargokit"
+        shared-key: flutter-ui-app
+        cache-on-failure: true
+
     # path_provider resolves the documents directory to ~/Documents on
     # Linux; the test database and the rendezvous files live there.
     - name: Prepare the app's documents directory

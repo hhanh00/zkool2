@@ -18,6 +18,7 @@ jobs:
     uses: ./.github/workflows/zkool-graphql-build.yml
     with:
       ledger-transport: zemu
+      cache-dependencies: true
     # One build per transport and commit (the branch head, on a pull request
     # as on a dispatch): the first caller compiles and caches
     # the binary, the others restore it. The group is set here, at the call

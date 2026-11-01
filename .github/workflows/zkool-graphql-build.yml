@@ -11,6 +11,14 @@ on:
         required: false
         default: ledger
         type: string
+      cache-dependencies:
+        description: >-
+          Keep the compiled dependencies between runs, so a source change
+          rebuilds the crate and not its 800 dependencies. The test workflows
+          set it; the release build starts from a clean target.
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   build:
@@ -30,6 +38,17 @@ jobs:
         with:
           path: target/release/zkool_graphql
           key: ${{ runner.os }}-zkool-graphql-${{ inputs.ledger-transport }}-${{ hashFiles('Cargo.lock', 'rust/Cargo.toml', 'rust/src/**', 'lib/**/*.dart', 'pubspec.yaml', 'pubspec.lock') }}
+
+      # The dependency artifacts, keyed on Cargo.lock and the toolchain, one
+      # entry per transport (the two differ by a crate). Saved on a failed
+      # build too, so a compile error does not throw the dependencies away.
+      - name: Cache the compiled dependencies
+        if: inputs.cache-dependencies && steps.cache.outputs.cache-hit != 'true'
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          shared-key: zkool-graphql-${{ inputs.ledger-transport }}
+          cache-on-failure: true
 
       - name: Build zkool_graphql
         if: steps.cache.outputs.cache-hit != 'true'

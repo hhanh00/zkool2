@@ -18,10 +18,14 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Checkout code
         uses: actions/checkout@v6
+      # The cargo workspace is the repository root and so is target/; the
+      # crate's own directory has no target of its own, so pointing the cache
+      # there kept the registry only and every run compiled the dependencies.
       - name: Cache cargo artifacts
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: rust
+          workspaces: ". -> target"
+          cache-on-failure: true
       - name: Run tests
         run: |
           cd rust
