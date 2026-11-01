@@ -61,7 +61,13 @@ impl LwdServer for GRPCClient {
             // The error goes down the channel as the last item: a stream
             // that failed must not look like one that ended (#1474).
             loop {
-                match blocks.message().await {
+                // A consumer that dropped the stream ends the task at once,
+                // not at the next block the server sends (#1538).
+                let message = tokio::select! {
+                    _ = tx.closed() => break,
+                    message = blocks.message() => message,
+                };
+                match message {
                     Ok(Some(block)) => {
                         if tx.send(Ok(block)).await.is_err() {
                             break; // the consumer is gone
@@ -191,7 +197,17 @@ impl LwdServer for GRPCClient {
         let (sender, rx) = tokio::sync::mpsc::channel::<Result<(u32, Transaction, usize)>>(10);
         tokio::spawn(async move {
             let forward = async {
-                while let Some(rtx) = txs.message().await? {
+                loop {
+                    // The consumer went away (an error ended the monitor, or
+                    // it was cancelled): stop holding the server's stream
+                    // until its next block and end the task (#1538).
+                    let rtx = tokio::select! {
+                        _ = sender.closed() => break,
+                        message = txs.message() => match message? {
+                            Some(rtx) => rtx,
+                            None => break,
+                        },
+                    };
                     let len = rtx.data.len();
                     let branch_id =
                         BranchId::for_height(&network, BlockHeight::from_u32(rtx.height as u32));
@@ -283,4 +299,170 @@ pub async fn query_lwd_list(coin: u8, route: &crate::net::http::Route) -> Result
     }
 
     Ok(lwd_list)
+}
+
+#[cfg(test)]
+mod producer_tests {
+    use super::*;
+    use crate::lwd::compact_tx_streamer_server::{CompactTxStreamer, CompactTxStreamerServer};
+    use std::pin::Pin;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use std::task::{Context, Poll};
+    use std::time::Duration;
+
+    /// A server stream that never yields and counts itself as live until
+    /// the server drops it, which happens when the client lets go of the
+    /// gRPC stream.
+    struct Stalled<T> {
+        live: Arc<AtomicUsize>,
+        _item: std::marker::PhantomData<fn() -> T>,
+    }
+
+    impl<T> Stalled<T> {
+        fn new(live: &Arc<AtomicUsize>) -> Self {
+            live.fetch_add(1, Ordering::SeqCst);
+            Self {
+                live: live.clone(),
+                _item: std::marker::PhantomData,
+            }
+        }
+    }
+
+    impl<T> Drop for Stalled<T> {
+        fn drop(&mut self) {
+            self.live.fetch_sub(1, Ordering::SeqCst);
+        }
+    }
+
+    impl<T> tokio_stream::Stream for Stalled<T> {
+        type Item = std::result::Result<T, tonic::Status>;
+        fn poll_next(self: Pin<&mut Self>, _: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+            Poll::Pending
+        }
+    }
+
+    /// A lightwalletd whose mempool and block streams open and then say
+    /// nothing, as a quiet mempool does between blocks.
+    struct Quiet {
+        live: Arc<AtomicUsize>,
+    }
+
+    #[async_trait]
+    impl CompactTxStreamer for Quiet {
+        type GetBlockRangeStream = Stalled<CompactBlock>;
+        type GetTaddressTxidsStream = Stalled<RawTransaction>;
+        type GetMempoolTxStream = Stalled<CompactTx>;
+        type GetMempoolStreamStream = Stalled<RawTransaction>;
+        type GetAddressUtxosStreamStream = Stalled<GetAddressUtxosReply>;
+
+        async fn get_block_range(
+            &self,
+            _: Request<BlockRange>,
+        ) -> std::result::Result<tonic::Response<Self::GetBlockRangeStream>, tonic::Status> {
+            Ok(tonic::Response::new(Stalled::new(&self.live)))
+        }
+        async fn get_mempool_stream(
+            &self,
+            _: Request<Empty>,
+        ) -> std::result::Result<tonic::Response<Self::GetMempoolStreamStream>, tonic::Status> {
+            Ok(tonic::Response::new(Stalled::new(&self.live)))
+        }
+        async fn get_latest_block(&self, _: Request<ChainSpec>) -> std::result::Result<tonic::Response<BlockId>, tonic::Status> {
+            unimplemented!()
+        }
+        async fn get_block(&self, _: Request<BlockId>) -> std::result::Result<tonic::Response<CompactBlock>, tonic::Status> {
+            unimplemented!()
+        }
+        async fn get_transaction(&self, _: Request<TxFilter>) -> std::result::Result<tonic::Response<RawTransaction>, tonic::Status> {
+            unimplemented!()
+        }
+        async fn send_transaction(&self, _: Request<RawTransaction>) -> std::result::Result<tonic::Response<SendResponse>, tonic::Status> {
+            unimplemented!()
+        }
+        async fn get_taddress_txids(
+            &self,
+            _: Request<TransparentAddressBlockFilter>,
+        ) -> std::result::Result<tonic::Response<Self::GetTaddressTxidsStream>, tonic::Status> {
+            unimplemented!()
+        }
+        async fn get_taddress_balance(&self, _: Request<AddressList>) -> std::result::Result<tonic::Response<Balance>, tonic::Status> {
+            unimplemented!()
+        }
+        async fn get_taddress_balance_stream(
+            &self,
+            _: Request<tonic::Streaming<Address>>,
+        ) -> std::result::Result<tonic::Response<Balance>, tonic::Status> {
+            unimplemented!()
+        }
+        async fn get_mempool_tx(&self, _: Request<Exclude>) -> std::result::Result<tonic::Response<Self::GetMempoolTxStream>, tonic::Status> {
+            unimplemented!()
+        }
+        async fn get_tree_state(&self, _: Request<BlockId>) -> std::result::Result<tonic::Response<TreeState>, tonic::Status> {
+            unimplemented!()
+        }
+        async fn get_address_utxos(
+            &self,
+            _: Request<GetAddressUtxosArg>,
+        ) -> std::result::Result<tonic::Response<GetAddressUtxosReplyList>, tonic::Status> {
+            unimplemented!()
+        }
+        async fn get_address_utxos_stream(
+            &self,
+            _: Request<GetAddressUtxosArg>,
+        ) -> std::result::Result<tonic::Response<Self::GetAddressUtxosStreamStream>, tonic::Status> {
+            unimplemented!()
+        }
+        async fn get_lightd_info(&self, _: Request<Empty>) -> std::result::Result<tonic::Response<LightdInfo>, tonic::Status> {
+            unimplemented!()
+        }
+        async fn ping(&self, _: Request<crate::lwd::Duration>) -> std::result::Result<tonic::Response<PingResponse>, tonic::Status> {
+            unimplemented!()
+        }
+    }
+
+    /// Starts the quiet server and connects a client to it.
+    async fn quiet_server() -> (GRPCClient, Arc<AtomicUsize>) {
+        let live = Arc::new(AtomicUsize::new(0));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let service = CompactTxStreamerServer::new(Quiet { live: live.clone() });
+        tokio::spawn(
+            tonic::transport::Server::builder()
+                .add_service(service)
+                .serve_with_incoming(tonic::transport::server::TcpIncoming::from(listener)),
+        );
+        let client = crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient::connect(format!("http://127.0.0.1:{port}"))
+            .await
+            .unwrap();
+        (client, live)
+    }
+
+    async fn wait_for(live: &AtomicUsize, expected: usize) -> bool {
+        for _ in 0..40 {
+            if live.load(Ordering::SeqCst) == expected {
+                return true;
+            }
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+        false
+    }
+
+    /// Dropping the stream a producer feeds ends the producer and releases
+    /// the server's stream at once, rather than at the server's next
+    /// message (#1538).
+    #[tokio::test]
+    async fn a_dropped_consumer_releases_the_servers_stream() {
+        let (mut client, live) = quiet_server().await;
+
+        let mempool = client.mempool_stream(&Network::Main).await.unwrap();
+        assert!(wait_for(&live, 1).await, "the mempool stream is open on the server");
+        drop(mempool);
+        assert!(wait_for(&live, 0).await, "the server's mempool stream was released");
+
+        let blocks = client.block_range(&Network::Main, 1, 10).await.unwrap();
+        assert!(wait_for(&live, 1).await, "the block stream is open on the server");
+        drop(blocks);
+        assert!(wait_for(&live, 0).await, "the server's block stream was released");
+    }
 }
