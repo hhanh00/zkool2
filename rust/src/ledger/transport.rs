@@ -56,14 +56,46 @@ pub struct APDUAnswer {
 }
 
 impl APDUAnswer {
+    /// Splits a reply into its body and the two-byte status word. A reply
+    /// shorter than the status word is a protocol error, not a panic: this
+    /// runs on the HID worker thread, which a panic would kill for the
+    /// rest of the session (#1541).
     pub fn from_bytes(data: &[u8]) -> LedgerResult<Self> {
-        let retcode = u16::from_be_bytes([data[data.len() - 2], data[data.len() - 1]]);
-        let mut data2 = vec![];
-        data2.extend_from_slice(&data[0..data.len() - 2]);
+        let Some((body, status)) = data.len().checked_sub(2).map(|at| data.split_at(at)) else {
+            return Err(LedgerError::Protocol(format!("short reply: {} bytes", data.len())));
+        };
         Ok(Self {
-            data: data2,
-            retcode,
+            data: body.to_vec(),
+            retcode: u16::from_be_bytes([status[0], status[1]]),
         })
+    }
+}
+
+#[cfg(test)]
+mod answer_tests {
+    use super::*;
+
+    fn message(r: LedgerResult<APDUAnswer>) -> String {
+        match r {
+            Ok(_) => panic!("a short reply was accepted"),
+            Err(e) => e.to_string(),
+        }
+    }
+
+    #[test]
+    fn a_reply_shorter_than_the_status_word_is_a_protocol_error() {
+        assert!(message(APDUAnswer::from_bytes(&[])).contains("short reply: 0 bytes"));
+        assert!(message(APDUAnswer::from_bytes(&[0x90])).contains("short reply: 1 bytes"));
+    }
+
+    #[test]
+    fn the_status_word_is_split_from_the_body() {
+        let ok = APDUAnswer::from_bytes(&[0x90, 0x00]).unwrap();
+        assert!(ok.data.is_empty());
+        assert_eq!(ok.retcode, 0x9000);
+        let denied = APDUAnswer::from_bytes(&[1, 2, 0x6a, 0x80]).unwrap();
+        assert_eq!(denied.data, vec![1, 2]);
+        assert_eq!(denied.retcode, 0x6a80);
     }
 }
 
