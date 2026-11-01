@@ -282,10 +282,14 @@ pub async fn finalize_key(
     );
     let (kp, pp) = dkg::part3(&state2.spkg2, &state2.state1.ppkg1s, &state2.ppkg2s)?;
     info!("DKG: dkg::part3 completed successfully");
+    // One transaction, as the other stages: a key package without its
+    // round-3 row sent the planner to CreateFrostAccount, which failed on
+    // the missing row on every pass (#1503).
+    let mut tx = connection.begin().await?;
     sqlx::query("UPDATE dkg_state SET key_pkg = ?1 WHERE account = ?2")
         .bind(kp.to_bytes()?)
         .bind(account)
-        .execute(&mut *connection)
+        .execute(&mut *tx)
         .await?;
     sqlx::query(
         "INSERT INTO dkg_peers(account, round, from_id, data) VALUES(?1, 3, ?2, ?3)
@@ -294,8 +298,9 @@ pub async fn finalize_key(
     .bind(account)
     .bind(state.params.id)
     .bind(pp.to_bytes()?)
-    .execute(&mut *connection)
+    .execute(&mut *tx)
     .await?;
+    tx.commit().await?;
     Ok(())
 }
 
@@ -420,4 +425,107 @@ pub async fn complete_finalize(
     }
     // 4. Cleanup LAST: the props this deletes are what stop the drivers.
     delete_frost_state(&mut *connection).await
+}
+
+#[cfg(test)]
+mod finalize_tests {
+    use super::*;
+    use crate::db::create_schema;
+    use crate::frost::dkg::{DkgInit, DkgState0, DkgState1, DkgState2};
+    use ed25519_dalek::SigningKey;
+    use rand_core_legacy::OsRng;
+    use reddsa_legacy::frost::redpallas::Identifier;
+    use std::collections::BTreeMap;
+
+    /// Participant 1 of a 2-of-2 DKG after round 2, as observe rebuilds it.
+    fn after_round_2() -> DkgState {
+        let id1: Identifier = 1u16.try_into().unwrap();
+        let id2: Identifier = 2u16.try_into().unwrap();
+        let (s1, p1) = dkg::part1(id1, 2, 2, OsRng).unwrap();
+        let (s2, p2) = dkg::part1(id2, 2, 2, OsRng).unwrap();
+        let ppkg1s = BTreeMap::from([(id2, p2)]);
+        let (spkg2, _) = dkg::part2(s1.clone(), &ppkg1s).unwrap();
+        let (_, from_2) = dkg::part2(s2, &BTreeMap::from([(id1, p1)])).unwrap();
+        let ppkg2s = BTreeMap::from([(id2, from_2[&id1].clone())]);
+        let signing_key = SigningKey::from_bytes(&[7u8; 32]);
+        let init = DkgInit { self_id: 1, n: 2, t: 2, dkg_version: 2 };
+        let state0 = DkgState0 {
+            init,
+            verifying_key: signing_key.verifying_key(),
+            signing_key,
+            peer_verifying_keys: BTreeMap::new(),
+        };
+        let state1 = DkgState1 { state0, spkg1: s1, ppkg1s };
+        let round = super::super::state::RoundState { secret_present: true, others: 1, pending: None };
+        DkgState {
+            funding_account: 1,
+            params: DKGParams { id: 1, n: 2, t: 2, birth_height: 1 },
+            addresses: vec!["a".into(), "b".into()],
+            mailbox: None,
+            broadcast: None,
+            broadcast_address: None,
+            rounds: [round; 3],
+            key_pkg_present: false,
+            frost_account: None,
+            rekeyed: false,
+            dkg_version: 2,
+            version_mismatch: None,
+            publish_unmined: false,
+            state0: None,
+            state1: None,
+            state2: Some(DkgState2 { state1, spkg2, ppkg2s }),
+        }
+    }
+
+    async fn wallet() -> SqliteConnection {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        create_schema(&mut db).await.unwrap();
+        sqlx::query("INSERT INTO dkg_state(account) VALUES (1)")
+            .execute(&mut db)
+            .await
+            .unwrap();
+        db
+    }
+
+    /// (key package stored, round-3 rows).
+    async fn written(db: &mut SqliteConnection) -> (bool, i64) {
+        let (kp,): (bool,) =
+            sqlx::query_as("SELECT key_pkg IS NOT NULL FROM dkg_state WHERE account = 1")
+                .fetch_one(&mut *db)
+                .await
+                .unwrap();
+        let (n,): (i64,) =
+            sqlx::query_as("SELECT COUNT(*) FROM dkg_peers WHERE account = 1 AND round = 3")
+                .fetch_one(&mut *db)
+                .await
+                .unwrap();
+        (kp, n)
+    }
+
+    /// The key package and its round-3 row commit together: a refused
+    /// row leaves no key package behind to send the planner past
+    /// FinalizeKey (#1503).
+    #[tokio::test]
+    async fn the_key_package_and_its_round_3_row_commit_together() {
+        let mut db = wallet().await;
+        let state = after_round_2();
+        sqlx::query(
+            "CREATE TRIGGER refuse_round_3 BEFORE INSERT ON dkg_peers WHEN NEW.round = 3
+            BEGIN SELECT RAISE(ABORT, 'refused'); END",
+        )
+        .execute(&mut db)
+        .await
+        .unwrap();
+        assert!(finalize_key(&mut db, 1, &state).await.is_err());
+        assert_eq!(written(&mut db).await, (false, 0), "neither write survived");
+
+        sqlx::query("DROP TRIGGER refuse_round_3").execute(&mut db).await.unwrap();
+        finalize_key(&mut db, 1, &state).await.unwrap();
+        assert_eq!(written(&mut db).await, (true, 1));
+
+        let mut done = state.clone();
+        done.key_pkg_present = true;
+        finalize_key(&mut db, 1, &done).await.unwrap();
+        assert_eq!(written(&mut db).await, (true, 1), "a second call is a no-op");
+    }
 }
