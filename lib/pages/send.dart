@@ -585,10 +585,11 @@ class SendPageState extends ConsumerState<SendPage> with BusyGate<SendPage> {
       if (fields == null || fields['address']?.value != addr) return;
       fields['address']!.didChange(recipient.address);
       setState(() => address = recipient.address);
-      if (recipient.userMemo != null) {
-        memo = recipient.userMemo;
-        fields['memo']!.didChange(memo);
-      }
+      // The memo is the alias's, or none: the field was hidden while the
+      // alias was typed, so what it held belongs to an earlier recipient
+      // (#1533).
+      memo = recipient.userMemo;
+      fields['memo']!.didChange(memo);
     });
   }
 
@@ -602,6 +603,14 @@ class SendPageState extends ConsumerState<SendPage> with BusyGate<SendPage> {
       var memo = form.fields['memo']?.value as String?;
       final fxStr = amountKey.currentState!.fx();
       final price = (fxStr != null) ? stringToDecimal(fxStr).toDecimal().toDouble() : null;
+      // A reference (`!account`, `@contact`, `#alias`) hides the memo field
+      // while it is typed, so whatever the field holds belongs to an earlier
+      // recipient: the memo becomes what the reference carries, which is
+      // none for an account or a contact (#1533).
+      void takeMemo(String? resolved) {
+        memo = resolved;
+        form.fields['memo']!.didChange(resolved);
+      }
 
       // Resolve !accountname to actual address
       if (address.startsWith('!')) {
@@ -631,6 +640,7 @@ class SendPageState extends ConsumerState<SendPage> with BusyGate<SendPage> {
           }
         }
         address = resolved;
+        takeMemo(null);
       }
 
       // Resolve @contactname to actual address
@@ -644,6 +654,7 @@ class SendPageState extends ConsumerState<SendPage> with BusyGate<SendPage> {
           return null;
         }
         address = resolved;
+        takeMemo(null);
       }
 
       // Resolve #alias via OpenAlias DNS
@@ -652,16 +663,14 @@ class SendPageState extends ConsumerState<SendPage> with BusyGate<SendPage> {
         if (recipient != null) {
           address = recipient.address;
           form.fields['address']!.didChange(address);
-          if (recipient.userMemo != null) {
-            memo = recipient.userMemo;
-            form.fields['memo']!.didChange(memo);
-          }
+          takeMemo(recipient.userMemo);
         }
       }
 
       // A transparent recipient takes no memo, and the hidden memo field may
       // still hold one from an earlier recipient (#1355).
-      if (memo != null && (memo.isEmpty || isValidTransparentAddress(address: address, c: c))) {
+      final kept = memo;
+      if (kept != null && (kept.isEmpty || isValidTransparentAddress(address: address, c: c))) {
         memo = null;
       }
 
