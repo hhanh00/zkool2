@@ -1423,10 +1423,12 @@ mod new_account_tests {
 }
 
 pub fn derive_transparent_sk(tsk: &AccountPrivKey, scope: u32, dindex: u32) -> Result<Vec<u8>> {
-    let scope = scope.transparent_scope();
+    let scope = scope.transparent_scope()?;
+    let child = NonHardenedChildIndex::from_index(dindex)
+        .ok_or_else(|| anyhow!("transparent child index {dindex} is hardened"))?;
     let tsk = tsk
-        .derive_secret_key(scope, NonHardenedChildIndex::from_index(dindex).unwrap())
-        .unwrap()
+        .derive_secret_key(scope, child)
+        .map_err(|error| anyhow!("cannot derive the transparent key at {dindex}: {error:?}"))?
         .to_bytes();
     Ok(tsk.to_vec())
 }

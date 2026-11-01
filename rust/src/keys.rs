@@ -33,8 +33,10 @@ pub trait ScopeExt {
     /// Convert to [`zip32::Scope`] (Sapling).
     fn sapling_scope(self) -> zip32::Scope;
 
-    /// Convert to [`TransparentKeyScope`].
-    fn transparent_scope(self) -> TransparentKeyScope;
+    /// Convert to [`TransparentKeyScope`]; a value other than 0 or 1 is an
+    /// error rather than a panic, since scopes also arrive in PCZT
+    /// proprietary fields (#1480).
+    fn transparent_scope(self) -> anyhow::Result<TransparentKeyScope>;
 }
 
 impl ScopeExt for u8 {
@@ -58,11 +60,13 @@ impl ScopeExt for u8 {
         }
     }
 
-    fn transparent_scope(self) -> TransparentKeyScope {
+    fn transparent_scope(self) -> anyhow::Result<TransparentKeyScope> {
         match self {
-            0 => TransparentKeyScope::EXTERNAL,
-            1 => TransparentKeyScope::INTERNAL,
-            _ => unreachable!(),
+            0 => Ok(TransparentKeyScope::EXTERNAL),
+            1 => Ok(TransparentKeyScope::INTERNAL),
+            _ => Err(anyhow::anyhow!(
+                "scope {self} is neither external (0) nor internal (1)"
+            )),
         }
     }
 }
@@ -80,7 +84,10 @@ impl ScopeExt for u32 {
         (self as u8).sapling_scope()
     }
 
-    fn transparent_scope(self) -> TransparentKeyScope {
+    fn transparent_scope(self) -> anyhow::Result<TransparentKeyScope> {
+        if self > 1 {
+            anyhow::bail!("scope {self} is neither external (0) nor internal (1)");
+        }
         (self as u8).transparent_scope()
     }
 }

@@ -139,13 +139,22 @@ async fn send_command<D: Device>(
     Ok(())
 }
 
+/// The app addresses a spend by a one-byte parameter, so a package index
+/// that does not fit is refused before any APDU: narrowing it would ask the
+/// device to sign one action and apply the signature to another (#1480).
+fn ledger_index(index: u32) -> Result<u8> {
+    u8::try_from(index)
+        .map_err(|_| anyhow!("spend index {index} does not fit the Ledger protocol (at most 255)"))
+}
+
 async fn sign_one<D: Device>(ledger: &D, ins: u8, index: u32) -> Result<[u8; 64]> {
+    let p2 = ledger_index(index)?;
     let res = ledger
         .execute(APDUCommand {
             cla: CLA,
             ins,
             p1: 0,
-            p2: index as u8,
+            p2,
             data: vec![],
         })
         .await?;
@@ -167,12 +176,13 @@ async fn sign_transparent_input<D: Device>(
     ledger: &D,
     index: u32,
 ) -> Result<secp256k1::ecdsa::Signature> {
+    let p2 = ledger_index(index)?;
     let res = ledger
         .execute(APDUCommand {
             cla: CLA,
             ins: INS_PCZT_SIGN_TRANSPARENT,
             p1: 0,
-            p2: index as u8,
+            p2,
             data: vec![],
         })
         .await?;
@@ -381,6 +391,7 @@ where
 
     let pczt = Pczt::parse(&package.pczt)
         .map_err(|error| anyhow!("failed to parse PCZT: {error:?}"))?;
+    crate::pay::sign::validate_package(&package, &pczt)?;
 
     if !pczt.sapling().spends().is_empty() || !pczt.sapling().outputs().is_empty() {
         anyhow::bail!("Official Ledger accounts cannot spend Sapling notes");
@@ -696,4 +707,17 @@ where
 {
     let ledger = crate::ledger::transport::connect_ledger().await?;
     sign_transaction(&network, connection, account, &package, Some(sink), &ledger).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ledger_index;
+
+    #[test]
+    fn a_spend_index_above_a_byte_is_refused_before_any_apdu() {
+        assert_eq!(ledger_index(0).unwrap(), 0);
+        assert_eq!(ledger_index(255).unwrap(), 255);
+        let err = ledger_index(256).unwrap_err().to_string();
+        assert!(err.contains("256 does not fit"), "{err}");
+    }
 }

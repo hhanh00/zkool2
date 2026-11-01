@@ -3,7 +3,9 @@
 //! this module decides who does it. Either way the result has every spend
 //! signed, proved and finalised, ready to extract and broadcast.
 
-use anyhow::{anyhow, Result};
+use std::collections::{BTreeMap, HashSet};
+
+use anyhow::{anyhow, bail, Result};
 use bip32::PrivateKey as _;
 use orchard::keys::SpendAuthorizingKey;
 use pczt::{
@@ -84,6 +86,7 @@ async fn sign_transaction(
 ) -> Result<PcztPackage> {
     let span = span!(Level::INFO, "transaction");
 
+    let package = pczt;
     let PcztPackage {
         pczt,
         n_spends,
@@ -94,9 +97,10 @@ async fn sign_transaction(
         category,
         is_issuance,
         ..
-    } = pczt;
+    } = package;
     let pczt = Pczt::parse(pczt)
         .map_err(|error| anyhow!("failed to parse PCZT for signing: {error:?}"))?;
+    validate_package(package, &pczt)?;
     let orchard_pk = get_orchard_pk(*pczt.global().consensus_branch_id())?;
 
     let dindex = get_account_dindex(connection, account).await?;
@@ -115,44 +119,58 @@ async fn sign_transaction(
         return Err(Error::NoSigningKey.into());
     }
 
-    let updater = Updater::new(pczt);
-    let pgk = ssk.as_ref().map(|ssk| ssk.expsk().proof_generation_key());
-    let internal_pgk = ssk
-        .clone()
-        .map(|ssk| sapling_ssk_for_scope(1u8, &ssk).map(|key| key.expsk().proof_generation_key()))
-        .transpose()?;
-    let updater = updater
-        .update_sapling_with(|mut u| {
-            for bundle_index in sapling_indices.iter() {
-                let spend = &u.bundle().spends()[*bundle_index];
-                let scope =
-                    u32::from_le_bytes(spend.proprietary()["scope"].clone().try_into().unwrap());
-                u.update_spend_with(*bundle_index, |mut u| {
-                    u.set_proof_generation_key(sapling_pgk_for_scope(
-                        scope,
-                        pgk.clone().expect("proof_generation_key"),
-                        internal_pgk.clone().expect("internal_proof_generation_key"),
-                    ))
-                    .unwrap();
-
-                    Ok(())
-                })
-                .unwrap();
-            }
-            Ok(())
+    // The scope of each Sapling spend, read from the validated package
+    // before the updater takes the PCZT.
+    let sapling_scopes = sapling_indices
+        .iter()
+        .map(|bundle_index| {
+            scope_field(
+                pczt.sapling().spends()[*bundle_index].proprietary(),
+                "Sapling spend",
+                *bundle_index,
+            )
         })
-        .unwrap();
-    let pczt = updater.finish();
+        .collect::<Result<Vec<_>>>()?;
+    let sapling_keys = if sapling_indices.is_empty() {
+        None
+    } else {
+        let ssk = ssk.as_ref().ok_or(Error::NoSigningKey)?;
+        Some((
+            ssk.expsk().proof_generation_key(),
+            sapling_ssk_for_scope(1u8, ssk)?
+                .expsk()
+                .proof_generation_key(),
+        ))
+    };
+    let pczt = match sapling_keys {
+        Some((pgk, internal_pgk)) => Updater::new(pczt)
+            .update_sapling_with(|mut u| {
+                for (bundle_index, scope) in sapling_indices.iter().zip(&sapling_scopes) {
+                    u.update_spend_with(*bundle_index, |mut u| {
+                        u.set_proof_generation_key(sapling_pgk_for_scope(
+                            *scope,
+                            pgk.clone(),
+                            internal_pgk.clone(),
+                        ))?;
+                        Ok(())
+                    })?;
+                }
+                Ok(())
+            })
+            .map_err(|error| anyhow!("failed to set the Sapling proof keys: {error:?}"))?
+            .finish(),
+        None => pczt,
+    };
     info!("Updated");
 
-    let mut signer = PcztSigner::new(pczt.clone()).unwrap();
+    let mut signer = PcztSigner::new(pczt.clone())
+        .map_err(|error| anyhow!("failed to start the PCZT signer: {error:?}"))?;
     let tbundle = pczt.transparent();
-    let sbundle = pczt.sapling();
     for index in 0..n_spends[0] {
         info!("signing transparent {index}");
         let inp = &tbundle.inputs()[index];
-        let scope = u32::from_le_bytes(inp.proprietary()["scope"].clone().try_into().unwrap());
-        let dindex = u32::from_le_bytes(inp.proprietary()["dindex"].clone().try_into().unwrap());
+        let scope = scope_field(inp.proprietary(), "transparent input", index)?;
+        let dindex = u32_field(inp.proprietary(), "dindex", "transparent input", index)?;
         // Check if "uncompressed" flag exists in proprietary, default to false (compressed)
         let uncompressed_flag = if let Some(val) = inp.proprietary().get("uncompressed") {
             if !val.is_empty() {
@@ -178,11 +196,13 @@ async fn sign_transaction(
             // From the derivation path if we have the xsk
             Some(tsk) => {
                 let sk = derive_transparent_sk(tsk, scope, dindex)?;
-                SecretKey::from_bytes(&sk.try_into().unwrap()).ok()
+                <[u8; 32]>::try_from(sk)
+                    .ok()
+                    .and_then(|sk| SecretKey::from_bytes(&sk).ok())
             }
             // Or directly from the private key
             None => {
-                let address = String::from_utf8(inp.proprietary()["address"].clone())?;
+                let address = address_field(inp.proprietary(), index)?;
                 sqlx::query(
                     "SELECT sk FROM transparent_address_accounts
                     WHERE account = ?1 AND address = ?2",
@@ -205,7 +225,9 @@ async fn sign_transaction(
 
         // Sign the sighash ourselves and append the signature; the signer
         // recovers the pubkey from the input's hash160 preimage.
-        let sighash = signer.transparent_sighash(index).unwrap();
+        let sighash = signer
+            .transparent_sighash(index)
+            .map_err(|e| anyhow!("failed to compute the sighash of transparent input {index}: {e:?}"))?;
         let msg = secp256k1::Message::from_digest(sighash);
         let sig = secp256k1::ecdsa::sign(msg, &sk);
         signer
@@ -214,8 +236,7 @@ async fn sign_transaction(
     }
     for (index, bundle_index) in sapling_indices.iter().enumerate() {
         info!("signing sapling {index}");
-        let spend = &sbundle.spends()[*bundle_index];
-        let scope = u32::from_le_bytes(spend.proprietary()["scope"].clone().try_into().unwrap());
+        let scope = sapling_scopes[index];
         let ssk = ssk
             .as_ref()
             .map(|ssk| sapling_ssk_for_scope(scope, ssk))
@@ -225,7 +246,9 @@ async fn sign_transaction(
         };
         signer
             .sign_sapling(UnwrapErr(SysRng), *bundle_index, sk)
-            .unwrap();
+            .map_err(|e| {
+                anyhow!("failed to sign Sapling spend {bundle_index} (selected spend {index}): {e:?}")
+            })?;
     }
     for (index, bundle_index) in orchard_indices.iter().enumerate() {
         info!("signing orchard {index}");
@@ -247,7 +270,9 @@ async fn sign_transaction(
         };
         signer
             .sign_ironwood(UnwrapErr(SysRng), *bundle_index, osak)
-            .unwrap();
+            .map_err(|e| {
+                anyhow!("failed to sign Ironwood action {bundle_index} (selected spend {index}): {e:?}")
+            })?;
     }
     let pczt = signer.finish();
 
@@ -287,11 +312,222 @@ async fn sign_transaction(
     })
 }
 
+/// Check a package's own fields against the PCZT it carries, before any
+/// signer trusts them (#1480). The planner always writes them consistently;
+/// a package loaded from a file or an animated QR, posted to zkool_graphql
+/// or received from a FROST coordinator may not. Every mismatch is an error
+/// naming the field, so a hand-built package fails instead of panicking.
+pub fn validate_package(package: &PcztPackage, pczt: &Pczt) -> Result<()> {
+    let inputs = pczt.transparent().inputs();
+    if package.n_spends[0] > inputs.len() {
+        bail!(
+            "the package names {} transparent spends but the PCZT has {} inputs",
+            package.n_spends[0],
+            inputs.len()
+        );
+    }
+    check_indices(
+        "sapling_indices",
+        &package.sapling_indices,
+        pczt.sapling().spends().len(),
+        Some(package.n_spends[1]),
+    )?;
+    check_indices(
+        "orchard_indices",
+        &package.orchard_indices,
+        pczt.orchard().actions().len(),
+        None,
+    )?;
+    check_indices(
+        "ironwood_indices",
+        &package.ironwood_indices,
+        pczt.ironwood().actions().len(),
+        Some(package.n_spends[3]),
+    )?;
+    for (index, input) in inputs.iter().take(package.n_spends[0]).enumerate() {
+        scope_field(input.proprietary(), "transparent input", index)?;
+        let dindex = u32_field(input.proprietary(), "dindex", "transparent input", index)?;
+        if dindex & (1 << 31) != 0 {
+            bail!("transparent input {index}: child index {dindex} is hardened");
+        }
+        address_field(input.proprietary(), index)?;
+    }
+    for bundle_index in &package.sapling_indices {
+        scope_field(
+            pczt.sapling().spends()[*bundle_index].proprietary(),
+            "Sapling spend",
+            *bundle_index,
+        )?;
+    }
+    Ok(())
+}
+
+/// Every index names an entry of its bundle, once; `count` is what the
+/// package's spend count says there should be.
+fn check_indices(name: &str, indices: &[usize], len: usize, count: Option<usize>) -> Result<()> {
+    if let Some(count) = count {
+        if indices.len() != count {
+            bail!("{name} has {} entries but the package counts {count} spends", indices.len());
+        }
+    }
+    let mut seen = HashSet::new();
+    for &index in indices {
+        if index >= len {
+            bail!("{name} names entry {index} but the PCZT bundle has {len}");
+        }
+        if !seen.insert(index) {
+            bail!("{name} names entry {index} twice");
+        }
+    }
+    Ok(())
+}
+
+/// A 4-byte little-endian proprietary field.
+fn u32_field(
+    proprietary: &BTreeMap<String, Vec<u8>>,
+    field: &str,
+    what: &str,
+    index: usize,
+) -> Result<u32> {
+    let bytes = proprietary
+        .get(field)
+        .ok_or_else(|| anyhow!("{what} {index} has no `{field}` field"))?;
+    let bytes: [u8; 4] = bytes.as_slice().try_into().map_err(|_| {
+        anyhow!("{what} {index}: `{field}` is {} bytes, expected 4", bytes.len())
+    })?;
+    Ok(u32::from_le_bytes(bytes))
+}
+
+/// The `scope` field: 0 (external) or 1 (internal).
+fn scope_field(proprietary: &BTreeMap<String, Vec<u8>>, what: &str, index: usize) -> Result<u32> {
+    let scope = u32_field(proprietary, "scope", what, index)?;
+    if scope > 1 {
+        bail!("{what} {index}: scope {scope} is neither external (0) nor internal (1)");
+    }
+    Ok(scope)
+}
+
+/// The `address` field of a transparent input, as the encoded address.
+fn address_field(proprietary: &BTreeMap<String, Vec<u8>>, index: usize) -> Result<String> {
+    let bytes = proprietary
+        .get("address")
+        .filter(|bytes| !bytes.is_empty())
+        .ok_or_else(|| anyhow!("transparent input {index} has no `address` field"))?;
+    String::from_utf8(bytes.clone())
+        .map_err(|_| anyhow!("transparent input {index}: `address` is not UTF-8"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::db::create_schema;
     use sqlx::Connection;
+
+    mod validation {
+        use super::super::*;
+        use crate::pay::plan::tests::assembly::transparent_package;
+
+        fn parsed(package: &PcztPackage) -> Pczt {
+            Pczt::parse(&package.pczt).unwrap()
+        }
+
+        fn error(package: &PcztPackage) -> String {
+            validate_package(package, &parsed(package))
+                .expect_err("the package should be refused")
+                .to_string()
+        }
+
+        /// The same package with one transparent proprietary field rewritten.
+        fn with_field(package: &PcztPackage, field: &str, value: Vec<u8>) -> PcztPackage {
+            let pczt = Updater::new(parsed(package))
+                .update_transparent_with(|mut u| {
+                    u.update_input_with(0, |mut u| {
+                        u.set_proprietary(field.to_string(), value);
+                        Ok(())
+                    })
+                })
+                .unwrap()
+                .finish();
+            PcztPackage {
+                pczt: pczt.serialize().unwrap(),
+                ..package.clone()
+            }
+        }
+
+        #[test]
+        fn a_planner_built_package_is_valid() {
+            let package = transparent_package();
+            validate_package(&package, &parsed(&package)).unwrap();
+        }
+
+        #[test]
+        fn a_spend_count_above_the_inputs_is_refused() {
+            let mut package = transparent_package();
+            package.n_spends[0] = 2;
+            assert!(error(&package).contains("2 transparent spends"), "{}", error(&package));
+        }
+
+        #[test]
+        fn an_index_past_its_bundle_is_refused() {
+            let mut package = transparent_package();
+            package.sapling_indices = vec![0];
+            package.n_spends[1] = 1;
+            assert!(error(&package).contains("sapling_indices names entry 0"), "{}", error(&package));
+        }
+
+        #[test]
+        fn an_index_count_that_disagrees_with_the_spend_count_is_refused() {
+            let mut package = transparent_package();
+            package.n_spends[3] = 1;
+            assert!(error(&package).contains("ironwood_indices has 0 entries"), "{}", error(&package));
+        }
+
+        #[test]
+        fn a_duplicate_index_is_refused() {
+            let err = check_indices("orchard_indices", &[1, 1], 3, None).unwrap_err();
+            assert!(err.to_string().contains("entry 1 twice"), "{err}");
+            check_indices("orchard_indices", &[0, 2], 3, None).unwrap();
+        }
+
+        #[test]
+        fn a_scope_other_than_external_or_internal_is_refused() {
+            let package = with_field(&transparent_package(), "scope", 2u32.to_le_bytes().to_vec());
+            assert!(error(&package).contains("scope 2"), "{}", error(&package));
+        }
+
+        #[test]
+        fn a_hardened_child_index_is_refused() {
+            let package = with_field(
+                &transparent_package(),
+                "dindex",
+                (1u32 << 31 | 3).to_le_bytes().to_vec(),
+            );
+            assert!(error(&package).contains("is hardened"), "{}", error(&package));
+        }
+
+        #[test]
+        fn a_malformed_field_is_refused() {
+            let package = with_field(&transparent_package(), "dindex", vec![1, 2]);
+            assert!(error(&package).contains("`dindex` is 2 bytes"), "{}", error(&package));
+            let package = with_field(&transparent_package(), "address", vec![]);
+            assert!(error(&package).contains("no `address` field"), "{}", error(&package));
+            let empty = BTreeMap::new();
+            let err = u32_field(&empty, "scope", "transparent input", 0).unwrap_err();
+            assert!(err.to_string().contains("no `scope` field"), "{err}");
+        }
+
+        #[tokio::test]
+        async fn unparseable_bytes_fail_extraction_instead_of_panicking() {
+            let package = PcztPackage {
+                pczt: vec![1, 2, 3],
+                ..transparent_package()
+            };
+            let err = crate::pay::plan::extract_transaction(&package)
+                .await
+                .unwrap_err();
+            assert!(err.to_string().contains("parse"), "{err}");
+        }
+    }
 
     fn kind(hw: u8) -> &'static str {
         match Signer::for_hw(hw) {

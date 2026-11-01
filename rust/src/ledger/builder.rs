@@ -70,7 +70,9 @@ where
         let coin_type = network.coin_type();
         let aindex = get_account_aindex(&mut *connection, account).await?;
 
-        let pczt = Pczt::parse(&package.pczt).expect("cannot parse PCZT");
+        let pczt = Pczt::parse(&package.pczt)
+            .map_err(|error| anyhow::anyhow!("failed to parse PCZT: {error:?}"))?;
+        crate::pay::sign::validate_package(&package, &pczt)?;
 
         let mut buffers = vec![];
         let mut data = vec![];

@@ -1242,7 +1242,9 @@ pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
         info!("Extracting Tx");
     });
 
-    let pczt = Pczt::parse(&package.pczt).unwrap();
+    let pczt = Pczt::parse(&package.pczt)
+        .map_err(|error| anyhow!("failed to parse PCZT for extraction: {error:?}"))?;
+    crate::pay::sign::validate_package(package, &pczt)?;
 
     let sapling_prover = get_sapling_prover().await?;
     let (svk, ovk) = sapling_prover.verifying_keys();
@@ -1503,7 +1505,7 @@ pub(crate) fn get_orchard_pk(consensus_branch_id: u32) -> Result<&'static Provin
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::{orchard_proving_key_kind, BranchId, OrchardProvingKeyKind};
 
     #[test]
@@ -1571,7 +1573,7 @@ mod tests {
     // `assemble_pczt` with fabricated material: no DB, client, or prover.
     // Transparent-only, so no merkle paths or anchors are needed.
     // ------------------------------------------------------------------
-    mod assembly {
+    pub(crate) mod assembly {
         use super::super::*;
         use zcash_primitives::transaction::builder::BLOSSOM_DEFAULT_TX_EXPIRY_DELTA;
         use crate::pay::material::{Anchors, SpendMaterial, Utxo};
@@ -1671,6 +1673,16 @@ mod tests {
                 },
                 asset_names: HashMap::new(),
             }
+        }
+
+        /// A planner-built package spending one transparent coin, for the
+        /// signer tests that mutate it.
+        pub(crate) fn transparent_package() -> PcztPackage {
+            let n = regtest();
+            let plan = transparent_plan(&n, 300);
+            let m = material(&n, true, HwKind::Software as u8);
+            assemble_pczt(&n, 300, plan, &m, None, Some(4), BLOSSOM_DEFAULT_TX_EXPIRY_DELTA)
+                .unwrap()
         }
 
         #[test]
