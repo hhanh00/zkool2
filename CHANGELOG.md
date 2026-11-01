@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [6.36.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.36.0-rc...zkool-v6.36.0-rc.1) (2026-11-01)
+
+
+### Bug Fixes
+
+* **dkg:** a setup result that lands after the page was left is dropped ([063614c](https://github.com/hhanh00/zkool2/commit/063614c04b016daae806eb5d076c34ed168ffed2))
+* **plugin:** a plugin is downloaded over HTTPS, or over plain HTTP from localhost only ([2836589](https://github.com/hhanh00/zkool2/commit/2836589cdc7558051fff012dcc87525ca6d069f6))
+* **plugin:** lifecycle changes and index rebuilds run one at a time ([968d55d](https://github.com/hhanh00/zkool2/commit/968d55d003c81c2b36cbc2387e0c87afe896bc30))
+
 ## [6.36.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.35.0...zkool-v6.36.0-rc) (2026-11-01)
 
 
