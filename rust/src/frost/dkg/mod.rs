@@ -679,11 +679,15 @@ pub async fn set_dkg_params(
     dkg_version: u8,
 ) -> Result<()> {
     check_dkg_params(id, n, t)?;
-    check_no_dkg(&mut *connection).await?;
     let height = client.latest_height().await?;
     let birth_height = height.saturating_sub(10000) + 1;
     tracing::info!("birth_height {birth_height}");
 
+    // The check and both rows under one immediate transaction, as
+    // init_sign does: a failed selector insert or an interruption leaves
+    // no orphaned dkg_params row, and a concurrent init_sign waits (#1515).
+    let mut tx = crate::db::begin_immediate(connection).await?;
+    check_no_dkg(&mut *tx).await?;
     sqlx::query(
         "INSERT INTO dkg_params(account, id, n, t, seed, birth_height, name, dkg_version)
         VALUES (?, ?, ?, ?, '', ?, ?, ?)",
@@ -695,12 +699,13 @@ pub async fn set_dkg_params(
     .bind(birth_height)
     .bind(name)
     .bind(dkg_version)
-    .execute(&mut *connection)
+    .execute(&mut *tx)
     .await?;
     sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_account', ?1)")
         .bind(funding_account)
-        .execute(&mut *connection)
+        .execute(&mut *tx)
         .await?;
+    tx.commit().await?;
 
     Ok(())
 }
@@ -767,6 +772,88 @@ mod guard_tests {
         let m = check_no_dkg(&mut db).await.unwrap_err().to_string();
         assert!(m.contains("DKG is in progress"), "{m}");
         assert!(check_no_dkg(&mut wallet().await).await.is_ok());
+    }
+
+    /// A server that only knows the tip.
+    struct Tip;
+
+    #[tonic::async_trait]
+    impl crate::net::LwdServer for Tip {
+        type CompactBlockStream =
+            tokio_stream::wrappers::ReceiverStream<Result<crate::lwd::CompactBlock>>;
+        type TransactionStream = tokio_stream::wrappers::ReceiverStream<
+            Result<(u32, zcash_primitives::transaction::Transaction, usize)>,
+        >;
+
+        async fn latest_height(&mut self) -> Result<u32> {
+            Ok(20_000)
+        }
+        async fn block(&mut self, _: &Network, _: u32) -> Result<crate::lwd::CompactBlock> {
+            unimplemented!()
+        }
+        async fn block_range(&mut self, _: &Network, _: u32, _: u32) -> Result<Self::CompactBlockStream> {
+            unimplemented!()
+        }
+        async fn transaction(
+            &mut self,
+            _: &Network,
+            _: &[u8],
+        ) -> Result<(u32, zcash_primitives::transaction::Transaction)> {
+            unimplemented!()
+        }
+        async fn post_transaction(&mut self, _: u32, _: &[u8]) -> Result<String> {
+            unimplemented!()
+        }
+        async fn taddress_txs(&mut self, _: &Network, _: &str, _: u32, _: u32) -> Result<Self::TransactionStream> {
+            unimplemented!()
+        }
+        async fn mempool_stream(&mut self, _: &Network) -> Result<Self::TransactionStream> {
+            unimplemented!()
+        }
+        async fn tree_state(&mut self, _: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)> {
+            unimplemented!()
+        }
+    }
+
+    /// (dkg_params rows, dkg_account selector present).
+    async fn setup_rows(db: &mut SqliteConnection) -> (i64, bool) {
+        let (params,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM dkg_params")
+            .fetch_one(&mut *db)
+            .await
+            .unwrap();
+        let selector = sqlx::query("SELECT 1 FROM props WHERE key = 'dkg_account'")
+            .fetch_optional(&mut *db)
+            .await
+            .unwrap();
+        (params, selector.is_some())
+    }
+
+    /// The parameters row and the selector are written together: a
+    /// refused selector leaves no orphaned dkg_params row (#1515).
+    #[tokio::test]
+    async fn dkg_setup_writes_both_rows_or_neither() {
+        let mut db = wallet().await;
+        let mut client: Client = Box::new(Tip);
+        sqlx::query(
+            "CREATE TRIGGER refuse_selector BEFORE INSERT ON props WHEN NEW.key = 'dkg_account'
+            BEGIN SELECT RAISE(ABORT, 'refused'); END",
+        )
+        .execute(&mut db)
+        .await
+        .unwrap();
+        async fn setup(db: &mut SqliteConnection, client: &mut Client) -> Result<()> {
+            set_dkg_params(&Network::Main, db, client, "group", 1, 3, 2, 1, DKG_VERSION_1).await
+        }
+        assert!(setup(&mut db, &mut client).await.is_err());
+        assert_eq!(setup_rows(&mut db).await, (0, false), "neither row survived");
+
+        sqlx::query("DROP TRIGGER refuse_selector").execute(&mut db).await.unwrap();
+        setup(&mut db, &mut client).await.unwrap();
+        assert_eq!(setup_rows(&mut db).await, (1, true));
+
+        let m = setup(&mut db, &mut client).await.unwrap_err().to_string();
+        assert!(m.contains("DKG is in progress"), "{m}");
+        assert_eq!(setup_rows(&mut db).await, (1, true), "the second setup wrote nothing");
     }
 }
 
