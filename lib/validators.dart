@@ -96,6 +96,15 @@ String? normalizeCryptoAmount(String? amount, {required int decimals}) {
   return parsed != null && parsed.units > BigInt.zero ? parsed.normalized : null;
 }
 
+/// Optional Fx rate: a positive amount, since the fiat conversion divides
+/// by it (#1493).
+String? validRate(String? rate) {
+  if (rate == null || rate.isEmpty) return null;
+  final invalid = validAmount(rate);
+  if (invalid != null) return invalid;
+  return normalizeCryptoAmount(rate, decimals: 8) == null ? "Invalid rate" : null;
+}
+
 /// Optional ZEC amount, with an optional maximum expressed in zatoshis.
 String? validAmount(String? amount, {BigInt? max}) {
   if (amount == null || amount.isEmpty) return null;

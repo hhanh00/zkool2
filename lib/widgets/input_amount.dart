@@ -96,7 +96,7 @@ class InputAmountState extends ConsumerState<InputAmount> {
                       child: FormBuilderTextField(
                         name: "fx",
                         decoration: InputDecoration(label: Text("Fx")),
-                        validator: validAmount,
+                        validator: validRate,
                         keyboardType: TextInputType.numberWithOptions(decimal: true),
                         initialValue: displayPrice(price),
                         onChanged: onPriceChanged,
@@ -140,6 +140,9 @@ class InputAmountState extends ConsumerState<InputAmount> {
     } on Exception {
       return; // invalid input — ignore
     }
+    // A zero or negative rate never reaches the provider: the fiat
+    // conversion divides by it (#1493).
+    if (p.minorUnits <= BigInt.zero) return;
     setState(() {
       double pp = p.toDecimal().toDouble();
       final price = ref.read(priceProvider.notifier);
@@ -195,11 +198,21 @@ class InputAmountState extends ConsumerState<InputAmount> {
       if (v.isEmpty) {
         onReset(fiat: false);
         formFieldKey.currentState!.reset();
-      } else if (price != null) {
-        final zat = double.parse(v) / price * 1e8;
-        final z = zatToString(BigInt.from(zat));
-        form.fields["zat"]!.didChange(z);
-        formFieldKey.currentState!.setValue(z);
+      } else if (price != null && price > 0) {
+        // Locale-aware parsing and decimal arithmetic, like `onChanged`:
+        // `double.parse` throws on a comma decimal and a bad rate made
+        // `BigInt.from(Infinity)` throw (#1493).
+        try {
+          final fiat = stringToDecimal(v).toDecimal();
+          final rate = Decimal.parse(price.toString());
+          final zec = (fiat / rate).toDecimal(scaleOnInfinitePrecision: 8);
+          final zat = (zec * Decimal.fromInt(zatsPerZec)).round();
+          final z = zatToString(zat.toBigInt());
+          form.fields["zat"]!.didChange(z);
+          formFieldKey.currentState!.setValue(z);
+        } on Exception {
+          // invalid input — ignore
+        }
       }
       disableChangeHandlers = false;
     });
