@@ -10,7 +10,7 @@ import 'coin.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'pay.dart';
 
-// These functions are ignored because they are not marked as `pub`: `ensure_swap_deadline`, `funding_recipient`, `saved_swap`, `transport`
+// These functions are ignored because they are not marked as `pub`: `ensure_swap_deadline`, `funding_recipient`, `saved_swap`, `stamp_deposit_submitted`, `transport`
 
 Future<List<SavedSwap>> nearIntentsListSwaps(
         {required bool pendingOnly, required int account, required Coin c}) =>

@@ -2033,51 +2033,6 @@ pub async fn generate_next_dindex(
     Ok(dindex)
 }
 
-pub async fn generate_next_change_address(
-    network: &Network,
-    connection: &mut SqliteConnection,
-    account: u32,
-) -> Result<Option<String>> {
-    let dindex = sqlx::query(
-        "SELECT MAX(dindex) FROM transparent_address_accounts WHERE account = ? AND scope = 1",
-    )
-    .bind(account)
-    .map(|row: SqliteRow| row.get::<Option<u32>, _>(0))
-    .fetch_one(&mut *connection)
-    .await?;
-
-    let (xsk, xvk) = get_transparent_keys(connection, account).await?;
-
-    if let Some(tvk) = xvk.as_ref() {
-        let dindex = match dindex {
-            Some(dindex) => dindex + 1, // increment
-            None => 0,                  // first change address
-        };
-
-        let sk = xsk
-            .as_ref()
-            .map(|tsk| derive_transparent_sk(tsk, 1, dindex).unwrap());
-        let (change_pk, change_address) = derive_transparent_address(tvk, 1, dindex, false)?;
-        let change_address = change_address.encode(network);
-
-        store_account_transparent_addr(
-            &mut *connection,
-            account,
-            1,
-            dindex,
-            sk,
-            &change_pk,
-            &change_address,
-            false,
-        )
-        .await?;
-
-        return Ok(Some(change_address));
-    }
-
-    Ok(None)
-}
-
 pub(crate) async fn get_transparent_keys(
     connection: &mut SqliteConnection,
     account: u32,

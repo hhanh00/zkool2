@@ -70,11 +70,6 @@ Future<int> generateNextDindex({required int account, required Coin c}) =>
     RustLib.instance.api
         .crateApiAccountGenerateNextDindex(account: account, c: c);
 
-Future<String?> generateNextChangeAddress(
-        {required int account, required Coin c}) =>
-    RustLib.instance.api
-        .crateApiAccountGenerateNextChangeAddress(account: account, c: c);
-
 Future<void> resetSync({required int id, required Coin c}) =>
     RustLib.instance.api.crateApiAccountResetSync(id: id, c: c);
 

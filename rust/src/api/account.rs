@@ -276,13 +276,6 @@ pub async fn generate_next_dindex(account: u32, c: &Coin) -> Result<u32> {
 }
 
 #[cfg_attr(feature = "flutter", frb)]
-pub async fn generate_next_change_address(account: u32, c: &Coin) -> Result<Option<String>> {
-    let mut connection = c.get_connection().await?;
-
-    crate::account::generate_next_change_address(&c.network(), &mut connection, account).await
-}
-
-#[cfg_attr(feature = "flutter", frb)]
 pub async fn reset_sync(id: u32, c: &Coin) -> Result<()> {
     c.driver()?
         .rewind(c, id, crate::sync::driver::Rewind::Reset)
