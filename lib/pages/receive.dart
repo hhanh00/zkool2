@@ -28,6 +28,10 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
   Addresses? addresses;
   int uaPools = 0;
   int availablePools = 0;
+  /// An address fetch is in flight: the pool selector and the new-address
+  /// button refuse input until it lands, so the address shown always
+  /// belongs to the selection shown (#1483).
+  bool loading = false;
 
   @override
   void initState() {
@@ -37,13 +41,20 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
       final a = await ref.read(accountProvider(widget.account).future);
       final pools = a.pool; // All pools including transparent
       final defaultPools = pools & 6; // Default to shielded pools only
-      final addrs = await getAddresses(uaPools: defaultPools, account: widget.account, c: c);
-      setState(() {
-        account = a.account;
-        addresses = addrs;
-        availablePools = pools;
-        uaPools = defaultPools;
-      });
+      if (!mounted) return;
+      setState(() => loading = true);
+      try {
+        final addrs = await getAddresses(uaPools: defaultPools, account: widget.account, c: c);
+        if (!mounted) return;
+        setState(() {
+          account = a.account;
+          addresses = addrs;
+          availablePools = pools;
+          uaPools = defaultPools;
+        });
+      } finally {
+        if (mounted) setState(() => loading = false);
+      }
     });
   }
 
@@ -85,7 +96,7 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
             children: [
               if (addresses.saddr != null || addresses.oaddr != null)
                 PoolSelect(
-                  enabled: availablePools,
+                  enabled: loading ? 0 : availablePools,
                   value: uaPools,
                   onChanged: onChangedUAPools,
                 ),
@@ -155,21 +166,42 @@ class ReceivePageState extends ConsumerState<ReceivePage> {
     }
   }
 
+  /// Fetches the address for a selection and applies selection and address
+  /// together once it lands. One fetch at a time (#1483).
+  Future<void> loadAddresses(int pools) async {
+    if (loading) return;
+    setState(() => loading = true);
+    try {
+      final addrs = await getAddresses(uaPools: pools, account: widget.account, c: c);
+      if (!mounted) return;
+      setState(() {
+        uaPools = pools;
+        addresses = addrs;
+      });
+    } finally {
+      if (mounted) setState(() => loading = false);
+    }
+  }
+
   void onChangedUAPools(int pools) async {
-    uaPools = pools;
-    addresses = await getAddresses(uaPools: uaPools, account: widget.account, c: c);
-    setState(() {});
+    await loadAddresses(pools);
   }
 
   void onGenerateAddress() async {
+    if (loading) return;
     try {
       final confirmed = await confirmDialog(context,
           title: "New Addresses", message: "Do you want to generate a new set of addresses? Previous addresses can still receive funds");
       if (!confirmed) return;
       if (!mounted) return;
       final dialog = showLoadingDialog(context, "Please wait for the address generation\nCheck your Ledger");
-      await generateNextDindex(account: widget.account, c: c); // This takes a while on the Ledger
-      addresses = await getAddresses(uaPools: uaPools, account: widget.account, c: c);
+      setState(() => loading = true);
+      try {
+        await generateNextDindex(account: widget.account, c: c); // This takes a while on the Ledger
+        addresses = await getAddresses(uaPools: uaPools, account: widget.account, c: c);
+      } finally {
+        if (mounted) setState(() => loading = false);
+      }
       dialog.dismiss();
       setState(() {});
     } on AnyhowException catch (e) {
@@ -217,6 +249,9 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
   bool _aggregate = false;
   late Set<int> _selectedPools;
   late List<TAddressTxCount> _txCounts;
+  /// A row fetch is in flight: the pool and UA selectors refuse input until
+  /// it lands, so the rows shown always match the controls (#1483).
+  bool _loading = false;
 
   static const _poolBits = {0: 1, 1: 2, 2: 4};
 
@@ -233,12 +268,19 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
   bool _showFilters = true;
 
   Future<void> _refetch() async {
-    final mask = _selectedPools.fold(0, (acc, p) => acc | _poolBits[p]!);
-    final txCounts = await fetchAddressTxCount(aggregate: _aggregate, poolFilter: mask, account: widget.account, c: widget.c);
-    if (mounted) setState(() => _txCounts = txCounts);
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      final mask = _selectedPools.fold(0, (acc, p) => acc | _poolBits[p]!);
+      final txCounts = await fetchAddressTxCount(aggregate: _aggregate, poolFilter: mask, account: widget.account, c: widget.c);
+      if (mounted) setState(() => _txCounts = txCounts);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   void _onPoolsChanged(int v) {
+    if (_loading) return;
     final newPools = <int>{};
     if (v & 1 != 0) newPools.add(0);
     if (v & 2 != 0) newPools.add(1);
@@ -249,6 +291,7 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
   }
 
   void _onToggleUA(Set<bool> s) {
+    if (_loading) return;
     setState(() => _aggregate = s.first);
     _refetch();
   }
@@ -307,7 +350,7 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
                     Expanded(
                       child: Center(
                         child: PoolSelect(
-                          enabled: widget.availablePools,
+                          enabled: _loading ? 0 : widget.availablePools,
                           value: _selectedPools.fold(0, (acc, p) => acc | _poolBits[p]!),
                           onChanged: _onPoolsChanged,
                         ),
@@ -333,7 +376,7 @@ class _AddressesPageState extends ConsumerState<AddressesPage> {
                         ButtonSegment(value: true, label: Text("On")),
                       ],
                       selected: {_aggregate},
-                      onSelectionChanged: _selectedPools.length > 1 ? _onToggleUA : null,
+                      onSelectionChanged: _selectedPools.length > 1 && !_loading ? _onToggleUA : null,
                     ),
                   ),
                   SizedBox(height: 6),
