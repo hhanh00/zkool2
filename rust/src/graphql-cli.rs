@@ -13,7 +13,7 @@ use juniper::RootNode;
 use juniper_graphql_ws::ConnectionConfig;
 use rlz::api::coin::Coin;
 use rlz::graphql::jwt::{AuthError, Claims};
-use rlz::graphql::mutation::run_mempool;
+use rlz::graphql::mutation::run_mempool_daemon;
 use rlz::graphql::{mutation::Mutation, query::Query, subs::Subscription, Context};
 use serde::{Deserialize, Serialize};
 use warp::Filter;
@@ -283,7 +283,7 @@ async fn main() -> Result<()> {
         tracing::info!("FROST and DKG are disabled: the server runs with token authentication");
     }
     if !no_mempool {
-        tokio::spawn(run_mempool(context.clone()));
+        tokio::spawn(run_mempool_daemon(context.clone()));
     }
 
     let schema = Schema::new(Query {}, Mutation {}, Subscription {});

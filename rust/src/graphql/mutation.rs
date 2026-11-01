@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::LazyLock};
+use std::{collections::HashMap, sync::LazyLock, time::Duration};
 
 use crate::graphql::{check_admin_auth, check_auth, invalid_integer};
 use crate::{
@@ -528,13 +528,58 @@ impl Mutation {
     }
 }
 
-pub async fn run_mempool(context: Context) -> anyhow::Result<()> {
+/// How long the daemon's mempool monitor waits after a failed pass before
+/// it tries again, matching the app's listener (#1525).
+pub const MEMPOOL_RETRY_PAUSE: Duration = Duration::from_secs(5);
+
+/// The daemon's mempool monitor. `connect` yields the network client for
+/// each pass, so a connect failure is retried like any other failure
+/// instead of ending the task; the daemon passes `Coin::client`. `pause`
+/// is the wait after a failed pass, [`MEMPOOL_RETRY_PAUSE`] for the daemon.
+pub async fn run_mempool<C, CF>(context: Context, connect: C, pause: Duration) -> anyhow::Result<()>
+where
+    C: Fn() -> CF,
+    CF: std::future::Future<Output = anyhow::Result<crate::Client>>,
+{
     let coin = context.coin.clone();
     let network = &coin.network();
     loop {
-        let coin = context.coin.clone();
-        let mut conn = coin.get_connection().await?;
-        let mut client = coin.client().await?;
+        let pass = async {
+            let mut conn = coin.get_connection().await?;
+            let mut client = connect().await?;
+            run_mempool_pass(network, &mut conn, &mut client).await
+        };
+        if let Err(error) = pass.await {
+            tracing::error!("mempool monitor: {error:#}; retrying in {pause:?}");
+            tokio::time::sleep(pause).await;
+        }
+    }
+}
+
+/// [`run_mempool`] with the wallet's own client and pace: what the daemon
+/// spawns. The binary sees this crate from outside, where `Coin::client`
+/// is not visible, so the wiring lives here.
+pub async fn run_mempool_daemon(context: Context) -> anyhow::Result<()> {
+    let coin = context.coin.clone();
+    run_mempool(
+        context,
+        move || {
+            let coin = coin.clone();
+            async move { coin.client().await }
+        },
+        MEMPOOL_RETRY_PAUSE,
+    )
+    .await
+}
+
+/// One monitoring pass: fans the mempool stream out to the subscribers
+/// until the stream ends or fails.
+async fn run_mempool_pass(
+    network: &crate::api::coin::Network,
+    conn: &mut sqlx::SqliteConnection,
+    client: &mut crate::Client,
+) -> anyhow::Result<()> {
+    {
         let (tx, mut rx) = tokio::sync::mpsc::channel::<MempoolMsg>(10);
         tokio::spawn(async move {
             while let Some(msg) = rx.recv().await {
@@ -600,23 +645,12 @@ pub async fn run_mempool(context: Context) -> anyhow::Result<()> {
             }
         });
 
-        let runner = async move {
-            {
-                let mut mempool = MEMPOOL.lock().await;
-                mempool.unconfirmed.clear();
-            }
-            let cancel_token = CancellationToken::new();
-
-            crate::mempool::run_mempool_impl(tx, network, &mut conn, &mut client, cancel_token)
-                .await?;
-            Ok::<_, anyhow::Error>(())
-        };
-        match runner.await {
-            Ok(_) => {}
-            Err(error) => {
-                tracing::error!("Error: {error}");
-            }
+        {
+            let mut mempool = MEMPOOL.lock().await;
+            mempool.unconfirmed.clear();
         }
+        let cancel_token = CancellationToken::new();
+        crate::mempool::run_mempool_impl(tx, network, conn, client, cancel_token).await
     }
 }
 
@@ -690,5 +724,92 @@ mod input_tests {
 
         assert_eq!(mutate(&context, &edit(20)).await.unwrap()["editAccount"], true);
         assert_eq!(accounts(&context).await, vec![(id as u32, 20)]);
+    }
+}
+
+#[cfg(test)]
+mod mempool_retry_tests {
+    use super::*;
+    use crate::api::coin::Coin;
+    use std::sync::{Arc, Mutex as StdMutex};
+    use tokio::time::Instant;
+
+    /// A server whose every call fails.
+    struct Down;
+
+    #[tonic::async_trait]
+    impl crate::net::LwdServer for Down {
+        type CompactBlockStream =
+            tokio_stream::wrappers::ReceiverStream<anyhow::Result<crate::lwd::CompactBlock>>;
+        type TransactionStream = tokio_stream::wrappers::ReceiverStream<
+            anyhow::Result<(u32, zcash_primitives::transaction::Transaction, usize)>,
+        >;
+        async fn latest_height(&mut self) -> anyhow::Result<u32> {
+            anyhow::bail!("connection refused")
+        }
+        async fn block(&mut self, _: &crate::api::coin::Network, _: u32) -> anyhow::Result<crate::lwd::CompactBlock> {
+            unimplemented!()
+        }
+        async fn block_range(&mut self, _: &crate::api::coin::Network, _: u32, _: u32) -> anyhow::Result<Self::CompactBlockStream> {
+            unimplemented!()
+        }
+        async fn transaction(&mut self, _: &crate::api::coin::Network, _: &[u8]) -> anyhow::Result<(u32, zcash_primitives::transaction::Transaction)> {
+            unimplemented!()
+        }
+        async fn post_transaction(&mut self, _: u32, _: &[u8]) -> anyhow::Result<String> {
+            unimplemented!()
+        }
+        async fn taddress_txs(&mut self, _: &crate::api::coin::Network, _: &str, _: u32, _: u32) -> anyhow::Result<Self::TransactionStream> {
+            unimplemented!()
+        }
+        async fn mempool_stream(&mut self, _: &crate::api::coin::Network) -> anyhow::Result<Self::TransactionStream> {
+            unimplemented!()
+        }
+        async fn tree_state(&mut self, _: u32) -> anyhow::Result<(Vec<u8>, Vec<u8>, Vec<u8>)> {
+            unimplemented!()
+        }
+    }
+
+    async fn context() -> Context {
+        let path = format!("/tmp/graphql_mempool_{}.db", uuid::Uuid::new_v4());
+        let coin = Coin::new(Some(3)).open_database(path, None).await.unwrap();
+        Context::new(coin)
+    }
+
+    /// A failing server is retried at the app's pace, and a failure to
+    /// connect is retried the same way instead of ending the task (#1525).
+    #[tokio::test]
+    async fn a_failing_server_is_retried_at_the_pause_and_the_task_lives_on() {
+        let context = context().await;
+        let pause = Duration::from_millis(50);
+        let attempts: Arc<StdMutex<Vec<Instant>>> = Arc::new(StdMutex::new(Vec::new()));
+        let log = attempts.clone();
+        let task = tokio::spawn(run_mempool(context, move || {
+            let log = log.clone();
+            async move {
+                let n = {
+                    let mut log = log.lock().unwrap();
+                    log.push(Instant::now());
+                    log.len()
+                };
+                // The first two attempts cannot even connect.
+                if n <= 2 {
+                    anyhow::bail!("no route to host");
+                }
+                Ok(Box::new(Down) as crate::Client)
+            }
+        }, pause));
+        tokio::time::sleep(pause * 4 + pause / 2).await;
+        assert!(!task.is_finished(), "the monitor does not end on an error");
+        let attempts = attempts.lock().unwrap().clone();
+        assert!(
+            (4..=5).contains(&attempts.len()),
+            "one attempt, then one per pause: {}",
+            attempts.len()
+        );
+        for pair in attempts.windows(2) {
+            assert!(pair[1] - pair[0] >= pause, "attempts are paced");
+        }
+        task.abort();
     }
 }
