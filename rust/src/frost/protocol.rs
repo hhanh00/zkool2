@@ -1412,3 +1412,53 @@ mod mailbox_tests {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod conflict_tests {
+    use super::*;
+    use crate::db::create_schema;
+    use crate::frost::dkg::DkgRound1;
+    use rand_core_legacy::OsRng;
+    use reddsa_legacy::frost::redpallas::keys::dkg;
+    use sqlx::Connection;
+
+    /// The memo bytes a wallet stores for a round-1 package from `from_id`.
+    fn round1_memo(from_id: u8) -> Vec<u8> {
+        let (_, pkg) = dkg::part1(u16::from(from_id).try_into().unwrap(), 2, 2, OsRng).unwrap();
+        let payload = FrostMessage {
+            from_id,
+            data: pkg.to_bytes().unwrap(),
+        }
+        .encode_with_prefix(&DkgRound1::PREFIX)
+        .unwrap();
+        let mut arbitrary = [0u8; 511];
+        arbitrary[..payload.len()].copy_from_slice(&payload);
+        Memo::Arbitrary(Box::new(arbitrary)).encode().as_array().to_vec()
+    }
+
+    /// Two distinct round-1 packages both claiming participant 2 do not
+    /// race for the slot: the second is a conflict, reported as an error
+    /// rather than dropped silently (#1550).
+    #[tokio::test]
+    async fn two_packages_for_one_participant_are_a_conflict() {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        create_schema(&mut db).await.unwrap();
+        sqlx::query("INSERT INTO dkg_params(account, id, n, t, seed, birth_height) VALUES (1, 1, 2, 2, '', 1)")
+            .execute(&mut db)
+            .await
+            .unwrap();
+        for (vout, memo) in [round1_memo(2), round1_memo(2)].into_iter().enumerate() {
+            sqlx::query("INSERT INTO memos(account, height, tx, pool, vout, memo_bytes) VALUES (2, 1, 1, 1, ?, ?)")
+                .bind(vout as u32)
+                .bind(memo)
+                .execute(&mut db)
+                .await
+                .unwrap();
+        }
+        let err = decode_dkg_memos::<DkgRound1>(&mut db, 1, 2)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, "conflicting round-1 package for participant 2");
+    }
+}

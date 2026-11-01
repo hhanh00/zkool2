@@ -278,6 +278,35 @@ pub struct DkgState2 {
     pub ppkg2s: BTreeMap<Identifier, round2::Package>,
 }
 
+/// Stores a peer's package for a round. A slot already holding the same
+/// bytes is a resend, re-read from the memos on every pass; a slot holding
+/// different bytes is a conflict: two packages claimed one participant,
+/// and the DKG must not complete on either (#1550). Participants are not
+/// assumed malicious, so the conflict is an error and nothing more.
+pub(crate) async fn store_peer_package(
+    conn: &mut SqliteConnection,
+    account: u32,
+    round: u8,
+    from_id: u8,
+    data: &[u8],
+) -> Result<()> {
+    let stored = sqlx::query(
+        "INSERT INTO dkg_peers(account, round, from_id, data) VALUES(?1, ?2, ?3, ?4)
+        ON CONFLICT DO UPDATE SET data = excluded.data WHERE data = excluded.data",
+    )
+    .bind(account)
+    .bind(round)
+    .bind(from_id)
+    .bind(data)
+    .execute(&mut *conn)
+    .await?;
+    anyhow::ensure!(
+        stored.rows_affected() == 1,
+        "conflicting round-{round} package for participant {from_id}"
+    );
+    Ok(())
+}
+
 // ── DkgRound0 ────────────────────────────────────────────────────────────────
 
 pub struct DkgRound0;
@@ -386,16 +415,7 @@ impl Round for DkgRound0 {
         from_id: u8,
         p: &Round0Pkg,
     ) -> Result<()> {
-        sqlx::query(
-            "INSERT INTO dkg_peers(account, round, from_id, data) VALUES(?1, 0, ?2, ?3)
-            ON CONFLICT DO NOTHING",
-        )
-        .bind(account)
-        .bind(from_id)
-        .bind(p.to_bytes()?)
-        .execute(&mut *conn)
-        .await?;
-        Ok(())
+        store_peer_package(conn, account, 0, from_id, &p.to_bytes()?).await
     }
 
     /// Rows written by a dkg-1 build hold the bare 32-byte key and decode
@@ -525,16 +545,7 @@ impl Round for DkgRound1 {
         from_id: u8,
         p: &round1::Package,
     ) -> Result<()> {
-        sqlx::query(
-            "INSERT INTO dkg_peers(account, round, from_id, data) VALUES(?1, 1, ?2, ?3)
-            ON CONFLICT DO NOTHING",
-        )
-        .bind(account)
-        .bind(from_id)
-        .bind(p.to_bytes()?)
-        .execute(&mut *conn)
-        .await?;
-        Ok(())
+        store_peer_package(conn, account, 1, from_id, &p.to_bytes()?).await
     }
 
     async fn load_publics(
@@ -638,16 +649,7 @@ impl Round for DkgRound2 {
         from_id: u8,
         p: &round2::Package,
     ) -> Result<()> {
-        sqlx::query(
-            "INSERT INTO dkg_peers(account, round, from_id, data) VALUES(?1, 2, ?2, ?3)
-            ON CONFLICT DO NOTHING",
-        )
-        .bind(account)
-        .bind(from_id)
-        .bind(p.to_bytes()?)
-        .execute(&mut *conn)
-        .await?;
-        Ok(())
+        store_peer_package(conn, account, 2, from_id, &p.to_bytes()?).await
     }
 
     async fn load_publics(
@@ -793,6 +795,41 @@ mod guard_tests {
             vec![String::new(), "t1peer".to_string()],
             "the own id is skipped, the peer stored, the bad ones absent"
         );
+    }
+
+    /// A resend of a stored package is a no-op; a different package for a
+    /// filled slot is an error naming the round and the participant, and
+    /// the first package stays (#1550).
+    #[tokio::test]
+    async fn a_second_package_for_a_slot_must_match_the_first() {
+        let mut db = wallet().await;
+        for round in 0..=2u8 {
+            store_peer_package(&mut db, 1, round, 2, b"first").await.unwrap();
+            store_peer_package(&mut db, 1, round, 2, b"first").await.unwrap();
+            let m = store_peer_package(&mut db, 1, round, 2, b"second")
+                .await
+                .unwrap_err()
+                .to_string();
+            assert_eq!(m, format!("conflicting round-{round} package for participant 2"));
+            let rows: Vec<(Vec<u8>,)> =
+                sqlx::query_as("SELECT data FROM dkg_peers WHERE account = 1 AND round = ? AND from_id = 2")
+                    .bind(round)
+                    .fetch_all(&mut db)
+                    .await
+                    .unwrap();
+            assert_eq!(rows, vec![(b"first".to_vec(),)]);
+        }
+        // Through a round's own store: the same rule.
+        let key = SigningKey::from_bytes(&[9u8; 32]).verifying_key();
+        let pkg = Round0Pkg { verifying_key: key, dkg_version: 2 };
+        <DkgRound0 as Round>::store_public(&mut db, 1, 3, &pkg).await.unwrap();
+        <DkgRound0 as Round>::store_public(&mut db, 1, 3, &pkg).await.unwrap();
+        let other = Round0Pkg { verifying_key: key, dkg_version: 1 };
+        let m = <DkgRound0 as Round>::store_public(&mut db, 1, 3, &other)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert_eq!(m, "conflicting round-0 package for participant 3");
     }
 
     /// A server that only knows the tip.
