@@ -609,6 +609,16 @@ pub(crate) fn plan_outputs(inp: PlanInputs) -> Result<PlanOutputs> {
         info!("plan: output pool={} amount={}", o.pool, o.amount);
     }
 
+    // ZSA assets only exist in Orchard, so a ZSA bundle (assets or an
+    // issuance) takes its ZEC change there; the solver prices that pool
+    // and no other, so the fee it returns is the fee of the change it
+    // chose (#1562). The ZEC change output satisfies ZIP-226 (no dummy
+    // needed).
+    let change_pools = if has_zsa {
+        1 << 2
+    } else {
+        solve::ALL_CHANGE_POOLS
+    };
     let selection = solve::select_notes(
         &select_notes_input,
         &select_outputs,
@@ -616,6 +626,7 @@ pub(crate) fn plan_outputs(inp: PlanInputs) -> Result<PlanOutputs> {
         migration,
         recipient_pays_fee,
         recipients.first().map(|r| r.amount).unwrap_or(0),
+        change_pools,
     )
     .ok_or_else(|| anyhow::Error::new(crate::pay::error::Error::NoFeasibleSelection))?;
 
@@ -633,9 +644,7 @@ pub(crate) fn plan_outputs(inp: PlanInputs) -> Result<PlanOutputs> {
         }
     }
 
-    // ZSA assets only exist in Orchard; force change to orchard if any ZSA.
-    // The ZEC change output satisfies ZIP-226 (no dummy needed).
-    let change_pool = if has_zsa { 2 } else { selection.change_pool };
+    let change_pool = selection.change_pool;
 
     // ── Compute ZSA change amounts ───────────────────────────────────────
     // Per-asset: sum of selected ZSA notes minus required ZSA outputs.
@@ -2111,6 +2120,29 @@ pub(crate) mod tests {
                 recipients.push(r);
             }
             plan_inputs(n, pools(notes), recipients)
+        }
+
+        #[test]
+        fn a_zsa_payment_takes_orchard_change_from_the_solver() {
+            // One ZSA asset paid from an Orchard note, with a transparent
+            // note that would make transparent change the cheaper pick:
+            // the solver itself lands the change in Orchard.
+            let n = net();
+            let ua = UnifiedAddress::from_receivers(Some(orchard_addr()), None, None, None, None)
+                .unwrap()
+                .encode(&n);
+            let mut asset_note = note(2, 2, 10, 100);
+            asset_note.id_asset = Some(1);
+            asset_note.asset_base = vec![1u8; 32];
+            let mut r = recipient(&ua, 10);
+            r.asset_base = vec![1u8; 32];
+            let input = plan_inputs(
+                &n,
+                pools(vec![note(1, 0, 100_000_000, 100), asset_note]),
+                vec![r],
+            );
+            let out = plan_outputs(input).unwrap();
+            assert_eq!(out.change_pool, 2);
         }
 
         #[test]

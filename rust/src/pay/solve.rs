@@ -103,7 +103,14 @@ struct Context<'a> {
     migration: bool,   // orchard fee = inputs+outputs instead of max
     recipient_pays_fee: bool,
     first_recipient_amount: u64,
+    /// Which pools may take the ZEC change, as a bit per pool. The planner
+    /// restricts a ZSA bundle (assets or issuance) to Orchard, so that the
+    /// pool the solver prices is the pool the change lands in (#1562).
+    change_pools: u8,
 }
+
+/// Every pool may take the change.
+pub(super) const ALL_CHANGE_POOLS: u8 = (1 << N_POOLS) - 1;
 
 // ---------------------------------------------------------------------
 // Budget (anytime control)
@@ -301,6 +308,9 @@ fn evaluate_privacy(state: &State, ctx: &Context) -> (u64, u8) {
     let mut best_fee = u64::MAX;
     let mut best_pool = 0u8;
     for cp in 0..N_POOLS as u8 {
+        if ctx.change_pools & (1 << cp) == 0 {
+            continue;
+        }
         let fee = fee_for_change_pool(state, ctx, cp);
 
         if ctx.recipient_pays_fee && fee > ctx.first_recipient_amount {
@@ -579,6 +589,7 @@ pub(super) fn select_notes(
     migration: bool,
     recipient_pays_fee: bool,
     first_recipient_amount: u64,
+    change_pools: u8,
 ) -> Option<Selection> {
     // ---- 1. Pre-filter dust ------------------------------------------------
     let total_notes = notes.len();
@@ -652,6 +663,7 @@ pub(super) fn select_notes(
         migration,
         recipient_pays_fee,
         first_recipient_amount,
+        change_pools,
     };
 
     // ---- 5. Greedy baseline -----------------------------------------------
@@ -879,7 +891,7 @@ mod tests {
 
         let f_unit = 5_000u64;
 
-        let sel = select_notes(&notes, &outputs, f_unit, false, false, 0)
+        let sel = select_notes(&notes, &outputs, f_unit, false, false, 0, ALL_CHANGE_POOLS)
             .expect("should find a feasible selection");
 
         // Total input >= total output + fee
@@ -933,7 +945,7 @@ mod tests {
         }];
         let f_unit = 5_000u64;
 
-        let sel = select_notes(&notes, &outputs, f_unit, false, false, 0)
+        let sel = select_notes(&notes, &outputs, f_unit, false, false, 0, ALL_CHANGE_POOLS)
             .expect("should find a feasible selection");
 
         // Should only use the non-dust note
@@ -965,7 +977,7 @@ mod tests {
             asset_index: 1,
         }];
 
-        let sel = select_notes(&notes, &outputs, 5_000, false, false, 0)
+        let sel = select_notes(&notes, &outputs, 5_000, false, false, 0, ALL_CHANGE_POOLS)
             .expect("sub-fee-unit ZSA note should remain selectable");
 
         assert!(sel
@@ -1007,7 +1019,7 @@ mod tests {
         let f_unit = 5_000u64;
 
         // First recipient has 200_000, fee will be well under that
-        let sel = select_notes(&notes, &outputs, f_unit, false, true, 200_000)
+        let sel = select_notes(&notes, &outputs, f_unit, false, true, 200_000, ALL_CHANGE_POOLS)
             .expect("should find a feasible selection");
 
         // With recipient_pays_fee, target = output_sum (no fee added)
@@ -1060,7 +1072,7 @@ mod tests {
         let f_unit = 5_000u64;
 
         // First recipient only has 1_000 zats — fee will exceed that
-        let result = select_notes(&notes, &outputs, f_unit, false, true, 1_000);
+        let result = select_notes(&notes, &outputs, f_unit, false, true, 1_000, ALL_CHANGE_POOLS);
         // Should still work if it can find a change pool where fee <= 1000,
         // but with 4 pools and enough notes the min fee is >= 10000.
         // This may or may not find a solution depending on fee structure.
@@ -1089,7 +1101,7 @@ mod tests {
         }];
         let f_unit = 5_000u64;
 
-        let result = select_notes(&notes, &outputs, f_unit, false, false, 0);
+        let result = select_notes(&notes, &outputs, f_unit, false, false, 0, ALL_CHANGE_POOLS);
         assert!(
             result.is_none(),
             "should return None for insufficient funds"
@@ -1124,7 +1136,7 @@ mod tests {
                 amount: 150_000,
                 asset_index: 0,
             }];
-            select_notes(&notes, &outputs, 5_000, false, false, 0)
+            select_notes(&notes, &outputs, 5_000, false, false, 0, ALL_CHANGE_POOLS)
                 .expect("feasible")
                 .fee
         };
@@ -1166,6 +1178,7 @@ mod tests {
             migration: false,
             recipient_pays_fee: false,
             first_recipient_amount: 0,
+            change_pools: ALL_CHANGE_POOLS,
         };
         let state = State {
             asset_sums: vec![200_000_000, 499_500],
@@ -1213,7 +1226,7 @@ mod tests {
             asset_index: 1,
         }];
 
-        let selection = select_notes(&notes, &outputs, 5_000, false, false, 0)
+        let selection = select_notes(&notes, &outputs, 5_000, false, false, 0, ALL_CHANGE_POOLS)
             .expect("ZSA transfer should be selectable");
 
         // One ZEC spend pairs with ZEC change. The ZSA spend needs one
@@ -1236,6 +1249,7 @@ mod tests {
             migration: false,
             recipient_pays_fee: false,
             first_recipient_amount: 0,
+            change_pools: ALL_CHANGE_POOLS,
         };
         let state = State {
             asset_sums: vec![100_000],
@@ -1254,6 +1268,43 @@ mod tests {
         assert_eq!(turnstile, 140_000);
         assert_eq!(change_pool, 1);
         assert_eq!(fee_for_change_pool(&state, &ctx, change_pool), 20_000);
+    }
+
+    #[test]
+    fn a_change_pool_mask_restricts_the_choice_and_prices_the_chosen_pool() {
+        // Same state as the tie-break test: Sapling change would be the
+        // cheapest; with only Orchard allowed, Orchard is chosen and its
+        // own fee is the one reported.
+        let ctx = Context {
+            notes: &[],
+            n_assets: 1,
+            asset_output_amounts: vec![40_000],
+            output_amounts: [40_000, 0, 0, 0],
+            n_outputs: [2, 0, 0, 0],
+            orchard_asset_outputs: vec![0],
+            f_unit: 5_000,
+            migration: false,
+            recipient_pays_fee: false,
+            first_recipient_amount: 0,
+            change_pools: 1 << 2,
+        };
+        let state = State {
+            asset_sums: vec![100_000],
+            balance: [-40_000, 20_000, 0, 0],
+            n_inputs: [2, 1, 0, 0],
+            t_in_size: 2 * super::super::fee::P2PKH_INPUT_SIZE,
+            orchard_asset_inputs: vec![0],
+            tin: 80_000,
+            tout: 40_000,
+            selected: vec![],
+        };
+        let (_, change_pool) = evaluate_privacy(&state, &ctx);
+        assert_eq!(change_pool, 2);
+        assert_ne!(
+            fee_for_change_pool(&state, &ctx, 2),
+            fee_for_change_pool(&state, &ctx, 1),
+            "the masked-out pool would have been priced differently"
+        );
     }
 
     #[test]
@@ -1289,7 +1340,7 @@ mod tests {
             asset_index: 0,
         }];
 
-        let sel = select_notes(&notes, &outputs, 5_000, false, false, 0)
+        let sel = select_notes(&notes, &outputs, 5_000, false, false, 0, ALL_CHANGE_POOLS)
             .expect("Orchard-only inputs should fund a Sapling output");
 
         assert!(
@@ -1333,7 +1384,7 @@ mod tests {
             },
         ];
 
-        let sel = select_notes(&notes, &outputs, 5_000, false, false, 0)
+        let sel = select_notes(&notes, &outputs, 5_000, false, false, 0, ALL_CHANGE_POOLS)
             .expect("should fund both outputs");
 
         let total_input: u64 = sel.inputs.iter().map(|n| n.amount).sum();
@@ -1367,6 +1418,6 @@ mod tests {
             asset_index: 0,
         }];
 
-        assert!(select_notes(&notes, &outputs, 5_000, false, false, 0).is_none());
+        assert!(select_notes(&notes, &outputs, 5_000, false, false, 0, ALL_CHANGE_POOLS).is_none());
     }
 }
