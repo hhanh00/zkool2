@@ -238,6 +238,11 @@ void main() {
     await fillRestore(tester);
     await save(tester);
 
+    // The question says what the tip default means and how to undo it
+    // (#1536). AwesomeDialog shows a body instead of its title, so the
+    // text is what identifies the question.
+    expect(find.textContaining('funds received before today will not appear'), findsOneWidget);
+    expect(find.textContaining('set the birth height later in the account editor'), findsOneWidget);
     await tapDialog(tester, 'Ok'); // "No Birth Height": sure
     await settle(tester);
     expect(find.textContaining('Would you like to synchronize it now?'), findsOneWidget);
@@ -247,6 +252,18 @@ void main() {
     expect(na.restore, isTrue);
     expect(na.birth, tip);
     expect(find.text('Home'), findsOneWidget, reason: 'back to the account after the offer');
+  });
+
+  testWidgets('declining the no-birth-height question creates nothing and keeps the form', (tester) async {
+    api.height = tip;
+    await openPage(tester);
+    await fillRestore(tester);
+    await save(tester);
+
+    expect(find.textContaining('funds received before today will not appear'), findsOneWidget);
+    await tapDialog(tester, 'Cancel');
+    expect(api.created, isEmpty);
+    expect(find.byTooltip('Save'), findsOneWidget, reason: 'still on the form to type a birth height');
   });
 
   testWidgets('a typed birth height is kept and the sync offer still comes', (tester) async {

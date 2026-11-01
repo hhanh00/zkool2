@@ -484,10 +484,14 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> with BusyGate {
         return;
       }
       if (r && birth == null) {
+        // The restore is born at the tip: say what that means and where
+        // the birth height can be changed afterwards (#1536).
         final confirmed = await confirmDialog(
           context,
           title: "No Birth Height",
-          message: "Are you sure you don't want to enter the birth height?",
+          message: "Without a birth height the wallet syncs from the current block "
+              "and funds received before today will not appear. "
+              "You can set the birth height later in the account editor and resync. Continue?",
         );
         if (!confirmed) return;
       }
