@@ -6,11 +6,13 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_rust_bridge/flutter_rust_bridge.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:zkool/src/rust/api/raptor.dart';
 import 'package:zkool/store.dart';
+import 'package:zkool/widgets/error_display.dart';
 
 class ShowAnimatedQRPage extends ConsumerStatefulWidget {
   final List<Uint8List> packets;
@@ -122,33 +124,63 @@ class ScanAnimatedQRPageState extends State<ScanAnimatedQRPage> {
   Widget? scanner;
   final controller = MobileScannerController();
   Map<int, Uint8List> packets = {};
+  StreamSubscription<BarcodeCapture>? _sub;
 
   @override
   void initState() {
     super.initState();
 
     Future(() async {
+      // Each scan starts with a fresh decoder: one left over from a scan
+      // that was backed out of, or that completed, would swallow this
+      // one's frames (#1504).
+      await endDecode();
+      if (!mounted) return;
       final completed = Completer<Uint8List>();
-      final sub = controller.barcodes.listen((qr) async {
+      _sub = controller.barcodes.listen((qr) async {
         final barcode = qr.barcodes.first;
         var data = barcode.rawBytes!;
         if (Platform.isMacOS) data = getQrBytes(data: data);
         if (data.length < 16) return;
         final id = ByteData.sublistView(data).getUint32(12, Endian.big);
 
-        if (!packets.containsKey(id)) {
+        if (!packets.containsKey(id) && !completed.isCompleted) {
           packets[id] = data;
           setState(() {});
-          final result = await decode(packet: data);
-          if (result != null) {
-            completed.complete(result);
+          try {
+            final result = await decode(packet: data);
+            if (result != null && !completed.isCompleted) {
+              completed.complete(result);
+            }
+          } on AnyhowException catch (e) {
+            // A frame from another transfer, or a malformed one: this scan
+            // cannot complete, say so and let the user start again.
+            if (!completed.isCompleted) completed.completeError(e);
           }
         }
       });
-      final data = await completed.future;
-      sub.cancel();
-      GoRouter.of(context).pop(data.toList());
+      try {
+        final data = await completed.future;
+        await _sub?.cancel();
+        _sub = null;
+        if (mounted) GoRouter.of(context).pop(data.toList());
+      } on AnyhowException catch (e) {
+        await _sub?.cancel();
+        _sub = null;
+        if (!mounted) return;
+        await showException(context, e.message);
+        if (mounted) GoRouter.of(context).pop(null);
+      }
     });
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    _sub = null;
+    controller.dispose();
+    unawaited(endDecode());
+    super.dispose();
   }
 
   @override

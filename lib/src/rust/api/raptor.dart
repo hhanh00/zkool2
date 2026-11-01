@@ -15,9 +15,21 @@ Future<List<Uint8List>> encode(
 Uint8List getQrBytes({required List<int> data}) =>
     RustLib.instance.api.crateApiRaptorGetQrBytes(data: data);
 
+/// Feed one scanned frame to the decoder of the transfer in progress and
+/// return the object once it is complete (#1504).
+///
+/// The first frame of a scan configures the decoder from its header; a
+/// later frame with another header belongs to another transfer and is an
+/// error, not a reset: re-creating the decoder would silently discard the
+/// frames collected so far. A completed transfer clears the decoder, so
+/// the next scan starts fresh even if the page is not disposed. A frame
+/// too short to carry a packet, or a header claiming more than the
+/// largest PCZT the wallet accepts, is refused before any decoder exists.
 Future<Uint8List?> decode({required List<int> packet}) =>
     RustLib.instance.api.crateApiRaptorDecode(packet: packet);
 
+/// Forget the transfer in progress: the scanner page calls it when a scan
+/// starts and when it is left, so no scan inherits another's frames.
 Future<void> endDecode() => RustLib.instance.api.crateApiRaptorEndDecode();
 
 class RaptorQParams {
