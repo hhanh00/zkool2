@@ -1163,6 +1163,55 @@ mod new_account_tests {
         assert!(err.to_string().contains("no change address"), "{err}");
     }
 
+    async fn stored_taddr(db: &mut sqlx::SqliteConnection, account: u32, scope: u32) -> Option<String> {
+        sqlx::query_as::<_, (String,)>(
+            "SELECT address FROM transparent_address_accounts
+            WHERE account = ?1 AND scope = ?2
+            AND dindex = (SELECT dindex FROM accounts WHERE id_account = ?1)",
+        )
+        .bind(account)
+        .bind(scope)
+        .fetch_optional(db)
+        .await
+        .unwrap()
+        .map(|(a,)| a)
+    }
+
+    fn transparent_receiver(ua: &str) -> String {
+        UnifiedAddress::decode(&NETWORK, ua)
+            .unwrap()
+            .transparent()
+            .unwrap()
+            .encode(&NETWORK)
+    }
+
+    /// The full change address carries the transparent receiver of the
+    /// requested scope, and the external one when the account has no
+    /// internal row at its index (#1486).
+    #[tokio::test]
+    async fn the_full_change_address_takes_the_transparent_receiver_of_its_scope() {
+        let mut db = sqlx::SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        crate::db::create_schema(&mut db).await.unwrap();
+        let ufvk = usk().to_unified_full_viewing_key();
+        let full = watch_account(&mut db, ufvk.encode(&NETWORK).unwrap(), "full").await;
+        let external = stored_taddr(&mut db, full, 0).await.unwrap();
+        let internal = stored_taddr(&mut db, full, 1).await.unwrap();
+        assert_ne!(external, internal);
+
+        let at_0 = get_account_full_address(&NETWORK, &mut db, full, 0, 0).await.unwrap();
+        let at_1 = get_account_full_address(&NETWORK, &mut db, full, 1, 0).await.unwrap();
+        assert_eq!(transparent_receiver(&at_0), external);
+        assert_eq!(transparent_receiver(&at_1), internal);
+
+        sqlx::query("DELETE FROM transparent_address_accounts WHERE account = ? AND scope = 1")
+            .bind(full)
+            .execute(&mut db)
+            .await
+            .unwrap();
+        let at_1 = get_account_full_address(&NETWORK, &mut db, full, 1, 0).await.unwrap();
+        assert_eq!(transparent_receiver(&at_1), external);
+    }
+
     /// Creating an account from an incoming key stores the incoming key of
     /// each pool with the full key NULL, and never uses internal change.
     #[tokio::test]
@@ -1741,13 +1790,18 @@ pub async fn get_account_full_address(
     scope: u8,
     hw: u8,
 ) -> Result<String> {
+    // The receiver of the requested scope. An account with no row at that
+    // scope (a Zondax account registers index 0 of the external chain and
+    // nothing else) falls back to the external one (#1486).
     let taddress = sqlx::query(
         "SELECT ta.address FROM transparent_address_accounts ta
         JOIN accounts a ON ta.account = a.id_account AND ta.dindex = a.dindex
-        AND ta.scope = 0
-        WHERE ta.account = ?",
+        WHERE ta.account = ?1 AND ta.scope IN (0, ?2)
+        ORDER BY ta.scope = ?2 DESC
+        LIMIT 1",
     )
     .bind(account)
+    .bind(scope)
     .map(|row: SqliteRow| {
         let taddress: String = row.get(0);
         TransparentAddress::decode(network, &taddress).unwrap()
