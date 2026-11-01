@@ -262,8 +262,24 @@ fn run_plugin(engine: &Engine, ast: &AST, memo: Memo) -> Vec<ParsedMemoSection> 
 
 // ── Install / remove ────────────────────────────────────────────────────
 
+/// A plugin is downloaded over HTTPS, so that nothing on the path can
+/// replace the archive (#1608). Plain HTTP is accepted from the user's own
+/// machine, for a developer serving a plugin locally: the host string is
+/// compared, never resolved, as a resolved check could be rebound between
+/// the check and the download.
+pub fn check_plugin_url(url: &str) -> Result<()> {
+    let parsed = reqwest::Url::parse(url).with_context(|| format!("Invalid plugin URL: {url}"))?;
+    let local = matches!(parsed.host_str(), Some("localhost" | "127.0.0.1" | "[::1]"));
+    match parsed.scheme() {
+        "https" => Ok(()),
+        "http" if local => Ok(()),
+        _ => bail!("Plugins must be downloaded over HTTPS (plain HTTP is allowed from localhost only)"),
+    }
+}
+
 /// Download and install a plugin from a URL.
 pub async fn install_plugin_from_url(c: &Coin, url: &str) -> Result<Plugin> {
+    check_plugin_url(url)?;
     let route = c.route(Duration::from_secs(60))?;
     let response = crate::net::http::http_get(&route, &[url], crate::net::http::RetryPolicy::default())
         .await
@@ -429,6 +445,22 @@ impl From<ParsedMemoCell> for MemoCell {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Plugins are fetched over HTTPS; plain HTTP only from the user's own
+    /// machine (#1608).
+    #[test]
+    fn a_plugin_url_must_be_https_unless_local() {
+        assert!(check_plugin_url("https://example.com/plugin.zip").is_ok());
+        assert!(check_plugin_url("http://localhost:8000/plugin.zip").is_ok());
+        assert!(check_plugin_url("http://127.0.0.1/plugin.zip").is_ok());
+        assert!(check_plugin_url("http://[::1]:8000/plugin.zip").is_ok());
+
+        let e = check_plugin_url("http://example.com/plugin.zip").unwrap_err().to_string();
+        assert!(e.contains("HTTPS"), "{e}");
+        assert!(check_plugin_url("http://localhost.example.com/plugin.zip").is_err());
+        assert!(check_plugin_url("ftp://localhost/plugin.zip").is_err());
+        assert!(check_plugin_url("example.com/plugin.zip").is_err(), "no scheme");
+    }
 
     /// A plugin whose script makes a native function panic contributes no
     /// sections; the call returns instead of unwinding to the FRB boundary.
