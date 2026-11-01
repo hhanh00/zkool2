@@ -16,8 +16,8 @@ use zcash_transparent::address::TransparentAddress;
 
 pub mod broadcast;
 pub use broadcast::{
-    broadcast_package_under_session, broadcast_under_session, lock_spent_notes, pending_of, post,
-    record_sent, Pending, Sent,
+    bookkeeping_failed, broadcast_package_under_session, broadcast_under_session, lock_spent_notes,
+    pending_of, post, record_sent, Pending, Sent,
 };
 pub mod error;
 pub mod fee;

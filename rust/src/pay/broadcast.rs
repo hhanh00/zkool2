@@ -11,8 +11,8 @@
 //! never writes beside one.
 
 use anyhow::{anyhow, Result};
-use sqlx::SqliteConnection;
-use tracing::{info, span, Level};
+use sqlx::{Connection, SqliteConnection};
+use tracing::{error, info, span, Level};
 use zcash_primitives::transaction::{OrchardBundle, Transaction};
 use zcash_protocol::consensus::BranchId;
 
@@ -77,8 +77,8 @@ pub async fn post(client: &mut Client, tx_bytes: &[u8]) -> Result<Sent> {
 }
 
 /// After an acceptance: lock the notes the transaction spends, and record
-/// the pending metadata if any. Called under the sync session, by the
-/// driver or by a caller that holds it.
+/// the pending metadata if any, as one database transaction. Called under
+/// the sync session, by the driver or by a caller that holds it.
 pub async fn record_sent(
     conn: &mut SqliteConnection,
     account: u32,
@@ -86,10 +86,11 @@ pub async fn record_sent(
     tx_bytes: &[u8],
     pending: Option<Pending>,
 ) -> Result<()> {
-    lock_spent_notes(conn, account, tx_bytes).await?;
+    let mut db_tx = conn.begin().await?;
+    lock_spent_notes(&mut db_tx, account, tx_bytes).await?;
     if let Some(pending) = pending {
         crate::db::store_pending_tx(
-            conn,
+            &mut db_tx,
             account,
             sent.height,
             &sent.txid,
@@ -98,13 +99,28 @@ pub async fn record_sent(
         )
         .await?;
     }
+    db_tx.commit().await?;
     Ok(())
+}
+
+/// The node accepted the transaction but the wallet could not record it.
+/// The send is reported as what it is, accepted: the notes stay unlocked
+/// until the next sync or mempool scan records the spend, the state sync
+/// repairs on its own, while a "failed" answer would invite a retry over a
+/// transaction that is already in the mempool (#1484).
+pub fn bookkeeping_failed(txid: &str, error: &anyhow::Error) {
+    error!(
+        "transaction {txid} was accepted but could not be recorded: {error:#}; \
+         its notes stay spendable until the next sync records the spend"
+    );
 }
 
 /// Post a serialized transaction. On acceptance, lock the notes it spends so
 /// a later plan cannot select them before the spend is mined, record the
 /// pending metadata when given, and return the txid. A rejection is an
-/// error and leaves the wallet untouched.
+/// error and leaves the wallet untouched; a failure to record an accepted
+/// transaction is logged and the txid still returned (see
+/// [`bookkeeping_failed`]).
 pub async fn broadcast_under_session(
     conn: &mut SqliteConnection,
     client: &mut Client,
@@ -113,7 +129,9 @@ pub async fn broadcast_under_session(
     pending: Option<Pending>,
 ) -> Result<String> {
     let sent = post(client, tx_bytes).await?;
-    record_sent(conn, account, &sent, tx_bytes, pending).await?;
+    if let Err(error) = record_sent(conn, account, &sent, tx_bytes, pending).await {
+        bookkeeping_failed(&sent.response, &error);
+    }
     Ok(sent.response)
 }
 
@@ -389,6 +407,35 @@ mod tests {
             .unwrap_err();
         assert_eq!(err.to_string(), "tx has expired");
         assert_eq!(locked(&mut db).await?, 0);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn a_recording_failure_after_acceptance_still_returns_the_txid() -> Result<()> {
+        let outpoint = OutPoint::new([7u8; 32], 3);
+        let mut db = wallet_with_note(&outpoint).await?;
+        // The pending row is written after the lock: refusing it rolls the
+        // lock back too, since both are one transaction.
+        sqlx::query(
+            "CREATE TRIGGER refuse_pending BEFORE INSERT ON pending_txs \
+             BEGIN SELECT RAISE(ABORT, 'disk refused'); END",
+        )
+        .execute(&mut db)
+        .await?;
+        let mut client: Client = Box::new(Posts(TXID.to_string(), vec![]));
+        let pending = Pending {
+            price: Some(1.5),
+            category: Some(4),
+        };
+        let txid =
+            broadcast_under_session(&mut db, &mut client, 1, &spend_of(outpoint), Some(pending))
+                .await?;
+        assert_eq!(txid, TXID, "the accepted transaction is reported as accepted");
+        assert_eq!(locked(&mut db).await?, 0, "the lock was rolled back with the pending row");
+        let pending: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM pending_txs")
+            .fetch_one(&mut db)
+            .await?;
+        assert_eq!(pending, 0);
         Ok(())
     }
 

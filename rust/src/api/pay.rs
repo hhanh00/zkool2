@@ -164,7 +164,9 @@ pub async fn broadcast_bytes(tx_bytes: &[u8], account: u32, c: &Coin) -> Result<
 }
 
 /// Post outside the sync session, then queue the writes that follow an
-/// acceptance through the sync driver.
+/// acceptance through the sync driver. A rejection is an error; once the
+/// node has accepted, a failure to queue or apply the writes is logged and
+/// the txid still returned (see [`crate::pay::bookkeeping_failed`]).
 async fn send(
     tx_bytes: &[u8],
     pending: Option<crate::pay::Pending>,
@@ -174,17 +176,23 @@ async fn send(
     let mut client = c.client().await?;
     let sent = crate::pay::post(&mut client, tx_bytes).await?;
     let response = sent.response.clone();
-    c.driver()?
-        .apply(
-            c,
-            crate::sync::driver::Apply::Sent {
-                account,
-                sent,
-                tx_bytes: tx_bytes.to_vec(),
-                pending,
-            },
-        )
-        .await?;
+    let recorded = async {
+        c.driver()?
+            .apply(
+                c,
+                crate::sync::driver::Apply::Sent {
+                    account,
+                    sent,
+                    tx_bytes: tx_bytes.to_vec(),
+                    pending,
+                },
+            )
+            .await
+    }
+    .await;
+    if let Err(error) = recorded {
+        crate::pay::bookkeeping_failed(&response, &error);
+    }
     Ok(response)
 }
 
