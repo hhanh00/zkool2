@@ -21,6 +21,7 @@ use crate::account::{
     get_transparent_keys,
 };
 use crate::api::coin::Network;
+use crate::keys::{invalid_key, key_bytes};
 use crate::db::{get_account_aindex, get_account_hw, store_account_transparent_addr};
 use crate::ledger::LedgerHandle;
 
@@ -65,7 +66,8 @@ impl TransparentKeySource {
                 .fetch_optional(&mut *conn)
                 .await?;
         if let Some((Some(ivk),)) = ivk {
-            let ivk = ExternalIvk::deserialize(&ivk.try_into().unwrap())?;
+            let ivk = ExternalIvk::deserialize(&key_bytes(account, "transparent ivk", ivk)?)
+                .map_err(|_| invalid_key(account, "transparent ivk"))?;
             return Ok(Some(TransparentKeySource::Incoming { ivk }));
         }
         let hw = get_account_hw(conn, account).await?;

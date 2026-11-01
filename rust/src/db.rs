@@ -1,7 +1,8 @@
 use std::fs::File;
 
 use crate::keys::{
-    AccountViewingKeys, OrchardViewingKeys, SaplingDiversifiedAddress, SaplingViewingKeys, ScopeExt,
+    invalid_key, key_bytes, AccountViewingKeys, OrchardViewingKeys, SaplingDiversifiedAddress,
+    SaplingViewingKeys, ScopeExt,
 };
 use anyhow::{anyhow, Result};
 use csv_async::AsyncWriter;
@@ -1355,6 +1356,12 @@ pub async fn update_dindex(
     Ok(())
 }
 
+/// The stored transparent account key, or [`invalid_key`] (#1496).
+pub fn transparent_xvk(account: u32, xvk: Vec<u8>) -> Result<AccountPubKey> {
+    AccountPubKey::deserialize(&key_bytes(account, "transparent xvk", xvk)?)
+        .map_err(|_| invalid_key(account, "transparent xvk"))
+}
+
 pub async fn select_account_transparent(
     connection: &mut SqliteConnection,
     account: u32,
@@ -1385,9 +1392,18 @@ pub async fn select_account_transparent(
     };
 
     let keys = TransparentKeys {
-        xsk: xsk.map(|xsk| AccountPrivKey::from_bytes(&xsk).unwrap()),
-        xvk: xvk.map(|xvk| AccountPubKey::deserialize(&xvk.try_into().unwrap()).unwrap()),
-        ivk: ivk.map(|ivk| ExternalIvk::deserialize(&ivk.try_into().unwrap()).unwrap()),
+        xsk: xsk
+            .map(|xsk| {
+                AccountPrivKey::from_bytes(&xsk).ok_or_else(|| invalid_key(account, "transparent xsk"))
+            })
+            .transpose()?,
+        xvk: xvk.map(|xvk| transparent_xvk(account, xvk)).transpose()?,
+        ivk: ivk
+            .map(|ivk| {
+                ExternalIvk::deserialize(&key_bytes(account, "transparent ivk", ivk)?)
+                    .map_err(|_| invalid_key(account, "transparent ivk"))
+            })
+            .transpose()?,
         address: taddress,
     };
 
@@ -1412,14 +1428,24 @@ pub async fn select_account_sapling(
     };
 
     let keys = SaplingKeys {
-        xsk: xsk.map(|xsk| {
-            ExtendedSpendingKey::from_bytes(&xsk)
-                .map_err(|_| anyhow!("Invalid sdk"))
-                .unwrap()
-        }),
+        xsk: xsk
+            .map(|xsk| {
+                ExtendedSpendingKey::from_bytes(&xsk).map_err(|_| invalid_key(account, "sapling xsk"))
+            })
+            .transpose()?,
         xvk: xvk
-            .map(|xvk| DiversifiableFullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()),
-        ivk: ivk.map(|ivk| SaplingZip32Ivk::from_bytes(&ivk.try_into().unwrap()).unwrap()),
+            .map(|xvk| {
+                DiversifiableFullViewingKey::from_bytes(&key_bytes(account, "sapling xvk", xvk)?)
+                    .ok_or_else(|| invalid_key(account, "sapling xvk"))
+            })
+            .transpose()?,
+        ivk: ivk
+            .map(|ivk| {
+                SaplingZip32Ivk::from_bytes(&key_bytes(account, "sapling ivk", ivk)?)
+                    .into_option()
+                    .ok_or_else(|| invalid_key(account, "sapling ivk"))
+            })
+            .transpose()?,
         // A corrupt or empty stored address (e.g. rows imported before the
         // address was backfilled) must not panic the runtime: surface a
         // clear error instead.
@@ -1450,9 +1476,26 @@ pub async fn select_account_orchard(
     };
 
     let keys = OrchardKeys {
-        xsk: xsk.map(|xsk| SpendingKey::from_bytes(xsk.try_into().unwrap()).unwrap()),
-        xvk: xvk.map(|xvk| FullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap()),
-        ivk: ivk.map(|ivk| OrchardIvk::from_bytes(&ivk.try_into().unwrap()).unwrap()),
+        xsk: xsk
+            .map(|xsk| {
+                SpendingKey::from_bytes(key_bytes(account, "orchard xsk", xsk)?)
+                    .into_option()
+                    .ok_or_else(|| invalid_key(account, "orchard xsk"))
+            })
+            .transpose()?,
+        xvk: xvk
+            .map(|xvk| {
+                FullViewingKey::from_bytes(&key_bytes(account, "orchard xvk", xvk)?)
+                    .ok_or_else(|| invalid_key(account, "orchard xvk"))
+            })
+            .transpose()?,
+        ivk: ivk
+            .map(|ivk| {
+                OrchardIvk::from_bytes(&key_bytes(account, "orchard ivk", ivk)?)
+                    .into_option()
+                    .ok_or_else(|| invalid_key(account, "orchard ivk"))
+            })
+            .transpose()?,
     };
 
     Ok(keys)
@@ -1493,7 +1536,7 @@ pub async fn sapling_viewing_keys(
             .bind(account)
             .fetch_optional(&mut *connection)
             .await?;
-    Ok(row.and_then(|(xvk, ivk)| SaplingViewingKeys::from_stored(xvk, ivk)))
+    row.map_or(Ok(None), |(xvk, ivk)| SaplingViewingKeys::from_stored(account, xvk, ivk))
 }
 
 /// An account's shielded viewing keys, full or incoming-only per pool.
@@ -1518,7 +1561,7 @@ pub async fn orchard_viewing_keys(
             .bind(account)
             .fetch_optional(&mut *connection)
             .await?;
-    Ok(row.and_then(|(xvk, ivk)| OrchardViewingKeys::from_stored(xvk, ivk)))
+    row.map_or(Ok(None), |(xvk, ivk)| OrchardViewingKeys::from_stored(account, xvk, ivk))
 }
 
 /// The keys that find an account's incoming Orchard (and Ironwood) notes at
@@ -2832,6 +2875,64 @@ mod header_tests {
                 (2, 200, vec![2], 456)
             ]
         );
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod key_blob_tests {
+    use super::*;
+    use sqlx::Connection;
+
+    async fn wallet_with(table: &str) -> Result<SqliteConnection> {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        create_schema(&mut db).await?;
+        sqlx::query(
+            "INSERT INTO accounts(id_account, name, aindex, dindex, def_dindex,
+            birth, position, use_internal, hidden, saved) VALUES (1, 'a', 0, 0, 0, 0, 0, 1, 0, 0)",
+        )
+        .execute(&mut db)
+        .await?;
+        // A one-byte full viewing key: the row of an edited backup or a
+        // tampered file.
+        let insert = match table {
+            "transparent_accounts" => "INSERT INTO transparent_accounts(account, xvk) VALUES (1, X'01')",
+            "sapling_accounts" => "INSERT INTO sapling_accounts(account, xvk, address) VALUES (1, X'01', '')",
+            "orchard_accounts" => "INSERT INTO orchard_accounts(account, xvk) VALUES (1, X'01')",
+            _ => unreachable!(),
+        };
+        sqlx::query(insert).execute(&mut db).await?;
+        Ok(db)
+    }
+
+    fn message<T>(r: Result<T>) -> String {
+        match r {
+            Ok(_) => panic!("a malformed key blob was accepted"),
+            Err(e) => e.to_string(),
+        }
+    }
+
+    /// A stored key blob that is not a key is an error naming the account
+    /// and the key, from every loader, never a panic (#1496).
+    #[tokio::test]
+    async fn a_malformed_key_blob_is_an_error_from_every_loader() -> Result<()> {
+        let mut db = wallet_with("transparent_accounts").await?;
+        let err = message(select_account_transparent(&mut db, 1, 0).await);
+        assert_eq!(err, "account 1: invalid transparent xvk");
+        let err = message(crate::account::get_transparent_keys(&mut db, 1).await);
+        assert_eq!(err, "account 1: invalid transparent xvk");
+
+        let mut db = wallet_with("sapling_accounts").await?;
+        let err = message(select_account_sapling(&Network::Main, &mut db, 1).await);
+        assert_eq!(err, "account 1: invalid sapling xvk");
+        let err = message(sapling_viewing_keys(&mut db, 1).await);
+        assert_eq!(err, "account 1: invalid sapling xvk");
+
+        let mut db = wallet_with("orchard_accounts").await?;
+        let err = message(select_account_orchard(&mut db, 1).await);
+        assert_eq!(err, "account 1: invalid orchard xvk");
+        let err = message(orchard_viewing_keys(&mut db, 1).await);
+        assert_eq!(err, "account 1: invalid orchard xvk");
         Ok(())
     }
 }

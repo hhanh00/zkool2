@@ -100,7 +100,7 @@ pub async fn preload_account_key_cache(
             .fetch_all(&mut *connection)
             .await?;
     for (account, xvk, ivk) in sapling_rows {
-        if let Some(keys) = SaplingViewingKeys::from_stored(xvk, ivk) {
+        if let Some(keys) = SaplingViewingKeys::from_stored(account, xvk, ivk)? {
             sapling.insert(account, keys);
         }
     }
@@ -111,7 +111,7 @@ pub async fn preload_account_key_cache(
             .fetch_all(&mut *connection)
             .await?;
     for (account, xvk, ivk) in orchard_rows {
-        if let Some(keys) = OrchardViewingKeys::from_stored(xvk, ivk) {
+        if let Some(keys) = OrchardViewingKeys::from_stored(account, xvk, ivk)? {
             orchard.insert(account, keys);
         }
     }

@@ -515,6 +515,61 @@ pub async fn export_account(connection: &mut SqliteConnection, account: u32) -> 
     Ok(data)
 }
 
+/// Decode every key blob and address of a backup before any of it is
+/// written: a malformed one fails the import here, by name, instead of
+/// panicking every wallet open and sync afterwards (#1496). The Sapling
+/// keys are decoded where the address is derived from them.
+fn check_imported_keys(network: &Network, io_account: &IOAccount) -> Result<()> {
+    use orchard::keys::{FullViewingKey, IncomingViewingKey, SpendingKey};
+    use zcash_transparent::keys::{AccountPrivKey, AccountPubKey, ExternalIvk, IncomingViewingKey as _};
+
+    fn sized<const N: usize>(what: &str, blob: &HexBytes) -> Result<[u8; N]> {
+        blob.0
+            .as_slice()
+            .try_into()
+            .map_err(|_| anyhow!("invalid {what} length in account backup"))
+    }
+    fn invalid(what: &str) -> anyhow::Error {
+        anyhow!("invalid {what} in account backup")
+    }
+
+    if let Some(tkeys) = io_account.tkeys.as_ref() {
+        if let Some(xsk) = tkeys.xsk.as_ref() {
+            AccountPrivKey::from_bytes(&xsk.0).ok_or_else(|| invalid("transparent xsk"))?;
+        }
+        if let Some(xvk) = tkeys.xvk.as_ref() {
+            AccountPubKey::deserialize(&sized("transparent xvk", xvk)?)
+                .map_err(|_| invalid("transparent xvk"))?;
+        }
+        if let Some(ivk) = tkeys.ivk.as_ref() {
+            ExternalIvk::deserialize(&sized("transparent ivk", ivk)?)
+                .map_err(|_| invalid("transparent ivk"))?;
+        }
+    }
+    if let Some(okeys) = io_account.okeys.as_ref() {
+        if let Some(xsk) = okeys.xsk.as_ref() {
+            SpendingKey::from_bytes(sized("orchard xsk", xsk)?)
+                .into_option()
+                .ok_or_else(|| invalid("orchard xsk"))?;
+        }
+        if let Some(xvk) = okeys.xvk.as_ref() {
+            FullViewingKey::from_bytes(&sized("orchard xvk", xvk)?).ok_or_else(|| invalid("orchard xvk"))?;
+        }
+        if let Some(ivk) = okeys.ivk.as_ref() {
+            IncomingViewingKey::from_bytes(&sized("orchard ivk", ivk)?)
+                .into_option()
+                .ok_or_else(|| invalid("orchard ivk"))?;
+        }
+    }
+    for taddr in io_account.taddrs.iter() {
+        zcash_transparent::address::TransparentAddress::decode(network, &taddr.address)
+            .map_err(|_| anyhow!("invalid transparent address {} in account backup", taddr.address))?;
+        secp256k1::PublicKey::from_slice(&taddr.pk.0)
+            .map_err(|_| anyhow!("invalid transparent public key in account backup"))?;
+    }
+    Ok(())
+}
+
 /// Import an exported account. For a caller holding the sync session: the
 /// sync driver, so a sync cannot pick the account up half-written.
 pub async fn import_account(
@@ -529,6 +584,8 @@ pub async fn import_account(
     if io_account.version > DB_VERSION {
         anyhow::bail!("This backup was created by a newer app version. Please update.");
     }
+
+    check_imported_keys(network, &io_account)?;
 
     info!("Importing account {}", io_account.name);
     let mut tx = connection.begin().await?;
@@ -1751,6 +1808,87 @@ mod dkg_export_tests {
         let imported = newest_account(&mut dst).await?;
         let rows = dkg_rows(&mut dst, imported).await?;
         assert_eq!(rows.params.map(|p| (p.6, p.7)), Some((1, None)));
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod malformed_backup_tests {
+    use super::*;
+    use crate::{account::new_account, api::account::NewAccount, db::create_schema};
+    use sqlx::Connection;
+
+    const NETWORK: Network = Network::Main;
+    const MNEMONIC: &str = "equal clock rain latin plastic toss scrub modify clarify fold armor exchange gesture erase habit plug state forward demise demand limb risk only document";
+
+    async fn exported(db: &mut SqliteConnection) -> Result<IOAccount> {
+        let na = NewAccount {
+            icon: None,
+            name: "software".into(),
+            restore: true,
+            key: MNEMONIC.into(),
+            passphrase: None,
+            fingerprint: None,
+            aindex: 0,
+            birth: Some(1),
+            folder: String::new(),
+            pools: Some(7),
+            use_internal: true,
+            internal: false,
+            hw: 0,
+        };
+        let account = new_account(&NETWORK, db, &na).await?;
+        let data = export_account(db, account).await?;
+        let mut json = String::new();
+        zstd::Decoder::new(data.as_slice())?.read_to_string(&mut json)?;
+        Ok(serde_json::from_str(&json)?)
+    }
+
+    fn packed(io_account: &IOAccount) -> Result<Vec<u8>> {
+        let json = serde_json::to_string(io_account)?;
+        let mut encoder = zstd::Encoder::new(Vec::new(), DEFAULT_COMPRESSION_LEVEL)?;
+        encoder.write_all(json.as_bytes())?;
+        Ok(encoder.finish()?)
+    }
+
+    async fn import(db: &mut SqliteConnection, io_account: &IOAccount) -> Result<()> {
+        let session = crate::sync::session::SyncSession::new();
+        let run = session.try_begin().unwrap();
+        import_account(&NETWORK, &mut run.held(db), &packed(io_account)?).await
+    }
+
+    async fn account_count(db: &mut SqliteConnection) -> Result<i64> {
+        let (n,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM accounts").fetch_one(db).await?;
+        Ok(n)
+    }
+
+    /// A backup whose key blobs or addresses do not decode is refused by
+    /// name before anything is written; the intact backup still imports.
+    #[tokio::test]
+    async fn a_backup_with_a_malformed_key_or_address_is_refused_untouched() -> Result<()> {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        create_schema(&mut db).await?;
+        let good = exported(&mut db).await?;
+        assert_eq!(account_count(&mut db).await?, 1);
+
+        let mut bad = good.clone();
+        bad.tkeys.as_mut().unwrap().xvk = Some(HexBytes(vec![1]));
+        let err = import(&mut db, &bad).await.unwrap_err().to_string();
+        assert!(err.contains("transparent xvk"), "{err}");
+
+        let mut bad = good.clone();
+        bad.okeys.as_mut().unwrap().xvk = Some(HexBytes(vec![1]));
+        let err = import(&mut db, &bad).await.unwrap_err().to_string();
+        assert!(err.contains("orchard xvk"), "{err}");
+
+        let mut bad = good.clone();
+        bad.taddrs[0].address = "not an address".into();
+        let err = import(&mut db, &bad).await.unwrap_err().to_string();
+        assert!(err.contains("transparent address"), "{err}");
+
+        assert_eq!(account_count(&mut db).await?, 1, "nothing of the refused backups was written");
+        import(&mut db, &good).await?;
+        assert_eq!(account_count(&mut db).await?, 2);
         Ok(())
     }
 }

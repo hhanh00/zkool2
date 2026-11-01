@@ -66,12 +66,14 @@ pub async fn run_mempool_impl<S: Sink<MempoolMsg> + Send + 'static>(
         .map(|row: SqliteRow| {
             let account: u32 = row.get(0);
             let name: String = row.get(1);
-            let keys = SaplingViewingKeys::from_stored(row.get(2), row.get(3));
-            keys.map(|keys| (account, name, keys))
+            let keys = SaplingViewingKeys::from_stored(account, row.get(2), row.get(3));
+            keys.map(|keys| keys.map(|keys| (account, name, keys)))
         })
         .fetch_all(&mut *connection)
         .await
         .context("sapling_accounts")?
+        .into_iter()
+        .collect::<Result<Vec<_>>>()?
         .into_iter()
         .flatten()
         .collect::<Vec<_>>();
@@ -83,12 +85,14 @@ pub async fn run_mempool_impl<S: Sink<MempoolMsg> + Send + 'static>(
         .map(|row: SqliteRow| {
             let account: u32 = row.get(0);
             let name: String = row.get(1);
-            let keys = OrchardViewingKeys::from_stored(row.get(2), row.get(3));
-            keys.map(|keys| (account, name, keys))
+            let keys = OrchardViewingKeys::from_stored(account, row.get(2), row.get(3));
+            keys.map(|keys| keys.map(|keys| (account, name, keys)))
         })
         .fetch_all(&mut *connection)
         .await
         .context("orchard_accounts")?
+        .into_iter()
+        .collect::<Result<Vec<_>>>()?
         .into_iter()
         .flatten()
         .collect::<Vec<_>>();

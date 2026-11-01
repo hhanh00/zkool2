@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::str::FromStr as _;
 
+use crate::db::transparent_xvk;
+use crate::keys::{invalid_key, key_bytes};
 use crate::{
     api::{
         account::{get_ledger, Addresses, TAddressTxCount},
@@ -1212,6 +1214,40 @@ mod new_account_tests {
         assert_eq!(transparent_receiver(&at_1), external);
     }
 
+    /// The paths that run without the user asking, the open-time backfill
+    /// and the change-address builder, report a malformed row as an error
+    /// naming the account rather than panicking (#1496).
+    #[tokio::test]
+    async fn a_malformed_row_is_an_error_at_open_and_in_the_change_address() {
+        let mut db = sqlx::SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        crate::db::create_schema(&mut db).await.unwrap();
+        let ufvk = usk().to_unified_full_viewing_key();
+        let full = watch_account(&mut db, ufvk.encode(&NETWORK).unwrap(), "full").await;
+        assert!(backfill_transparent_change_addresses(&NETWORK, &mut db).await.is_ok());
+
+        sqlx::query("UPDATE transparent_accounts SET xvk = X'01' WHERE account = ?")
+            .bind(full)
+            .execute(&mut db)
+            .await
+            .unwrap();
+        let err = backfill_transparent_change_addresses(&NETWORK, &mut db)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert_eq!(err, format!("account {full}: invalid transparent xvk"));
+
+        sqlx::query("UPDATE transparent_address_accounts SET address = 'nope' WHERE account = ?")
+            .bind(full)
+            .execute(&mut db)
+            .await
+            .unwrap();
+        let err = get_account_full_address(&NETWORK, &mut db, full, 0, 0)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(err.contains("invalid stored transparent address"), "{err}");
+    }
+
     /// Creating an account from an incoming key stores the incoming key of
     /// each pool with the full key NULL, and never uses internal change.
     #[tokio::test]
@@ -1804,10 +1840,12 @@ pub async fn get_account_full_address(
     .bind(scope)
     .map(|row: SqliteRow| {
         let taddress: String = row.get(0);
-        TransparentAddress::decode(network, &taddress).unwrap()
+        TransparentAddress::decode(network, &taddress)
+            .map_err(|e| anyhow!("invalid stored transparent address for account {account}: {e}"))
     })
     .fetch_optional(&mut *connection)
-    .await?;
+    .await?
+    .transpose()?;
 
     let saddress = sqlx::query(
         "SELECT sa.xvk, sa.address, a.dindex FROM sapling_accounts sa
@@ -1855,9 +1893,10 @@ pub async fn get_account_full_address(
             }
             // An incoming-only account: external addresses only.
             (None, Some(ivk)) if scope == 0 => Ok(orchard::keys::IncomingViewingKey::from_bytes(
-                &ivk.try_into().unwrap(),
+                &key_bytes(account, "orchard ivk", ivk)?,
             )
-            .unwrap()
+            .into_option()
+            .ok_or_else(|| invalid_key(account, "orchard ivk"))?
             .address_at(dindex)),
             _ => Err(anyhow!(
                 "account {account} sees incoming payments only: it has no change address"
@@ -2000,21 +2039,21 @@ pub(crate) async fn get_transparent_keys(
     connection: &mut SqliteConnection,
     account: u32,
 ) -> Result<(Option<AccountPrivKey>, Option<AccountPubKey>)> {
-    let tkeys = sqlx::query("SELECT xsk, xvk FROM transparent_accounts WHERE account = ?")
-        .bind(account)
-        .map(|row: SqliteRow| {
-            let xsk: Option<Vec<u8>> = row.get(0);
-            let xvk: Option<Vec<u8>> = row.get(1);
-            let xsk = xsk.map(|xsk| AccountPrivKey::from_bytes(&xsk).unwrap());
-            let xvk = xvk.map(|xvk| AccountPubKey::deserialize(&xvk.try_into().unwrap()).unwrap());
-            (xsk, xvk)
-        })
-        .fetch_optional(&mut *connection)
-        .await?;
-    let (xsk, xvk) = match tkeys {
-        Some((xsk, xvk)) => (xsk, xvk),
-        None => (None, None),
+    #[allow(clippy::type_complexity)]
+    let tkeys: Option<(Option<Vec<u8>>, Option<Vec<u8>>)> =
+        sqlx::query_as("SELECT xsk, xvk FROM transparent_accounts WHERE account = ?")
+            .bind(account)
+            .fetch_optional(&mut *connection)
+            .await?;
+    let Some((xsk, xvk)) = tkeys else {
+        return Ok((None, None));
     };
+    // Decoded after the fetch so a blob that is not a key is an error
+    // naming the account, not a panic (#1496).
+    let xsk = xsk
+        .map(|xsk| AccountPrivKey::from_bytes(&xsk).ok_or_else(|| invalid_key(account, "transparent xsk")))
+        .transpose()?;
+    let xvk = xvk.map(|xvk| transparent_xvk(account, xvk)).transpose()?;
     Ok((xsk, xvk))
 }
 

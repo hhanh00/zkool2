@@ -212,21 +212,31 @@ pub enum SaplingViewingKeys {
 
 impl SaplingViewingKeys {
     /// From the stored columns: the full key when there is one, else the
-    /// incoming key, else nothing.
-    pub fn from_stored(xvk: Option<Vec<u8>>, ivk: Option<Vec<u8>>) -> Option<Self> {
-        match (xvk, ivk) {
+    /// incoming key, else nothing. A blob that is not a key is an error
+    /// naming the account, never a panic (#1496).
+    pub fn from_stored(
+        account: u32,
+        xvk: Option<Vec<u8>>,
+        ivk: Option<Vec<u8>>,
+    ) -> anyhow::Result<Option<Self>> {
+        Ok(match (xvk, ivk) {
             (Some(xvk), _) => Some(SaplingViewingKeys::Full(
                 sapling_crypto::zip32::DiversifiableFullViewingKey::from_bytes(
-                    &xvk.try_into().unwrap(),
+                    &key_bytes(account, "sapling xvk", xvk)?,
                 )
-                .unwrap(),
+                .ok_or_else(|| invalid_key(account, "sapling xvk"))?,
             )),
             (None, Some(ivk)) => Some(SaplingViewingKeys::Incoming(
-                sapling_crypto::zip32::IncomingViewingKey::from_bytes(&ivk.try_into().unwrap())
-                    .unwrap(),
+                sapling_crypto::zip32::IncomingViewingKey::from_bytes(&key_bytes(
+                    account,
+                    "sapling ivk",
+                    ivk,
+                )?)
+                .into_option()
+                .ok_or_else(|| invalid_key(account, "sapling ivk"))?,
             )),
             (None, None) => None,
-        }
+        })
     }
 
     /// The incoming keys to trial-decrypt with, by scope: both scopes of a
@@ -284,6 +294,18 @@ impl SaplingViewingKeys {
     }
 }
 
+/// A stored key blob that is not a key of its kind: the row was written by
+/// an edited backup or a tampered wallet file (#1496).
+pub fn invalid_key(account: u32, what: &str) -> anyhow::Error {
+    anyhow::anyhow!("account {account}: invalid {what}")
+}
+
+/// The stored blob as the fixed-size array its key type reads, or
+/// [`invalid_key`] when the length is off.
+pub fn key_bytes<const N: usize>(account: u32, what: &str, blob: Vec<u8>) -> anyhow::Result<[u8; N]> {
+    blob.try_into().map_err(|_| invalid_key(account, what))
+}
+
 /// As [`SaplingViewingKeys`], for Orchard; the same keys serve Ironwood.
 pub enum OrchardViewingKeys {
     Full(orchard::keys::FullViewingKey),
@@ -291,16 +313,24 @@ pub enum OrchardViewingKeys {
 }
 
 impl OrchardViewingKeys {
-    pub fn from_stored(xvk: Option<Vec<u8>>, ivk: Option<Vec<u8>>) -> Option<Self> {
-        match (xvk, ivk) {
+    /// As [`SaplingViewingKeys::from_stored`].
+    pub fn from_stored(
+        account: u32,
+        xvk: Option<Vec<u8>>,
+        ivk: Option<Vec<u8>>,
+    ) -> anyhow::Result<Option<Self>> {
+        Ok(match (xvk, ivk) {
             (Some(xvk), _) => Some(OrchardViewingKeys::Full(
-                orchard::keys::FullViewingKey::from_bytes(&xvk.try_into().unwrap()).unwrap(),
+                orchard::keys::FullViewingKey::from_bytes(&key_bytes(account, "orchard xvk", xvk)?)
+                    .ok_or_else(|| invalid_key(account, "orchard xvk"))?,
             )),
             (None, Some(ivk)) => Some(OrchardViewingKeys::Incoming(
-                orchard::keys::IncomingViewingKey::from_bytes(&ivk.try_into().unwrap()).unwrap(),
+                orchard::keys::IncomingViewingKey::from_bytes(&key_bytes(account, "orchard ivk", ivk)?)
+                    .into_option()
+                    .ok_or_else(|| invalid_key(account, "orchard ivk"))?,
             )),
             (None, None) => None,
-        }
+        })
     }
 
     pub fn prepared_ivks(&self) -> Vec<(u8, orchard::keys::PreparedIncomingViewingKey)> {
