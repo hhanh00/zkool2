@@ -67,8 +67,30 @@ struct CachedMemoPlugin {
 static PLUGIN_INDEX: LazyLock<Mutex<Vec<CachedMemoPlugin>>> =
     LazyLock::new(|| Mutex::new(Vec::new()));
 
+/// Lifecycle changes and index rebuilds run one at a time (#1603): a row
+/// write and the rebuild that follows it are one step under this lock, so
+/// the published index always reflects the last write and a rebuild never
+/// publishes rows it read before a later change. Memo dispatch only clones
+/// the index; it takes this lock when it has to rebuild an empty one.
+static LIFECYCLE: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+/// The index, recovered from a poisoned lock: a panic while it was held
+/// must not leave the previous index installed for good.
+fn plugin_index() -> std::sync::MutexGuard<'static, Vec<CachedMemoPlugin>> {
+    PLUGIN_INDEX.lock().unwrap_or_else(|e| e.into_inner())
+}
+
 /// Rebuild the plugin index from the database.
 pub async fn refresh_plugin_index(c: &Coin) -> Result<()> {
+    let _lifecycle = LIFECYCLE.lock().await;
+    rebuild_plugin_index(c).await
+}
+
+/// The rebuild itself; the caller holds [`LIFECYCLE`]. The index is cleared
+/// first and published only on success: a rebuild that fails leaves nothing
+/// stale dispatchable, and the next memo rebuilds from the rows.
+async fn rebuild_plugin_index(c: &Coin) -> Result<()> {
+    plugin_index().clear();
     let mut conn = c.get_connection().await?;
     let rows = plugin_db::list_plugins(&mut conn).await?;
     let engine = create_sandboxed_engine();
@@ -100,9 +122,7 @@ pub async fn refresh_plugin_index(c: &Coin) -> Result<()> {
             prefixes,
         });
     }
-    if let Ok(mut guard) = PLUGIN_INDEX.lock() {
-        *guard = index;
-    }
+    *plugin_index() = index;
     Ok(())
 }
 
@@ -200,10 +220,15 @@ pub async fn parse_memo_with_plugins(c: &Coin, memo_bytes: &[u8]) -> Result<Vec<
     let prefix = &payload[0..4];
 
     // Clone out of lock — must not hold MutexGuard across await
-    let plugins: Vec<CachedMemoPlugin> = { PLUGIN_INDEX.lock().unwrap().clone() };
+    let plugins: Vec<CachedMemoPlugin> = plugin_index().clone();
     let plugins = if plugins.is_empty() {
-        refresh_plugin_index(c).await?;
-        PLUGIN_INDEX.lock().unwrap().clone()
+        // Empty because there is none, or because a lifecycle change is
+        // in flight: wait for it, then rebuild only if it left nothing.
+        let _lifecycle = LIFECYCLE.lock().await;
+        if plugin_index().is_empty() {
+            rebuild_plugin_index(c).await?;
+        }
+        plugin_index().clone()
     } else {
         plugins
     };
@@ -348,6 +373,7 @@ pub async fn install_plugin_from_bytes(c: &Coin, archive: &[u8]) -> Result<Plugi
     // Store in DB
     let types_json = serde_json::to_string(&plugin.manifest.types)?;
     let manifest_json = serde_json::to_string(&plugin.manifest)?;
+    let _lifecycle = LIFECYCLE.lock().await;
     let mut conn = c.get_connection().await?;
     plugin_db::upsert_plugin(
         &mut conn,
@@ -367,12 +393,13 @@ pub async fn install_plugin_from_bytes(c: &Coin, archive: &[u8]) -> Result<Plugi
     )
     .await?;
 
-    refresh_plugin_index(c).await?;
+    rebuild_plugin_index(c).await?;
     Ok(plugin)
 }
 
 /// Remove a plugin: delete DB row, evict AST cache, refresh index.
 pub async fn remove_plugin(c: &Coin, id: &str) -> Result<()> {
+    let _lifecycle = LIFECYCLE.lock().await;
     let mut conn = c.get_connection().await?;
     let row = plugin_db::get_plugin(&mut conn, id).await?;
     plugin_db::delete_plugin(&mut conn, id).await?;
@@ -387,19 +414,20 @@ pub async fn remove_plugin(c: &Coin, id: &str) -> Result<()> {
     }
 
     evict_ast(id);
-    refresh_plugin_index(c).await?;
+    rebuild_plugin_index(c).await?;
     Ok(())
 }
 
 /// Enable or disable a plugin.
 pub async fn set_plugin_enabled(c: &Coin, id: &str, enabled: bool) -> Result<()> {
+    let _lifecycle = LIFECYCLE.lock().await;
     let mut conn = c.get_connection().await?;
     plugin_db::set_plugin_enabled(&mut conn, id, enabled).await?;
 
     if !enabled {
         evict_ast(id);
     }
-    refresh_plugin_index(c).await?;
+    rebuild_plugin_index(c).await?;
 
     Ok(())
 }
