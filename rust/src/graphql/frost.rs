@@ -1,17 +1,12 @@
-use bincode::config;
 use juniper::{FieldError, FieldResult};
 
 use crate::{
     frost::{driver::Cancel, keys::CURRENT_DKG_VERSION},
     graphql::{
         data::{FrostParamsResult, FrostRestoreResult},
-        Context,
+        invalid_integer, Context,
     },
 };
-
-fn invalid_integer(name: &str) -> FieldError {
-    FieldError::new(format!("Invalid {name}"), juniper::Value::Null)
-}
 
 /// Every FROST and DKG entry point starts here. A FROST session is
 /// wallet-wide, one at a time whatever account owns it, so a server with

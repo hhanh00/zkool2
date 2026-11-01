@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::LazyLock};
 
-use crate::graphql::{check_admin_auth, check_auth};
+use crate::graphql::{check_admin_auth, check_auth, invalid_integer};
 use crate::{
     account::generate_next_dindex,
     api::mempool::MempoolMsg,
@@ -232,7 +232,13 @@ impl Mutation {
 
     async fn create_account(new_account: NewAccount, context: &Context) -> FieldResult<i32> {
         check_admin_auth(context)?;
-        let height = crate::api::network::get_current_height(&context.coin).await?;
+        // GraphQL integers are signed; a negative one is refused here
+        // rather than wrapped into a height or index near u32::MAX (#1532).
+        let aindex = u32::try_from(new_account.aindex).map_err(|_| invalid_integer("aindex"))?;
+        let birth = match new_account.birth {
+            Some(birth) => u32::try_from(birth).map_err(|_| invalid_integer("birth"))?,
+            None => crate::api::network::get_current_height(&context.coin).await?,
+        };
         let na = crate::api::account::NewAccount {
             name: new_account.name,
             restore: false,
@@ -240,8 +246,8 @@ impl Mutation {
             passphrase: new_account.passphrase,
             fingerprint: None,
             icon: None,
-            aindex: new_account.aindex as u32,
-            birth: new_account.birth.map(|v| v as u32).or(Some(height)),
+            aindex,
+            birth: Some(birth),
             pools: new_account.pools.map(|v| v as u8),
             use_internal: new_account.use_internal,
             folder: String::new(),
@@ -263,7 +269,10 @@ impl Mutation {
             id: id_account as u32,
             name: update_account.name,
             icon: None,
-            birth: update_account.birth.map(|v| v as u32),
+            birth: update_account
+                .birth
+                .map(|v| u32::try_from(v).map_err(|_| invalid_integer("birth")))
+                .transpose()?,
             folder: 0,
             hidden: None,
             enabled: None,
@@ -617,3 +626,69 @@ pub struct Mempool {
 }
 
 pub static MEMPOOL: LazyLock<Mutex<Mempool>> = LazyLock::new(|| Mutex::new(Mempool::default()));
+
+#[cfg(test)]
+mod input_tests {
+    use super::*;
+    use crate::api::coin::Coin;
+    use crate::graphql::query::Query;
+    use juniper::{EmptySubscription, RootNode, Variables};
+
+    const MNEMONIC: &str = "equal clock rain latin plastic toss scrub modify clarify fold armor exchange gesture erase habit plug state forward demise demand limb risk only document";
+
+    async fn context() -> Context {
+        let path = format!("/tmp/graphql_input_{}.db", uuid::Uuid::new_v4());
+        let coin = Coin::new(Some(3)).open_database(path, None).await.unwrap();
+        Context::new(coin)
+    }
+
+    /// Runs one mutation; the first error's message, or the JSON value.
+    async fn mutate(context: &Context, mutation: &str) -> Result<serde_json::Value, String> {
+        let schema = RootNode::new(Query {}, Mutation {}, EmptySubscription::<Context>::new());
+        let (value, errors) =
+            juniper::execute(&format!("mutation {{ {mutation} }}"), None, &schema, &Variables::new(), context)
+                .await
+                .map_err(|e| e.to_string())?;
+        if let Some(error) = errors.first() {
+            return Err(error.error().message().to_owned());
+        }
+        Ok(serde_json::to_value(value).unwrap())
+    }
+
+    fn create(aindex: i32, birth: i32) -> String {
+        format!(
+            "createAccount(newAccount: {{ name: \"a\", key: \"{MNEMONIC}\", aindex: {aindex}, birth: {birth}, useInternal: false }})"
+        )
+    }
+
+    async fn accounts(context: &Context) -> Vec<(u32, u32)> {
+        let mut conn = context.coin.get_connection().await.unwrap();
+        sqlx::query_as("SELECT id_account, birth FROM accounts ORDER BY id_account")
+            .fetch_all(&mut *conn)
+            .await
+            .unwrap()
+    }
+
+    #[tokio::test]
+    async fn a_negative_birth_or_aindex_is_refused_before_anything_is_stored() {
+        let context = context().await;
+        assert_eq!(mutate(&context, &create(0, -2)).await.unwrap_err(), "Invalid birth");
+        assert_eq!(mutate(&context, &create(-1, 10)).await.unwrap_err(), "Invalid aindex");
+        assert!(accounts(&context).await.is_empty());
+    }
+
+    #[tokio::test]
+    async fn an_edit_with_a_negative_birth_leaves_the_stored_birth_alone() {
+        let context = context().await;
+        let created = mutate(&context, &create(0, 10)).await.unwrap();
+        let id = created["createAccount"].as_i64().unwrap();
+        assert_eq!(accounts(&context).await, vec![(id as u32, 10)]);
+
+        let edit = |birth: i32| format!("editAccount(idAccount: {id}, updateAccount: {{ birth: {birth} }})");
+        assert_eq!(mutate(&context, &edit(-1)).await.unwrap_err(), "Invalid birth");
+        assert_eq!(accounts(&context).await, vec![(id as u32, 10)]);
+
+        assert_eq!(mutate(&context, &edit(20)).await.unwrap()["editAccount"], true);
+        assert_eq!(accounts(&context).await, vec![(id as u32, 20)]);
+    }
+}

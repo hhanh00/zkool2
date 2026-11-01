@@ -77,6 +77,12 @@ pub fn check_admin_auth(context: &Context) -> FieldResult<()> {
     authorize_admin(context.auth.as_ref(), now())
 }
 
+/// A signed GraphQL integer that does not fit the unsigned field it is
+/// bound for; the caller names the field.
+pub(crate) fn invalid_integer(name: &str) -> FieldError {
+    FieldError::new(format!("Invalid {name}"), juniper::Value::Null)
+}
+
 fn authorize(auth: Option<&Claims>, id_account: i32, check_write: bool, now: usize) -> FieldResult<()> {
     if let Some(auth) = auth {
         unexpired(auth, now)?;
