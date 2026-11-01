@@ -1,6 +1,6 @@
 #[cfg(feature = "flutter")]
 use crate::frb_generated::StreamSink;
-use anyhow::{Ok, Result};
+use anyhow::{Context as _, Ok, Result};
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 use serde::{Deserialize, Serialize};
@@ -181,8 +181,43 @@ pub(crate) async fn get_funding_account(connection: &mut SqliteConnection) -> Re
     let (account,): (String,) = sqlx::query_as("SELECT value FROM props WHERE key = 'dkg_account'")
         .fetch_one(&mut *connection)
         .await?;
-    let account = u32::from_str(&account).unwrap();
+    // Written by the wallet as a number; anything else is a hand-edited
+    // row, reported rather than panicked on (#1490).
+    let account = u32::from_str(&account)
+        .with_context(|| format!("dkg_account prop is not an account id: {account:?}"))?;
     Ok(account)
+}
+
+#[cfg(test)]
+mod funding_account_tests {
+    use super::*;
+    use sqlx::Connection;
+
+    async fn wallet_with(value: &str) -> SqliteConnection {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        crate::db::create_schema(&mut db).await.unwrap();
+        sqlx::query("INSERT INTO props(key, value) VALUES ('dkg_account', ?)")
+            .bind(value)
+            .execute(&mut db)
+            .await
+            .unwrap();
+        db
+    }
+
+    #[tokio::test]
+    async fn a_numeric_selector_is_the_account() {
+        let mut db = wallet_with("7").await;
+        assert_eq!(get_funding_account(&mut db).await.unwrap(), 7);
+    }
+
+    #[tokio::test]
+    async fn a_non_numeric_selector_is_an_error_naming_it() {
+        let mut db = wallet_with("not-a-u32").await;
+        let err = get_funding_account(&mut db).await.unwrap_err().to_string();
+        assert!(err.contains("\"not-a-u32\""), "{err}");
+        let err = crate::frost::dkg::in_dkg(&mut db).await.unwrap_err().to_string();
+        assert!(err.contains("\"not-a-u32\""), "{err}");
+    }
 }
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
