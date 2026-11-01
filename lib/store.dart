@@ -547,17 +547,21 @@ class PriceNotifier extends _$PriceNotifier {
   String _lastApi = "";
   String _lastCurrency = "usd";
 
+  /// Every call replaces the timer: the settings build and every save
+  /// call this, and each used to add a periodic fetch that ran until the
+  /// process exited. The timer is installed before the first fetch, so a
+  /// disable that lands during that fetch cancels the timer that exists
+  /// instead of being undone by one created afterwards (#1530).
   void setAutoFetchFx(bool autoGetFx, String api, String currency) async {
     _lastApi = api;
     _lastCurrency = currency;
+    fetchFxTimer?.cancel();
+    fetchFxTimer = null;
     if (autoGetFx) {
-      await fetch(api, currency);
       fetchFxTimer = Timer.periodic(Duration(minutes: 1), (_) async {
         await fetch(_lastApi, _lastCurrency);
       });
-    } else {
-      fetchFxTimer?.cancel();
-      fetchFxTimer = null;
+      await fetch(api, currency);
     }
   }
 
