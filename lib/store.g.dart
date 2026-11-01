@@ -566,7 +566,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'd130e3d2c680560e6b475d2d87596c607c7f0da9';
+    r'cdcdbcc17c96d83c576667cd25a2fe945195da34';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -616,7 +616,7 @@ final class PriceNotifierProvider
   }
 }
 
-String _$priceNotifierHash() => r'bac957ccbb2c04fc8dc8ef2028c1c8aa284d91c4';
+String _$priceNotifierHash() => r'bb5f1e553f482ae09a3c8012282ec4ed77f3deaa';
 
 abstract class _$PriceNotifier extends $Notifier<double?> {
   double? build();
@@ -850,7 +850,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'22a4f43640189d33b46f61c212c02ea5b485aedd';
+    r'7042e48103b98609909ea41615508d73f84587eb';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();
@@ -897,7 +897,7 @@ final class TransparentScanProvider
   }
 }
 
-String _$transparentScanHash() => r'44d8fc7c776f599e3d67dbc7ff27ce4b9c30c810';
+String _$transparentScanHash() => r'2c76ee51aabbaecc5f1dc65c1de22ce80e57a185';
 
 abstract class _$TransparentScan extends $Notifier<String> {
   String build();
@@ -1044,7 +1044,7 @@ final class LifecycleProvider extends $AsyncNotifierProvider<Lifecycle, bool> {
   Lifecycle create() => Lifecycle();
 }
 
-String _$lifecycleHash() => r'84c4bc8b08d2a464e0b67519730300ec766a48bb';
+String _$lifecycleHash() => r'5bc175f3a43c8bc1e1bd11662f15698c4a061ef9';
 
 abstract class _$Lifecycle extends $AsyncNotifier<bool> {
   FutureOr<bool> build();

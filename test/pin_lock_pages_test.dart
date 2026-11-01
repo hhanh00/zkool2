@@ -147,6 +147,37 @@ void main() {
       expect(find.text('Locked'), findsOneWidget);
       expect(find.byType(TextField), findsNothing, reason: 'none of the page is reachable');
       expect(find.byTooltip('Issue'), findsNothing);
+      expect(find.textContaining('010203'), findsNothing, reason: 'the raw transaction is not shown');
     });
   }
+
+  /// With the settings already loaded, as the splash leaves them, the
+  /// lifecycle's first state is the lock itself: a guarded page never
+  /// paints its content for a frame before the lock resolves (#1534).
+  testWidgets('a guarded page is locked on its very first frame', (tester) async {
+    final router = GoRouter(navigatorKey: navigatorKey, routes: [
+      GoRoute(path: '/', builder: (context, state) => const Scaffold(body: Text('Home'))),
+      GoRoute(path: '/page', builder: (context, state) => const MigratePage(account: 1)),
+    ]);
+    addTearDown(router.dispose);
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        // The real Lifecycle, with a PIN required.
+        appSettingsProvider.overrideWith(_Settings.new),
+        getAccountsProvider.overrideWith((ref) async => []),
+      ],
+      child: MaterialApp.router(routerConfig: router),
+    ));
+    await tester.pumpAndSettle();
+    expect(find.text('Home'), findsOneWidget);
+
+    router.push<void>('/page').ignore();
+    // The first frame on which the page exists at all must already be the lock.
+    for (var i = 0; i < 5 && find.byType(MigratePage).evaluate().isEmpty; i++) {
+      await tester.pump();
+    }
+    expect(find.byType(MigratePage), findsOneWidget);
+    expect(find.byType(PinLock), findsOneWidget, reason: 'locked on the first frame');
+    expect(find.byTooltip('Start'), findsNothing, reason: 'no content of the page was painted first');
+  });
 }

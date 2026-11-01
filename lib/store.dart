@@ -1239,13 +1239,24 @@ class Lifecycle extends _$Lifecycle {
   DateTime unlockTime = DateTime.fromMillisecondsSinceEpoch(0);
   bool? locked;
 
+  /// Resolves without a loading frame whenever it can: the splash reads
+  /// the settings before any guarded page, so the first state is already
+  /// AsyncData and a page's `pinlock.value ?? false` never sees a missing
+  /// value as "unlocked" (#1534). Only settings still loading are awaited.
   @override
-  Future<bool> build() async {
-    if (locked == null) {
-      final settings = await ref.watch(appSettingsProvider.future);
+  FutureOr<bool> build() {
+    if (locked case final locked?) return locked;
+    if (ref.watch(appSettingsProvider).value case final settings?) {
       locked = settings.needPin;
+      return settings.needPin;
     }
-    return locked!;
+    return _awaitSettings();
+  }
+
+  Future<bool> _awaitSettings() async {
+    final settings = await ref.watch(appSettingsProvider.future);
+    locked = settings.needPin;
+    return settings.needPin;
   }
 
   void unlock() {
