@@ -351,6 +351,10 @@ pub(crate) struct PlanOutputs {
 /// coin-selection call, and the recipient/change/fee accounting. It performs no
 /// I/O, so its behaviour is fully determined by [`PlanInputs`] and can be tested
 /// without a database, network client, or proving keys.
+/// How many distinct ZSA assets one payment may name: the solver's asset
+/// index is a `u8` with 0 reserved for ZEC.
+pub const MAX_ZSA_ASSETS: usize = u8::MAX as usize - 1;
+
 pub(crate) fn plan_outputs(inp: PlanInputs) -> Result<PlanOutputs> {
     let PlanInputs {
         network,
@@ -465,6 +469,14 @@ pub(crate) fn plan_outputs(inp: PlanInputs) -> Result<PlanOutputs> {
         .dedup()
         .filter_map(|b| b.try_into().ok())
         .collect();
+    // The solver indexes assets in a `u8`, 0 being ZEC: 255 would overflow
+    // its per-asset vectors and 256 would wrap onto the ZEC slot (#1476).
+    if zsa_assets.len() > MAX_ZSA_ASSETS {
+        anyhow::bail!(
+            "a payment may name at most {MAX_ZSA_ASSETS} distinct ZSA assets (got {})",
+            zsa_assets.len()
+        );
+    }
 
     // Compute weighted average price from recipients that have a price set
     let mut total_amount = 0;
@@ -2073,6 +2085,48 @@ pub(crate) mod tests {
             input.height = 300;
             let err = plan_outputs(input).err().expect("the plan must be rejected");
             assert!(err.to_string().contains("Ironwood"), "{err}");
+        }
+
+        /// `count` distinct ZSA assets, one note and one recipient each, plus
+        /// a ZEC note for the fee.
+        fn zsa_payment(n: &Network, count: usize) -> PlanInputs<'_> {
+            let ua = UnifiedAddress::from_receivers(Some(orchard_addr()), None, None, None, None)
+                .unwrap()
+                .encode(n);
+            let mut notes = vec![note(1, 2, 100_000_000, 100)];
+            let mut recipients = vec![];
+            for i in 0..count {
+                let asset_base = {
+                    let mut b = [0u8; 32];
+                    b[0] = (i + 1) as u8;
+                    b[1] = (i >> 8) as u8 + 1;
+                    b.to_vec()
+                };
+                let mut nt = note(2 + i as u32, 2, 1, 100);
+                nt.id_asset = Some(1 + i as u32);
+                nt.asset_base = asset_base.clone();
+                notes.push(nt);
+                let mut r = recipient(&ua, 1);
+                r.asset_base = asset_base;
+                recipients.push(r);
+            }
+            plan_inputs(n, pools(notes), recipients)
+        }
+
+        #[test]
+        fn a_payment_naming_the_maximum_number_of_assets_plans() {
+            let n = net();
+            let out = plan_outputs(zsa_payment(&n, MAX_ZSA_ASSETS)).unwrap();
+            assert_eq!(out.change_pool, 2);
+        }
+
+        #[test]
+        fn a_payment_naming_one_asset_too_many_is_refused_before_the_solver() {
+            let n = net();
+            let err = plan_outputs(zsa_payment(&n, MAX_ZSA_ASSETS + 1))
+                .err()
+                .expect("the plan must be rejected");
+            assert!(err.to_string().contains("at most 254"), "{err}");
         }
 
         #[test]
