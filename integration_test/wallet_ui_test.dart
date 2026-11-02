@@ -441,7 +441,9 @@ Future<void> _createAccount(WidgetTester tester, GoRouter appRouter, {required S
   // each as it comes; the sync happens later, when the test needs it.
   // Keyed on body text: an AwesomeDialog title is not a plain Text widget.
   const dialogs = {
-    "Are you sure you don't want to enter the birth height?": "Ok",
+    "Without a birth height the wallet syncs from the current block "
+        "and funds received before today will not appear. "
+        "You can set the birth height later in the account editor and resync. Continue?": "Ok",
     "SEED PHRASE - SAVE IT OR YOU CAN LOSE YOUR FUNDS": "Ok",
     "Scan for alternative transparent addresses?": "Close",
     "Account imported successfully. Would you like to synchronize it now?": "Cancel",

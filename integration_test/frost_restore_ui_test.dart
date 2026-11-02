@@ -111,6 +111,8 @@ void main() {
       );
       await tester.ensureVisible(fieldNamed("ufvk"));
       await tester.enterText(fieldNamed("ufvk"), ufvk);
+      // The match runs when editing completes.
+      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pump();
       // The form defaults to the generation the pasted key matches.
       await pumpUntil(
