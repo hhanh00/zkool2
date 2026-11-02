@@ -126,7 +126,16 @@ void main() {
         timeout: const Duration(seconds: 30),
         what: "the generation selector to default to ${defaultGeneration.label}",
       );
-      await tester.tap(find.byTooltip("Save"));
+      // ZIP 2005 is also the default before the match, so wait for the
+      // match to release the page: Save is disabled while it runs.
+      final save = find.widgetWithIcon(IconButton, Icons.save);
+      await pumpUntil(
+        tester,
+        () => tester.widget<IconButton>(save).onPressed != null,
+        timeout: const Duration(seconds: 30),
+        what: "the key match to finish",
+      );
+      await tester.tap(save);
       // The app offers to synchronize when it knows the chain height, which
       // under the test harness it may not; either way it lands on the
       // account page, where a FROST account shows a snowflake by its name.
