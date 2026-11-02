@@ -140,6 +140,8 @@ void main() {
       tester.widget<FrostGenerationSelect>(find.byType(FrostGenerationSelect)).initialValue;
 
   Future<void> showFrostFields(WidgetTester tester) async {
+    await tester.tap(find.byWidgetPredicate((w) => w is FormBuilderSwitch && w.name == 'restore'));
+    await tester.pumpAndSettle();
     await tester.enterText(field('key'), backup);
     await tester.pumpAndSettle();
     expect(field('ufvk'), findsOneWidget);

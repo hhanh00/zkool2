@@ -31,7 +31,6 @@ class _Api implements RustLibApi {
     required List<int> accounts,
     required int currentHeight,
     required int actionsPerSync,
-    required int transparentLimit,
     required int checkpointAge,
     required bool fast,
     required Coin c,
