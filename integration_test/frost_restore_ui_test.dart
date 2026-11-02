@@ -133,12 +133,12 @@ void main() {
       await pumpUntil(
         tester,
         () =>
-            find.text("FROST Account Restored").evaluate().isNotEmpty ||
+            find.textContaining("Would you like to synchronize now?").evaluate().isNotEmpty ||
             find.byIcon(Icons.ac_unit).evaluate().isNotEmpty,
         timeout: const Duration(minutes: 2),
         what: "the restore to complete",
       );
-      if (find.text("FROST Account Restored").evaluate().isNotEmpty) {
+      if (find.textContaining("Would you like to synchronize now?").evaluate().isNotEmpty) {
         await tester.tap(find.text("Ok")); // synchronize now
         await pumpFor(tester, const Duration(seconds: 2));
       }
