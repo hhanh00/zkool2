@@ -56,6 +56,7 @@ AppSettings _settings() => AppSettings(
       blockExplorer: '',
       syncInterval: '0',
       actionsPerSync: '',
+      feePerAction: '',
       transport: 3,
       proxy: 'socks5h://user:pw@127.0.0.1:9050',
       coingecko: '',

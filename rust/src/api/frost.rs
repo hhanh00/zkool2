@@ -387,7 +387,7 @@ pub struct FundingShortfall {
 
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn funding_shortfall(c: &Coin) -> Result<Option<FundingShortfall>> {
-    use zcash_primitives::transaction::fees::zip317::{GRACE_ACTIONS, MARGINAL_FEE};
+    use zcash_primitives::transaction::fees::zip317::GRACE_ACTIONS;
     let mut connection = c.get_connection().await?;
     let signing = crate::frost::sign::signing_funding_account(&mut *connection).await?;
     let dkg: Option<u32> =
@@ -403,10 +403,19 @@ pub async fn funding_shortfall(c: &Coin) -> Result<Option<FundingShortfall>> {
         .0
         .iter()
         .sum();
+    let height = crate::sync::get_db_height(&mut *connection, account)
+        .await?
+        .height;
+    let cost_per_action = crate::pay::fee::resolve_cost_per_action(
+        &c.network(),
+        &mut connection,
+        height.saturating_add(1),
+    )
+    .await?;
     Ok(Some(FundingShortfall {
         account,
         balance,
-        message_cost: MARGINAL_FEE.into_u64() * GRACE_ACTIONS as u64,
+        message_cost: cost_per_action * GRACE_ACTIONS as u64,
     }))
 }
 

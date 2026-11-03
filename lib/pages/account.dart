@@ -1239,7 +1239,8 @@ Widget showMemos(BuildContext context, List<Memo> memos, int account, VoidCallba
 Widget showNotes(WidgetRef ref, int account, List<TxNote> notes, bool showDust, VoidCallback onToggleDust, bool groupByPool, VoidCallback onToggleGroup) {
   final t = Theme.of(navigatorKey.currentContext!);
   final currentHeight = ref.read(currentHeightProvider).value;
-  final dustThreshold = BigInt.from(5000);
+  // A ZEC note below one logical action's fee is dust.
+  final dustThreshold = ref.watch(currentFeePerActionProvider).value ?? BigInt.from(5000);
   final filtered = showDust ? notes : notes.where((n) => n.idAsset != null || n.value > dustThreshold).toList();
 
   // Build grouped items: header + its notes

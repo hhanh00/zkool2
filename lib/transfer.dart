@@ -6,6 +6,7 @@ import 'package:zkool/src/rust/api/account.dart';
 import 'package:zkool/src/rust/api/coin.dart';
 import 'package:zkool/src/rust/api/pay.dart';
 import 'package:zkool/src/rust/pay.dart';
+import 'package:zkool/store.dart' show blockHeightService;
 
 Future<PcztPackage> transferAllBetweenPools({
   required int account,
@@ -20,13 +21,15 @@ Future<PcztPackage> transferAllBetweenPools({
   }
 
   final notes = await listNotes(account: account, c: c);
+  // A note worth less than one logical action's fee cannot pay for itself.
+  final dust = await feePerAction(height: blockHeightService.lastHeight ?? 0, c: c);
   final amount = notes
       .where(
         (note) =>
             (sourcePools & (1 << note.pool)) != 0 &&
             !note.locked &&
             note.idAsset == null &&
-            note.value >= BigInt.from(5000),
+            note.value >= dust,
       )
       .fold(BigInt.zero, (total, note) => total + note.value);
   if (amount == BigInt.zero) {

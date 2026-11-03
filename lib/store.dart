@@ -20,6 +20,7 @@ import 'package:zkool/src/rust/api/db.dart';
 import 'package:zkool/src/rust/api/init.dart';
 import 'package:zkool/src/rust/api/mempool.dart';
 import 'package:zkool/src/rust/api/network.dart';
+import 'package:zkool/src/rust/api/pay.dart' as pay_api;
 import 'package:zkool/src/rust/api/plugin.dart' as plugin_api;
 import 'package:zkool/src/rust/api/sweep.dart';
 import 'package:zkool/src/rust/api/sync.dart';
@@ -267,6 +268,17 @@ Future<List<Account>> getAccounts(Ref ref) async {
   return as;
 }
 
+/// The ZIP 317 marginal fee, in zatoshis per logical action, that a
+/// transaction sent now pays: the "Fee per action" setting if set, else
+/// ZIP 2009's schedule at the current height. A ZEC note below it is dust.
+@riverpod
+Future<BigInt> currentFeePerAction(Ref ref) async {
+  // Re-read when the override is saved or the chain moves.
+  await ref.watch(appSettingsProvider.future);
+  final height = await ref.watch(currentHeightProvider.future) ?? blockHeightService.lastHeight ?? 0;
+  return await pay_api.feePerAction(height: height, c: coinContext.coin);
+}
+
 @riverpod
 Future<List<Folder>> getFolders(Ref ref) async {
   final c = coinContext.coin;
@@ -384,6 +396,8 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final votingConfigUrl =
         (hasDb ? await getProp(key: "voting_config_url", c: c) : null) ?? "";
     final actionsPerSync = (hasDb ? await getProp(key: "actions_per_sync", c: c) : null) ?? "10000";
+    // Fee per logical action, in zatoshis. Empty means automatic (ZIP 2009).
+    final feePerAction = (hasDb ? await getProp(key: "fee_per_action", c: c) : null) ?? "";
     final blockExplorer = (hasDb ? await getProp(key: "block_explorer", c: c) : null) ?? defaultBlockExplorerFor(net);
     final qrEnabled = (hasDb ? await getProp(key: "qr_enabled", c: c) : null) ?? "false";
     final qrSize = (hasDb ? await getProp(key: "qr_size", c: c) : null) ?? "20";
@@ -426,6 +440,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       recovery: recovery,
       syncInterval: syncInterval,
       actionsPerSync: actionsPerSync,
+      feePerAction: feePerAction,
       blockExplorer: blockExplorer,
       qrSettings: qrSettings,
       vault: vault,
@@ -517,6 +532,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     await putProp(key: "lwd", value: settings.lwd, c: c);
     await putProp(key: "block_explorer", value: settings.blockExplorer, c: c);
     await putProp(key: "actions_per_sync", value: settings.actionsPerSync, c: c);
+    await putProp(key: "fee_per_action", value: settings.feePerAction, c: c);
     await putProp(key: "sync_interval", value: settings.syncInterval, c: c);
     await prefs.setBool("pin_lock", settings.needPin);
     await prefs.setBool("offline", settings.offline);
@@ -614,6 +630,7 @@ sealed class AppSettings with _$AppSettings {
     required String blockExplorer,
     required String syncInterval, // in blocks
     required String actionsPerSync,
+    required String feePerAction, // zatoshis per logical action, empty = automatic
     required int transport,
     required String proxy,
     required String coingecko,

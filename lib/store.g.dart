@@ -285,6 +285,51 @@ final class GetAccountsProvider extends $FunctionalProvider<
 
 String _$getAccountsHash() => r'4628dce465555f59311a5f3232bb00fbfb6e428c';
 
+/// The ZIP 317 marginal fee, in zatoshis per logical action, that a
+/// transaction sent now pays: the "Fee per action" setting if set, else
+/// ZIP 2009's schedule at the current height. A ZEC note below it is dust.
+
+@ProviderFor(currentFeePerAction)
+const currentFeePerActionProvider = CurrentFeePerActionProvider._();
+
+/// The ZIP 317 marginal fee, in zatoshis per logical action, that a
+/// transaction sent now pays: the "Fee per action" setting if set, else
+/// ZIP 2009's schedule at the current height. A ZEC note below it is dust.
+
+final class CurrentFeePerActionProvider
+    extends $FunctionalProvider<AsyncValue<BigInt>, BigInt, FutureOr<BigInt>>
+    with $FutureModifier<BigInt>, $FutureProvider<BigInt> {
+  /// The ZIP 317 marginal fee, in zatoshis per logical action, that a
+  /// transaction sent now pays: the "Fee per action" setting if set, else
+  /// ZIP 2009's schedule at the current height. A ZEC note below it is dust.
+  const CurrentFeePerActionProvider._()
+      : super(
+          from: null,
+          argument: null,
+          retry: null,
+          name: r'currentFeePerActionProvider',
+          isAutoDispose: true,
+          dependencies: null,
+          $allTransitiveDependencies: null,
+        );
+
+  @override
+  String debugGetCreateSourceHash() => _$currentFeePerActionHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<BigInt> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<BigInt> create(Ref ref) {
+    return currentFeePerAction(ref);
+  }
+}
+
+String _$currentFeePerActionHash() =>
+    r'fb2152aee230b0269bd93f9688e4da4aeb591146';
+
 @ProviderFor(getFolders)
 const getFoldersProvider = GetFoldersProvider._();
 
@@ -566,7 +611,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'cdcdbcc17c96d83c576667cd25a2fe945195da34';
+    r'afeb26112cfb4d60c2d3294de129ffffc5d4597d';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();

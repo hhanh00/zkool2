@@ -25,6 +25,17 @@ pub struct PaymentOptions {
     pub category: Option<u32>,
 }
 
+/// The ZIP 317 marginal fee, in zatoshis per logical action, that a
+/// transaction sent now pays: the wallet's `fee_per_action` override if set,
+/// else the ZIP 2009 schedule for the wallet's network at the block after
+/// `height`, the current chain tip. One ZEC note below this is dust.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn fee_per_action(height: u32, c: &Coin) -> Result<u64> {
+    let mut connection = c.get_connection().await?;
+    crate::pay::fee::resolve_cost_per_action(&c.network(), &mut connection, height.saturating_add(1))
+        .await
+}
+
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn build_puri(recipients: &[Recipient]) -> Result<String> {
     crate::pay::plan::build_puri(recipients).await

@@ -85,6 +85,7 @@ class _Settings extends AppSettingsNotifier {
         blockExplorer: '',
         syncInterval: '',
         actionsPerSync: '',
+        feePerAction: '',
         transport: 0,
         proxy: '',
         coingecko: '',

@@ -2668,9 +2668,11 @@ pub async fn fetch_address_tx_count(
     Ok(results)
 }
 
+/// `dust` is the fee of one logical action: notes below it cannot move.
 pub async fn get_account_frost_params(
     connection: &mut SqliteConnection,
     account: u32,
+    dust: u64,
 ) -> Result<Option<FrostParams>> {
     let params: Option<(u8, u8, u8, u8)> =
         sqlx::query_as("SELECT id, n, t, dkg_version FROM dkg_params WHERE account = ?")
@@ -2682,7 +2684,8 @@ pub async fn get_account_frost_params(
     };
     let sibling = crate::frost::upgrade::sibling_of(&mut *connection, account).await?;
     let quantum_recoverable =
-        crate::frost::upgrade::quantum_recoverable(&mut *connection, account, dkg_version).await?;
+        crate::frost::upgrade::quantum_recoverable(&mut *connection, account, dkg_version, dust)
+            .await?;
     Ok(Some(FrostParams {
         id,
         n,
