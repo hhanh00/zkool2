@@ -14,6 +14,7 @@ Legend: `[ ]` open, `[~]` in progress, `[x]` done.
 | [ ] | Swaps (NEAR Intents) | Account menu → Swaps | news/6.34 | The 6.34 page still lacks its swaps screenshot |
 | [ ] | Memo plugins and Plugin Manager | Settings → Plugin Manager | news/6.21 | Rhai scripts that turn structured memos into tables |
 | [ ] | Themes and Dark Mode | Settings → Theme | news/6.17 | |
+| [ ] | Cancelling a synchronization | Sync bar, app-bar sync icons | news/6.36 | The Settings cancel button is gone since 6.36; guide/sync does not mention cancel or the manual retry |
 
 ## Not mentioned anywhere
 
@@ -24,7 +25,6 @@ Legend: `[ ]` open, `[~]` in progress, `[x]` done.
 | [ ] | Log viewer | Account menu → Log | |
 | [ ] | Clear and reset to birth height | Edit Account | Rewind is documented in recipe/account and recipe/sync, reset is not |
 | [ ] | Transaction table mode | Account menu toggle | Switches the history between list and table |
-| [ ] | Cancelling Synchronization | Settings | |
 | [ ] | File transmission via QR codes | Settings | QR size, error correction level, duration between codes, repair packets. recipe/cold uses animated QR but never explains the knobs |
 | [ ] | Block Explorer | Settings | protocol/concepts mentions explorers in general only |
 | [ ] | Sweep page | lib/pages/sweep.dart | The only "sweep" in the docs is the FROST ZIP 2005 upgrade sweep |
