@@ -27,7 +27,7 @@ app. Restart the app[^1].
 
 ![Database Manager =450x](./images/18.manager.png)
 
-1. Create a new database
+1. Create a new database, on the [network](net) of your choice
 2. Import and *replace* the selected database. This **erases** the current
    contents
 3. Save the database file (ie. make a copy). The copy is identical to the

@@ -46,13 +46,20 @@ Options:
   -d, --db-path <DB_PATH>
   -l, --lwd-url <LWD_URL>
   -p, --port <PORT>
+  -C, --coin <COIN>                Coin type for a database being created:
+                                   0=mainnet, 1=testnet, 2=regtest, 3=ZSA regtest
   -h, --help                       Print help
 ```
 
 ## Using Testnet or Regtest
 
-To use the testnet, name the database with `testnet` in it.
-For regtest, name the database with `regtest` in it.
+Pass `--coin` when the database is created: `1` for testnet, `2` for regtest,
+`3` for the ZSA regtest. An existing database keeps the network it was created
+on, whatever the flag says.
+
+Without `--coin`, the file name decides for a new database: `testnet` in the
+name means testnet, `regtest` means regtest, `zsa` the ZSA regtest, and
+anything else mainnet.
 
 :::important
 You must also use a lightwalletd that connects to the proper network.
