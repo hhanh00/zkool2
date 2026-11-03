@@ -336,6 +336,25 @@ sealed class AccountData with _$AccountData {
   }) = _AccountData;
 }
 
+/// The server a wallet uses until its owner picks one, by the network name
+/// the Rust side reports (`mainnet`, `testnet`, `regnet`, `zsa`). The regtest
+/// one is the lightwalletd of the local test stack.
+String defaultServerFor(String net) => switch (net) {
+      "testnet" => "https://testnet.zec.rocks",
+      "regnet" => "http://localhost:8137",
+      "zsa" => "https://zsa.methyl.cc",
+      _ => "https://zec.rocks",
+    };
+
+/// The block explorer link template for a wallet without one of its own.
+/// Empty on the regtests, which have no explorer: the transaction page then
+/// shows no link.
+String defaultBlockExplorerFor(String net) => switch (net) {
+      "testnet" => "https://testnet.zecblock.com/tx/{txid}",
+      "regnet" || "zsa" => "",
+      _ => "https://zecblock.com/tx/{txid}",
+    };
+
 @Riverpod(keepAlive: true)
 class AppSettingsNotifier extends _$AppSettingsNotifier {
   @override
@@ -360,12 +379,12 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final recovery = await prefs.getBool("recovery") ?? false;
     final net = (hasDb ? await getNetworkName(c: c) : null) ?? "mainnet";
     final isLightNode = (hasDb ? await getProp(key: "is_light_node", c: c) : null) ?? "true";
-    final lwd = (hasDb ? await getProp(key: "lwd", c: c) : null) ?? "https://zec.rocks";
+    final lwd = (hasDb ? await getProp(key: "lwd", c: c) : null) ?? defaultServerFor(net);
     final syncInterval = (hasDb ? await getProp(key: "sync_interval", c: c) : null) ?? "30";
     final votingConfigUrl =
         (hasDb ? await getProp(key: "voting_config_url", c: c) : null) ?? "";
     final actionsPerSync = (hasDb ? await getProp(key: "actions_per_sync", c: c) : null) ?? "10000";
-    final blockExplorer = (hasDb ? await getProp(key: "block_explorer", c: c) : null) ?? "https://cipherscan.app/tx/{txid}";
+    final blockExplorer = (hasDb ? await getProp(key: "block_explorer", c: c) : null) ?? defaultBlockExplorerFor(net);
     final qrEnabled = (hasDb ? await getProp(key: "qr_enabled", c: c) : null) ?? "false";
     final qrSize = (hasDb ? await getProp(key: "qr_size", c: c) : null) ?? "20";
     final qrEC = (hasDb ? await getProp(key: "qr_ecLevel", c: c) : null) ?? "1";

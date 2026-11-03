@@ -172,11 +172,16 @@ class TxViewPageState extends ConsumerState<TxViewPage> {
 
     final categories = [DropdownMenuEntry(value: null, label: "Unknown"), ...categoryList!.map((c) => DropdownMenuEntry(value: c.id, label: c.name))];
 
+    final blockExplorer = ref.read(appSettingsProvider).value?.blockExplorer ?? "";
+
     return [
       ListTile(
         title: Text("Transaction ID"),
         subtitle: CopyableText(txIdToString(txd.txid)),
-        trailing: IconButton(onPressed: () => openBlockExplorer(txd.txid), icon: Icon(Icons.open_in_browser)),
+        // The regtests have no explorer, and an empty template is no link.
+        trailing: blockExplorer.isEmpty
+            ? null
+            : IconButton(onPressed: () => openBlockExplorer(txd.txid), icon: Icon(Icons.open_in_browser)),
       ),
       ListTile(
         title: Text("Block Height"),
