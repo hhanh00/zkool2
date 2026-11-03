@@ -162,7 +162,7 @@ class FrostPage1State extends ConsumerState<FrostPage1> {
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
                   child: Tooltip(
-                    message: "Multisig uses messages in memos. The process needs a ~0.0001 ZEC to pay for the fees. This account is used to pay for them.",
+                    message: "Multisig uses messages in memos. The process needs about ${zatToString((ref.watch(currentFeePerActionProvider).value ?? BigInt.from(5000)) * BigInt.two)} ZEC to pay for the fees. This account is used to pay for them.",
                     child: FormBuilderDropdown(
                       name: "account",
                       decoration: const InputDecoration(

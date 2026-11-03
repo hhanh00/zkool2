@@ -49,14 +49,16 @@ from utils import (
 
 # Must match crate::migrate::ANCHOR_BUCKET_SIZE, which step_migration uses.
 ANCHOR_BUCKET_SIZE = 144
-# Must match crate::migrate::MIN_SD (100 * COST_PER_ACTION), in zats.
-MIN_SD = 500_000
+# Regtest pays the ZIP 2009 fee at every height: 1000 zats per logical action.
+COST_PER_ACTION = 1_000
+# Must match crate::migrate::min_sd (100 actions), in zats.
+MIN_SD = 100 * COST_PER_ACTION
+# Must match crate::migrate::sd_fee_pad (4 actions). Every Orchard SD note
+# carries this to pay for its own O→I hop, so each migrate step should cost
+# exactly this much.
+SD_FEE_PAD = 4 * COST_PER_ACTION
 # The smallest standard denomination, 10^5 + SD_FEE_PAD.
-SD_MIN_DENOM = 120_000
-# Must match crate::migrate::SD_FEE_PAD (4 * COST_PER_ACTION). Every Orchard SD
-# note carries this to pay for its own O→I hop, so each migrate step should
-# cost exactly this much.
-SD_FEE_PAD = 20_000
+SD_MIN_DENOM = 100_000 + SD_FEE_PAD
 # Migration must not eat an unreasonable share of the balance. Loose, because
 # the per-transaction cost is fixed and so weighs heavily on a small wallet.
 MAX_FEE_FRACTION = 0.25
@@ -326,13 +328,14 @@ async def test_migration_orchard_to_ironwood(gql_client_factory, rpc_url, zkool_
             ordinary_id = await create_account(client, "Ordinary", key="")
             dead_zone_id = await create_account(client, "DeadZone", key="")
 
-            # 0.0125 ZEC = 1_250_000 zats decomposes to 1_020_000 + 120_000 with
-            # 110_000 left over: a split, two denominations, and sub-MIN_SD
-            # dust, in three anchor boundaries. Every SD note costs a full
-            # ANCHOR_BUCKET_SIZE of mining and syncing, so keep the count low.
-            # 0.0055 ZEC = 550_000 zats decomposes to 4 x 120_000 with 70_000
-            # left over: the exact shape from the reported stall.
-            for account_id, amount in ((ordinary_id, "0.0125"), (dead_zone_id, "0.0055")):
+            # 0.0125 ZEC = 1_250_000 zats decomposes to 1_004_000 + 2 x 104_000
+            # with 38_000 left over: a split, two denominations, and sub-MIN_SD
+            # dust. Every SD note costs a full ANCHOR_BUCKET_SIZE of mining and
+            # syncing, so keep the count low.
+            # 0.0015 ZEC = 150_000 zats decomposes to 1 x 104_000 with 46_000
+            # left over: inside the dead zone [MIN_SD, MIN_SD + SD_MIN_DENOM),
+            # the shape of the reported stall at the reduced fee.
+            for account_id, amount in ((ordinary_id, "0.0125"), (dead_zone_id, "0.0015")):
                 address = await get_address(client, account_id, pool="orchard")
                 await fund_orchard(client, rpc_url, miner_id, address, amount)
                 await sync_account(client, account_id)
@@ -367,7 +370,7 @@ async def test_migration_orchard_to_ironwood(gql_client_factory, rpc_url, zkool_
             assert events[-1] == "Complete"
             await assert_migrated(client, ordinary_id, sum(ordinary_notes), steps, "ordinary")
 
-            print("\n=== Subject 2: dead zone [500_000, 620_000) ===")
+            print(f"\n=== Subject 2: dead zone [{MIN_SD}, {MIN_SD + SD_MIN_DENOM}) ===")
             steps = await drive_migration(client, rpc_url, dead_zone_id)
             events = [event for event, _ in steps]
             print(f"Events: {events}")

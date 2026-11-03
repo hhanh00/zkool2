@@ -270,6 +270,21 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                 ),
                 Gap(16),
                 Tooltip(
+                  message: "Network fee per logical action, in zatoshis. Leave empty to follow the network schedule "
+                      "(5000, then 1000 from the ZIP 2009 switch). A value lower than what nodes accept gets "
+                      "transactions dropped.",
+                  child: FormBuilderTextField(
+                    name: "fee_per_action",
+                    decoration: const InputDecoration(labelText: "Fee per action (zatoshis)", hintText: "automatic"),
+                    initialValue: settings.feePerAction,
+                    onChanged: onChangedFeePerAction,
+                    validator: (v) => (v == null || v.isEmpty || (int.tryParse(v) ?? 0) > 0) ? null : "Must be a positive integer",
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  ),
+                ),
+                Gap(16),
+                Tooltip(
                   message: "AutoSync interval in blocks, 0 for off. Accounts that are behind by more than this value will start synchronization",
                   child: FormBuilderTextField(
                     name: "autosync",
@@ -1082,6 +1097,16 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
     }
     setState(() {
       settings = settings.copyWith(actionsPerSync: value);
+      widget.onChanged(settings);
+    });
+  }
+
+  onChangedFeePerAction(String? value) async {
+    if (value == null) return;
+    // Empty is automatic; otherwise only a positive integer is kept.
+    if (value.isNotEmpty && (int.tryParse(value) ?? 0) <= 0) return;
+    setState(() {
+      settings = settings.copyWith(feePerAction: value);
       widget.onChanged(settings);
     });
   }

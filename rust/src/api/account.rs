@@ -484,8 +484,22 @@ pub async fn import_account(passphrase: &str, data: &[u8], c: &Coin) -> Result<(
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn get_account_frost_params(account: u32, c: &Coin) -> Result<Option<FrostParams>> {
     let mut connection = c.get_connection().await?;
+    let dust = dust_threshold(c, &mut connection, account).await?;
+    crate::account::get_account_frost_params(&mut connection, account, dust).await
+}
 
-    crate::account::get_account_frost_params(&mut connection, account).await
+/// The fee of one logical action for `account`'s next transaction, read at
+/// the block after the account's checkpoint: a note below it is dust.
+async fn dust_threshold(
+    c: &Coin,
+    connection: &mut sqlx::SqliteConnection,
+    account: u32,
+) -> Result<u64> {
+    let height = crate::sync::get_db_height(&mut *connection, account)
+        .await?
+        .height;
+    crate::pay::fee::resolve_cost_per_action(&c.network(), connection, height.saturating_add(1))
+        .await
 }
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
@@ -610,7 +624,8 @@ async fn lock(account: u32, op: LockOp, c: &Coin) -> Result<()> {
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn max_spendable(account: u32, c: &Coin) -> Result<u64> {
     let mut connection = c.get_connection().await?;
-    crate::db::max_spendable(&mut connection, account, crate::pay::pool::ALL_POOLS).await
+    let dust = dust_threshold(c, &mut connection, account).await?;
+    crate::db::max_spendable(&mut connection, account, crate::pay::pool::ALL_POOLS, dust).await
 }
 
 #[cfg_attr(feature = "flutter", frb)]

@@ -28,7 +28,6 @@ use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_note_encryption::Domain;
 use zcash_primitives::transaction::{
     builder::{BuildConfig, Builder, BundlePadding, default_tx_expiry_delta},
-    fees::zip317::FeeRule,
     TxVersion,
 };
 use zcash_proofs::prover::LocalTxProver;
@@ -51,7 +50,7 @@ use crate::{
     keys::SaplingFullViewingKey,
     ledger::HwKind,
     pay::{
-        fee::COST_PER_ACTION,
+        fee::{fee_rule, resolve_cost_per_action},
         material::{SpendMaterial, TreeEdges},
         pool::{PoolMask, NUM_POOLS},
         prepare::to_zec,
@@ -319,6 +318,9 @@ impl<'a> PlanMode<'a> {
 pub(crate) struct PlanInputs<'a> {
     pub network: &'a Network,
     pub height: u32,
+    /// Marginal fee, in zatoshis per logical action, the plan is priced at:
+    /// [`crate::pay::fee::cost_per_action`] for the block after `height`.
+    pub cost_per_action: u64,
     pub input_pools: Vec<Vec<InputNote>>,
     pub request: PaymentRequest,
     pub mode: PlanMode<'a>,
@@ -337,6 +339,9 @@ pub(crate) struct PlanOutputs {
     /// exposed for tests and callers that want to inspect the plan.
     #[allow(dead_code)]
     pub fee: u64,
+    /// The marginal fee the plan was priced at; the builder's fee rule is
+    /// built from it so the two agree exactly.
+    pub cost_per_action: u64,
     pub has_pool: [bool; NUM_POOLS],
     pub ironwood_active: bool,
     pub orchard_note_version: orchard::NoteVersion,
@@ -359,6 +364,7 @@ pub(crate) fn plan_outputs(inp: PlanInputs) -> Result<PlanOutputs> {
     let PlanInputs {
         network,
         height,
+        cost_per_action,
         mut input_pools,
         request,
         mode,
@@ -500,7 +506,7 @@ pub(crate) fn plan_outputs(inp: PlanInputs) -> Result<PlanOutputs> {
     for pool in input_pools.iter_mut() {
         pool.retain(|n| {
             let is_zec = n.asset_base.is_empty() || n.asset_base.iter().all(|&byte| byte == 0);
-            !is_zec || n.amount >= COST_PER_ACTION
+            !is_zec || n.amount >= cost_per_action
         });
     }
     info!(
@@ -622,7 +628,7 @@ pub(crate) fn plan_outputs(inp: PlanInputs) -> Result<PlanOutputs> {
     let selection = solve::select_notes(
         &select_notes_input,
         &select_outputs,
-        COST_PER_ACTION,
+        cost_per_action,
         migration,
         recipient_pays_fee,
         recipients.first().map(|r| r.amount).unwrap_or(0),
@@ -712,7 +718,7 @@ pub(crate) fn plan_outputs(inp: PlanInputs) -> Result<PlanOutputs> {
     // Issuance actions add separate logical actions on top of regular pool
     // actions (ZIP-233). First issuance: 2 notes (reference + real), reissuance: 1.
     let issuance_fee = issuance
-        .map(|info| if info.first_issuance { 2 } else { 1 } * COST_PER_ACTION)
+        .map(|info| if info.first_issuance { 2 } else { 1 } * cost_per_action)
         .unwrap_or(0);
     let fee = selection.fee + issuance_fee;
     info!("Fee (select_notes + issuance): {}", to_zec(fee));
@@ -767,6 +773,7 @@ pub(crate) fn plan_outputs(inp: PlanInputs) -> Result<PlanOutputs> {
         change,
         change_pool,
         fee,
+        cost_per_action,
         has_pool,
         ironwood_active,
         orchard_note_version,
@@ -791,6 +798,10 @@ pub async fn plan_transaction(
     );
     let input_pools = fetch_unspent_notes_by_pool(connection, account).await?;
     let height = client.latest_height().await?;
+    // The transaction lands in the block after the tip at the earliest, so
+    // that is the height the ZIP 2009 fee schedule is read at.
+    let cost_per_action =
+        resolve_cost_per_action(network, connection, height.saturating_add(1)).await?;
     let migration = mode.is_migration();
     let issuance = mode.issuance();
     let category = request.category;
@@ -799,6 +810,7 @@ pub async fn plan_transaction(
     let plan = plan_outputs(PlanInputs {
         network,
         height,
+        cost_per_action,
         input_pools,
         request: request.clone(),
         mode: mode.clone(),
@@ -850,6 +862,7 @@ pub(crate) fn assemble_pczt(
         mut recipient_states,
         change,
         change_pool,
+        cost_per_action,
         has_pool,
         ironwood_active,
         price,
@@ -1123,7 +1136,7 @@ pub(crate) fn assemble_pczt(
 
     let r = builder.build_for_pczt(
         UnwrapErr(SysRng),
-        &FeeRule::standard(),
+        &fee_rule(cost_per_action),
         |_asset: &AssetBase| false,
     )?;
     let sapling_meta = &r.sapling_meta;
@@ -1596,6 +1609,7 @@ pub(crate) mod tests {
     // ------------------------------------------------------------------
     pub(crate) mod assembly {
         use super::super::*;
+        use crate::pay::fee::LEGACY_COST_PER_ACTION;
         use zcash_primitives::transaction::builder::BLOSSOM_DEFAULT_TX_EXPIRY_DELTA;
         use crate::pay::material::{Anchors, SpendMaterial, Utxo};
         use crate::pay::pool::ALL_POOLS;
@@ -1656,6 +1670,7 @@ pub(crate) mod tests {
             let plan = plan_outputs(PlanInputs {
                 network,
                 height,
+                cost_per_action: LEGACY_COST_PER_ACTION,
                 input_pools,
                 request: PaymentRequest {
                     recipients: vec![Recipient {
@@ -1814,6 +1829,7 @@ pub(crate) mod tests {
 
     mod planning {
         use super::super::*;
+        use crate::pay::fee::LEGACY_COST_PER_ACTION;
         use crate::api::coin::Network;
         use crate::pay::pool::ALL_POOLS;
         use zcash_keys::address::UnifiedAddress;
@@ -1909,6 +1925,7 @@ pub(crate) mod tests {
             PlanInputs {
                 network,
                 height: 1_000_000,
+                cost_per_action: LEGACY_COST_PER_ACTION,
                 input_pools,
                 request: PaymentRequest {
                     recipients,
@@ -1960,7 +1977,7 @@ pub(crate) mod tests {
             for n in out.input_pools.iter().flatten().filter(|n| n.is_used()) {
                 let is_zec = n.asset_base.is_empty() || n.asset_base.iter().all(|&b| b == 0);
                 if is_zec {
-                    assert!(n.amount >= COST_PER_ACTION, "dust note {} selected", n.id);
+                    assert!(n.amount >= LEGACY_COST_PER_ACTION, "dust note {} selected", n.id);
                 }
             }
         }

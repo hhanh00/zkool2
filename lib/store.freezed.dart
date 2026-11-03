@@ -1500,6 +1500,7 @@ mixin _$AppSettings {
   String get blockExplorer;
   String get syncInterval; // in blocks
   String get actionsPerSync;
+  String get feePerAction; // zatoshis per logical action, empty = automatic
   int get transport;
   String get proxy;
   String get coingecko;
@@ -1543,6 +1544,8 @@ mixin _$AppSettings {
                 other.syncInterval == syncInterval) &&
             (identical(other.actionsPerSync, actionsPerSync) ||
                 other.actionsPerSync == actionsPerSync) &&
+            (identical(other.feePerAction, feePerAction) ||
+                other.feePerAction == feePerAction) &&
             (identical(other.transport, transport) ||
                 other.transport == transport) &&
             (identical(other.proxy, proxy) || other.proxy == proxy) &&
@@ -1588,6 +1591,7 @@ mixin _$AppSettings {
         blockExplorer,
         syncInterval,
         actionsPerSync,
+        feePerAction,
         transport,
         proxy,
         coingecko,
@@ -1611,7 +1615,7 @@ mixin _$AppSettings {
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, transport: $transport, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, transactionTableMode: $transactionTableMode, collapsePoolBalances: $collapsePoolBalances, currency: $currency, votingConfigUrl: $votingConfigUrl, marketInterval: $marketInterval, marketStyle: $marketStyle)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, feePerAction: $feePerAction, transport: $transport, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, transactionTableMode: $transactionTableMode, collapsePoolBalances: $collapsePoolBalances, currency: $currency, votingConfigUrl: $votingConfigUrl, marketInterval: $marketInterval, marketStyle: $marketStyle)';
   }
 }
 
@@ -1629,6 +1633,7 @@ abstract mixin class $AppSettingsCopyWith<$Res> {
       String blockExplorer,
       String syncInterval,
       String actionsPerSync,
+      String feePerAction,
       int transport,
       String proxy,
       String coingecko,
@@ -1671,6 +1676,7 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
     Object? blockExplorer = null,
     Object? syncInterval = null,
     Object? actionsPerSync = null,
+    Object? feePerAction = null,
     Object? transport = null,
     Object? proxy = null,
     Object? coingecko = null,
@@ -1719,6 +1725,10 @@ class _$AppSettingsCopyWithImpl<$Res> implements $AppSettingsCopyWith<$Res> {
       actionsPerSync: null == actionsPerSync
           ? _self.actionsPerSync
           : actionsPerSync // ignore: cast_nullable_to_non_nullable
+              as String,
+      feePerAction: null == feePerAction
+          ? _self.feePerAction
+          : feePerAction // ignore: cast_nullable_to_non_nullable
               as String,
       transport: null == transport
           ? _self.transport
@@ -1909,6 +1919,7 @@ extension AppSettingsPatterns on AppSettings {
             String blockExplorer,
             String syncInterval,
             String actionsPerSync,
+            String feePerAction,
             int transport,
             String proxy,
             String coingecko,
@@ -1942,6 +1953,7 @@ extension AppSettingsPatterns on AppSettings {
             _that.blockExplorer,
             _that.syncInterval,
             _that.actionsPerSync,
+            _that.feePerAction,
             _that.transport,
             _that.proxy,
             _that.coingecko,
@@ -1989,6 +2001,7 @@ extension AppSettingsPatterns on AppSettings {
             String blockExplorer,
             String syncInterval,
             String actionsPerSync,
+            String feePerAction,
             int transport,
             String proxy,
             String coingecko,
@@ -2021,6 +2034,7 @@ extension AppSettingsPatterns on AppSettings {
             _that.blockExplorer,
             _that.syncInterval,
             _that.actionsPerSync,
+            _that.feePerAction,
             _that.transport,
             _that.proxy,
             _that.coingecko,
@@ -2065,6 +2079,7 @@ extension AppSettingsPatterns on AppSettings {
             String blockExplorer,
             String syncInterval,
             String actionsPerSync,
+            String feePerAction,
             int transport,
             String proxy,
             String coingecko,
@@ -2097,6 +2112,7 @@ extension AppSettingsPatterns on AppSettings {
             _that.blockExplorer,
             _that.syncInterval,
             _that.actionsPerSync,
+            _that.feePerAction,
             _that.transport,
             _that.proxy,
             _that.coingecko,
@@ -2133,6 +2149,7 @@ class _AppSettings implements AppSettings {
       required this.blockExplorer,
       required this.syncInterval,
       required this.actionsPerSync,
+      required this.feePerAction,
       required this.transport,
       required this.proxy,
       required this.coingecko,
@@ -2168,6 +2185,9 @@ class _AppSettings implements AppSettings {
 // in blocks
   @override
   final String actionsPerSync;
+  @override
+  final String feePerAction;
+// zatoshis per logical action, empty = automatic
   @override
   final int transport;
   @override
@@ -2231,6 +2251,8 @@ class _AppSettings implements AppSettings {
                 other.syncInterval == syncInterval) &&
             (identical(other.actionsPerSync, actionsPerSync) ||
                 other.actionsPerSync == actionsPerSync) &&
+            (identical(other.feePerAction, feePerAction) ||
+                other.feePerAction == feePerAction) &&
             (identical(other.transport, transport) ||
                 other.transport == transport) &&
             (identical(other.proxy, proxy) || other.proxy == proxy) &&
@@ -2276,6 +2298,7 @@ class _AppSettings implements AppSettings {
         blockExplorer,
         syncInterval,
         actionsPerSync,
+        feePerAction,
         transport,
         proxy,
         coingecko,
@@ -2299,7 +2322,7 @@ class _AppSettings implements AppSettings {
 
   @override
   String toString() {
-    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, transport: $transport, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, transactionTableMode: $transactionTableMode, collapsePoolBalances: $collapsePoolBalances, currency: $currency, votingConfigUrl: $votingConfigUrl, marketInterval: $marketInterval, marketStyle: $marketStyle)';
+    return 'AppSettings(dbName: $dbName, net: $net, isLightNode: $isLightNode, lwd: $lwd, blockExplorer: $blockExplorer, syncInterval: $syncInterval, actionsPerSync: $actionsPerSync, feePerAction: $feePerAction, transport: $transport, proxy: $proxy, coingecko: $coingecko, recovery: $recovery, needPin: $needPin, pinUnlockedAt: $pinUnlockedAt, offline: $offline, getFx: $getFx, qrSettings: $qrSettings, vault: $vault, expertMode: $expertMode, paletteName: $paletteName, darkMode: $darkMode, transactionTableMode: $transactionTableMode, collapsePoolBalances: $collapsePoolBalances, currency: $currency, votingConfigUrl: $votingConfigUrl, marketInterval: $marketInterval, marketStyle: $marketStyle)';
   }
 }
 
@@ -2319,6 +2342,7 @@ abstract mixin class _$AppSettingsCopyWith<$Res>
       String blockExplorer,
       String syncInterval,
       String actionsPerSync,
+      String feePerAction,
       int transport,
       String proxy,
       String coingecko,
@@ -2362,6 +2386,7 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
     Object? blockExplorer = null,
     Object? syncInterval = null,
     Object? actionsPerSync = null,
+    Object? feePerAction = null,
     Object? transport = null,
     Object? proxy = null,
     Object? coingecko = null,
@@ -2410,6 +2435,10 @@ class __$AppSettingsCopyWithImpl<$Res> implements _$AppSettingsCopyWith<$Res> {
       actionsPerSync: null == actionsPerSync
           ? _self.actionsPerSync
           : actionsPerSync // ignore: cast_nullable_to_non_nullable
+              as String,
+      feePerAction: null == feePerAction
+          ? _self.feePerAction
+          : feePerAction // ignore: cast_nullable_to_non_nullable
               as String,
       transport: null == transport
           ? _self.transport

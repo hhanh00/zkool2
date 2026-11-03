@@ -187,7 +187,7 @@ class DKGPage1State extends ConsumerState<DKGPage1> {
                   ),
                 ),
                 Tooltip(
-                  message: "DKG uses messages in memos. The process needs a ~0.0001 ZEC to pay for the fees. This account is used to pay for them.",
+                  message: "DKG uses messages in memos. The process needs about ${zatToString((ref.watch(currentFeePerActionProvider).value ?? BigInt.from(5000)) * BigInt.two)} ZEC to pay for the fees. This account is used to pay for them.",
                   child: FormBuilderDropdown(
                     name: "account",
                     decoration: const InputDecoration(

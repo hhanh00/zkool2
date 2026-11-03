@@ -2592,10 +2592,13 @@ fn get_sqlite_column_value(row: &SqliteRow, index: usize) -> Result<String> {
 /// transaction with the fee taken from the amount: the sum of its unspent,
 /// unlocked ZEC notes the planner would select. Dust (a note worth less
 /// than one action's fee) is left out, as the planner leaves it out.
+/// Unspent, unlocked ZEC in `pools`, notes below `dust` left out: a note
+/// worth less than one logical action's fee cannot pay for its own spend.
 pub async fn max_spendable(
     connection: &mut SqliteConnection,
     account: u32,
     pools: u8,
+    dust: u64,
 ) -> Result<u64> {
     let (amount,): (Option<u64>,) = sqlx::query_as(
         "SELECT SUM(n.value) FROM notes n LEFT JOIN spends s ON n.id_note = s.id_note
@@ -2604,7 +2607,7 @@ pub async fn max_spendable(
     )
     .bind(account)
     .bind(pools)
-    .bind(crate::pay::fee::COST_PER_ACTION as i64)
+    .bind(dust as i64)
     .fetch_one(connection)
     .await?;
     Ok(amount.unwrap_or_default())

@@ -11,7 +11,7 @@ use sqlx::{Row, SqliteConnection};
 
 use crate::{account::get_account_full_address, api::coin::Network, db::get_account_hw, Client};
 
-use super::{is_iw_sd, is_sd, MAX_SPLIT_INPUTS};
+use super::{is_iw_sd, is_sd, sd_fee_pad, MAX_SPLIT_INPUTS};
 
 /// An unspent, unlocked note the migration may act on.
 #[derive(Clone, Debug)]
@@ -31,7 +31,10 @@ pub struct MigrationState {
     pub tip_height: u32,
     pub checkpoint_height: u32,
     pub anchor_bucket_size: u32,
-    /// Orchard ZEC notes already at a standard denomination (`10^k + SD_FEE_PAD`),
+    /// Marginal fee, in zatoshis per logical action, at the block after the
+    /// tip: it sets the fee pad the denominations below were matched with.
+    pub cost_per_action: u64,
+    /// Orchard ZEC notes already at a standard denomination (`10^k + pad`),
     /// ready for the O→I hop.
     pub orchard_sd: Vec<NoteRef>,
     /// Orchard ZEC notes that must be split before they can be migrated.
@@ -77,6 +80,13 @@ pub async fn observe(
     anchor_bucket_size: u32,
 ) -> Result<MigrationState> {
     let tip_height = client.latest_height().await?;
+    let cost_per_action = crate::pay::fee::resolve_cost_per_action(
+        network,
+        &mut *connection,
+        tip_height.saturating_add(1),
+    )
+    .await?;
+    let pad = sd_fee_pad(cost_per_action);
     let checkpoint_height = crate::sync::get_db_height(&mut *connection, account)
         .await?
         .height;
@@ -127,7 +137,7 @@ pub async fn observe(
 
     for (pool, note) in notes {
         match pool {
-            2 if is_sd(note.value) => orchard_sd.push(note),
+            2 if is_sd(note.value, pad) => orchard_sd.push(note),
             2 => orchard_non_sd.push(note),
             3 if is_iw_sd(note.value) => ironwood_sd_count += 1,
             _ => {}
@@ -138,6 +148,7 @@ pub async fn observe(
         tip_height,
         checkpoint_height,
         anchor_bucket_size,
+        cost_per_action,
         orchard_sd,
         orchard_non_sd,
         ironwood_sd_count,

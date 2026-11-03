@@ -15,6 +15,13 @@ part 'pay.freezed.dart';
 // These function are ignored because they are on traits that is not defined in current crate (put an empty `#[frb]` on it to unignore): `borrow_decode`, `clone`, `clone`, `decode`, `encode`, `fmt`, `fmt`
 // These functions are ignored (category: IgnoreBecauseExplicitAttribute): `pczt_config`
 
+/// The ZIP 317 marginal fee, in zatoshis per logical action, that a
+/// transaction sent now pays: the wallet's `fee_per_action` override if set,
+/// else the ZIP 2009 schedule for the wallet's network at the block after
+/// `height`, the current chain tip. One ZEC note below this is dust.
+Future<BigInt> feePerAction({required int height, required Coin c}) =>
+    RustLib.instance.api.crateApiPayFeePerAction(height: height, c: c);
+
 Future<String> buildPuri({required List<Recipient> recipients}) =>
     RustLib.instance.api.crateApiPayBuildPuri(recipients: recipients);
 

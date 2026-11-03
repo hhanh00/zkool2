@@ -129,7 +129,15 @@ impl Coin {
     }
 
     pub(crate) fn network(&self) -> Network {
-        match self.coin {
+        network_for_coin(self.coin)
+    }
+}
+
+/// The network parameters of network id `coin`: 0 mainnet, 1 testnet,
+/// 2 regtest, 3 ZSA regtest.
+pub(crate) fn network_for_coin(coin: u8) -> Network {
+    {
+        match coin {
             0 => Network::Main,
             1 => Network::Test,
             2 => Network::Regtest(LocalNetwork {
@@ -169,7 +177,9 @@ impl Coin {
             _ => Network::Main,
         }
     }
+}
 
+impl Coin {
     pub(crate) fn get_pool(&self) -> Result<SqlitePool> {
         self.pool
             .clone()

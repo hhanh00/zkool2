@@ -559,6 +559,7 @@ mod tests {
             change: 10,
             change_pool: 0,
             fee: 0,
+            cost_per_action: crate::pay::fee::LEGACY_COST_PER_ACTION,
             has_pool: [true, false, true, true],
             ironwood_active: true,
             orchard_note_version: NoteVersion::V3,
