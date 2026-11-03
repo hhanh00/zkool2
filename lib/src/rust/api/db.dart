@@ -30,6 +30,19 @@ Future<void> putProp(
         {required String key, required String value, required Coin c}) =>
     RustLib.instance.api.crateApiDbPutProp(key: key, value: value, c: c);
 
+/// Creates the wallet file at `db_filepath` for network `coin` (0 mainnet,
+/// 1 testnet, 2 regtest, 3 ZSA regtest).
+///
+/// The network is the caller's choice and always wins: a file name such as
+/// `testnet.db` does not relabel a wallet created as mainnet, unlike an open
+/// of a new file without a hint. An existing file is refused rather than
+/// opened, so a name typed twice cannot silently reuse the first wallet. The
+/// pool is closed on return; the caller opens the wallet the ordinary way.
+Future<void> createDb(
+        {required String dbFilepath, String? password, required int coin}) =>
+    RustLib.instance.api.crateApiDbCreateDb(
+        dbFilepath: dbFilepath, password: password, coin: coin);
+
 /// Deletes a wallet database and every file that belongs to it.
 ///
 /// The wallet file must exist; everything beside it is optional. The voting

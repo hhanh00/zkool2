@@ -55,8 +55,9 @@ pub struct Coin {
 impl Coin {
     /// Open the wallet at `db_filepath`. The wallet's network is the one
     /// stored in it; this handle's coin only names the network of a wallet
-    /// being created (the app passes the current wallet's when the user
-    /// creates one, the server its `--coin` flag).
+    /// being created, and 0 is no hint at all: the file name decides. A
+    /// caller that chose a network creates the wallet through
+    /// `crate::api::db::create_db` first, where the choice always wins.
     pub async fn open_database(
         &self,
         db_filepath: String,
@@ -296,7 +297,7 @@ impl Coin {
     }
 }
 
-async fn try_open(
+pub(crate) async fn try_open(
     db_filepath: &str,
     password: &Option<String>,
     hint_coin: Option<u8>,

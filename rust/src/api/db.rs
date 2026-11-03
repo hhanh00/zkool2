@@ -84,6 +84,26 @@ pub async fn put_prop(key: &str, value: &str, c: &Coin) -> Result<()> {
     crate::db::put_prop(&mut connection, key, value).await
 }
 
+/// Creates the wallet file at `db_filepath` for network `coin` (0 mainnet,
+/// 1 testnet, 2 regtest, 3 ZSA regtest).
+///
+/// The network is the caller's choice and always wins: a file name such as
+/// `testnet.db` does not relabel a wallet created as mainnet, unlike an open
+/// of a new file without a hint. An existing file is refused rather than
+/// opened, so a name typed twice cannot silently reuse the first wallet. The
+/// pool is closed on return; the caller opens the wallet the ordinary way.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn create_db(db_filepath: &str, password: Option<String>, coin: u8) -> Result<()> {
+    ensure!(
+        !std::path::Path::new(db_filepath).exists(),
+        "a wallet file already exists at {db_filepath}"
+    );
+    ensure!(coin <= 3, "unknown network {coin}");
+    let pool = crate::api::coin::try_open(db_filepath, &password, Some(coin)).await?;
+    pool.close().await;
+    Ok(())
+}
+
 /// Deletes a wallet database and every file that belongs to it.
 ///
 /// The wallet file must exist; everything beside it is optional. The voting
@@ -205,7 +225,7 @@ pub async fn list_db_names(dir: &str) -> Result<Vec<String>> {
 
 #[cfg(test)]
 mod tests {
-    use super::{remove_companions, restore_db};
+    use super::{create_db, remove_companions, restore_db};
     use crate::api::coin::Coin;
 
     /// A fresh directory under the system temp dir, removed on drop.
@@ -230,6 +250,38 @@ mod tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
+    }
+
+    #[tokio::test]
+    async fn create_takes_the_chosen_network_over_the_file_name() {
+        let scratch = Scratch::new("create");
+        let wallet = scratch.0.join("testnet.db");
+        let path = wallet.to_str().unwrap();
+
+        create_db(path, None, 0).await.unwrap();
+
+        let opened = Coin::new(None)
+            .open_database(path.to_string(), None)
+            .await
+            .unwrap();
+        assert_eq!(opened.coin(), 0, "mainnet was chosen; the file name says testnet");
+    }
+
+    #[tokio::test]
+    async fn create_refuses_an_existing_wallet() {
+        let scratch = Scratch::new("create-twice");
+        let wallet = scratch.0.join("wallet.db");
+        let path = wallet.to_str().unwrap();
+        create_db(path, None, 1).await.unwrap();
+
+        let err = create_db(path, None, 2).await.unwrap_err();
+        assert!(err.to_string().contains("already exists"), "{err}");
+
+        let opened = Coin::new(None)
+            .open_database(path.to_string(), None)
+            .await
+            .unwrap();
+        assert_eq!(opened.coin(), 1, "the first wallet is untouched");
     }
 
     #[tokio::test]
