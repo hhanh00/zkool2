@@ -15,6 +15,10 @@ import 'package:zkool/store.dart';
 import 'package:zkool/utils.dart';
 import 'package:zkool/widgets/error_display.dart';
 
+/// The networks a wallet can be created on, by the id the Rust side
+/// stores: 0 mainnet, 1 testnet, 2 regtest, 3 ZSA regtest.
+const networkNames = {0: "Mainnet", 1: "Testnet", 2: "Regtest", 3: "ZSA Regtest"};
+
 class DatabaseManagerPage extends ConsumerStatefulWidget {
   const DatabaseManagerPage({super.key});
 
@@ -106,17 +110,25 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
 
     final confirmed = await confirmDialog(context, title: "Open Database", message: message);
     if (!mounted) return;
-    if (confirmed) {
-      await selectDatabase(ref, dbName);
-      final prefs = SharedPreferencesAsync();
-      await prefs.remove("recovery");
-      GoRouter.of(context).go("/splash");
-    }
+    if (confirmed) await _open(dbName);
+  }
+
+  /// Makes `dbName` the preferred wallet and restarts through the splash,
+  /// which opens it and sets up its server, transport and sync.
+  Future<void> _open(String dbName) async {
+    await selectDatabase(ref, dbName);
+    final prefs = SharedPreferencesAsync();
+    await prefs.remove("recovery");
+    if (!mounted) return;
+    GoRouter.of(context).go("/splash");
   }
 
   void onNewDatabase() async {
     final formKey = GlobalKey<FormBuilderState>();
-    final res = await inputData<(String, String?)>(
+    // A new wallet starts on the network of the one that is open, the
+    // likeliest choice; the user picks another from the list.
+    final currentNetwork = coinContext.coin.coin;
+    final res = await inputData<(String, String?, int)>(
       context,
       builder: (context) => FormBuilder(
         key: formKey,
@@ -128,6 +140,15 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
               name: "name",
               decoration: InputDecoration(labelText: 'Name'),
               validator: FormBuilderValidators.required(),
+            ),
+            Gap(8),
+            FormBuilderDropdown<int>(
+              name: "network",
+              decoration: InputDecoration(labelText: 'Network'),
+              initialValue: networkNames.containsKey(currentNetwork) ? currentNetwork : 0,
+              items: [
+                for (final e in networkNames.entries) DropdownMenuItem(value: e.key, child: Text(e.value)),
+              ],
             ),
             Gap(8),
             FormBuilderTextField(
@@ -157,17 +178,22 @@ class DatabaseManagerState extends ConsumerState<DatabaseManagerPage> {
         final fields = formKey.currentState!.fields;
         final name = fields["name"]!.value as String;
         final password = fields["password"]!.value as String?;
-        return (name, password);
+        final network = fields["network"]!.value as int;
+        return (name, password, network);
       },
     );
 
     if (res != null) {
-      final (name, password) = res;
+      final (name, password, network) = res;
       final dbFilepath = await getFullDatabasePath(name);
-      final c = coinContext.coin;
-      final c2 = await c.openDatabase(dbFilepath: dbFilepath, password: password);
-      coinContext.set(coin: c2);
-      await refresh();
+      try {
+        await createDb(dbFilepath: dbFilepath, password: password, coin: network);
+      } on AnyhowException catch (e) {
+        if (!mounted) return;
+        await showException(context, "Failed to create database: ${e.message}");
+        return;
+      }
+      await _open(name);
     }
   }
 
