@@ -312,7 +312,11 @@ pub async fn decrypt_tx(
 
     let tx_data = tx.into_data();
 
-    let mut fee_manager = FeeManager::default();
+    // The fee is estimated from the action count at the marginal fee in
+    // force when the transaction was mined.
+    let cost_per_action =
+        crate::pay::fee::resolve_cost_per_action(network, connection, height).await?;
+    let mut fee_manager = FeeManager::new(cost_per_action);
     let mut outputs = vec![];
     let mut memos = vec![];
     // Full or incoming-only keys: an incoming key decrypts what the account

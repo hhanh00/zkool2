@@ -8,16 +8,17 @@ use crate::pay::fee::FeeManager;
 
 use super::state::{MigrationState, NoteRef};
 use super::task::{MigrationTask, Pacing};
-use super::{decompose_to_sd, next_anchor_bucket_height, MIN_SD, SD_FEE_PAD};
+use super::{decompose_to_sd, min_sd, next_anchor_bucket_height, sd_fee_pad};
 
 /// Plan the standard-denomination outputs of one O→O split transaction.
 ///
 /// `total` is the summed value of the preselected non-SD inputs, `num_inputs`
-/// how many notes they are. Returns sparse `(denom, count)` pairs, largest
-/// denomination first.
+/// how many notes they are, `cost_per_action` the marginal fee the split
+/// pays and pads its denominations with. Returns sparse `(denom, count)`
+/// pairs, largest denomination first.
 ///
 /// An empty result means no split is worth broadcasting — either `total` is
-/// below [`MIN_SD`], or the fee cannot be covered by the change left over
+/// below [`min_sd`], or the fee cannot be covered by the change left over
 /// after denominating. Callers should treat `plan_split(..).is_empty()` as
 /// the authoritative "is a split available?" predicate rather than
 /// re-deriving one, so that what is displayed and what is executed cannot
@@ -27,18 +28,18 @@ use super::{decompose_to_sd, next_anchor_bucket_height, MIN_SD, SD_FEE_PAD};
 /// `plan_transaction` builds for a migration self-send — one Orchard input per
 /// note, one output per denomination, plus a change output — so `fee()` is the
 /// fee the transaction will actually pay.
-pub fn plan_split(total: u64, num_inputs: u64) -> Vec<(u64, u8)> {
+pub fn plan_split(total: u64, num_inputs: u64, cost_per_action: u64) -> Vec<(u64, u8)> {
     // Below this, splitting costs more in fees than the value it recovers.
-    if total < MIN_SD {
+    if total < min_sd(cost_per_action) {
         return Vec::new();
     }
 
-    let (mut digits, mut remainder) = decompose_to_sd(total);
+    let (mut digits, mut remainder) = decompose_to_sd(total, sd_fee_pad(cost_per_action));
     let mut num_outputs: u64 = digits.iter().map(|&(_, c)| c as u64).sum();
 
     let mut fm = FeeManager {
         migration: true,
-        ..FeeManager::default()
+        ..FeeManager::new(cost_per_action)
     };
     for _ in 0..num_inputs {
         fm.add_input(2);
@@ -82,7 +83,11 @@ pub fn planned_value(digits: &[(u64, u8)]) -> u64 {
 /// guessed at the same question and could disagree, which is how a wallet
 /// could be told "splitting" forever while no split was ever built.
 pub fn next_task(s: &MigrationState, p: &Pacing) -> MigrationTask {
-    let split = plan_split(s.split_input_total(), s.capped_non_sd().len() as u64);
+    let split = plan_split(
+        s.split_input_total(),
+        s.capped_non_sd().len() as u64,
+        s.cost_per_action,
+    );
 
     // Terminal first: a finished migration reports completion immediately
     // rather than sleeping through one more delay.
@@ -112,9 +117,9 @@ pub fn next_task(s: &MigrationState, p: &Pacing) -> MigrationTask {
         BoundaryState::At { anchor } => match pick_sd(&s.sd_spendable_at(anchor)) {
             Some(note) => MigrationTask::Migrate {
                 note: note.id,
-                // The note's value embeds SD_FEE_PAD to pay for this hop; the
-                // Ironwood output is the pure denomination.
-                amount: note.value - SD_FEE_PAD,
+                // The note's value embeds the fee pad to pay for this hop;
+                // the Ironwood output is the pure denomination.
+                amount: note.value - sd_fee_pad(s.cost_per_action),
                 anchor,
             },
             // On a boundary, but no SD note is witnessed there. Aim past it.
@@ -179,7 +184,13 @@ pub fn boundary_state(tip: u32, checkpoint: u32, bucket_size: u32) -> BoundarySt
 /// The phase to show the user, derived from the same `plan_split` the
 /// executor uses, so the display cannot claim work that will not happen.
 pub fn phase(s: &MigrationState) -> &'static str {
-    if !plan_split(s.split_input_total(), s.capped_non_sd().len() as u64).is_empty() {
+    if !plan_split(
+        s.split_input_total(),
+        s.capped_non_sd().len() as u64,
+        s.cost_per_action,
+    )
+    .is_empty()
+    {
         "splitting"
     } else if !s.orchard_sd.is_empty() {
         "migrating"
@@ -191,6 +202,11 @@ pub fn phase(s: &MigrationState) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pay::fee::LEGACY_COST_PER_ACTION;
+
+    /// The tests price everything at the legacy fee: denominations are
+    /// 10^k + 20_000 and the minimum chunk is 500_000.
+    const COST: u64 = LEGACY_COST_PER_ACTION;
 
     /// Value of one output count in a plan, 0 if the denomination is absent.
     fn count_of(digits: &[(u64, u8)], denom: u64) -> u8 {
@@ -228,6 +244,7 @@ mod tests {
             tip_height: 288,
             checkpoint_height: 288,
             anchor_bucket_size: 144,
+            cost_per_action: COST,
             orchard_non_sd: mk(non_sd),
             orchard_sd: mk(sd),
             ironwood_sd_count: 0,
@@ -370,7 +387,7 @@ mod tests {
             } => {
                 // Largest cmx wins; both notes carry SD_FEE_PAD for this hop.
                 assert_eq!(note, 2);
-                assert_eq!(amount, 1_020_000 - SD_FEE_PAD);
+                assert_eq!(amount, 1_020_000 - sd_fee_pad(COST));
                 assert_eq!(anchor, 288);
             }
             other => panic!("expected a migrate, got {other:?}"),
@@ -462,9 +479,9 @@ mod tests {
     #[test]
     fn test_plan_split_below_min_sd() {
         // Not worth splitting, however it would decompose.
-        assert!(plan_split(MIN_SD - 1, 1).is_empty());
-        assert!(plan_split(400_000, 1).is_empty());
-        assert!(plan_split(0, 0).is_empty());
+        assert!(plan_split(min_sd(COST) - 1, 1, COST).is_empty());
+        assert!(plan_split(400_000, 1, COST).is_empty());
+        assert!(plan_split(0, 0, COST).is_empty());
     }
 
     /// Regression: a non-SD total anywhere in [MIN_SD, MIN_SD + 120_000) used
@@ -474,7 +491,7 @@ mod tests {
     #[test]
     fn test_plan_split_dead_zone_still_splits() {
         for total in [500_000u64, 510_000, 550_000, 599_999, 619_999] {
-            let digits = plan_split(total, 1);
+            let digits = plan_split(total, 1, COST);
             assert!(
                 !digits.is_empty(),
                 "total {total} planned no outputs — dead zone regression",
@@ -488,7 +505,7 @@ mod tests {
         // The user's log: `SD split: [(120000, 4)]`, one input note.
         // fee = (1 input + 4 outputs + 1 change) × 5000 = 30_000, and the
         // change is 550_000 - 480_000 = 70_000, so nothing is trimmed.
-        let digits = plan_split(550_000, 1);
+        let digits = plan_split(550_000, 1, COST);
         assert_eq!(digits, vec![(120_000, 4)]);
         assert_eq!(planned_value(&digits), 480_000);
     }
@@ -498,7 +515,7 @@ mod tests {
         // 50 dust inputs summing to 550_000: the fee starts at
         // (50 + 4 + 1) × 5000 = 275_000 against 70_000 of change, so outputs
         // are trimmed until it fits rather than the split being abandoned.
-        let digits = plan_split(550_000, 50);
+        let digits = plan_split(550_000, 50, COST);
         assert!(!digits.is_empty(), "should still plan a smaller split");
         assert!(count_of(&digits, 120_000) < 4, "should have trimmed");
         assert!(planned_value(&digits) <= 550_000);
@@ -509,13 +526,13 @@ mod tests {
         // Whatever it plans, the change must cover the fee it will pay.
         for num_inputs in [1u64, 2, 7, 50] {
             for total in [500_000u64, 620_000, 1_000_000, 12_345_678, 100_000_000] {
-                let digits = plan_split(total, num_inputs);
+                let digits = plan_split(total, num_inputs, COST);
                 let num_outputs: u64 = digits.iter().map(|&(_, c)| c as u64).sum();
                 let remainder = total - planned_value(&digits);
 
                 let mut fm = FeeManager {
                     migration: true,
-                    ..FeeManager::default()
+                    ..FeeManager::new(COST)
                 };
                 for _ in 0..num_inputs {
                     fm.add_input(2);
@@ -538,17 +555,20 @@ mod tests {
 
     #[test]
     fn test_plan_split_outputs_are_sd() {
-        let digits = plan_split(12_345_678, 3);
+        let digits = plan_split(12_345_678, 3, COST);
         assert!(!digits.is_empty());
         for &(denom, count) in &digits {
-            assert!(super::super::is_sd(denom), "{denom} is not a denomination");
+            assert!(
+                super::super::is_sd(denom, sd_fee_pad(COST)),
+                "{denom} is not a denomination"
+            );
             assert!(count > 0, "zero-count denominations should be dropped");
         }
     }
 
     #[test]
     fn test_plan_split_largest_first() {
-        let digits = plan_split(100_000_000, 1);
+        let digits = plan_split(100_000_000, 1, COST);
         let denoms: Vec<u64> = digits.iter().map(|&(d, _)| d).collect();
         let mut sorted = denoms.clone();
         sorted.sort_unstable_by(|a, b| b.cmp(a));

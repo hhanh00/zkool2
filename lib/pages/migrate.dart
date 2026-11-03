@@ -211,11 +211,13 @@ class _MigratePageState extends ConsumerState<MigratePage> with WidgetsBindingOb
   }
 
   Future<void> _startOneShotMigration() async {
+    final dust = await ref.read(currentFeePerActionProvider.future);
+    if (!mounted) return;
     final confirmed = await confirmDialog(
       context,
       title: "One-Shot Migration",
       message: "This will spend every unlocked Orchard ZEC note worth at least "
-          "0.00005000 ZEC in one transaction and send their total, minus the "
+          "${zatToString(dust)} ZEC in one transaction and send their total, minus the "
           "network fee, to Ironwood. Smaller notes will remain in Orchard.\n\n"
           "This bypasses the privacy-preserving migration workflow. Continue?",
     );

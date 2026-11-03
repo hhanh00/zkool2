@@ -7,9 +7,9 @@ inputs:
     required: false
     default: 'false'
   zebra-version:
-    description: Zebra git tag
+    description: Zebra git tag (6.4.0 or later relays the ZIP 2009 fee of 1000 zatoshis per action)
     required: false
-    default: v6.2.1
+    default: v6.4.2
   lightwalletd-revision:
     description: lightwalletd git revision
     required: false

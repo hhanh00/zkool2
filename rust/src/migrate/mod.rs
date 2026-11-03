@@ -11,12 +11,13 @@ pub mod state;
 pub mod step;
 pub mod task;
 
-use crate::pay::fee::COST_PER_ACTION;
-
-/// Minimum spendable chunk: 100 × COST_PER_ACTION (500,000 zats).
-/// Below this threshold, non-SD notes are left alone — splitting them
-/// would cost more in fees than the value recovered.
-pub const MIN_SD: u64 = 100 * COST_PER_ACTION;
+/// Minimum spendable chunk: 100 logical actions at `cost_per_action`
+/// (500,000 zats at the legacy fee, 100,000 after ZIP 2009). Below this
+/// threshold, non-SD notes are left alone — splitting them would cost more
+/// in fees than the value recovered.
+pub const fn min_sd(cost_per_action: u64) -> u64 {
+    100 * cost_per_action
+}
 
 /// Maximum number of non-SD notes to split in a single transaction.
 /// Caps transaction size to avoid oversized bundles that nodes reject.
@@ -32,19 +33,25 @@ const TARGET_BLOCK_SPACING_MS: u64 = 75_000;
 
 /// Fee padding embedded in each standard denomination.
 /// Covers Orchard input + change (2 actions in sum mode) and Ironwood
-/// output (2 actions, padded) = 4 × COST_PER_ACTION = 20,000 zats.
-pub(crate) const SD_FEE_PAD: u64 = 4 * COST_PER_ACTION;
+/// output (2 actions, padded) = 4 logical actions at `cost_per_action`:
+/// 20,000 zats at the legacy fee, 4,000 after ZIP 2009.
+///
+/// The pad follows the marginal fee, so a note denominated before the
+/// ZIP 2009 switch no longer matches [`is_sd`] after it: the migration
+/// treats it as an ordinary note and splits it again at the new pad.
+pub(crate) const fn sd_fee_pad(cost_per_action: u64) -> u64 {
+    4 * cost_per_action
+}
 
 /// Decompose a total amount into standard denomination notes with embedded fees.
 ///
-/// Each standard denomination is `10^k + P` where P = 2*COST_PER_ACTION:
-/// 1_000_010_000, 100_010_000, …, 110_000.
+/// Each standard denomination is `10^k + P` where P is the fee pad `p`:
+/// 1_000_020_000, 100_020_000, …, 120_000 at the legacy pad.
 ///
 /// Greedy from largest to smallest. Returns sparse `(denom, count)` pairs
 /// and any leftover below the smallest denomination.
-pub fn decompose_to_sd(total: u64) -> (Vec<(u64, u8)>, u64) {
-    let p = SD_FEE_PAD;
-    let d_min = 10u64.pow(5) + p; // 110_000
+pub fn decompose_to_sd(total: u64, p: u64) -> (Vec<(u64, u8)>, u64) {
+    let d_min = 10u64.pow(5) + p; // 120_000 at the legacy pad
     let k_min = 5u32;
     let k_max = 16u32; // 10^16 + P covers 100M ZEC
     let mut result = Vec::new();
@@ -65,11 +72,9 @@ pub fn decompose_to_sd(total: u64) -> (Vec<(u64, u8)>, u64) {
     (result, remainder)
 }
 
-/// Check if a value is a fee-inclusive standard denomination:
-/// `10^(i+5) + 2*COST_PER_ACTION` (110_000, 1_010_000, 10_010_000, …).
 /// Check whether `value` is a standard denomination: exactly `10^(i+5)`, i ≥ 0.
 /// Ironwood notes are minted at the pure denomination; Orchard SD notes include
-/// an additional `SD_FEE_PAD`.
+/// an additional fee pad, see [`is_sd`].
 pub fn is_iw_sd(value: u64) -> bool {
     value >= 100_000 && value % 100_000 == 0 && {
         let mut x = value / 100_000;
@@ -80,8 +85,10 @@ pub fn is_iw_sd(value: u64) -> bool {
     }
 }
 
-pub fn is_sd(value: u64) -> bool {
-    value > SD_FEE_PAD && is_iw_sd(value - SD_FEE_PAD)
+/// Check whether `value` is a fee-inclusive standard denomination,
+/// `10^(i+5) + p` for the fee pad `p` (120_000, 1_020_000, … at the legacy pad).
+pub fn is_sd(value: u64, p: u64) -> bool {
+    value > p && is_iw_sd(value - p)
 }
 
 /// Scale the anchor interval to the selected migration speed.
@@ -107,20 +114,39 @@ pub(crate) fn next_anchor_bucket_height(height: u32, bucket_size: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pay::fee::{LEGACY_COST_PER_ACTION, REDUCED_COST_PER_ACTION};
+
+    /// The legacy fee pad, 20_000: the tests' denominations are 10^k + 20_000.
+    const PAD: u64 = sd_fee_pad(LEGACY_COST_PER_ACTION);
 
     #[test]
     fn test_is_sd() {
-        // SD_FEE_PAD = 20_000, so SD = 10^k + 20_000
-        assert!(!is_sd(10_001)); // not a multiple of 10,000
-        assert!(!is_sd(20_001)); // (20001-20000) % 100000 = 1 ≠ 0
-        assert!(is_sd(120_000)); // 10^5 + 20_000
-        assert!(is_sd(1_020_000)); // 10^6 + 20_000
-        assert!(is_sd(10_020_000)); // 10^7 + 20_000
-        assert!(!is_sd(1_000_000)); // missing +base
-        assert!(!is_sd(120_001)); // (120001-20000) % 100000 = 1 ≠ 0
-                                  // Old P=10_000 values are no longer SD
-        assert!(!is_sd(110_000));
-        assert!(!is_sd(1_010_000));
+        // PAD = 20_000, so SD = 10^k + 20_000
+        assert!(!is_sd(10_001, PAD)); // not a multiple of 10,000
+        assert!(!is_sd(20_001, PAD)); // (20001-20000) % 100000 = 1 ≠ 0
+        assert!(is_sd(120_000, PAD)); // 10^5 + 20_000
+        assert!(is_sd(1_020_000, PAD)); // 10^6 + 20_000
+        assert!(is_sd(10_020_000, PAD)); // 10^7 + 20_000
+        assert!(!is_sd(1_000_000, PAD)); // missing +base
+        assert!(!is_sd(120_001, PAD)); // (120001-20000) % 100000 = 1 ≠ 0
+                                       // Old P=10_000 values are no longer SD
+        assert!(!is_sd(110_000, PAD));
+        assert!(!is_sd(1_010_000, PAD));
+    }
+
+    /// After ZIP 2009 the pad is 4_000: the new denominations are
+    /// 10^k + 4_000, and a note padded at the legacy fee is no longer one.
+    #[test]
+    fn test_pad_follows_the_marginal_fee() {
+        let pad = sd_fee_pad(REDUCED_COST_PER_ACTION);
+        assert_eq!(pad, 4_000);
+        assert_eq!(min_sd(REDUCED_COST_PER_ACTION), 100_000);
+        assert!(is_sd(104_000, pad));
+        assert!(is_sd(1_004_000, pad));
+        assert!(!is_sd(120_000, pad), "a legacy-pad note is re-split");
+        let (pairs, leftover) = decompose_to_sd(550_000, pad);
+        assert_eq!(pairs, vec![(104_000, 5)]);
+        assert_eq!(leftover, 30_000);
     }
 
     #[test]
@@ -145,14 +171,14 @@ mod tests {
     #[test]
     fn test_decompose_below_min_denom() {
         // Below d_min (120_000).
-        let (pairs, leftover) = decompose_to_sd(10_000);
+        let (pairs, leftover) = decompose_to_sd(10_000, PAD);
         assert!(pairs.is_empty());
         assert_eq!(leftover, 10_000);
     }
 
     #[test]
     fn test_decompose_zero() {
-        let (pairs, leftover) = decompose_to_sd(0);
+        let (pairs, leftover) = decompose_to_sd(0, PAD);
         assert!(pairs.is_empty());
         assert_eq!(leftover, 0);
     }
@@ -160,7 +186,7 @@ mod tests {
     #[test]
     fn test_decompose_exact_sd() {
         // 120_000 = 10^5 + 20_000.
-        let (pairs, leftover) = decompose_to_sd(120_000);
+        let (pairs, leftover) = decompose_to_sd(120_000, PAD);
         assert_eq!(pairs, vec![(120_000, 1)]);
         assert_eq!(leftover, 0);
     }
@@ -168,7 +194,7 @@ mod tests {
     #[test]
     fn test_decompose_multiple() {
         // 4 × 120_000 = 480_000, leftover 20_000.
-        let (pairs, leftover) = decompose_to_sd(500_000);
+        let (pairs, leftover) = decompose_to_sd(500_000, PAD);
         assert_eq!(pairs, vec![(120_000, 4)]);
         assert_eq!(leftover, 20_000);
     }
@@ -176,7 +202,7 @@ mod tests {
     #[test]
     fn test_decompose_two_positions() {
         // 1_140_000 → 1×1_020_000 + 1×120_000.
-        let (pairs, leftover) = decompose_to_sd(1_140_000);
+        let (pairs, leftover) = decompose_to_sd(1_140_000, PAD);
         assert_eq!(pairs, vec![(1_020_000, 1), (120_000, 1)]);
         assert_eq!(leftover, 0);
     }
@@ -184,7 +210,7 @@ mod tests {
     #[test]
     fn test_decompose_with_remainder() {
         // 130_000 → 1×120_000, leftover 10_000 (below d_min).
-        let (pairs, leftover) = decompose_to_sd(130_000);
+        let (pairs, leftover) = decompose_to_sd(130_000, PAD);
         assert_eq!(pairs, vec![(120_000, 1)]);
         assert_eq!(leftover, 10_000);
     }
@@ -194,7 +220,7 @@ mod tests {
     fn test_decompose_round_trip() {
         let cases = &[0, 10_000, 120_000, 500_000, 1_140_000, 130_000, 5_000_000];
         for &total in cases {
-            let (pairs, leftover) = decompose_to_sd(total);
+            let (pairs, leftover) = decompose_to_sd(total, PAD);
             let represented: u64 = pairs.iter().map(|&(d, c)| d * c as u64).sum();
             assert_eq!(
                 represented + leftover,

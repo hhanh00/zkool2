@@ -44,8 +44,8 @@ TARGET_SECONDS = 360
 FUND_TADDR = "0.3"
 FUND_SADDR = "0.2"
 FUND_OADDR = "0.4"
-# Below the notes tab's dust threshold (5000 zats).
-FUND_DUST = "0.00003"
+# Below the notes tab's dust threshold, one action's fee: 1000 zats on regtest.
+FUND_DUST = "0.000005"
 MEMO = "wallet-ext memo"
 # Created, renamed and deleted by the database manager steps.
 SCRATCH_DBS = ("wallet-ext-scratch", "wallet-ext-scratch-renamed")
