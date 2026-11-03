@@ -261,6 +261,13 @@ async fn main() -> Result<()> {
     tracing::info!(
         "db_path {db_path} lwd_url {lwd_url} bind_address {bind_address} port {port} zebra {zebra}"
     );
+    // A chosen network wins over the file name, which only decides when
+    // the flag is absent. An existing wallet keeps its stored network.
+    if let Some(coin) = coin {
+        if !std::path::Path::new(&db_path).exists() {
+            rlz::api::db::create_db(&db_path, database_password.clone(), coin).await?;
+        }
+    }
     let coin = Coin::new(coin)
         .open_database(db_path, database_password)
         .await?
