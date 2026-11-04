@@ -11,7 +11,9 @@ on:
 
 jobs:
   build:
-    if: ${{ !startsWith(github.head_ref, 'release-please--branches--') }}
+    # Release-please PRs skip every step rather than the whole job: a job
+    # skipped by its own `if` reports one check named "build", so the matrix
+    # check the ruleset requires never appears and the PR stays blocked.
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -32,6 +34,7 @@ jobs:
     env:
       FLUTTER_VERSION: 3.47.4
       NEAR_INTENTS_API_KEY: ${{ secrets.NEAR_INTENTS_API_KEY }}
+      RELEASE_PR: ${{ startsWith(github.head_ref, 'release-please--branches--') }}
     permissions:
       id-token: write
       attestations: write
@@ -39,23 +42,29 @@ jobs:
 
     steps:
       - name: Install RUST
+        if: ${{ env.RELEASE_PR != 'true' }}
         uses: dtolnay/rust-toolchain@stable
       - name: Install PYTHON
+        if: ${{ env.RELEASE_PR != 'true' }}
         uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Checkout code
+        if: ${{ env.RELEASE_PR != 'true' }}
         uses: actions/checkout@v6
       - name: Set up Flutter
+        if: ${{ env.RELEASE_PR != 'true' }}
         shell: bash
         run: |
           git clone --depth 1 --branch "$FLUTTER_VERSION" https://github.com/flutter/flutter.git $RUNNER_TEMP/flutter
           echo "$RUNNER_TEMP/flutter/bin" >> $GITHUB_PATH
-      - run: |
+      - if: ${{ env.RELEASE_PR != 'true' }}
+        run: |
           flutter --version
           flutter precache
         shell: bash
       - name: Get version number
+        if: ${{ env.RELEASE_PR != 'true' }}
         id: version
         shell: bash
         run: |
@@ -66,7 +75,7 @@ jobs:
           echo "result=$RELEASE_VERSION" >> $GITHUB_OUTPUT
       - name: Build Android
         id: build_android
-        if: ${{ matrix.target == 'android' && github.event_name != 'pull_request' }}
+        if: ${{ env.RELEASE_PR != 'true' && (matrix.target == 'android' && github.event_name != 'pull_request') }}
         uses: ./.github/actions/android
         with:
           version: ${{ steps.version.outputs.result }}
@@ -75,7 +84,7 @@ jobs:
         id: build_linux
         # The aarch64 build is the required PR check; x86_64 only needs to be
         # built for releases.
-        if: ${{ matrix.target == 'linux' && (matrix.arch != 'x86_64' || github.event_name != 'pull_request') }}
+        if: ${{ env.RELEASE_PR != 'true' && (matrix.target == 'linux' && (matrix.arch != 'x86_64' || github.event_name != 'pull_request')) }}
         uses: ./.github/actions/linux
         with:
           version: ${{ steps.version.outputs.result }}
@@ -83,7 +92,7 @@ jobs:
           arch: ${{ matrix.arch }}
       - name: Build Mac
         id: build_mac
-        if: ${{ matrix.target == 'mac' && github.event_name != 'pull_request' }}
+        if: ${{ env.RELEASE_PR != 'true' && (matrix.target == 'mac' && github.event_name != 'pull_request') }}
         uses: ./.github/actions/mac
         with:
           version: ${{ steps.version.outputs.result }}
@@ -96,11 +105,12 @@ jobs:
           apple_team_id: ${{ secrets.MACOS_NOTARIZATION_TEAM_ID }}
       - name: Build Windows
         id: build_windows
-        if: ${{ matrix.target == 'windows' && github.event_name != 'pull_request' }}
+        if: ${{ env.RELEASE_PR != 'true' && (matrix.target == 'windows' && github.event_name != 'pull_request') }}
         uses: ./.github/actions/windows
         with:
           version: ${{ steps.version.outputs.result }}
       - name: Collect output dir
+        if: ${{ env.RELEASE_PR != 'true' }}
         id: collect
         shell: bash
         run: |
