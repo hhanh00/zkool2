@@ -938,12 +938,14 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
                 ),
               ),
               Tooltip(
-                message: "Use an internal address for change (ZIP 316). Ledger accounts have a fixed change setting",
+                message: accounts.any((a) => a.fixedInternalChange)
+                    ? "Fixed by the key type: Ledger, incoming-only and single transparent key accounts cannot switch"
+                    : "Use an internal address for change (ZIP 316)",
                 child: FormBuilderCheckbox(
                   name: "useInternal",
                   title: Text("Use Internal Change"),
                   tristate: account == null,
-                  enabled: accounts.every((a) => a.hw != 1 && a.hw != 2),
+                  enabled: !accounts.any((a) => a.fixedInternalChange),
                 ),
               ),
               Tooltip(

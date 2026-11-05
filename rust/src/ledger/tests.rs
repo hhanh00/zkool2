@@ -233,7 +233,7 @@ pub async fn ledger_account_import() -> LedgerResult<()> {
         folder: String::new(),
         // Exercise the same omitted-pools path used by the GraphQL API.
         pools: None,
-        use_internal: false,
+        use_internal: None,
         internal: false,
         hw: HwKind::Official as u8,
     };

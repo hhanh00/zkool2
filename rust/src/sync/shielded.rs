@@ -725,7 +725,7 @@ mod stream_tests {
                 birth: Some(1),
                 folder: String::new(),
                 pools: Some(POOL_SAPLING | POOL_ORCHARD),
-                use_internal: false,
+                use_internal: Some(false),
                 internal: false,
                 hw: 0,
             },

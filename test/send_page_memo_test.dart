@@ -119,6 +119,7 @@ Account _account(int id, String name) => Account(
       enabled: true,
       internal: false,
       incomingOnly: false,
+      fixedInternalChange: false,
       hw: 0,
       frost: false,
       height: 100,

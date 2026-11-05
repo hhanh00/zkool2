@@ -1,5 +1,6 @@
 use std::fs::File;
 
+use crate::ledger::HwKind;
 use crate::keys::{
     invalid_key, key_bytes, AccountViewingKeys, OrchardViewingKeys, SaplingDiversifiedAddress,
     SaplingViewingKeys, ScopeExt,
@@ -1622,7 +1623,10 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
         OR EXISTS(SELECT 1 FROM orchard_accounts k
             WHERE k.account = a.id_account AND k.xvk IS NULL AND k.ivk IS NOT NULL)
         AS incoming_only,
-        EXISTS(SELECT 1 FROM dkg_params d WHERE d.account = a.id_account) AS frost
+        EXISTS(SELECT 1 FROM dkg_params d WHERE d.account = a.id_account) AS frost,
+        EXISTS(SELECT 1 FROM transparent_accounts k
+            WHERE k.account = a.id_account AND k.xsk IS NULL AND k.xvk IS NULL AND k.ivk IS NULL)
+        AS single_transparent_key
         FROM accounts a
         JOIN sh ON a.id_account = sh.account
         LEFT JOIN headers hdr ON sh.height = hdr.height AND sh.account = hdr.account
@@ -1659,6 +1663,9 @@ pub async fn list_accounts(connection: &mut SqliteConnection, coin: u8) -> Resul
             hw: row.get::<u8, _>(19),
             incoming_only: row.get::<bool, _>(20),
             frost: row.get::<bool, _>(21),
+            fixed_internal_change: row.get::<u8, _>(19) != 0
+                || row.get::<bool, _>(20)
+                || row.get::<bool, _>(22),
         }
     })
     .fetch(&mut *connection);
@@ -1687,6 +1694,27 @@ pub async fn is_incoming_only(connection: &mut SqliteConnection, account: u32) -
     .fetch_one(&mut *connection)
     .await?;
     Ok(incoming_only)
+}
+
+/// The only internal change setting the account's key allows, when it fixes one.
+pub async fn fixed_use_internal(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Option<bool>> {
+    Ok(match HwKind::from_hw(get_account_hw(connection, account).await?) {
+        HwKind::Official => Some(true),
+        HwKind::Zondax => Some(false),
+        HwKind::Software => {
+            let (single,): (bool,) = sqlx::query_as(
+                "SELECT EXISTS(SELECT 1 FROM transparent_accounts
+                    WHERE account = ? AND xsk IS NULL AND xvk IS NULL AND ivk IS NULL)",
+            )
+            .bind(account)
+            .fetch_one(&mut *connection)
+            .await?;
+            (single || is_incoming_only(connection, account).await?).then_some(false)
+        }
+    })
 }
 
 pub async fn get_account_fingerprint(

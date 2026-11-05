@@ -127,6 +127,7 @@ Account _account({int height = tip}) => Account(
       enabled: true,
       internal: false,
       incomingOnly: true,
+      fixedInternalChange: true,
       hw: 0,
       frost: false,
       height: height,
@@ -277,5 +278,42 @@ void main() {
     expect(find.textContaining('Would you like to synchronize it now?'), findsOneWidget);
     await tapDialog(tester, 'Cancel');
     expect(api.created.single.birth, 1);
+  });
+
+  group('internal change (#1619)', () {
+    Finder toggle() => find.byWidgetPredicate((w) => w is FormBuilderSwitch && w.name == 'useInternal');
+
+    testWidgets('a pasted key with no toggle leaves the setting to the key', (tester) async {
+      api.height = tip;
+      await openPage(tester);
+      await fillRestore(tester, birth: '1');
+      await save(tester);
+      await tapDialog(tester, 'Cancel');
+      expect(api.created.single.useInternal, isNull);
+    });
+
+    testWidgets('a toggle changed before the key was pasted does not count', (tester) async {
+      api.height = tip;
+      await openPage(tester);
+      await tester.ensureVisible(find.text('Advanced Options'));
+      await tester.tap(find.text('Advanced Options'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(toggle());
+      await tester.tap(toggle());
+      await tester.pumpAndSettle();
+      await fillRestore(tester, birth: '1');
+      expect(toggle(), findsNothing, reason: 'the toggle is hidden once a key is in the field');
+      await save(tester);
+      await tapDialog(tester, 'Cancel');
+      expect(api.created.single.useInternal, isNull);
+    });
+
+    testWidgets('a new account with no key uses internal change', (tester) async {
+      api.height = null;
+      api.existing = [_account(height: 2000000)];
+      await openPage(tester);
+      await save(tester);
+      expect(api.created.single.useInternal, isTrue);
+    });
   });
 }

@@ -105,17 +105,7 @@ pub async fn new_account(
     let source = classify_key(network, ledger_kind, &key)?;
     let passphrase = na.passphrase.clone().unwrap_or_default();
 
-    // Official Ledger accounts always use an internal change address, so the
-    // transparent change output can carry the derivation path the Ledger app
-    // requires to verify it as change. An incoming-only account never
-    // spends, and its key cannot derive the internal chain anyway.
-    let use_internal = if ledger_kind == HwKind::Official {
-        true
-    } else if source.is_incoming_only() {
-        false
-    } else {
-        na.use_internal
-    };
+    let use_internal = resolve_use_internal(ledger_kind, &source, na.use_internal)?;
 
     let account = store_account_metadata(
         &mut db_tx,
@@ -220,6 +210,60 @@ impl KeySource {
     fn is_incoming_only(&self) -> bool {
         matches!(self, KeySource::TransparentIvk(_) | KeySource::Uivk(_))
     }
+
+    /// Whether the key cannot derive an internal (change) chain at all.
+    fn has_no_change_chain(&self) -> bool {
+        self.is_incoming_only() || matches!(self, KeySource::TransparentSingle { .. })
+    }
+}
+
+/// The internal change setting of a new account: the one its key allows, or
+/// the request, by default on. A request the key cannot honor is an error.
+fn resolve_use_internal(hw: HwKind, source: &KeySource, requested: Option<bool>) -> Result<bool> {
+    // Official Ledger accounts always use an internal change address, so the
+    // transparent change output can carry the derivation path the Ledger app
+    // requires to verify it as change.
+    let fixed = match hw {
+        HwKind::Official => Some(true),
+        HwKind::Zondax => Some(false),
+        HwKind::Software if source.has_no_change_chain() => Some(false),
+        HwKind::Software => None,
+    };
+    match (fixed, requested) {
+        (Some(fixed), Some(requested)) if requested != fixed => {
+            anyhow::bail!(fixed_use_internal_error(fixed))
+        }
+        (Some(fixed), _) => Ok(fixed),
+        (None, requested) => Ok(requested.unwrap_or(true)),
+    }
+}
+
+/// Sets an existing account's internal change flag.
+pub async fn set_use_internal(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+    use_internal: bool,
+) -> Result<()> {
+    if let Some(fixed) = crate::db::fixed_use_internal(connection, account).await? {
+        anyhow::ensure!(use_internal == fixed, "{}", fixed_use_internal_error(fixed));
+    }
+    let mut tx = connection.begin().await?;
+    sqlx::query("UPDATE accounts SET use_internal = ? WHERE id_account = ?")
+        .bind(use_internal)
+        .bind(account)
+        .execute(&mut *tx)
+        .await?;
+    if use_internal {
+        backfill_account_transparent_change_addresses(network, &mut tx, account).await?;
+    }
+    tx.commit().await?;
+    Ok(())
+}
+
+fn fixed_use_internal_error(fixed: bool) -> String {
+    let required = if fixed { "on" } else { "off" };
+    format!("Use Internal Change must be {required} for this type of key")
 }
 
 fn classify_key(network: &Network, hw: HwKind, key: &str) -> Result<KeySource> {
@@ -1077,7 +1121,7 @@ mod new_account_tests {
             birth: Some(1),
             folder: String::new(),
             pools: Some(ALL_POOLS),
-            use_internal: true,
+            use_internal: None,
             internal: false,
             hw: 0,
         };
@@ -1313,7 +1357,7 @@ mod new_account_tests {
             birth: Some(1),
             folder: String::new(),
             pools: Some(ALL_POOLS),
-            use_internal: true,
+            use_internal: None,
             internal: false,
             hw: 0,
         };
@@ -2130,6 +2174,26 @@ pub async fn backfill_transparent_change_addresses(
     Ok(added)
 }
 
+/// Clear the internal change flag of accounts whose key has no change chain.
+/// Older versions, the account editor and backups could set it. These accounts
+/// have no internal keys or addresses, so nothing they scan changes and sync
+/// stays as it is. Idempotent; run at database open. Returns the accounts fixed.
+pub async fn clear_unusable_use_internal(connection: &mut SqliteConnection) -> Result<u64> {
+    let result = sqlx::query(
+        "UPDATE accounts SET use_internal = 0
+        WHERE use_internal = 1 AND hw = 0 AND (
+            EXISTS(SELECT 1 FROM transparent_accounts k WHERE k.account = id_account
+                AND k.xvk IS NULL AND (k.ivk IS NOT NULL OR k.xsk IS NULL))
+            OR EXISTS(SELECT 1 FROM sapling_accounts k WHERE k.account = id_account
+                AND k.xvk IS NULL AND k.ivk IS NOT NULL)
+            OR EXISTS(SELECT 1 FROM orchard_accounts k WHERE k.account = id_account
+                AND k.xvk IS NULL AND k.ivk IS NOT NULL))",
+    )
+    .execute(connection)
+    .await?;
+    Ok(result.rows_affected())
+}
+
 /// Materialize missing internal change addresses for one account.
 pub async fn backfill_account_transparent_change_addresses(
     network: &Network,
@@ -2869,6 +2933,249 @@ pub(crate) fn derive_sapling_address(
 }
 
 #[cfg(test)]
+mod use_internal_tests {
+    use super::*;
+    use crate::pay::pool::ALL_POOLS;
+
+    const MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    const WIF_COMPRESSED: &str = "L4jNzRuAe1kHvGj7N5UXd3m9erYWRkV6EnXiHR6AoMM37dEzUkTV";
+    const WIF_UNCOMPRESSED: &str = "5KWzYbBuw9n9pQxJkk9xRUpADCgJzia6ie3t3Ms7JJJEAmSWSgw";
+    const NETWORK: Network = Network::Main;
+
+    async fn db() -> sqlx::SqliteConnection {
+        let mut db = sqlx::SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        crate::db::create_schema(&mut db).await.unwrap();
+        db
+    }
+
+    fn new(key: &str, use_internal: Option<bool>) -> NewAccount {
+        NewAccount {
+            icon: None,
+            name: "a".into(),
+            restore: true,
+            key: key.into(),
+            passphrase: None,
+            fingerprint: None,
+            aindex: 0,
+            birth: Some(1),
+            folder: String::new(),
+            pools: Some(ALL_POOLS),
+            use_internal,
+            internal: false,
+            hw: 0,
+        }
+    }
+
+    /// A bare public key, the other form of a single transparent key.
+    fn zpk() -> String {
+        let sk = crate::bip38::import_tsk(WIF_COMPRESSED).unwrap();
+        let pk = sk.0.public_key().serialize();
+        bech32::encode::<bech32::Bech32>(bech32::Hrp::parse("zpk").unwrap(), &pk).unwrap()
+    }
+
+    fn usk() -> UnifiedSpendingKey {
+        let seed = bip39::Mnemonic::from_str(MNEMONIC).unwrap().to_seed("");
+        UnifiedSpendingKey::from_seed(&NETWORK, &seed, AccountId::ZERO).unwrap()
+    }
+
+    fn uivk() -> String {
+        usk()
+            .to_unified_full_viewing_key()
+            .to_unified_incoming_viewing_key()
+            .encode(&NETWORK)
+            .unwrap()
+    }
+
+    fn ufvk() -> String {
+        usk().to_unified_full_viewing_key().encode(&NETWORK).unwrap()
+    }
+
+    fn single_keys() -> Vec<String> {
+        vec![WIF_COMPRESSED.into(), WIF_UNCOMPRESSED.into(), zpk()]
+    }
+
+    async fn stored_flag(db: &mut sqlx::SqliteConnection, account: u32) -> bool {
+        let (flag,): (bool,) =
+            sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
+                .bind(account)
+                .fetch_one(db)
+                .await
+                .unwrap();
+        flag
+    }
+
+    async fn addresses_by_scope(db: &mut sqlx::SqliteConnection, account: u32) -> (i64, i64) {
+        sqlx::query_as(
+            "SELECT COALESCE(SUM(scope = 0), 0), COALESCE(SUM(scope = 1), 0)
+            FROM transparent_address_accounts WHERE account = ?",
+        )
+        .bind(account)
+        .fetch_one(db)
+        .await
+        .unwrap()
+    }
+
+    async fn account_rows(db: &mut sqlx::SqliteConnection) -> i64 {
+        let (n,): (i64,) = sqlx::query_as("SELECT COUNT(*) FROM accounts")
+            .fetch_one(db)
+            .await
+            .unwrap();
+        n
+    }
+
+    async fn listed_fixed(db: &mut sqlx::SqliteConnection, account: u32) -> bool {
+        let accounts = crate::db::list_accounts(db, 0).await.unwrap();
+        accounts.iter().find(|a| a.id == account).unwrap().fixed_internal_change
+    }
+
+    async fn set_stored_flag(db: &mut sqlx::SqliteConnection, account: u32, flag: bool) {
+        sqlx::query("UPDATE accounts SET use_internal = ? WHERE id_account = ?")
+            .bind(flag)
+            .bind(account)
+            .execute(db)
+            .await
+            .unwrap();
+    }
+
+    /// The reported failure (#1619): a single key has no change chain.
+    #[tokio::test]
+    async fn a_single_key_imports_without_internal_change() {
+        for key in single_keys() {
+            for requested in [None, Some(false)] {
+                let mut db = db().await;
+                let account = new_account(&NETWORK, &mut db, &new(&key, requested)).await.unwrap();
+                assert!(!stored_flag(&mut db, account).await, "{key} {requested:?}");
+                assert_eq!(addresses_by_scope(&mut db, account).await, (1, 0), "{key}");
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn a_key_that_cannot_honor_internal_change_is_refused_and_stores_nothing() {
+        for key in single_keys().into_iter().chain([uivk()]) {
+            let mut db = db().await;
+            let err = new_account(&NETWORK, &mut db, &new(&key, Some(true))).await.unwrap_err();
+            assert_eq!(err.to_string(), "Use Internal Change must be off for this type of key");
+            assert_eq!(account_rows(&mut db).await, 0, "{key}");
+        }
+    }
+
+    #[tokio::test]
+    async fn an_incoming_only_key_defaults_to_no_internal_change() {
+        for requested in [None, Some(false)] {
+            let mut db = db().await;
+            let account = new_account(&NETWORK, &mut db, &new(&uivk(), requested)).await.unwrap();
+            assert!(!stored_flag(&mut db, account).await);
+        }
+    }
+
+    #[tokio::test]
+    async fn a_key_with_a_change_chain_defaults_to_internal_change_and_can_opt_out() {
+        for key in [MNEMONIC.to_string(), ufvk()] {
+            for (requested, expected) in [(None, true), (Some(true), true), (Some(false), false)] {
+                let mut db = db().await;
+                let account = new_account(&NETWORK, &mut db, &new(&key, requested)).await.unwrap();
+                assert_eq!(stored_flag(&mut db, account).await, expected, "{key} {requested:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn a_ledger_fixes_internal_change_by_app() {
+        let official = || KeySource::OfficialDevice;
+        let zondax = || KeySource::ZondaxDevice;
+        assert!(resolve_use_internal(HwKind::Official, &official(), None).unwrap());
+        assert!(resolve_use_internal(HwKind::Official, &official(), Some(true)).unwrap());
+        let err = resolve_use_internal(HwKind::Official, &official(), Some(false)).unwrap_err();
+        assert_eq!(err.to_string(), "Use Internal Change must be on for this type of key");
+        assert!(!resolve_use_internal(HwKind::Zondax, &zondax(), None).unwrap());
+        assert!(!resolve_use_internal(HwKind::Zondax, &zondax(), Some(false)).unwrap());
+        let err = resolve_use_internal(HwKind::Zondax, &zondax(), Some(true)).unwrap_err();
+        assert_eq!(err.to_string(), "Use Internal Change must be off for this type of key");
+    }
+
+    #[tokio::test]
+    async fn list_accounts_marks_the_accounts_that_cannot_switch() {
+        let mut db = db().await;
+        for key in single_keys().into_iter().chain([uivk()]) {
+            let account = new_account(&NETWORK, &mut db, &new(&key, None)).await.unwrap();
+            assert!(listed_fixed(&mut db, account).await, "{key}");
+        }
+        for key in [MNEMONIC.to_string(), ufvk()] {
+            let account = new_account(&NETWORK, &mut db, &new(&key, None)).await.unwrap();
+            assert!(!listed_fixed(&mut db, account).await, "{key}");
+        }
+        for hw in [HwKind::Zondax, HwKind::Official] {
+            let account = new_account(&NETWORK, &mut db, &new(MNEMONIC, None)).await.unwrap();
+            crate::db::store_account_hw(&mut db, account, hw as u8, 0).await.unwrap();
+            assert!(listed_fixed(&mut db, account).await);
+        }
+    }
+
+    #[tokio::test]
+    async fn an_edit_cannot_change_what_the_key_fixes() {
+        let mut db = db().await;
+        for key in single_keys().into_iter().chain([uivk()]) {
+            let account = new_account(&NETWORK, &mut db, &new(&key, None)).await.unwrap();
+            let err = set_use_internal(&NETWORK, &mut db, account, true).await.unwrap_err();
+            assert_eq!(err.to_string(), "Use Internal Change must be off for this type of key");
+            assert!(!stored_flag(&mut db, account).await, "{key}");
+            set_use_internal(&NETWORK, &mut db, account, false).await.unwrap();
+        }
+        let official = new_account(&NETWORK, &mut db, &new(MNEMONIC, None)).await.unwrap();
+        crate::db::store_account_hw(&mut db, official, HwKind::Official as u8, 0).await.unwrap();
+        assert!(set_use_internal(&NETWORK, &mut db, official, false).await.is_err());
+        set_use_internal(&NETWORK, &mut db, official, true).await.unwrap();
+        let zondax = new_account(&NETWORK, &mut db, &new(MNEMONIC, Some(false))).await.unwrap();
+        crate::db::store_account_hw(&mut db, zondax, HwKind::Zondax as u8, 0).await.unwrap();
+        assert!(set_use_internal(&NETWORK, &mut db, zondax, true).await.is_err());
+        set_use_internal(&NETWORK, &mut db, zondax, false).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn an_edit_switches_a_key_with_a_change_chain_and_pairs_its_addresses() {
+        let mut db = db().await;
+        let account = new_account(&NETWORK, &mut db, &new(MNEMONIC, Some(false))).await.unwrap();
+        assert_eq!(addresses_by_scope(&mut db, account).await.1, 0);
+        set_use_internal(&NETWORK, &mut db, account, true).await.unwrap();
+        assert!(stored_flag(&mut db, account).await);
+        assert!(addresses_by_scope(&mut db, account).await.1 > 0);
+        set_use_internal(&NETWORK, &mut db, account, false).await.unwrap();
+        assert!(!stored_flag(&mut db, account).await);
+    }
+
+    #[tokio::test]
+    async fn opening_a_database_clears_a_flag_the_key_cannot_honor() {
+        let mut db = db().await;
+        let mut stale = vec![];
+        for key in single_keys().into_iter().chain([uivk()]) {
+            let account = new_account(&NETWORK, &mut db, &new(&key, None)).await.unwrap();
+            set_stored_flag(&mut db, account, true).await;
+            stale.push(account);
+        }
+        let seed = new_account(&NETWORK, &mut db, &new(MNEMONIC, Some(true))).await.unwrap();
+        let official = new_account(&NETWORK, &mut db, &new(MNEMONIC, Some(true))).await.unwrap();
+        crate::db::store_account_hw(&mut db, official, HwKind::Official as u8, 0).await.unwrap();
+        let heights = || "SELECT account, pool, height FROM sync_heights ORDER BY account, pool";
+        let before: Vec<(u32, u8, u32)> =
+            sqlx::query_as(heights()).fetch_all(&mut db).await.unwrap();
+
+        let cleared = clear_unusable_use_internal(&mut db).await.unwrap();
+
+        assert_eq!(cleared, stale.len() as u64);
+        for account in stale {
+            assert!(!stored_flag(&mut db, account).await);
+        }
+        assert!(stored_flag(&mut db, seed).await);
+        assert!(stored_flag(&mut db, official).await);
+        let after: Vec<(u32, u8, u32)> =
+            sqlx::query_as(heights()).fetch_all(&mut db).await.unwrap();
+        assert_eq!(before, after, "the correction does not reset sync");
+        assert_eq!(clear_unusable_use_internal(&mut db).await.unwrap(), 0);
+    }
+}
+
+#[cfg(test)]
 mod lock_tests {
     use std::time::{Duration, Instant};
 
@@ -2916,7 +3223,7 @@ mod lock_tests {
             birth: Some(1),
             folder: String::new(),
             pools: Some(ALL_POOLS),
-            use_internal: true,
+            use_internal: Some(true),
             internal: false,
             hw: 0,
         };

@@ -222,6 +222,7 @@ sealed class Account with _$Account {
     required BigInt balance,
     required bool incomingOnly,
     required bool frost,
+    required bool fixedInternalChange,
   }) = _Account;
 }
 
@@ -334,7 +335,7 @@ sealed class NewAccount with _$NewAccount {
     int? birth,
     required String folder,
     int? pools,
-    required bool useInternal,
+    bool? useInternal,
     required bool internal,
     required int hw,
   }) = _NewAccount;

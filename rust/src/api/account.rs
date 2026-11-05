@@ -7,7 +7,7 @@ use csv_async::AsyncWriter;
 #[cfg(feature = "flutter")]
 use flutter_rust_bridge::frb;
 use sapling_crypto::PaymentAddress;
-use sqlx::{Connection, SqliteConnection};
+use sqlx::SqliteConnection;
 use zcash_address::unified::{Container, Encoding};
 use zcash_keys::{
     address::UnifiedAddress,
@@ -23,7 +23,7 @@ use crate::{
     api::coin::Coin,
     db::{get_account_dindex, get_account_hw},
     io::{decrypt, encrypt},
-    ledger::{HwKind, LedgerHandle},
+    ledger::LedgerHandle,
 };
 
 #[cfg_attr(feature = "flutter", frb)]
@@ -201,26 +201,8 @@ pub async fn update_account(update: &AccountUpdate, c: &Coin) -> Result<()> {
             .await?;
     }
     if let Some(use_internal) = update.use_internal {
-        let hw = HwKind::from_hw(get_account_hw(&mut connection, update.id).await?);
-        anyhow::ensure!(
-            !hw.is_ledger() || use_internal == (hw == HwKind::Official),
-            "Ledger accounts have a fixed internal change setting"
-        );
-        let mut tx = connection.begin().await?;
-        sqlx::query("UPDATE accounts SET use_internal = ? WHERE id_account = ?")
-            .bind(use_internal)
-            .bind(update.id)
-            .execute(&mut *tx)
+        crate::account::set_use_internal(&c.network(), &mut connection, update.id, use_internal)
             .await?;
-        if use_internal {
-            crate::account::backfill_account_transparent_change_addresses(
-                &c.network(),
-                &mut tx,
-                update.id,
-            )
-            .await?;
-        }
-        tx.commit().await?;
     }
     match update.folder {
         0 => {
@@ -310,6 +292,9 @@ pub struct Account {
     pub incoming_only: bool,
     /// True when the account is a FROST (threshold) account produced by a DKG.
     pub frost: bool,
+    /// The key type allows only one internal change setting: Ledger,
+    /// incoming-only and single transparent key accounts.
+    pub fixed_internal_change: bool,
 }
 
 #[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
@@ -337,7 +322,7 @@ pub struct NewAccount {
     pub birth: Option<u32>,
     pub folder: String,
     pub pools: Option<u8>,
-    pub use_internal: bool,
+    pub use_internal: Option<bool>,
     pub internal: bool,
     pub hw: u8,
 }

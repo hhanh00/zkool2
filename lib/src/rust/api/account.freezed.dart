@@ -36,6 +36,7 @@ mixin _$Account {
   BigInt get balance;
   bool get incomingOnly;
   bool get frost;
+  bool get fixedInternalChange;
 
   /// Create a copy of Account
   /// with the given fields replaced by the non-null parameter values.
@@ -75,7 +76,9 @@ mixin _$Account {
             (identical(other.balance, balance) || other.balance == balance) &&
             (identical(other.incomingOnly, incomingOnly) ||
                 other.incomingOnly == incomingOnly) &&
-            (identical(other.frost, frost) || other.frost == frost));
+            (identical(other.frost, frost) || other.frost == frost) &&
+            (identical(other.fixedInternalChange, fixedInternalChange) ||
+                other.fixedInternalChange == fixedInternalChange));
   }
 
   @override
@@ -102,12 +105,13 @@ mixin _$Account {
         time,
         balance,
         incomingOnly,
-        frost
+        frost,
+        fixedInternalChange
       ]);
 
   @override
   String toString() {
-    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, passphrase: $passphrase, aindex: $aindex, dindex: $dindex, icon: $icon, useInternal: $useInternal, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance, incomingOnly: $incomingOnly, frost: $frost)';
+    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, passphrase: $passphrase, aindex: $aindex, dindex: $dindex, icon: $icon, useInternal: $useInternal, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance, incomingOnly: $incomingOnly, frost: $frost, fixedInternalChange: $fixedInternalChange)';
   }
 }
 
@@ -138,7 +142,8 @@ abstract mixin class $AccountCopyWith<$Res> {
       int time,
       BigInt balance,
       bool incomingOnly,
-      bool frost});
+      bool frost,
+      bool fixedInternalChange});
 
   $FolderCopyWith<$Res> get folder;
 }
@@ -177,6 +182,7 @@ class _$AccountCopyWithImpl<$Res> implements $AccountCopyWith<$Res> {
     Object? balance = null,
     Object? incomingOnly = null,
     Object? frost = null,
+    Object? fixedInternalChange = null,
   }) {
     return _then(_self.copyWith(
       coin: null == coin
@@ -266,6 +272,10 @@ class _$AccountCopyWithImpl<$Res> implements $AccountCopyWith<$Res> {
       frost: null == frost
           ? _self.frost
           : frost // ignore: cast_nullable_to_non_nullable
+              as bool,
+      fixedInternalChange: null == fixedInternalChange
+          ? _self.fixedInternalChange
+          : fixedInternalChange // ignore: cast_nullable_to_non_nullable
               as bool,
     ));
   }
@@ -394,7 +404,8 @@ extension AccountPatterns on Account {
             int time,
             BigInt balance,
             bool incomingOnly,
-            bool frost)?
+            bool frost,
+            bool fixedInternalChange)?
         $default, {
     required TResult orElse(),
   }) {
@@ -423,7 +434,8 @@ extension AccountPatterns on Account {
             _that.time,
             _that.balance,
             _that.incomingOnly,
-            _that.frost);
+            _that.frost,
+            _that.fixedInternalChange);
       case _:
         return orElse();
     }
@@ -466,7 +478,8 @@ extension AccountPatterns on Account {
             int time,
             BigInt balance,
             bool incomingOnly,
-            bool frost)
+            bool frost,
+            bool fixedInternalChange)
         $default,
   ) {
     final _that = this;
@@ -494,7 +507,8 @@ extension AccountPatterns on Account {
             _that.time,
             _that.balance,
             _that.incomingOnly,
-            _that.frost);
+            _that.frost,
+            _that.fixedInternalChange);
     }
   }
 
@@ -534,7 +548,8 @@ extension AccountPatterns on Account {
             int time,
             BigInt balance,
             bool incomingOnly,
-            bool frost)?
+            bool frost,
+            bool fixedInternalChange)?
         $default,
   ) {
     final _that = this;
@@ -562,7 +577,8 @@ extension AccountPatterns on Account {
             _that.time,
             _that.balance,
             _that.incomingOnly,
-            _that.frost);
+            _that.frost,
+            _that.fixedInternalChange);
       case _:
         return null;
     }
@@ -594,7 +610,8 @@ class _Account implements Account {
       required this.time,
       required this.balance,
       required this.incomingOnly,
-      required this.frost});
+      required this.frost,
+      required this.fixedInternalChange});
 
   @override
   final int coin;
@@ -640,6 +657,8 @@ class _Account implements Account {
   final bool incomingOnly;
   @override
   final bool frost;
+  @override
+  final bool fixedInternalChange;
 
   /// Create a copy of Account
   /// with the given fields replaced by the non-null parameter values.
@@ -680,7 +699,9 @@ class _Account implements Account {
             (identical(other.balance, balance) || other.balance == balance) &&
             (identical(other.incomingOnly, incomingOnly) ||
                 other.incomingOnly == incomingOnly) &&
-            (identical(other.frost, frost) || other.frost == frost));
+            (identical(other.frost, frost) || other.frost == frost) &&
+            (identical(other.fixedInternalChange, fixedInternalChange) ||
+                other.fixedInternalChange == fixedInternalChange));
   }
 
   @override
@@ -707,12 +728,13 @@ class _Account implements Account {
         time,
         balance,
         incomingOnly,
-        frost
+        frost,
+        fixedInternalChange
       ]);
 
   @override
   String toString() {
-    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, passphrase: $passphrase, aindex: $aindex, dindex: $dindex, icon: $icon, useInternal: $useInternal, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance, incomingOnly: $incomingOnly, frost: $frost)';
+    return 'Account(coin: $coin, id: $id, name: $name, seed: $seed, passphrase: $passphrase, aindex: $aindex, dindex: $dindex, icon: $icon, useInternal: $useInternal, birth: $birth, folder: $folder, position: $position, hidden: $hidden, saved: $saved, enabled: $enabled, internal: $internal, hw: $hw, height: $height, time: $time, balance: $balance, incomingOnly: $incomingOnly, frost: $frost, fixedInternalChange: $fixedInternalChange)';
   }
 }
 
@@ -744,7 +766,8 @@ abstract mixin class _$AccountCopyWith<$Res> implements $AccountCopyWith<$Res> {
       int time,
       BigInt balance,
       bool incomingOnly,
-      bool frost});
+      bool frost,
+      bool fixedInternalChange});
 
   @override
   $FolderCopyWith<$Res> get folder;
@@ -784,6 +807,7 @@ class __$AccountCopyWithImpl<$Res> implements _$AccountCopyWith<$Res> {
     Object? balance = null,
     Object? incomingOnly = null,
     Object? frost = null,
+    Object? fixedInternalChange = null,
   }) {
     return _then(_Account(
       coin: null == coin
@@ -873,6 +897,10 @@ class __$AccountCopyWithImpl<$Res> implements _$AccountCopyWith<$Res> {
       frost: null == frost
           ? _self.frost
           : frost // ignore: cast_nullable_to_non_nullable
+              as bool,
+      fixedInternalChange: null == fixedInternalChange
+          ? _self.fixedInternalChange
+          : fixedInternalChange // ignore: cast_nullable_to_non_nullable
               as bool,
     ));
   }
@@ -2955,7 +2983,7 @@ mixin _$NewAccount {
   int? get birth;
   String get folder;
   int? get pools;
-  bool get useInternal;
+  bool? get useInternal;
   bool get internal;
   int get hw;
 
@@ -3030,7 +3058,7 @@ abstract mixin class $NewAccountCopyWith<$Res> {
       int? birth,
       String folder,
       int? pools,
-      bool useInternal,
+      bool? useInternal,
       bool internal,
       int hw});
 }
@@ -3057,7 +3085,7 @@ class _$NewAccountCopyWithImpl<$Res> implements $NewAccountCopyWith<$Res> {
     Object? birth = freezed,
     Object? folder = null,
     Object? pools = freezed,
-    Object? useInternal = null,
+    Object? useInternal = freezed,
     Object? internal = null,
     Object? hw = null,
   }) {
@@ -3102,10 +3130,10 @@ class _$NewAccountCopyWithImpl<$Res> implements $NewAccountCopyWith<$Res> {
           ? _self.pools
           : pools // ignore: cast_nullable_to_non_nullable
               as int?,
-      useInternal: null == useInternal
+      useInternal: freezed == useInternal
           ? _self.useInternal
           : useInternal // ignore: cast_nullable_to_non_nullable
-              as bool,
+              as bool?,
       internal: null == internal
           ? _self.internal
           : internal // ignore: cast_nullable_to_non_nullable
@@ -3220,7 +3248,7 @@ extension NewAccountPatterns on NewAccount {
             int? birth,
             String folder,
             int? pools,
-            bool useInternal,
+            bool? useInternal,
             bool internal,
             int hw)?
         $default, {
@@ -3274,7 +3302,7 @@ extension NewAccountPatterns on NewAccount {
             int? birth,
             String folder,
             int? pools,
-            bool useInternal,
+            bool? useInternal,
             bool internal,
             int hw)
         $default,
@@ -3324,7 +3352,7 @@ extension NewAccountPatterns on NewAccount {
             int? birth,
             String folder,
             int? pools,
-            bool useInternal,
+            bool? useInternal,
             bool internal,
             int hw)?
         $default,
@@ -3366,7 +3394,7 @@ class _NewAccount implements NewAccount {
       this.birth,
       required this.folder,
       this.pools,
-      required this.useInternal,
+      this.useInternal,
       required this.internal,
       required this.hw});
 
@@ -3391,7 +3419,7 @@ class _NewAccount implements NewAccount {
   @override
   final int? pools;
   @override
-  final bool useInternal;
+  final bool? useInternal;
   @override
   final bool internal;
   @override
@@ -3471,7 +3499,7 @@ abstract mixin class _$NewAccountCopyWith<$Res>
       int? birth,
       String folder,
       int? pools,
-      bool useInternal,
+      bool? useInternal,
       bool internal,
       int hw});
 }
@@ -3498,7 +3526,7 @@ class __$NewAccountCopyWithImpl<$Res> implements _$NewAccountCopyWith<$Res> {
     Object? birth = freezed,
     Object? folder = null,
     Object? pools = freezed,
-    Object? useInternal = null,
+    Object? useInternal = freezed,
     Object? internal = null,
     Object? hw = null,
   }) {
@@ -3543,10 +3571,10 @@ class __$NewAccountCopyWithImpl<$Res> implements _$NewAccountCopyWith<$Res> {
           ? _self.pools
           : pools // ignore: cast_nullable_to_non_nullable
               as int?,
-      useInternal: null == useInternal
+      useInternal: freezed == useInternal
           ? _self.useInternal
           : useInternal // ignore: cast_nullable_to_non_nullable
-              as bool,
+              as bool?,
       internal: null == internal
           ? _self.internal
           : internal // ignore: cast_nullable_to_non_nullable

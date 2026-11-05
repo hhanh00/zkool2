@@ -289,7 +289,7 @@ mod tests {
             birth: Some(1),
             folder: String::new(),
             pools: Some(ALL_POOLS),
-            use_internal: true,
+            use_internal: Some(true),
             internal: false,
             hw: 0,
         };

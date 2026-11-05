@@ -458,7 +458,11 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> with BusyGate {
         await onRestoreFrostBackup(name ?? "", formData?["ufvk"] as String? ?? "", birth);
         return;
       }
-      final bool useInternal = ledger ? ledgerApp == 1 : formData?["useInternal"] ?? true;
+      // Without the toggle the key decides, so a value set before the key was
+      // pasted does not count.
+      final bool showsToggle = isSeed || key.isEmpty;
+      final bool? toggled = formData?["useInternal"];
+      final bool? useInternal = ledger ? ledgerApp == 1 : (showsToggle ? toggled ?? true : null);
       final int? pools = formData!["pools"];
 
       final icon = iconBytes;
@@ -545,7 +549,7 @@ class NewAccountPageState extends ConsumerState<NewAccountPage> with BusyGate {
                 name: name ?? "",
                 seed: seed.mnemonic,
                 aindex: int.parse(aindex ?? "0"),
-                useInternal: useInternal,
+                useInternal: useInternal ?? true, // an account with a seed always has the toggle
                 birthHeight: bh,
               );
         }

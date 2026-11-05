@@ -1477,7 +1477,7 @@ mod incoming_only_export_tests {
             birth: Some(1),
             folder: String::new(),
             pools: None,
-            use_internal: false,
+            use_internal: Some(false),
             internal: false,
             hw: 0,
         };
@@ -1543,7 +1543,7 @@ mod incoming_only_export_tests {
             birth: Some(1),
             folder: String::new(),
             pools: Some(7),
-            use_internal: false,
+            use_internal: Some(false),
             internal: false,
             hw: 0,
         };
@@ -1916,7 +1916,7 @@ mod malformed_backup_tests {
             birth: Some(1),
             folder: String::new(),
             pools: Some(7),
-            use_internal: true,
+            use_internal: Some(true),
             internal: false,
             hw: 0,
         };

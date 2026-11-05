@@ -11421,6 +11421,7 @@ impl SseDecode for crate::api::account::Account {
         let mut var_balance = <u64>::sse_decode(deserializer);
         let mut var_incomingOnly = <bool>::sse_decode(deserializer);
         let mut var_frost = <bool>::sse_decode(deserializer);
+        let mut var_fixedInternalChange = <bool>::sse_decode(deserializer);
         return crate::api::account::Account {
             coin: var_coin,
             id: var_id,
@@ -11444,6 +11445,7 @@ impl SseDecode for crate::api::account::Account {
             balance: var_balance,
             incoming_only: var_incomingOnly,
             frost: var_frost,
+            fixed_internal_change: var_fixedInternalChange,
         };
     }
 }
@@ -12535,7 +12537,7 @@ impl SseDecode for crate::api::account::NewAccount {
         let mut var_birth = <Option<u32>>::sse_decode(deserializer);
         let mut var_folder = <String>::sse_decode(deserializer);
         let mut var_pools = <Option<u8>>::sse_decode(deserializer);
-        let mut var_useInternal = <bool>::sse_decode(deserializer);
+        let mut var_useInternal = <Option<bool>>::sse_decode(deserializer);
         let mut var_internal = <bool>::sse_decode(deserializer);
         let mut var_hw = <u8>::sse_decode(deserializer);
         return crate::api::account::NewAccount {
@@ -14403,6 +14405,7 @@ impl flutter_rust_bridge::IntoDart for crate::api::account::Account {
             self.balance.into_into_dart().into_dart(),
             self.incoming_only.into_into_dart().into_dart(),
             self.frost.into_into_dart().into_dart(),
+            self.fixed_internal_change.into_into_dart().into_dart(),
         ]
         .into_dart()
     }
@@ -16416,6 +16419,7 @@ impl SseEncode for crate::api::account::Account {
         <u64>::sse_encode(self.balance, serializer);
         <bool>::sse_encode(self.incoming_only, serializer);
         <bool>::sse_encode(self.frost, serializer);
+        <bool>::sse_encode(self.fixed_internal_change, serializer);
     }
 }
 
@@ -17249,7 +17253,7 @@ impl SseEncode for crate::api::account::NewAccount {
         <Option<u32>>::sse_encode(self.birth, serializer);
         <String>::sse_encode(self.folder, serializer);
         <Option<u8>>::sse_encode(self.pools, serializer);
-        <bool>::sse_encode(self.use_internal, serializer);
+        <Option<bool>>::sse_encode(self.use_internal, serializer);
         <bool>::sse_encode(self.internal, serializer);
         <u8>::sse_encode(self.hw, serializer);
     }

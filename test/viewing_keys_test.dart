@@ -69,6 +69,7 @@ Account _account(int id) => Account(
       enabled: true,
       internal: false,
       incomingOnly: false,
+      fixedInternalChange: false,
       frost: false,
       hw: 0,
       height: 100,

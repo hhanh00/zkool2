@@ -27,7 +27,7 @@ pub struct NewAccount {
     pub aindex: i32,
     pub birth: Option<i32>,
     pub pools: Option<i32>,
-    pub use_internal: bool,
+    pub use_internal: Option<bool>,
     /// Hardware wallet kind: 1 for the legacy Zondax app, 2 for the Official app.
     pub hw: Option<i32>,
 }
@@ -701,6 +701,34 @@ mod input_tests {
             .fetch_all(&mut *conn)
             .await
             .unwrap()
+    }
+
+    #[tokio::test]
+    async fn use_internal_may_be_left_out_and_follows_the_key() {
+        const WIF: &str = "L4jNzRuAe1kHvGj7N5UXd3m9erYWRkV6EnXiHR6AoMM37dEzUkTV";
+        let context = context().await;
+        let omitted = |key: &str, name: &str| {
+            format!("createAccount(newAccount: {{ name: \"{name}\", key: \"{key}\", aindex: 0, birth: 1 }})")
+        };
+        mutate(&context, &omitted(MNEMONIC, "seed")).await.unwrap();
+        mutate(&context, &omitted(WIF, "wif")).await.unwrap();
+        let mut conn = context.coin.get_connection().await.unwrap();
+        let flags: Vec<(String, bool)> =
+            sqlx::query_as("SELECT name, use_internal FROM accounts ORDER BY id_account")
+                .fetch_all(&mut *conn)
+                .await
+                .unwrap();
+        assert_eq!(flags, [("seed".to_string(), true), ("wif".to_string(), false)]);
+        drop(conn);
+
+        let explicit = format!(
+            "createAccount(newAccount: {{ name: \"bad\", key: \"{WIF}\", aindex: 0, birth: 1, useInternal: true }})"
+        );
+        assert_eq!(
+            mutate(&context, &explicit).await.unwrap_err(),
+            "Use Internal Change must be off for this type of key"
+        );
+        assert_eq!(accounts(&context).await.len(), 2);
     }
 
     #[tokio::test]

@@ -59,7 +59,6 @@ async def test_ledger_import_and_payments_via_graphql(
                     createAccount(newAccount: {
                         name: "Mock Ledger"
                         aindex: 0
-                        useInternal: false
                         birth: 1
                         hw: 2
                     })

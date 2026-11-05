@@ -87,6 +87,7 @@ impl Coin {
 
         migrate_sapling_addresses(&network, &mut connection).await?;
         backfill_diversifier_index(&mut connection).await?;
+        crate::account::clear_unusable_use_internal(&mut connection).await?;
         crate::account::backfill_transparent_change_addresses(&network, &mut connection).await?;
 
         // Voting state lives in a sidecar database beside the wallet file, not

@@ -7242,8 +7242,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Account dco_decode_account(dynamic raw) {
     // Codec=Dco (DartCObject based), see doc to use other codecs
     final arr = raw as List<dynamic>;
-    if (arr.length != 22)
-      throw Exception('unexpected arr length: expect 22 but see ${arr.length}');
+    if (arr.length != 23)
+      throw Exception('unexpected arr length: expect 23 but see ${arr.length}');
     return Account(
       coin: dco_decode_u_8(arr[0]),
       id: dco_decode_u_32(arr[1]),
@@ -7267,6 +7267,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       balance: dco_decode_u_64(arr[19]),
       incomingOnly: dco_decode_bool(arr[20]),
       frost: dco_decode_bool(arr[21]),
+      fixedInternalChange: dco_decode_bool(arr[22]),
     );
   }
 
@@ -8174,7 +8175,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       birth: dco_decode_opt_box_autoadd_u_32(arr[7]),
       folder: dco_decode_String(arr[8]),
       pools: dco_decode_opt_box_autoadd_u_8(arr[9]),
-      useInternal: dco_decode_bool(arr[10]),
+      useInternal: dco_decode_opt_box_autoadd_bool(arr[10]),
       internal: dco_decode_bool(arr[11]),
       hw: dco_decode_u_8(arr[12]),
     );
@@ -9409,6 +9410,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_balance = sse_decode_u_64(deserializer);
     var var_incomingOnly = sse_decode_bool(deserializer);
     var var_frost = sse_decode_bool(deserializer);
+    var var_fixedInternalChange = sse_decode_bool(deserializer);
     return Account(
         coin: var_coin,
         id: var_id,
@@ -9431,7 +9433,8 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         time: var_time,
         balance: var_balance,
         incomingOnly: var_incomingOnly,
-        frost: var_frost);
+        frost: var_frost,
+        fixedInternalChange: var_fixedInternalChange);
   }
 
   @protected
@@ -10563,7 +10566,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     var var_birth = sse_decode_opt_box_autoadd_u_32(deserializer);
     var var_folder = sse_decode_String(deserializer);
     var var_pools = sse_decode_opt_box_autoadd_u_8(deserializer);
-    var var_useInternal = sse_decode_bool(deserializer);
+    var var_useInternal = sse_decode_opt_box_autoadd_bool(deserializer);
     var var_internal = sse_decode_bool(deserializer);
     var var_hw = sse_decode_u_8(deserializer);
     return NewAccount(
@@ -12036,6 +12039,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_u_64(self.balance, serializer);
     sse_encode_bool(self.incomingOnly, serializer);
     sse_encode_bool(self.frost, serializer);
+    sse_encode_bool(self.fixedInternalChange, serializer);
   }
 
   @protected
@@ -12976,7 +12980,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
     sse_encode_opt_box_autoadd_u_32(self.birth, serializer);
     sse_encode_String(self.folder, serializer);
     sse_encode_opt_box_autoadd_u_8(self.pools, serializer);
-    sse_encode_bool(self.useInternal, serializer);
+    sse_encode_opt_box_autoadd_bool(self.useInternal, serializer);
     sse_encode_bool(self.internal, serializer);
     sse_encode_u_8(self.hw, serializer);
   }

@@ -757,7 +757,7 @@ pub async fn ensure_mailbox_from_seed(
                 birth: Some(birth_height),
                 folder: "".to_string(),
                 pools: None,
-                use_internal: false,
+                use_internal: Some(false),
                 internal: true,
                 hw: 0,
             };
@@ -1121,7 +1121,7 @@ pub async fn get_mailbox_account(
                 birth: Some(birth_height),
                 folder: "".to_string(),
                 pools: None,
-                use_internal: false,
+                use_internal: Some(false),
                 internal: true,
                 hw: 0,
             };
@@ -1266,7 +1266,7 @@ pub async fn get_coordinator_broadcast_account(
                     birth: Some(height),
                     folder: "".to_string(),
                     pools: None,
-                    use_internal: false,
+                    use_internal: Some(false),
                     internal: true,
                     hw: 0,
                 };
@@ -1331,7 +1331,7 @@ mod mailbox_tests {
                 birth: Some(1),
                 folder: String::new(),
                 pools: None,
-                use_internal: false,
+                use_internal: Some(false),
                 internal: false,
                 hw: 0,
             },

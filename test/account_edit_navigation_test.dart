@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -80,9 +81,9 @@ class _Settings extends AppSettingsNotifier {
       );
 }
 
-Account _account() => Account(
+Account _account({int id = 1, bool fixedInternalChange = false}) => Account(
       coin: 3,
-      id: 1,
+      id: id,
       name: 'Original',
       aindex: 0,
       dindex: 0,
@@ -95,12 +96,16 @@ Account _account() => Account(
       enabled: true,
       internal: false,
       incomingOnly: false,
+      fixedInternalChange: fixedInternalChange,
       hw: 0,
       height: 100,
       time: 0,
       balance: BigInt.zero,
       frost: false,
     );
+
+const fixedInternalChangeTooltip =
+    'Fixed by the key type: Ledger, incoming-only and single transparent key accounts cannot switch';
 
 void main() {
   late _Api api;
@@ -114,13 +119,13 @@ void main() {
   });
   tearDownAll(RustLib.dispose);
 
-  Future<GoRouter> openEditor(WidgetTester tester) async {
+  Future<GoRouter> openEditor(WidgetTester tester, {List<Account>? accounts}) async {
     final key = GlobalKey<AccountEditPageState>();
     final router = GoRouter(navigatorKey: navigatorKey, routes: [
       GoRoute(path: '/', builder: (context, state) => const Scaffold(body: Text('Account list'))),
       GoRoute(
         path: '/edit',
-        builder: (context, state) => AccountEditPage([_account()], key: key),
+        builder: (context, state) => AccountEditPage(accounts ?? [_account()], key: key),
         onExit: (context, state) => key.currentState?.confirmLeave() ?? true,
       ),
     ]);
@@ -217,5 +222,34 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.updates.single.useInternal, true);
     expect(api.resets, [1]);
+  });
+
+  bool internalChangeEnabled(WidgetTester tester) => tester
+      .widget<FormBuilderCheckbox>(
+          find.byWidgetPredicate((w) => w is FormBuilderCheckbox && w.name == 'useInternal'))
+      .enabled;
+
+  testWidgets('internal change can be switched when the key allows it', (tester) async {
+    await openEditor(tester);
+    expect(internalChangeEnabled(tester), isTrue);
+    expect(find.byTooltip('Use an internal address for change (ZIP 316)'), findsOneWidget);
+  });
+
+  testWidgets('internal change is disabled when the key type fixes it', (tester) async {
+    final router = await openEditor(tester, accounts: [_account(fixedInternalChange: true)]);
+    expect(internalChangeEnabled(tester), isFalse);
+    expect(find.byTooltip(fixedInternalChangeTooltip), findsOneWidget);
+    await tester.tap(find.text('Use Internal Change'));
+    await tester.pump();
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.text('Account list'), findsOneWidget, reason: 'nothing changed, so nothing to confirm');
+    expect(api.updates, isEmpty);
+  });
+
+  testWidgets('a selection with one fixed account disables internal change for all', (tester) async {
+    await openEditor(tester, accounts: [_account(), _account(id: 2, fixedInternalChange: true)]);
+    expect(internalChangeEnabled(tester), isFalse);
+    expect(find.byTooltip(fixedInternalChangeTooltip), findsOneWidget);
   });
 }
