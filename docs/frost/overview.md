@@ -64,6 +64,24 @@ Save your backup string and the group viewing key. Without them, a lost
 device means a lost share, and the group may no longer reach its threshold.
 :::
 
+## Internal Change
+
+A MSig Acct starts with "Use Internal Change" off. To use
+[internal change](../guide/accounts.md#internal-change), every participant has
+to turn it on in the account's settings. Keeping the setting the same across
+the group is up to the participants.
+
+::: important
+A participant with the setting off does not see change that another participant
+sent to an internal address, and Zkool cannot detect this. The funds are safe,
+but that participant's balance is too low until the setting is on.
+:::
+
+A restored account also starts with the setting off, because the backup string
+does not record it. If your group uses internal change, turn it on after
+restoring. Saving the setting clears the account's sync data, so the next
+synchronization rescans from the birth height and finds the change.
+
 ## Legacy Groups
 
 Groups created before ZIP 2005 have an Orchard address and are not quantum
