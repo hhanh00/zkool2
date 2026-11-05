@@ -1136,11 +1136,14 @@ extension AccountExtension on Account {
   }
 }
 
-/// The smallest balance a pool chip shows as more than 0.000: at 3 decimals,
-/// `zatToShortString` rounds anything below this down to zero.
-final BigInt _minVisiblePoolBalance = BigInt.from(50000);
-
-bool _isPoolChipVisible(BigInt zat) => zat >= _minVisiblePoolBalance;
+/// In display order: each pool's position in `PoolBalance.field0`, which is
+/// also the value `BalanceWidget.onPoolSelected` reports.
+const _poolIndices = {
+  PoolType.transparent: 0,
+  PoolType.sapling: 1,
+  PoolType.orchard: 2,
+  PoolType.ironwood: 3,
+};
 
 /// The account page's pool balances: the chips, or the row that stands in for
 /// them when collapsed. Takes no room at all when no chip would be visible.
@@ -1159,7 +1162,11 @@ class PoolBalanceControl extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!balance.field0.any(_isPoolChipVisible)) return const SizedBox.shrink();
+    final visiblePools = {
+      for (final MapEntry(key: pool, value: index) in _poolIndices.entries)
+        if (balance.field0[index] >= minNonZeroShortZat) pool,
+    };
+    if (visiblePools.isEmpty) return const SizedBox.shrink();
     final tt = Theme.of(context).textTheme;
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1179,7 +1186,7 @@ class PoolBalanceControl extends StatelessWidget {
                       Text(incomingOnly ? "Received by Pool" : "Pool Balances", style: tt.bodySmall),
                     ],
                   )
-                : BalanceWidget(balance, hideZeroPools: true),
+                : BalanceWidget(balance, pools: visiblePools),
           ),
         ),
       ],
@@ -1191,18 +1198,20 @@ class BalanceWidget extends StatelessWidget {
   final PoolBalance balance;
   final void Function(int)? onPoolSelected;
 
-  /// Leave out the pools that would show as 0.000. Off for the Send page, where
+  /// The pools to show, or all of them when null. The Send page shows all:
   /// tapping a chip fills in the account's address, even for an empty pool.
-  final bool hideZeroPools;
-  const BalanceWidget(this.balance, {super.key, this.onPoolSelected, this.hideZeroPools = false});
+  final Set<PoolType>? pools;
+  const BalanceWidget(this.balance, {super.key, this.onPoolSelected, this.pools});
 
   @override
   Widget build(BuildContext context) {
     final b = balance.field0;
+    final onSelected = onPoolSelected;
     final chips = [
-      for (final pool in PoolType.values)
-        if (!hideZeroPools || _isPoolChipVisible(b[pool.index]))
-          GestureDetector(onTap: () => onPoolSelected?.call(pool.index), child: BalanceChip(pool, zatToShortString(b[pool.index]))),
+      for (final MapEntry(key: pool, value: index) in _poolIndices.entries)
+        if (pools?.contains(pool) ?? true)
+          // Without a handler, a tap falls through to whatever encloses the chip.
+          GestureDetector(onTap: onSelected == null ? null : () => onSelected(index), child: BalanceChip(pool, zatToShortString(b[index]))),
     ];
     return Column(
       mainAxisSize: MainAxisSize.min,

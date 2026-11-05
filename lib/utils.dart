@@ -47,7 +47,8 @@ String formatLocale(String platformLocale) =>
 final locale = formatLocale(PlatformDispatcher.instance.locale.toString());
 final formatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: 8);
 final zatFormatter = DecimalFormatter(formatter);
-final shortFormatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: 3);
+const shortDecimals = 3;
+final shortFormatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: shortDecimals);
 final zatShortFormatter = DecimalFormatter(shortFormatter);
 final fiatFormatter = NumberFormat.decimalPatternDigits(locale: locale, decimalDigits: 2);
 final fiatCentFormatter = DecimalFormatter(fiatFormatter);
@@ -86,6 +87,10 @@ String zatToShortString(BigInt zat) {
   final s = zatShortFormatter.format(z.toDecimal());
   return s;
 }
+
+/// The smallest amount [zatToShortString] shows as more than zero: half of its
+/// last decimal place, since anything below rounds down.
+final BigInt minNonZeroShortZat = BigInt.from(zatsPerZec) ~/ BigInt.from(10).pow(shortDecimals) ~/ BigInt.two;
 
 Widget zatToText(BigInt zat, {String prefix = "", TextStyle? style, Function()? onTap, required bool selectable, bool colored = false}) {
   style ??= Theme.of(navigatorKey.currentContext!).textTheme.bodyMedium!;
