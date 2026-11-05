@@ -30,3 +30,9 @@ jobs:
         run: |
           cd rust
           cargo test --lib
+      # Tests behind a feature, or outside src/, otherwise stop compiling
+      # without anyone noticing.
+      - name: Build all tests
+        run: |
+          cd rust
+          cargo test --features graphql --no-run
