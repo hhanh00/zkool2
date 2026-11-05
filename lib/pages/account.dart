@@ -529,25 +529,13 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
                                   if (fiat != null) Text(fiat),
                                   const Gap(4),
                                   const ExchangeRateButton(),
-                                  Gap(8),
-                                  GestureDetector(
-                                    behavior: HitTestBehavior.opaque,
-                                    onTap: () => ref
+                                  PoolBalanceControl(
+                                    account.balance,
+                                    collapsed: settings.collapsePoolBalances,
+                                    incomingOnly: incomingOnly,
+                                    onToggleCollapsed: () => ref
                                         .read(appSettingsProvider.notifier)
                                         .setCollapsePoolBalances(!settings.collapsePoolBalances),
-                                    child: SizedBox(
-                                      width: double.infinity,
-                                      child: settings.collapsePoolBalances
-                                          ? Row(
-                                              mainAxisAlignment: MainAxisAlignment.center,
-                                              children: [
-                                                Icon(Icons.expand_more, size: 18),
-                                                const Gap(4),
-                                                Text(incomingOnly ? "Received by Pool" : "Pool Balances", style: tt.bodySmall),
-                                              ],
-                                            )
-                                          : BalanceWidget(account.balance),
-                                    ),
                                   ),
                                 ]),
                               ),
@@ -1148,34 +1136,87 @@ extension AccountExtension on Account {
   }
 }
 
+/// The smallest balance a pool chip shows as more than 0.000: at 3 decimals,
+/// `zatToShortString` rounds anything below this down to zero.
+final BigInt _minVisiblePoolBalance = BigInt.from(50000);
+
+bool _isPoolChipVisible(BigInt zat) => zat >= _minVisiblePoolBalance;
+
+/// The account page's pool balances: the chips, or the row that stands in for
+/// them when collapsed. Takes no room at all when no chip would be visible.
+class PoolBalanceControl extends StatelessWidget {
+  final PoolBalance balance;
+  final bool collapsed;
+  final bool incomingOnly;
+  final VoidCallback onToggleCollapsed;
+  const PoolBalanceControl(
+    this.balance, {
+    super.key,
+    required this.collapsed,
+    required this.incomingOnly,
+    required this.onToggleCollapsed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!balance.field0.any(_isPoolChipVisible)) return const SizedBox.shrink();
+    final tt = Theme.of(context).textTheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Gap(8),
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: onToggleCollapsed,
+          child: SizedBox(
+            width: double.infinity,
+            child: collapsed
+                ? Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.expand_more, size: 18),
+                      const Gap(4),
+                      Text(incomingOnly ? "Received by Pool" : "Pool Balances", style: tt.bodySmall),
+                    ],
+                  )
+                : BalanceWidget(balance, hideZeroPools: true),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class BalanceWidget extends StatelessWidget {
   final PoolBalance balance;
   final void Function(int)? onPoolSelected;
-  const BalanceWidget(this.balance, {super.key, this.onPoolSelected});
+
+  /// Leave out the pools that would show as 0.000. Off for the Send page, where
+  /// tapping a chip fills in the account's address, even for an empty pool.
+  final bool hideZeroPools;
+  const BalanceWidget(this.balance, {super.key, this.onPoolSelected, this.hideZeroPools = false});
 
   @override
   Widget build(BuildContext context) {
     final b = balance.field0;
+    final chips = [
+      for (final pool in PoolType.values)
+        if (!hideZeroPools || _isPoolChipVisible(b[pool.index]))
+          GestureDetector(onTap: () => onPoolSelected?.call(pool.index), child: BalanceChip(pool, zatToShortString(b[pool.index]))),
+    ];
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            GestureDetector(onTap: () => onPoolSelected?.call(0), child: BalanceChip(PoolType.transparent, zatToShortString(b[0]))),
-            const Gap(8),
-            GestureDetector(onTap: () => onPoolSelected?.call(1), child: BalanceChip(PoolType.sapling, zatToShortString(b[1]))),
-          ],
-        ),
-        const Gap(8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            GestureDetector(onTap: () => onPoolSelected?.call(2), child: BalanceChip(PoolType.orchard, zatToShortString(b[2]))),
-            const Gap(8),
-            GestureDetector(onTap: () => onPoolSelected?.call(3), child: BalanceChip(PoolType.ironwood, zatToShortString(b[3]))),
-          ],
-        ),
+        for (var i = 0; i < chips.length; i += 2) ...[
+          if (i > 0) const Gap(8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              chips[i],
+              if (i + 1 < chips.length) ...[const Gap(8), chips[i + 1]],
+            ],
+          ),
+        ],
       ],
     );
   }
