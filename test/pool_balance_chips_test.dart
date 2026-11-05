@@ -31,31 +31,26 @@ List<String> _chips(WidgetTester tester) => [
     ];
 
 /// The chips grouped by the line they sit on, top to bottom, left to right.
-List<List<String>> _rows(WidgetTester tester) {
-  final finder = find.byType(BalanceChip);
-  final byLine = <double, List<(double, String)>>{};
-  for (final element in finder.evaluate()) {
-    final center = tester.getCenter(find.byWidget(element.widget));
-    byLine.putIfAbsent(center.dy, () => []).add((center.dx, (element.widget as BalanceChip).pool.name));
+List<List<(BalanceChip, Rect)>> _lines(WidgetTester tester) {
+  final byLine = <double, List<(BalanceChip, Rect)>>{};
+  for (final element in find.byType(BalanceChip).evaluate()) {
+    final rect = tester.getRect(find.byWidget(element.widget));
+    byLine.putIfAbsent(rect.center.dy, () => []).add((element.widget as BalanceChip, rect));
   }
-  final lines = byLine.keys.toList()..sort();
-  return [
-    for (final line in lines) [for (final (_, name) in byLine[line]!..sort((a, b) => a.$1.compareTo(b.$1))) name],
-  ];
+  final tops = byLine.keys.toList()..sort();
+  return [for (final top in tops) byLine[top]!..sort((a, b) => a.$2.left.compareTo(b.$2.left))];
 }
+
+/// The pool names on each line.
+List<List<String>> _rows(WidgetTester tester) => [
+      for (final line in _lines(tester)) [for (final (chip, _) in line) chip.pool.name],
+    ];
 
 /// Each line of chips, as a whole, sits on the screen's vertical center line.
 void _expectRowsCentered(WidgetTester tester) {
   final screenCenter = tester.getCenter(find.byType(Scaffold)).dx;
-  final byLine = <double, List<Rect>>{};
-  for (final element in find.byType(BalanceChip).evaluate()) {
-    final rect = tester.getRect(find.byWidget(element.widget));
-    byLine.putIfAbsent(rect.center.dy, () => []).add(rect);
-  }
-  for (final rects in byLine.values) {
-    final left = rects.map((r) => r.left).reduce((a, b) => a < b ? a : b);
-    final right = rects.map((r) => r.right).reduce((a, b) => a > b ? a : b);
-    expect((left + right) / 2, moreOrLessEquals(screenCenter));
+  for (final line in _lines(tester)) {
+    expect((line.first.$2.left + line.last.$2.right) / 2, moreOrLessEquals(screenCenter));
   }
 }
 
@@ -65,15 +60,28 @@ void main() {
     expect(zatToShortString(BigInt.from(_cutoff)), '0.001');
   });
 
-  group('BalanceWidget hiding pools that show as 0.000', () {
+  test('the cutoff derived from the short format is 50,000 zatoshis', () {
+    expect(minNonZeroShortZat, BigInt.from(50000));
+    expect(zatToShortString(minNonZeroShortZat - BigInt.one), '0.000');
+    expect(zatToShortString(minNonZeroShortZat), '0.001');
+  });
+
+  group('PoolBalanceControl', () {
+    Widget control(PoolBalance balance, {required bool collapsed, bool incomingOnly = false, VoidCallback? onToggle}) => PoolBalanceControl(
+          balance,
+          collapsed: collapsed,
+          incomingOnly: incomingOnly,
+          onToggleCollapsed: onToggle ?? () {},
+        );
+
     testWidgets('49,999 zatoshis is hidden and 50,000 is shown', (tester) async {
-      await _pump(tester, BalanceWidget(_balance(0, _dust, _cutoff, 0), hideZeroPools: true));
+      await _pump(tester, control(_balance(0, _dust, _cutoff, 0), collapsed: false));
 
       expect(_chips(tester), ['orchard 0.001']);
     });
 
     testWidgets('three chips split 2 + 1, in pool order, each row centered', (tester) async {
-      await _pump(tester, BalanceWidget(_balance(_cutoff, 0, _cutoff, _cutoff), hideZeroPools: true));
+      await _pump(tester, control(_balance(_cutoff, 0, _cutoff, _cutoff), collapsed: false));
 
       expect(_chips(tester), ['transparent 0.001', 'orchard 0.001', 'ironwood 0.001']);
       expect(_rows(tester), [
@@ -84,27 +92,24 @@ void main() {
     });
 
     testWidgets('four chips split 2 + 2 and two chips share one row', (tester) async {
-      await _pump(tester, BalanceWidget(_balance(_cutoff, _cutoff, _cutoff, _cutoff), hideZeroPools: true));
+      await _pump(tester, control(_balance(_cutoff, _cutoff, _cutoff, _cutoff), collapsed: false));
       expect(_rows(tester), [
         ['transparent', 'sapling'],
         ['orchard', 'ironwood'],
       ]);
 
-      await _pump(tester, BalanceWidget(_balance(0, _cutoff, 0, _cutoff), hideZeroPools: true));
+      await _pump(tester, control(_balance(0, _cutoff, 0, _cutoff), collapsed: false));
       expect(_rows(tester), [
         ['sapling', 'ironwood'],
       ]);
       _expectRowsCentered(tester);
     });
-  });
 
-  group('PoolBalanceControl', () {
-    Widget control(PoolBalance balance, {required bool collapsed, bool incomingOnly = false, VoidCallback? onToggle}) => PoolBalanceControl(
-          balance,
-          collapsed: collapsed,
-          incomingOnly: incomingOnly,
-          onToggleCollapsed: onToggle ?? () {},
-        );
+    testWidgets('each chip shows its own pool balance', (tester) async {
+      await _pump(tester, control(_balance(100000, 200000, 300000, 400000), collapsed: false));
+
+      expect(_chips(tester), ['transparent 0.001', 'sapling 0.002', 'orchard 0.003', 'ironwood 0.004']);
+    });
 
     for (final incomingOnly in [false, true]) {
       final label = incomingOnly ? 'Received by Pool' : 'Pool Balances';
@@ -139,6 +144,15 @@ void main() {
       });
     }
 
+    testWidgets('tapping a chip reaches the collapse toggle', (tester) async {
+      var toggles = 0;
+      await _pump(tester, control(_balance(0, 0, _cutoff, 0), collapsed: false, onToggle: () => toggles++));
+
+      await tester.tap(find.byType(BalanceChip));
+
+      expect(toggles, 1);
+    });
+
     testWidgets('tapping toggles the collapse setting; hiding leaves it alone', (tester) async {
       var toggles = 0;
       await _pump(tester, control(_balance(0, 0, _cutoff, 0), collapsed: true, onToggle: () => toggles++));
@@ -164,15 +178,17 @@ void main() {
       ]);
     });
 
-    testWidgets('tapping an empty pool still selects it', (tester) async {
-      final selected = <int>[];
-      await _pump(tester, BalanceWidget(_balance(0, 0, 0, 0), onPoolSelected: selected.add));
+    testWidgets('tapping a chip reports its pool, even an empty one', (tester) async {
+      final selected = <String, int>{};
+      late BalanceChip tapped;
+      await _pump(tester, BalanceWidget(_balance(0, 0, 0, 0), onPoolSelected: (index) => selected[tapped.pool.name] = index));
 
       for (final chip in tester.widgetList<BalanceChip>(find.byType(BalanceChip)).toList()) {
+        tapped = chip;
         await tester.tap(find.byWidget(chip));
       }
 
-      expect(selected, [0, 1, 2, 3]);
+      expect(selected, {'transparent': 0, 'sapling': 1, 'orchard': 2, 'ironwood': 3});
     });
   });
 }

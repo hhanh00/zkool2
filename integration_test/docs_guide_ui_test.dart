@@ -19,7 +19,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/main.dart';
-import 'package:zkool/pages/account.dart';
 import 'package:zkool/pages/tx.dart';
 import 'package:zkool/router.dart';
 import 'package:zkool/src/rust/api/account.dart';
@@ -178,11 +177,8 @@ void main() {
       // ── Account page, still empty ────────────────────────────────────────
       appRouter.go(accountRoute("/", a));
       await waitForAccountView(tester, _main);
-      await pumpUntil(tester, () => find.byType(BalanceWidget).evaluate().isNotEmpty,
-          timeout: shortTimeout, what: "the pool balances",);
       await shots.take("guide/images/08.account", annots: () => [
         shots.box(find.byTooltip("Balance across all pools")),
-        shots.box(find.byType(BalanceWidget), color: "green"),
         shots.boxAround([
           find.widgetWithText(TextField, "Search transactions (memo, contact, txid)"),
           find.textContaining("Transaction History"),
