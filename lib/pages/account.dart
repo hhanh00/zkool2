@@ -940,7 +940,9 @@ class AccountEditPageState extends ConsumerState<AccountEditPage> with RouteAwar
               Tooltip(
                 message: accounts.any((a) => a.fixedInternalChange)
                     ? "Fixed by the key type: Ledger, incoming-only and single transparent key accounts cannot switch"
-                    : "Use an internal address for change (ZIP 316)",
+                    : accounts.any((a) => a.frost)
+                        ? "All members of a multisig group must use the same setting: a member with it off does not see change sent to internal addresses"
+                        : "Use an internal address for change (ZIP 316)",
                 child: FormBuilderCheckbox(
                   name: "useInternal",
                   title: Text("Use Internal Change"),

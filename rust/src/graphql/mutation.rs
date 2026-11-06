@@ -36,6 +36,10 @@ pub struct NewAccount {
 pub struct UpdateAccount {
     pub name: Option<String>,
     pub birth: Option<i32>,
+    /// Use an internal address for change. Changing it resets the account's
+    /// sync data. Every member of a FROST group must use the same setting: a
+    /// member with it off does not see change sent to internal addresses.
+    pub use_internal: Option<bool>,
 }
 
 #[derive(GraphQLInputObject)]
@@ -264,6 +268,18 @@ impl Mutation {
         context: &Context,
     ) -> FieldResult<bool> {
         check_auth(context, id_account, true)?;
+        let internal_changes = match update_account.use_internal {
+            Some(use_internal) => {
+                let mut connection = context.coin.get_connection().await?;
+                let (stored,): (bool,) =
+                    sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
+                        .bind(id_account)
+                        .fetch_one(&mut *connection)
+                        .await?;
+                stored != use_internal
+            }
+            None => false,
+        };
         let ua = crate::api::account::AccountUpdate {
             coin: 0,
             id: id_account as u32,
@@ -276,9 +292,12 @@ impl Mutation {
             folder: 0,
             hidden: None,
             enabled: None,
-            use_internal: None,
+            use_internal: update_account.use_internal,
         };
         crate::api::account::update_account(&ua, &context.coin).await?;
+        if internal_changes {
+            crate::api::account::reset_sync(id_account as u32, &context.coin).await?;
+        }
         Ok(true)
     }
 
@@ -729,6 +748,64 @@ mod input_tests {
             "Use Internal Change must be off for this type of key"
         );
         assert_eq!(accounts(&context).await.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn editing_use_internal_resets_sync_only_when_it_changes() {
+        const SYNCED: u32 = 1_000_000;
+        let context = context().await;
+        let id = mutate(&context, &format!(
+            "createAccount(newAccount: {{ name: \"a\", key: \"{MNEMONIC}\", aindex: 0, birth: 1 }})"
+        ))
+        .await
+        .unwrap()["createAccount"]
+            .as_i64()
+            .unwrap();
+        let edit = |flag: bool| {
+            format!("editAccount(idAccount: {id}, updateAccount: {{ useInternal: {flag} }})")
+        };
+        let state = || async {
+            let mut conn = context.coin.get_connection().await.unwrap();
+            let flag: (bool,) = sqlx::query_as("SELECT use_internal FROM accounts WHERE id_account = ?")
+                .bind(id)
+                .fetch_one(&mut *conn)
+                .await
+                .unwrap();
+            let height: (u32,) = sqlx::query_as("SELECT MIN(height) FROM sync_heights WHERE account = ?")
+                .bind(id)
+                .fetch_one(&mut *conn)
+                .await
+                .unwrap();
+            (flag.0, height.0)
+        };
+        let advance = || async {
+            let mut conn = context.coin.get_connection().await.unwrap();
+            sqlx::query("UPDATE sync_heights SET height = ? WHERE account = ?")
+                .bind(SYNCED)
+                .bind(id)
+                .execute(&mut *conn)
+                .await
+                .unwrap();
+        };
+
+        advance().await;
+        mutate(&context, &edit(true)).await.unwrap();
+        assert_eq!(state().await, (true, SYNCED), "the same value keeps the sync data");
+        mutate(&context, &format!("editAccount(idAccount: {id}, updateAccount: {{ name: \"b\" }})"))
+            .await
+            .unwrap();
+        assert_eq!(state().await, (true, SYNCED), "leaving it out keeps the sync data");
+
+        mutate(&context, &edit(false)).await.unwrap();
+        let (flag, height) = state().await;
+        assert!(!flag);
+        assert!(height < SYNCED, "turning it off resets the sync data");
+
+        advance().await;
+        mutate(&context, &edit(true)).await.unwrap();
+        let (flag, height) = state().await;
+        assert!(flag);
+        assert!(height < SYNCED, "turning it on resets the sync data");
     }
 
     #[tokio::test]
