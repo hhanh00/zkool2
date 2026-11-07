@@ -18,17 +18,10 @@ runs:
       shell: bash
       run: |
         sudo apt-get update
-        sudo apt-get install -y clang cmake git ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev libudev-dev
         dart pub global activate fastforge
-        sudo apt install locate
-        wget -O appimagetool "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-$ARCH.AppImage"
-        chmod +x appimagetool
-        sudo mv appimagetool /usr/local/bin/
         sudo apt-get install -y flatpak flatpak-builder appstream appstream-compose
         mkdir out
         echo "$HOME/.pub-cache/bin" >> $GITHUB_PATH
-      env:
-        ARCH: ${{ inputs.arch }}
     - name: Install Flatpak runtime and SDK
       shell: bash
       run: |
@@ -36,11 +29,20 @@ runs:
         sudo flatpak install -y flathub org.freedesktop.Platform//25.08 org.freedesktop.Sdk//25.08
       env:
         ARCH: ${{ inputs.arch }}
+    # Built in an old distro, because the build system's glibc, libstdc++ and GLib
+    # headers set the minimum for every user. The check below enforces the limits.
     - name: Build
       shell: bash
+      run: ./misc/build-linux-in-container.sh
+    - name: Check glibc and libstdc++ requirements
+      shell: bash
+      run: ./misc/check-bundle-abi.sh build/linux/*/release/bundle
+    - name: Launch on older and newer distros
+      shell: bash
       run: |
-        ./misc/mkcargokit_options.sh "ledger,bundled-sapling-params" > rust/cargokit.yaml
-        fastforge package --platform=linux --targets=deb,appimage
+        for image in debian:12 ubuntu:22.04 ubuntu:26.04; do
+          ./misc/smoke-linux-bundle.sh build/linux/*/release/bundle dist/*/*.AppImage "$image"
+        done
     - name: Build Flatpak
       if: ${{ inputs.arch == 'x86_64' && github.event_name != 'pull_request' }}
       shell: bash

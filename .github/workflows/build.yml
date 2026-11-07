@@ -21,7 +21,9 @@ jobs:
         include:
           - os: macos-latest
             target: android
-          - os: ubuntu-latest
+          # Pinned: the runner's glibc sets the minimum for the AppImage and
+          # the .deb, so a moving label raises it without any change here.
+          - os: ubuntu-24.04
             target: linux
             arch: x86_64
           - os: ubuntu-24.04-arm
