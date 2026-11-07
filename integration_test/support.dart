@@ -8,6 +8,7 @@
 /// flow itself (signing needs a completed DKG first).
 library;
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
@@ -16,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_form_builder/flutter_form_builder.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:zkool/src/rust/api/account.dart';
@@ -577,6 +579,51 @@ Future<void> waitForSync(WidgetTester tester, int account) async {
     await pumpFor(tester, const Duration(seconds: 5));
   }
   fail("timed out waiting for account $account to reach the chain tip");
+}
+
+/// Imports [key] on the new-account page, declines the transparent scan, and
+/// syncs from the page's dialog. Ends on the account view.
+Future<void> importKey(
+  WidgetTester tester,
+  GoRouter appRouter, {
+  required String name,
+  required String key,
+  required String birth,
+}) async {
+  unawaited(appRouter.push("/account/new"));
+  await pumpUntil(tester, () => find.text("Create a new wallet or restore an existing one").evaluate().isNotEmpty,
+      timeout: shortTimeout, what: "the new account page",);
+  await tester.enterText(fieldNamed("name"), name);
+  await tester.pump();
+  await tester.ensureVisible(switchNamed("restore"));
+  await tester.tap(switchNamed("restore"));
+  await pumpFor(tester, const Duration(seconds: 1));
+  await tester.enterText(fieldNamed("key"), key);
+  await tester.pump();
+  await tester.ensureVisible(fieldNamed("birth"));
+  await tester.enterText(fieldNamed("birth"), birth);
+  await tester.pump();
+  await tapTooltip(tester, "Save");
+
+  // Keyed on body text: an AwesomeDialog title is not a plain Text widget.
+  const dialogs = {
+    "Scan for alternative transparent addresses?": "Close",
+    "Account imported successfully. Would you like to synchronize it now?": "Ok",
+  };
+  final deadline = DateTime.now().add(const Duration(minutes: 2));
+  while (DateTime.now().isBefore(deadline)) {
+    if (find.text(name).evaluate().isNotEmpty && find.byTooltip("Sync this account").evaluate().isNotEmpty) {
+      return;
+    }
+    for (final entry in dialogs.entries) {
+      if (find.text(entry.key).evaluate().isNotEmpty && find.text(entry.value).evaluate().isNotEmpty) {
+        await tester.tap(find.text(entry.value).last);
+        await pumpFor(tester, const Duration(seconds: 1));
+      }
+    }
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+  fail("the import of $name did not reach the account view: ${visibleTexts().join(" | ")}");
 }
 
 Future<void> tapTab(WidgetTester tester, String name) async {
