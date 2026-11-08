@@ -1582,11 +1582,11 @@ pub async fn orchard_receiving_keys(
     })
 }
 
-/// An account's stored keys for one pool. A full account has `xvk` (and
-/// `xsk` when it can spend); an incoming-only account has `ivk` alone.
 /// One transparent address of an account with its key material, as the
 /// `transparent_address_accounts` row holds it: `sk` when the account can
-/// spend from it, `pk` always.
+/// spend from it, `pk` always. These rows are the account's transparent
+/// addresses: sync watches them, signing spends from them, and the
+/// addresses page and the key tree both list them.
 pub struct TransparentAddressKey {
     pub scope: u8,
     pub dindex: u32,
@@ -1620,6 +1620,8 @@ pub async fn list_transparent_address_keys(
     Ok(rows)
 }
 
+/// An account's stored keys for one pool. A full account has `xvk` (and
+/// `xsk` when it can spend); an incoming-only account has `ivk` alone.
 pub struct TransparentKeys {
     pub xsk: Option<AccountPrivKey>,
     pub xvk: Option<AccountPubKey>,
