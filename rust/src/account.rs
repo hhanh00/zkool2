@@ -2572,151 +2572,127 @@ pub async fn fetch_address_tx_count(
     let has_full_key = tkeys.xvk.is_some() || skeys.xvk.is_some() || okeys.xvk.is_some();
     let scopes: &[u8] = if has_full_key { &[0, 1] } else { &[0] };
 
+    // The transparent addresses are the stored rows: the ones sync watches,
+    // signing spends from and the key tree lists. The page derives nothing
+    // for that pool, so the two views cannot disagree (#1634). A single
+    // imported key, WIF or public key, has its one row here too.
+    let taddrs: HashMap<(u8, u32), String> =
+        crate::db::list_transparent_address_keys(connection, account)
+            .await?
+            .into_iter()
+            .map(|r| ((r.scope, r.dindex), r.address))
+            .collect();
+
     for &scope in scopes {
         for d in 0..=dindex {
-            // Determine if this (scope, d) slot is valid.
-            // Sapling diversifier validity gates the entire slot — if the
-            // account has sapling keys and the address at this diversifier
-            // index is invalid, only the transparent fallback at d=0 applies.
-            let mut valid_dindex = true;
-            if let Some(dfvk) = skeys.xvk.as_ref() {
-                if !dfvk.has_sapling_address(scope, d as u64, internal_sap_ivk.as_ref()) {
-                    valid_dindex = false;
-                }
-            } else if let Some(ivk) = skeys.ivk.as_ref() {
-                if ivk.address_at(d as u64).is_none() {
-                    valid_dindex = false;
-                }
+            // A slot's shielded addresses exist where the EXTERNAL Sapling
+            // key has an address: the index only ever advances to such an
+            // index, and the internal key would hide the change rows stored
+            // there (#1634). Without a Sapling key every index has them.
+            let sapling_valid = match (skeys.xvk.as_ref(), skeys.ivk.as_ref()) {
+                (Some(dfvk), _) => dfvk.has_sapling_address(0u8, d as u64, None),
+                (None, Some(ivk)) => ivk.address_at(d as u64).is_some(),
+                (None, None) => true,
+            };
+
+            let t_str = if selected.has_pool(0) {
+                taddrs.get(&(scope, d)).cloned()
+            } else {
+                None
+            };
+            // A transparent row at an index Sapling skipped, index 0 or one
+            // the sweep found, is a slot of its own.
+            if !sapling_valid && t_str.is_none() {
+                continue;
             }
 
-            if valid_dindex {
-                // Per-pool stats
-                let t_st = t_stats.get(&(scope, d)).copied().unwrap_or((0, 0, 0));
-                let s_st = s_stats.get(&(1, scope, d)).copied().unwrap_or((0, 0, 0));
-                let o_st = s_stats.get(&(2, scope, d)).copied().unwrap_or((0, 0, 0));
+            // Per-pool stats
+            let t_st = t_stats.get(&(scope, d)).copied().unwrap_or((0, 0, 0));
+            let s_st = s_stats.get(&(1, scope, d)).copied().unwrap_or((0, 0, 0));
+            let o_st = s_stats.get(&(2, scope, d)).copied().unwrap_or((0, 0, 0));
 
-                // Derive addresses for selected pools
-                let mut t_addr_raw: Option<TransparentAddress> = None;
-                let t_str = if selected.has_pool(0) {
-                    let taddr = match (&tkeys.xvk, &tkeys.ivk) {
-                        (Some(tvk), _) => Some(
-                            crate::account::derive_transparent_address(tvk, scope as u32, d, false)?.1,
-                        ),
-                        (None, Some(ivk)) => Some(derive_transparent_address_from_ivk(ivk, d)?.1),
-                        (None, None) => None,
-                    };
-                    t_addr_raw = taddr;
-                    taddr.map(|taddr| taddr.encode(network))
-                } else {
-                    None
-                };
+            let t_addr_raw: Option<TransparentAddress> = t_str
+                .as_deref()
+                .map(|a| TransparentAddress::decode(network, a))
+                .transpose()
+                .map_err(|e| anyhow!("invalid stored transparent address for account {account}: {e}"))?;
 
-                let mut s_addr_raw: Option<sapling_crypto::PaymentAddress> = None;
-                let s_str = if selected.has_pool(1) {
-                    s_addr_raw = match (&skeys.xvk, &skeys.ivk) {
-                        (Some(dfvk), _) => {
-                            dfvk.sapling_address_at(scope, d as u64, internal_sap_ivk.as_ref())
-                        }
-                        (None, Some(ivk)) => ivk.address_at(d as u64),
-                        (None, None) => None,
-                    };
-                    s_addr_raw.as_ref().map(|pa| pa.encode(network))
-                } else {
-                    None
-                };
-
-                let mut o_addr_raw: Option<orchard::Address> = None;
-                let o_str = if selected.has_pool(2) {
-                    o_addr_raw = match (&okeys.xvk, &okeys.ivk) {
-                        (Some(fvk), _) => Some(fvk.address_at(d as u64, scope.orchard_scope())),
-                        (None, Some(ivk)) => Some(ivk.address_at(d as u64)),
-                        (None, None) => None,
-                    };
-                    o_addr_raw.map(|addr| {
-                        UnifiedAddress::from_receivers(Some(addr), None, None, None, None)
-                            .unwrap()
-                            .encode(network)
-                    })
-                } else {
-                    None
-                };
-
-                if aggregate {
-                    if let Some(ua) = UnifiedAddress::from_receivers(
-                        o_addr_raw, s_addr_raw, t_addr_raw, None, None,
-                    ) {
-                        results.push(TAddressTxCount {
-                            pool: 0,
-                            address: ua.encode(network),
-                            scope,
-                            dindex: d,
-                            amount: t_st.0.wrapping_add(s_st.0).wrapping_add(o_st.0),
-                            tx_count: t_st.1.wrapping_add(s_st.1).wrapping_add(o_st.1),
-                            time: t_st.2.max(s_st.2).max(o_st.2),
-                        });
+            let mut s_addr_raw: Option<sapling_crypto::PaymentAddress> = None;
+            let s_str = if sapling_valid && selected.has_pool(1) {
+                s_addr_raw = match (&skeys.xvk, &skeys.ivk) {
+                    (Some(dfvk), _) => {
+                        dfvk.sapling_address_at(scope, d as u64, internal_sap_ivk.as_ref())
                     }
-                } else {
-                    if let Some(addr) = t_str {
-                        results.push(TAddressTxCount {
-                            pool: 0,
-                            address: addr,
-                            scope,
-                            dindex: d,
-                            amount: t_st.0,
-                            tx_count: t_st.1,
-                            time: t_st.2,
-                        });
-                    }
-                    if let Some(addr) = s_str {
-                        results.push(TAddressTxCount {
-                            pool: 1,
-                            address: addr,
-                            scope,
-                            dindex: d,
-                            amount: s_st.0,
-                            tx_count: s_st.1,
-                            time: s_st.2,
-                        });
-                    }
-                    if let Some(addr) = o_str {
-                        results.push(TAddressTxCount {
-                            pool: 2,
-                            address: addr,
-                            scope,
-                            dindex: d,
-                            amount: o_st.0,
-                            tx_count: o_st.1,
-                            time: o_st.2,
-                        });
-                    }
-                }
-            } else if d == 0 && selected.has_pool(0) {
-                // Fallback: sapling address invalid at this slot, but d=0
-                // always produces a valid transparent address.
-                let t_st = t_stats.get(&(scope, 0)).copied().unwrap_or((0, 0, 0));
-
-                let t_str = match (&tkeys.xvk, &tkeys.ivk) {
-                    (Some(tvk), _) => Some(
-                        crate::account::derive_transparent_address(tvk, scope as u32, 0, false)?
-                            .1
-                            .encode(network),
-                    ),
-                    (None, Some(ivk)) => {
-                        Some(derive_transparent_address_from_ivk(ivk, 0)?.1.encode(network))
-                    }
+                    (None, Some(ivk)) => ivk.address_at(d as u64),
                     (None, None) => None,
                 };
+                s_addr_raw.as_ref().map(|pa| pa.encode(network))
+            } else {
+                None
+            };
 
-                // Aggregate of 1 taddr is the taddr itself.
+            let mut o_addr_raw: Option<orchard::Address> = None;
+            let o_str = if sapling_valid && selected.has_pool(2) {
+                o_addr_raw = match (&okeys.xvk, &okeys.ivk) {
+                    (Some(fvk), _) => Some(fvk.address_at(d as u64, scope.orchard_scope())),
+                    (None, Some(ivk)) => Some(ivk.address_at(d as u64)),
+                    (None, None) => None,
+                };
+                o_addr_raw.map(|addr| {
+                    UnifiedAddress::from_receivers(Some(addr), None, None, None, None)
+                        .unwrap()
+                        .encode(network)
+                })
+            } else {
+                None
+            };
+
+            if aggregate {
+                if let Some(ua) =
+                    UnifiedAddress::from_receivers(o_addr_raw, s_addr_raw, t_addr_raw, None, None)
+                {
+                    results.push(TAddressTxCount {
+                        pool: 0,
+                        address: ua.encode(network),
+                        scope,
+                        dindex: d,
+                        amount: t_st.0.wrapping_add(s_st.0).wrapping_add(o_st.0),
+                        tx_count: t_st.1.wrapping_add(s_st.1).wrapping_add(o_st.1),
+                        time: t_st.2.max(s_st.2).max(o_st.2),
+                    });
+                }
+            } else {
                 if let Some(addr) = t_str {
                     results.push(TAddressTxCount {
                         pool: 0,
                         address: addr,
                         scope,
-                        dindex: 0,
+                        dindex: d,
                         amount: t_st.0,
                         tx_count: t_st.1,
                         time: t_st.2,
+                    });
+                }
+                if let Some(addr) = s_str {
+                    results.push(TAddressTxCount {
+                        pool: 1,
+                        address: addr,
+                        scope,
+                        dindex: d,
+                        amount: s_st.0,
+                        tx_count: s_st.1,
+                        time: s_st.2,
+                    });
+                }
+                if let Some(addr) = o_str {
+                    results.push(TAddressTxCount {
+                        pool: 2,
+                        address: addr,
+                        scope,
+                        dindex: d,
+                        amount: o_st.0,
+                        tx_count: o_st.1,
+                        time: o_st.2,
                     });
                 }
             }
@@ -3350,5 +3326,110 @@ mod lock_tests {
         // It waited for the writer rather than skipping the lock somehow.
         assert!(started.elapsed() >= HOLD / 2, "did not wait: {:?}", started.elapsed());
         let _ = std::fs::remove_file(&path);
+    }
+}
+
+#[cfg(test)]
+mod address_page_tests {
+    use super::*;
+    use crate::{api::account::NewAccount, pay::pool::{ALL_POOLS, POOL_TRANSPARENT}};
+
+    const MNEMONIC: &str = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about";
+    const WIF: &str = "L4jNzRuAe1kHvGj7N5UXd3m9erYWRkV6EnXiHR6AoMM37dEzUkTV";
+    const NETWORK: Network = Network::Main;
+
+    async fn account(key: &str) -> (SqliteConnection, u32) {
+        account_with(key, None).await
+    }
+
+    async fn account_with(key: &str, use_internal: Option<bool>) -> (SqliteConnection, u32) {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await.unwrap();
+        crate::db::create_schema(&mut db).await.unwrap();
+        let na = NewAccount {
+            icon: None,
+            name: "a".into(),
+            restore: true,
+            key: key.into(),
+            passphrase: None,
+            fingerprint: None,
+            aindex: 0,
+            birth: Some(1),
+            folder: String::new(),
+            pools: Some(ALL_POOLS),
+            use_internal,
+            internal: false,
+            hw: 0,
+        };
+        let id = new_account(&NETWORK, &mut db, &na).await.unwrap();
+        (db, id)
+    }
+
+    /// `(scope, index, address)` of the stored transparent rows, the
+    /// addresses sync watches.
+    async fn stored(db: &mut SqliteConnection, id: u32) -> Vec<(u8, u32, String)> {
+        sqlx::query_as::<_, (u32, u32, String)>(
+            "SELECT scope, dindex, address FROM transparent_address_accounts
+            WHERE account = ? ORDER BY scope, dindex",
+        )
+        .bind(id)
+        .fetch_all(db)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|(s, d, a)| (s as u8, d, a))
+        .collect()
+    }
+
+    /// The same, as the addresses page lists them.
+    async fn page(db: &mut SqliteConnection, id: u32) -> Vec<(u8, u32, String)> {
+        fetch_address_tx_count(&NETWORK, db, id, false, POOL_TRANSPARENT)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|r| (r.scope, r.dindex, r.address))
+            .collect()
+    }
+
+    /// The change twin is stored at the external index whatever the
+    /// internal Sapling key resolves there, and the page lists it.
+    #[tokio::test]
+    async fn the_page_lists_every_stored_transparent_address_of_a_seed_account() {
+        let (mut db, id) = account(MNEMONIC).await;
+        for _ in 0..3 {
+            generate_next_dindex(&NETWORK, &mut db, id).await.unwrap();
+        }
+        let stored = stored(&mut db, id).await;
+        assert_eq!(page(&mut db, id).await, stored);
+        // Past the second new address the indices Sapling resolved
+        // externally are internally invalid: the rows the internal gate hid.
+        let change: Vec<u32> = stored.iter().filter(|r| r.0 == 1).map(|r| r.1).collect();
+        assert_eq!(change, [0, 1, 3, 4], "{stored:?}");
+    }
+
+    /// An account that sends change to its external addresses stores no
+    /// change rows, so the page lists none, like the tree.
+    #[tokio::test]
+    async fn the_page_lists_no_transparent_change_rows_without_internal_change() {
+        let seed = bip39::Mnemonic::from_str(MNEMONIC).unwrap().to_seed("");
+        let xprv = ExtendedPrivateKey::<SecretKey>::derive_from_path(&seed, &"m/44'/133'/0'".parse().unwrap())
+            .unwrap()
+            .to_extended_key(bip32::Prefix::XPRV)
+            .to_string();
+        let (mut db, id) = account_with(&xprv, Some(false)).await;
+        generate_next_dindex(&NETWORK, &mut db, id).await.unwrap();
+        let stored = stored(&mut db, id).await;
+        assert!(stored.iter().all(|r| r.0 == 0), "{stored:?}");
+        assert_eq!(stored.len(), 2);
+        assert_eq!(page(&mut db, id).await, stored);
+    }
+
+    /// A single imported key has no extended key to derive from: the page
+    /// lists its one stored address.
+    #[tokio::test]
+    async fn the_page_lists_the_address_of_a_single_key_account() {
+        let (mut db, id) = account(WIF).await;
+        let stored = stored(&mut db, id).await;
+        assert_eq!(stored.len(), 1, "{stored:?}");
+        assert_eq!(page(&mut db, id).await, stored);
     }
 }
