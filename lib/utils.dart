@@ -678,9 +678,6 @@ Widget blank(BuildContext context) => SizedBox.expand(
       ),
     );
 
-Widget showLoading(String area) =>
-    Material(child: Padding(padding: EdgeInsetsGeometry.all(8), child: Text("Loading $area...", style: TextStyle(fontSize: 17))));
-
 Widget showError(Object error) =>
     Material(child: Padding(padding: EdgeInsetsGeometry.all(8), child: Text("Error $error...", style: TextStyle(fontSize: 21, color: Colors.red))));
 
