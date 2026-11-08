@@ -2489,73 +2489,6 @@ pub async fn tx_memos(
 /// Per-address transaction statistics for an account, one row per
 /// (scope, diversifier index, pool) of the selected pools, or one aggregated
 /// unified-address row per slot when `aggregate` is set.
-/// The internal Sapling incoming key of an account, which finds its
-/// change addresses; `None` without a full Sapling key.
-pub(crate) fn internal_sapling_ivk(
-    skeys: &crate::db::SaplingKeys,
-) -> Option<sapling_crypto::zip32::IncomingViewingKey> {
-    skeys.xvk.as_ref().and_then(|dfvk| {
-        let dfvk_bytes = dfvk.to_bytes();
-        let dk_bytes: [u8; 32] = dfvk_bytes[96..128].try_into().ok()?;
-        let dk = sapling_crypto::zip32::DiversifierKey::from_bytes(dk_bytes);
-        let (int_fvk, int_dk) = sapling_derive_internal_fvk(dfvk.fvk(), &dk)?;
-        let mut ivk_bytes = [0u8; 64];
-        ivk_bytes[..32].copy_from_slice(int_dk.as_bytes());
-        ivk_bytes[32..].copy_from_slice(&int_fvk.vk.ivk().to_repr());
-        sapling_crypto::zip32::IncomingViewingKey::from_bytes(&ivk_bytes).into_option()
-    })
-}
-
-/// Whether the account's Sapling key has an address at `(scope, d)`, or
-/// the account has no Sapling key to object. Sapling validity gates an
-/// address slot for every pool: see `fetch_address_tx_count`.
-pub(crate) fn slot_has_sapling_address(
-    skeys: &crate::db::SaplingKeys,
-    internal_ivk: Option<&sapling_crypto::zip32::IncomingViewingKey>,
-    scope: u8,
-    d: u32,
-) -> bool {
-    if let Some(dfvk) = skeys.xvk.as_ref() {
-        dfvk.has_sapling_address(scope, d as u64, internal_ivk)
-    } else if let Some(ivk) = skeys.ivk.as_ref() {
-        ivk.address_at(d as u64).is_some()
-    } else {
-        true
-    }
-}
-
-/// The scopes an account lists addresses for. An incoming key derives the
-/// external scope only, so an account with no full key for any pool lists
-/// external rows alone (#1568).
-pub(crate) fn address_scopes(has_full_key: bool) -> &'static [u8] {
-    if has_full_key {
-        &[0, 1]
-    } else {
-        &[0]
-    }
-}
-
-/// The transparent address slots the addresses page lists for an account
-/// with transparent keys: every diversifier index up to `dindex`, in the
-/// scopes of `address_scopes`, where Sapling has an address, plus index 0,
-/// which always has a transparent address.
-pub(crate) fn transparent_address_slots(
-    skeys: &crate::db::SaplingKeys,
-    has_full_key: bool,
-    dindex: u32,
-) -> Vec<(u8, u32)> {
-    let internal_ivk = internal_sapling_ivk(skeys);
-    let mut slots = vec![];
-    for &scope in address_scopes(has_full_key) {
-        for d in 0..=dindex {
-            if d == 0 || slot_has_sapling_address(skeys, internal_ivk.as_ref(), scope, d) {
-                slots.push((scope, d));
-            }
-        }
-    }
-    slots
-}
-
 pub async fn fetch_address_tx_count(
     network: &Network,
     connection: &mut SqliteConnection,
@@ -2619,19 +2552,42 @@ pub async fn fetch_address_tx_count(
         .map(|s| ((s.pool, s.scope, s.dindex), (s.amount, s.tx_count, s.time)))
         .collect();
 
-    let internal_sap_ivk = internal_sapling_ivk(&skeys);
+    // Pre-compute internal Sapling IVK
+    let internal_sap_ivk: Option<sapling_crypto::zip32::IncomingViewingKey> =
+        skeys.xvk.as_ref().and_then(|dfvk| {
+            let dfvk_bytes = dfvk.to_bytes();
+            let dk_bytes: [u8; 32] = dfvk_bytes[96..128].try_into().ok()?;
+            let dk = sapling_crypto::zip32::DiversifierKey::from_bytes(dk_bytes);
+            let (int_fvk, int_dk) = sapling_derive_internal_fvk(dfvk.fvk(), &dk)?;
+            let mut ivk_bytes = [0u8; 64];
+            ivk_bytes[..32].copy_from_slice(int_dk.as_bytes());
+            ivk_bytes[32..].copy_from_slice(&int_fvk.vk.ivk().to_repr());
+            sapling_crypto::zip32::IncomingViewingKey::from_bytes(&ivk_bytes).into_option()
+        });
 
     let mut results = Vec::new();
 
+    // An incoming key derives the external scope only, so an account with
+    // no full key for any pool lists external rows alone (#1568).
     let has_full_key = tkeys.xvk.is_some() || skeys.xvk.is_some() || okeys.xvk.is_some();
-    let scopes = address_scopes(has_full_key);
+    let scopes: &[u8] = if has_full_key { &[0, 1] } else { &[0] };
 
     for &scope in scopes {
         for d in 0..=dindex {
-            // Sapling diversifier validity gates the entire slot: if the
+            // Determine if this (scope, d) slot is valid.
+            // Sapling diversifier validity gates the entire slot — if the
             // account has sapling keys and the address at this diversifier
             // index is invalid, only the transparent fallback at d=0 applies.
-            let valid_dindex = slot_has_sapling_address(&skeys, internal_sap_ivk.as_ref(), scope, d);
+            let mut valid_dindex = true;
+            if let Some(dfvk) = skeys.xvk.as_ref() {
+                if !dfvk.has_sapling_address(scope, d as u64, internal_sap_ivk.as_ref()) {
+                    valid_dindex = false;
+                }
+            } else if let Some(ivk) = skeys.ivk.as_ref() {
+                if ivk.address_at(d as u64).is_none() {
+                    valid_dindex = false;
+                }
+            }
 
             if valid_dindex {
                 // Per-pool stats
