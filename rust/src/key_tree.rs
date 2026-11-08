@@ -592,6 +592,41 @@ mod tests {
         assert!(decoded.p2pkh().is_none() && decoded.orchard().is_none());
     }
 
+    /// The tree's address leaves and the addresses page's transparent rows
+    /// come from the same stored rows, so they agree: here past the indices
+    /// Sapling skipped, with change rows at the external indices.
+    #[tokio::test]
+    async fn the_address_leaves_are_the_addresses_pages_transparent_rows() {
+        let mut db = open_db().await;
+        let id = account(&mut db, MNEMONIC).await;
+        for _ in 0..3 {
+            crate::account::generate_next_dindex(&NETWORK, &mut db, id).await.unwrap();
+        }
+        let root = tree(&mut db, id).await;
+        let leaves: Vec<(u8, u32, String)> = child(&root, "Transparent")
+            .children
+            .iter()
+            .map(|c| {
+                let (scope, n) = match c.name.split_once(" #") {
+                    Some(("External", n)) => (0u8, n),
+                    Some(("Change", n)) => (1u8, n),
+                    _ => panic!("not an address node: {}", c.name),
+                };
+                (scope, n.parse().unwrap(), c.detail.clone().unwrap())
+            })
+            .collect();
+        let page: Vec<(u8, u32, String)> =
+            crate::account::fetch_address_tx_count(&NETWORK, &mut db, id, false, POOL_TRANSPARENT)
+                .await
+                .unwrap()
+                .into_iter()
+                .map(|r| (r.scope, r.dindex, r.address))
+                .collect();
+        assert_eq!(leaves, page);
+        let change: Vec<u32> = leaves.iter().filter(|r| r.0 == 1).map(|r| r.1).collect();
+        assert_eq!(change, [0, 1, 3, 4], "{leaves:?}");
+    }
+
     /// Viewing-only unified accounts have no secret face anywhere; the root
     /// is the unified key and the pool nodes carry their bare viewing keys.
     #[tokio::test]
