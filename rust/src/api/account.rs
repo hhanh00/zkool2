@@ -81,6 +81,43 @@ pub struct Seed {
     pub aindex: u32,
 }
 
+/// Every key of the account as a tree: the key that created the account at
+/// the root, what derives from it below. `None` for a Ledger account, whose
+/// keys never leave the device. See `key_tree::get_account_key_tree`.
+#[cfg_attr(feature = "flutter", frb)]
+pub async fn get_account_key_tree(account: u32, c: &Coin) -> Result<Option<KeyNode>> {
+    let mut connection = c.get_connection().await?;
+    crate::key_tree::get_account_key_tree(&c.network(), &mut connection, account).await
+}
+
+/// One face of a [`KeyNode`]: what the node shows in secret or in viewing
+/// mode. `value` is `None` when the node has nothing on that face, which the
+/// page shows as N/A; `note` explains the face when it needs explaining.
+#[cfg_attr(feature = "flutter", frb)]
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+pub struct KeyFace {
+    pub label: String,
+    pub value: Option<String>,
+    pub note: Option<String>,
+}
+
+/// A node of the key tree. The same tree serves both modes of the Key Tree
+/// page: each node carries a secret face and a viewing face, so flipping the
+/// mode changes no node and keeps what the user expanded.
+#[cfg_attr(feature = "flutter", frb)]
+#[cfg_attr(feature = "flutter", frb(dart_metadata = ("freezed")))]
+pub struct KeyNode {
+    pub name: String,
+    /// Part of the creation key: the Viewing Keys page shows these nodes
+    /// in its backup block, the root always and a seed's passphrase and index.
+    pub summary: bool,
+    pub secret: KeyFace,
+    pub viewing: KeyFace,
+    /// Shown on both faces: the address of a transparent address node.
+    pub detail: Option<String>,
+    pub children: Vec<KeyNode>,
+}
+
 #[cfg_attr(feature = "flutter", frb)]
 pub async fn get_account_fingerprint(account: u32, c: &Coin) -> Result<Option<String>> {
     let mut connection = c.get_connection().await?;

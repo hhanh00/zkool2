@@ -23,7 +23,7 @@ class _Api implements RustLibApi {
   Coin crateApiCoinCoinNew({int? defaultCoin}) => _FakeCoin();
 
   @override
-  Future<Seed?> crateApiAccountGetAccountSeed({required int account, required Coin c}) async => null;
+  Future<KeyNode?> crateApiAccountGetAccountKeyTree({required int account, required Coin c}) async => null;
 
   @override
   Future<int> crateApiAccountGetAccountPools({required int account, required Coin c}) async => 7;

@@ -11,6 +11,7 @@ import asyncio
 import contextlib
 import os
 import shutil
+import sys
 from decimal import Decimal
 
 import pytest
@@ -191,6 +192,8 @@ async def test_key_types_flutter_ui(rpc_url, seed, zkool_binary):
             recipient=recipient,
             spend=SPEND,
             cases=cases,
+            # The backup block is behind authenticate(): Touch ID on macOS, open on Linux.
+            biometric_gate=sys.platform == "darwin",
         )
         flutter = await launch_flutter_test("key_types_ui_test.dart", rendezvous, FLUTTER_LOG)
         await rendezvous.poll_ui("phase", timeout=BUILD_TIMEOUT, process=flutter)

@@ -9,6 +9,7 @@ import 'package:zkool/pages/category.dart';
 import 'package:zkool/pages/contact_editor.dart';
 import 'package:zkool/pages/contacts.dart';
 import 'package:zkool/pages/folder.dart';
+import 'package:zkool/pages/key_tree.dart';
 import 'package:zkool/pages/account.dart';
 import 'package:zkool/pages/accounts.dart';
 import 'package:zkool/pages/currency.dart';
@@ -99,6 +100,10 @@ GoRouter router(bool disclaimerAccepted, bool recoveryMode, {String? initialLoca
         GoRoute(
           path: '/viewing_keys',
           builder: (context, state) => ViewingKeysPage(state.extra as int),
+        ),
+        GoRoute(
+          path: '/key_tree',
+          builder: (context, state) => KeyTreePage(state.extra as int),
         ),
         GoRoute(
           path: '/receive',

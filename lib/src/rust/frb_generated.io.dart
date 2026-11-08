@@ -271,6 +271,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64 dco_decode_box_autoadd_i_64(dynamic raw);
 
   @protected
+  KeyNode dco_decode_box_autoadd_key_node(dynamic raw);
+
+  @protected
   MempoolTx dco_decode_box_autoadd_mempool_tx(dynamic raw);
 
   @protected
@@ -367,6 +370,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64 dco_decode_isize(dynamic raw);
 
   @protected
+  KeyFace dco_decode_key_face(dynamic raw);
+
+  @protected
+  KeyNode dco_decode_key_node(dynamic raw);
+
+  @protected
   List<String> dco_decode_list_String(dynamic raw);
 
   @protected
@@ -392,6 +401,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   List<FrostRestore> dco_decode_list_frost_restore(dynamic raw);
+
+  @protected
+  List<KeyNode> dco_decode_list_key_node(dynamic raw);
 
   @protected
   List<Uint8List> dco_decode_list_list_prim_u_8_strict(dynamic raw);
@@ -559,6 +571,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PlatformInt64? dco_decode_opt_box_autoadd_i_64(dynamic raw);
+
+  @protected
+  KeyNode? dco_decode_opt_box_autoadd_key_node(dynamic raw);
 
   @protected
   Seed? dco_decode_opt_box_autoadd_seed(dynamic raw);
@@ -946,6 +961,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64 sse_decode_box_autoadd_i_64(SseDeserializer deserializer);
 
   @protected
+  KeyNode sse_decode_box_autoadd_key_node(SseDeserializer deserializer);
+
+  @protected
   MempoolTx sse_decode_box_autoadd_mempool_tx(SseDeserializer deserializer);
 
   @protected
@@ -1047,6 +1065,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   PlatformInt64 sse_decode_isize(SseDeserializer deserializer);
 
   @protected
+  KeyFace sse_decode_key_face(SseDeserializer deserializer);
+
+  @protected
+  KeyNode sse_decode_key_node(SseDeserializer deserializer);
+
+  @protected
   List<String> sse_decode_list_String(SseDeserializer deserializer);
 
   @protected
@@ -1075,6 +1099,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   List<FrostRestore> sse_decode_list_frost_restore(
       SseDeserializer deserializer);
+
+  @protected
+  List<KeyNode> sse_decode_list_key_node(SseDeserializer deserializer);
 
   @protected
   List<Uint8List> sse_decode_list_list_prim_u_8_strict(
@@ -1253,6 +1280,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
 
   @protected
   PlatformInt64? sse_decode_opt_box_autoadd_i_64(SseDeserializer deserializer);
+
+  @protected
+  KeyNode? sse_decode_opt_box_autoadd_key_node(SseDeserializer deserializer);
 
   @protected
   Seed? sse_decode_opt_box_autoadd_seed(SseDeserializer deserializer);
@@ -1658,6 +1688,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
       PlatformInt64 self, SseSerializer serializer);
 
   @protected
+  void sse_encode_box_autoadd_key_node(KeyNode self, SseSerializer serializer);
+
+  @protected
   void sse_encode_box_autoadd_mempool_tx(
       MempoolTx self, SseSerializer serializer);
 
@@ -1768,6 +1801,12 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   void sse_encode_isize(PlatformInt64 self, SseSerializer serializer);
 
   @protected
+  void sse_encode_key_face(KeyFace self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_key_node(KeyNode self, SseSerializer serializer);
+
+  @protected
   void sse_encode_list_String(List<String> self, SseSerializer serializer);
 
   @protected
@@ -1796,6 +1835,9 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_list_frost_restore(
       List<FrostRestore> self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_list_key_node(List<KeyNode> self, SseSerializer serializer);
 
   @protected
   void sse_encode_list_list_prim_u_8_strict(
@@ -1991,6 +2033,10 @@ abstract class RustLibApiImplPlatform extends BaseApiImpl<RustLibWire> {
   @protected
   void sse_encode_opt_box_autoadd_i_64(
       PlatformInt64? self, SseSerializer serializer);
+
+  @protected
+  void sse_encode_opt_box_autoadd_key_node(
+      KeyNode? self, SseSerializer serializer);
 
   @protected
   void sse_encode_opt_box_autoadd_seed(Seed? self, SseSerializer serializer);

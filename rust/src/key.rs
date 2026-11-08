@@ -91,7 +91,7 @@ async fn account_viewing_key(
 /// An xpub over `data`, the 32-byte chain code followed by the 33-byte
 /// public key, at `depth` and `child_number`. The parent fingerprint is
 /// a dummy: the key's own derivation path is not recorded.
-fn xpub(data: &[u8], depth: u8, child_number: ChildNumber) -> Result<String> {
+pub(crate) fn xpub(data: &[u8], depth: u8, child_number: ChildNumber) -> Result<String> {
     xpub_impl(data, depth, child_number)
 }
 

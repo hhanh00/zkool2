@@ -384,8 +384,8 @@ void main() {
       final shielded = (await tester.runAsync(() => getAccountUivk(account: a, pools: pools & ~1, c: coinContext.coin)))!;
       expect(copyableWith(shielded), findsOneWidget, reason: "the incoming key without the transparent pool");
       if (!biometricGate) {
-        await tapTooltip(tester, "Show Seed Phrase");
-        await pumpUntil(tester, () => find.text("Mnemonic").evaluate().isNotEmpty,
+        await tapTooltip(tester, "Show Backup Keys");
+        await pumpUntil(tester, () => find.text("Seed phrase").evaluate().isNotEmpty,
             timeout: shortTimeout, what: "the seed phrase",);
       }
       await _back(tester);
