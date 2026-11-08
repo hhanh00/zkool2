@@ -1622,6 +1622,44 @@ pub async fn list_transparent_address_keys(
 
 /// An account's stored keys for one pool. A full account has `xvk` (and
 /// `xsk` when it can spend); an incoming-only account has `ivk` alone.
+/// One transparent address of an account with its key material, as the
+/// `transparent_address_accounts` row holds it: `sk` when the account can
+/// spend from it, `pk` always. These rows are the account's transparent
+/// addresses: sync watches them, signing spends from them, and the
+/// addresses page and the key tree both list them.
+pub struct TransparentAddressKey {
+    pub scope: u8,
+    pub dindex: u32,
+    pub sk: Option<Vec<u8>>,
+    pub pk: Vec<u8>,
+    pub address: String,
+    pub uncompressed: bool,
+}
+
+/// Every transparent address of an account, external then change, by index.
+pub async fn list_transparent_address_keys(
+    connection: &mut SqliteConnection,
+    account: u32,
+) -> Result<Vec<TransparentAddressKey>> {
+    let rows = sqlx::query(
+        "SELECT scope, dindex, sk, pk, address, uncompressed
+        FROM transparent_address_accounts WHERE account = ?
+        ORDER BY scope, dindex",
+    )
+    .bind(account)
+    .map(|row: SqliteRow| TransparentAddressKey {
+        scope: row.get::<u32, _>(0) as u8,
+        dindex: row.get(1),
+        sk: row.get(2),
+        pk: row.get(3),
+        address: row.get(4),
+        uncompressed: row.get(5),
+    })
+    .fetch_all(&mut *connection)
+    .await?;
+    Ok(rows)
+}
+
 pub struct TransparentKeys {
     pub xsk: Option<AccountPrivKey>,
     pub xvk: Option<AccountPubKey>,
