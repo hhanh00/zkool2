@@ -25,6 +25,7 @@ use zcash_protocol::consensus::Parameters as _;
 use zcash_transparent::keys::IncomingViewingKey as _;
 
 use crate::{
+    account::transparent_address_slots,
     api::{
         account::{KeyFace, KeyNode},
         coin::Network,
@@ -37,6 +38,7 @@ use crate::{
     },
     key::{get_account_ufvk, xpub},
     pay::pool::{POOL_IRONWOOD, POOL_ORCHARD, POOL_SAPLING, POOL_TRANSPARENT},
+    transparent_keys::TransparentKeySource,
 };
 
 const ORCHARD_SECRET_NOTE: &str = "Not shown: the Orchard spending key has no standard encoding \
@@ -87,7 +89,7 @@ pub async fn get_account_key_tree(
     let tkeys = select_account_transparent(connection, account, dindex).await?;
     let skeys = select_account_sapling(network, connection, account).await?;
     let okeys = select_account_orchard(connection, account).await?;
-    let addresses = list_transparent_address_keys(connection, account).await?;
+    let addresses = transparent_addresses(network, connection, account, &tkeys, &skeys, &okeys, dindex).await?;
     let seed = crate::account::get_account_seed(connection, account).await?;
     let frost = is_frost(connection, account).await?;
     let incoming_only = is_incoming_only(connection, account).await?;
@@ -157,6 +159,39 @@ pub async fn get_account_key_tree(
     };
     root.summary = true;
     Ok(Some(root))
+}
+
+/// The transparent addresses of the account, the ones the addresses page
+/// lists: every slot of `transparent_address_slots`, derived from the
+/// account key with its secret when the account has one. A single imported
+/// key, WIF or public key, has no extended key to derive from: its one
+/// stored address is the account.
+async fn transparent_addresses(
+    network: &Network,
+    connection: &mut SqliteConnection,
+    account: u32,
+    tkeys: &TransparentKeys,
+    skeys: &SaplingKeys,
+    okeys: &OrchardKeys,
+    dindex: u32,
+) -> Result<Vec<TransparentAddressKey>> {
+    let Some(source) = TransparentKeySource::try_load(connection, account).await? else {
+        return list_transparent_address_keys(connection, account).await;
+    };
+    let has_full_key = tkeys.xvk.is_some() || skeys.xvk.is_some() || okeys.xvk.is_some();
+    let mut addresses = vec![];
+    for (scope, d) in transparent_address_slots(skeys, has_full_key, dindex) {
+        let derived = source.derive(network, scope as u32, d).await?;
+        addresses.push(TransparentAddressKey {
+            scope,
+            dindex: d,
+            sk: derived.sk,
+            pk: derived.pk,
+            address: derived.address,
+            uncompressed: false,
+        });
+    }
+    Ok(addresses)
 }
 
 async fn is_frost(connection: &mut SqliteConnection, account: u32) -> Result<bool> {
@@ -383,8 +418,8 @@ mod tests {
         db
     }
 
-    async fn account(db: &mut SqliteConnection, key: &str) -> u32 {
-        let na = NewAccount {
+    fn new_account_request(key: &str) -> NewAccount {
+        NewAccount {
             icon: None,
             name: "a".into(),
             restore: true,
@@ -398,8 +433,11 @@ mod tests {
             use_internal: None,
             internal: false,
             hw: 0,
-        };
-        new_account(&NETWORK, db, &na).await.unwrap()
+        }
+    }
+
+    async fn account(db: &mut SqliteConnection, key: &str) -> u32 {
+        new_account(&NETWORK, db, &new_account_request(key)).await.unwrap()
     }
 
     async fn tree(db: &mut SqliteConnection, account: u32) -> KeyNode {
@@ -590,6 +628,78 @@ mod tests {
             usk().sapling().to_diversifiable_full_viewing_key().to_bytes()
         );
         assert!(decoded.p2pkh().is_none() && decoded.orchard().is_none());
+    }
+
+    /// The transparent rows of the addresses page, `(scope, index, address)`.
+    async fn page_rows(db: &mut SqliteConnection, id: u32) -> Vec<(u8, u32, String)> {
+        crate::account::fetch_address_tx_count(&NETWORK, db, id, false, POOL_TRANSPARENT)
+            .await
+            .unwrap()
+            .into_iter()
+            .map(|r| (r.scope, r.dindex, r.address))
+            .collect()
+    }
+
+    fn tree_rows(t: &KeyNode) -> Vec<(u8, u32, String)> {
+        t.children
+            .iter()
+            .map(|c| {
+                let (scope, n) = match c.name.split_once(" #") {
+                    Some(("External", n)) => (0u8, n),
+                    Some(("Change", n)) => (1u8, n),
+                    _ => panic!("not an address node: {}", c.name),
+                };
+                (scope, n.parse().unwrap(), c.detail.clone().unwrap())
+            })
+            .collect()
+    }
+
+    /// The tree lists the transparent addresses the addresses page lists,
+    /// no more and no fewer: indices the account skipped, change addresses
+    /// of an account that sends change elsewhere, nothing the page lacks.
+    #[tokio::test]
+    async fn the_transparent_addresses_are_the_ones_the_addresses_page_lists() {
+        // A seed account: Sapling skips the indices without an address.
+        let mut db = open_db().await;
+        let id = account(&mut db, MNEMONIC).await;
+        for _ in 0..3 {
+            crate::account::generate_next_dindex(&NETWORK, &mut db, id).await.unwrap();
+        }
+        let root = tree(&mut db, id).await;
+        let rows = tree_rows(child(&root, "Transparent"));
+        assert_eq!(rows, page_rows(&mut db, id).await);
+        assert!(rows.len() > 2, "{rows:?}");
+        // Every row with the account key has its key.
+        for a in &child(&root, "Transparent").children {
+            let wif = crate::bip38::import_tsk(a.secret.value.as_deref().unwrap()).unwrap();
+            assert_eq!(wif.0.public_key().serialize().to_vec(), {
+                let (_, pk) = crate::key::decode_bech32::<Bech32>(a.viewing.value.as_deref().unwrap()).unwrap();
+                pk
+            });
+        }
+
+        // An xprv account without internal change: the page lists change
+        // addresses all the same, so the tree does too.
+        let mut db = open_db().await;
+        let mut na = new_account_request(&xprv_string());
+        na.use_internal = Some(false);
+        let id = new_account(&NETWORK, &mut db, &na).await.unwrap();
+        crate::account::generate_next_dindex(&NETWORK, &mut db, id).await.unwrap();
+        let root = tree(&mut db, id).await;
+        let rows = tree_rows(&root);
+        assert_eq!(rows, page_rows(&mut db, id).await);
+        assert_eq!(rows.iter().filter(|r| r.0 == 1).count(), 2, "{rows:?}");
+
+        // A viewing key account: external addresses only, from the page's
+        // incoming key.
+        let mut db = open_db().await;
+        let ufvk = usk().to_unified_full_viewing_key();
+        let id = account(&mut db, &ufvk.to_unified_incoming_viewing_key().encode(&NETWORK).unwrap()).await;
+        crate::account::generate_next_dindex(&NETWORK, &mut db, id).await.unwrap();
+        let root = tree(&mut db, id).await;
+        let rows = tree_rows(child(&root, "Transparent"));
+        assert_eq!(rows, page_rows(&mut db, id).await);
+        assert!(rows.iter().all(|r| r.0 == 0), "{rows:?}");
     }
 
     /// Viewing-only unified accounts have no secret face anywhere; the root
