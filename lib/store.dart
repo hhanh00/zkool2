@@ -159,14 +159,23 @@ class ProgressWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final ssAV = ref.watch(syncStateAccountProvider(account.id));
-    switch (ssAV) {
-      case AsyncLoading():
-        return showLoading("Sync State");
-      case AsyncError(:final error):
-        return showError(error);
-      default:
-    }
-    final ss = ssAV.requireValue;
+    if (ssAV case AsyncError(:final error)) return showError(error);
+    // While the provider loads, the widget keeps its size: the previous
+    // value when the provider is refreshing, else the account's stored
+    // height, which is what the provider returns for an account that is
+    // not syncing. A placeholder of another size here made the account
+    // list vibrate at the end of a bounce (#1636): the provider is
+    // auto-disposed, so a row leaving and re-entering the list's build
+    // window changed height on its first frame, moving the list extent
+    // under the bounce.
+    final ss = ssAV.value ??
+        SyncProgressAccount(
+          account: account,
+          start: 0,
+          end: 0,
+          height: account.height,
+          time: account.time,
+        );
     final t = Theme.of(context);
     final timestamp = DateTime.fromMillisecondsSinceEpoch(ss.time * 1000);
     final syncAge = DateTime.now().difference(timestamp);
