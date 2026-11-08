@@ -10,6 +10,8 @@
 /// `tests/tests/test_key_types_ui.py` owns the chain, the funding and the keys.
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -72,6 +74,7 @@ void main() {
     final recipient = config["recipient"] as String;
     final spend = config["spend"] as String;
     final cases = (config["cases"] as List).map((c) => _KeyCase(c as Map<String, dynamic>)).toList();
+    final biometricGate = config["biometric_gate"] as bool? ?? false;
     expect(dbPath, contains("regtest"));
 
     final prefs = SharedPreferencesAsync();
@@ -111,6 +114,10 @@ void main() {
         step("balance of ${keyCase.name}");
         await _waitForPools(tester, keyCase, id);
       }
+
+      // ── Each key shows itself again on the backup block and the key tree ─
+      phase("keys");
+      await _checkKeyTree(tester, appRouter, {for (final c in cases) c.name: c}, ids, biometricGate: biometricGate);
 
       // ── syncIfNeeded, across every key type at once ──────────────────────
       phase("auto-sync");
@@ -203,6 +210,75 @@ Future<void> _checkAccount(WidgetTester tester, _KeyCase keyCase, int id) async 
   expect(account.incomingOnly, incoming, reason: "${keyCase.name} incoming-only flag");
   expect(find.text(_incomingBanner), incoming ? findsOneWidget : findsNothing, reason: "${keyCase.name} banner");
   expect(find.byTooltip(_sendTooltip), incoming ? findsNothing : findsOneWidget, reason: "${keyCase.name} send button");
+}
+
+Finder _copyable(String text) => find.byWidgetPredicate((w) => w is CopyableText && w.text == text);
+
+/// The xprv account shows its xprv on the backup block; its key tree has the
+/// WIF of the address the WIF case was made from, and behind the switch the
+/// xpub and public key the watch cases were made from. The Sapling spending
+/// key shows itself and, behind the switch, the viewing key the S-vk case
+/// imported. Every string is compared with the key the orchestrator holds,
+/// so the tree is checked against an independent derivation. Secret keys sit
+/// behind `authenticate()`, Touch ID on macOS, so those checks run only where
+/// the gate opens by itself; a viewing-only account has no gate.
+Future<void> _checkKeyTree(
+  WidgetTester tester,
+  GoRouter appRouter,
+  Map<String, _KeyCase> byName,
+  Map<String, int> ids, {
+  required bool biometricGate,
+}) async {
+  Future<void> open(_KeyCase keyCase) async {
+    unawaited(appRouter.push("/viewing_keys", extra: ids[keyCase.name]!));
+    await pumpUntil(tester, () => find.text("Viewing Keys").evaluate().isNotEmpty,
+        timeout: shortTimeout, what: "the viewing keys page of ${keyCase.name}",);
+    await tapTooltip(tester, "Show Backup Keys");
+    await pumpUntil(tester, () => _copyable(keyCase.key).evaluate().isNotEmpty,
+        timeout: shortTimeout, what: "the key of ${keyCase.name} on the backup block",);
+    await tester.ensureVisible(find.text("Show Key Tree"));
+    await tester.tap(find.text("Show Key Tree"));
+    await pumpUntil(tester, () => find.text("Key Tree").evaluate().isNotEmpty,
+        timeout: shortTimeout, what: "the key tree of ${keyCase.name}",);
+    await pumpUntil(tester, () => _copyable(keyCase.key).evaluate().isNotEmpty,
+        timeout: shortTimeout, what: "the root of the key tree of ${keyCase.name}",);
+  }
+
+  Future<void> flip() async {
+    await tester.tap(find.byType(Switch));
+    await pumpFor(tester, const Duration(seconds: 1));
+  }
+
+  Future<void> close() async {
+    appRouter.pop();
+    await pumpFor(tester, const Duration(milliseconds: 500));
+    appRouter.pop();
+    await pumpFor(tester, const Duration(milliseconds: 500));
+  }
+
+  if (!biometricGate) {
+    final xprv = byName["T-xprv"]!;
+    await open(xprv);
+    expect(find.text("External #0"), findsOneWidget, reason: "the first external address hangs off the xprv");
+    expect(_copyable(byName["T-wif"]!.key), findsOneWidget, reason: "External #0 is the WIF the T-wif case imported");
+    await flip();
+    expect(_copyable(byName["T-xpub"]!.key), findsOneWidget, reason: "the xpub the T-xpub case imported");
+    expect(_copyable(byName["T-zpk"]!.key), findsOneWidget, reason: "the public key the T-zpk case imported");
+    expect(_copyable(xprv.key), findsNothing, reason: "no secret in viewing mode");
+    await close();
+
+    final ssk = byName["S-sk"]!;
+    await open(ssk);
+    await flip();
+    expect(_copyable(byName["S-vk"]!.key), findsOneWidget, reason: "the viewing key the S-vk case imported");
+    await close();
+  }
+
+  // A viewing-only account opens on its viewing face and has no switch.
+  final svk = byName["S-vk"]!;
+  await open(svk);
+  expect(find.byType(Switch), findsNothing, reason: "nothing secret to switch to");
+  await close();
 }
 
 /// Waits until every pool holds what was paid to the key.

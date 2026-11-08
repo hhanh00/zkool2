@@ -20,6 +20,7 @@ pub mod frost;
 pub mod graphql;
 pub mod io;
 pub mod key;
+pub mod key_tree;
 pub mod keys;
 pub mod ledger;
 pub mod lwd;

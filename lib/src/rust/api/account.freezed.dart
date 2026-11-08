@@ -2417,6 +2417,748 @@ class __$FrostParamsCopyWithImpl<$Res> implements _$FrostParamsCopyWith<$Res> {
 }
 
 /// @nodoc
+mixin _$KeyFace {
+  String get label;
+  String? get value;
+  String? get note;
+
+  /// Create a copy of KeyFace
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $KeyFaceCopyWith<KeyFace> get copyWith =>
+      _$KeyFaceCopyWithImpl<KeyFace>(this as KeyFace, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is KeyFace &&
+            (identical(other.label, label) || other.label == label) &&
+            (identical(other.value, value) || other.value == value) &&
+            (identical(other.note, note) || other.note == note));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, label, value, note);
+
+  @override
+  String toString() {
+    return 'KeyFace(label: $label, value: $value, note: $note)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $KeyFaceCopyWith<$Res> {
+  factory $KeyFaceCopyWith(KeyFace value, $Res Function(KeyFace) _then) =
+      _$KeyFaceCopyWithImpl;
+  @useResult
+  $Res call({String label, String? value, String? note});
+}
+
+/// @nodoc
+class _$KeyFaceCopyWithImpl<$Res> implements $KeyFaceCopyWith<$Res> {
+  _$KeyFaceCopyWithImpl(this._self, this._then);
+
+  final KeyFace _self;
+  final $Res Function(KeyFace) _then;
+
+  /// Create a copy of KeyFace
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? label = null,
+    Object? value = freezed,
+    Object? note = freezed,
+  }) {
+    return _then(_self.copyWith(
+      label: null == label
+          ? _self.label
+          : label // ignore: cast_nullable_to_non_nullable
+              as String,
+      value: freezed == value
+          ? _self.value
+          : value // ignore: cast_nullable_to_non_nullable
+              as String?,
+      note: freezed == note
+          ? _self.note
+          : note // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ));
+  }
+}
+
+/// Adds pattern-matching-related methods to [KeyFace].
+extension KeyFacePatterns on KeyFace {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_KeyFace value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _KeyFace() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_KeyFace value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _KeyFace():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_KeyFace value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _KeyFace() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(String label, String? value, String? note)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _KeyFace() when $default != null:
+        return $default(_that.label, _that.value, _that.note);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(String label, String? value, String? note) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _KeyFace():
+        return $default(_that.label, _that.value, _that.note);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(String label, String? value, String? note)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _KeyFace() when $default != null:
+        return $default(_that.label, _that.value, _that.note);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _KeyFace implements KeyFace {
+  const _KeyFace({required this.label, this.value, this.note});
+
+  @override
+  final String label;
+  @override
+  final String? value;
+  @override
+  final String? note;
+
+  /// Create a copy of KeyFace
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$KeyFaceCopyWith<_KeyFace> get copyWith =>
+      __$KeyFaceCopyWithImpl<_KeyFace>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _KeyFace &&
+            (identical(other.label, label) || other.label == label) &&
+            (identical(other.value, value) || other.value == value) &&
+            (identical(other.note, note) || other.note == note));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, label, value, note);
+
+  @override
+  String toString() {
+    return 'KeyFace(label: $label, value: $value, note: $note)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$KeyFaceCopyWith<$Res> implements $KeyFaceCopyWith<$Res> {
+  factory _$KeyFaceCopyWith(_KeyFace value, $Res Function(_KeyFace) _then) =
+      __$KeyFaceCopyWithImpl;
+  @override
+  @useResult
+  $Res call({String label, String? value, String? note});
+}
+
+/// @nodoc
+class __$KeyFaceCopyWithImpl<$Res> implements _$KeyFaceCopyWith<$Res> {
+  __$KeyFaceCopyWithImpl(this._self, this._then);
+
+  final _KeyFace _self;
+  final $Res Function(_KeyFace) _then;
+
+  /// Create a copy of KeyFace
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? label = null,
+    Object? value = freezed,
+    Object? note = freezed,
+  }) {
+    return _then(_KeyFace(
+      label: null == label
+          ? _self.label
+          : label // ignore: cast_nullable_to_non_nullable
+              as String,
+      value: freezed == value
+          ? _self.value
+          : value // ignore: cast_nullable_to_non_nullable
+              as String?,
+      note: freezed == note
+          ? _self.note
+          : note // ignore: cast_nullable_to_non_nullable
+              as String?,
+    ));
+  }
+}
+
+/// @nodoc
+mixin _$KeyNode {
+  String get name;
+  bool get summary;
+  KeyFace get secret;
+  KeyFace get viewing;
+  String? get detail;
+  List<KeyNode> get children;
+
+  /// Create a copy of KeyNode
+  /// with the given fields replaced by the non-null parameter values.
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  $KeyNodeCopyWith<KeyNode> get copyWith =>
+      _$KeyNodeCopyWithImpl<KeyNode>(this as KeyNode, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is KeyNode &&
+            (identical(other.name, name) || other.name == name) &&
+            (identical(other.summary, summary) || other.summary == summary) &&
+            (identical(other.secret, secret) || other.secret == secret) &&
+            (identical(other.viewing, viewing) || other.viewing == viewing) &&
+            (identical(other.detail, detail) || other.detail == detail) &&
+            const DeepCollectionEquality().equals(other.children, children));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, name, summary, secret, viewing,
+      detail, const DeepCollectionEquality().hash(children));
+
+  @override
+  String toString() {
+    return 'KeyNode(name: $name, summary: $summary, secret: $secret, viewing: $viewing, detail: $detail, children: $children)';
+  }
+}
+
+/// @nodoc
+abstract mixin class $KeyNodeCopyWith<$Res> {
+  factory $KeyNodeCopyWith(KeyNode value, $Res Function(KeyNode) _then) =
+      _$KeyNodeCopyWithImpl;
+  @useResult
+  $Res call(
+      {String name,
+      bool summary,
+      KeyFace secret,
+      KeyFace viewing,
+      String? detail,
+      List<KeyNode> children});
+
+  $KeyFaceCopyWith<$Res> get secret;
+  $KeyFaceCopyWith<$Res> get viewing;
+}
+
+/// @nodoc
+class _$KeyNodeCopyWithImpl<$Res> implements $KeyNodeCopyWith<$Res> {
+  _$KeyNodeCopyWithImpl(this._self, this._then);
+
+  final KeyNode _self;
+  final $Res Function(KeyNode) _then;
+
+  /// Create a copy of KeyNode
+  /// with the given fields replaced by the non-null parameter values.
+  @pragma('vm:prefer-inline')
+  @override
+  $Res call({
+    Object? name = null,
+    Object? summary = null,
+    Object? secret = null,
+    Object? viewing = null,
+    Object? detail = freezed,
+    Object? children = null,
+  }) {
+    return _then(_self.copyWith(
+      name: null == name
+          ? _self.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+      summary: null == summary
+          ? _self.summary
+          : summary // ignore: cast_nullable_to_non_nullable
+              as bool,
+      secret: null == secret
+          ? _self.secret
+          : secret // ignore: cast_nullable_to_non_nullable
+              as KeyFace,
+      viewing: null == viewing
+          ? _self.viewing
+          : viewing // ignore: cast_nullable_to_non_nullable
+              as KeyFace,
+      detail: freezed == detail
+          ? _self.detail
+          : detail // ignore: cast_nullable_to_non_nullable
+              as String?,
+      children: null == children
+          ? _self.children
+          : children // ignore: cast_nullable_to_non_nullable
+              as List<KeyNode>,
+    ));
+  }
+
+  /// Create a copy of KeyNode
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $KeyFaceCopyWith<$Res> get secret {
+    return $KeyFaceCopyWith<$Res>(_self.secret, (value) {
+      return _then(_self.copyWith(secret: value));
+    });
+  }
+
+  /// Create a copy of KeyNode
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $KeyFaceCopyWith<$Res> get viewing {
+    return $KeyFaceCopyWith<$Res>(_self.viewing, (value) {
+      return _then(_self.copyWith(viewing: value));
+    });
+  }
+}
+
+/// Adds pattern-matching-related methods to [KeyNode].
+extension KeyNodePatterns on KeyNode {
+  /// A variant of `map` that fallback to returning `orElse`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeMap<TResult extends Object?>(
+    TResult Function(_KeyNode value)? $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _KeyNode() when $default != null:
+        return $default(_that);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// Callbacks receives the raw object, upcasted.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case final Subclass2 value:
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult map<TResult extends Object?>(
+    TResult Function(_KeyNode value) $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _KeyNode():
+        return $default(_that);
+    }
+  }
+
+  /// A variant of `map` that fallback to returning `null`.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case final Subclass value:
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? mapOrNull<TResult extends Object?>(
+    TResult? Function(_KeyNode value)? $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _KeyNode() when $default != null:
+        return $default(_that);
+      case _:
+        return null;
+    }
+  }
+
+  /// A variant of `when` that fallback to an `orElse` callback.
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return orElse();
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult maybeWhen<TResult extends Object?>(
+    TResult Function(String name, bool summary, KeyFace secret, KeyFace viewing,
+            String? detail, List<KeyNode> children)?
+        $default, {
+    required TResult orElse(),
+  }) {
+    final _that = this;
+    switch (_that) {
+      case _KeyNode() when $default != null:
+        return $default(_that.name, _that.summary, _that.secret, _that.viewing,
+            _that.detail, _that.children);
+      case _:
+        return orElse();
+    }
+  }
+
+  /// A `switch`-like method, using callbacks.
+  ///
+  /// As opposed to `map`, this offers destructuring.
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case Subclass2(:final field2):
+  ///     return ...;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult when<TResult extends Object?>(
+    TResult Function(String name, bool summary, KeyFace secret, KeyFace viewing,
+            String? detail, List<KeyNode> children)
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _KeyNode():
+        return $default(_that.name, _that.summary, _that.secret, _that.viewing,
+            _that.detail, _that.children);
+    }
+  }
+
+  /// A variant of `when` that fallback to returning `null`
+  ///
+  /// It is equivalent to doing:
+  /// ```dart
+  /// switch (sealedClass) {
+  ///   case Subclass(:final field):
+  ///     return ...;
+  ///   case _:
+  ///     return null;
+  /// }
+  /// ```
+
+  @optionalTypeArgs
+  TResult? whenOrNull<TResult extends Object?>(
+    TResult? Function(String name, bool summary, KeyFace secret,
+            KeyFace viewing, String? detail, List<KeyNode> children)?
+        $default,
+  ) {
+    final _that = this;
+    switch (_that) {
+      case _KeyNode() when $default != null:
+        return $default(_that.name, _that.summary, _that.secret, _that.viewing,
+            _that.detail, _that.children);
+      case _:
+        return null;
+    }
+  }
+}
+
+/// @nodoc
+
+class _KeyNode implements KeyNode {
+  const _KeyNode(
+      {required this.name,
+      required this.summary,
+      required this.secret,
+      required this.viewing,
+      this.detail,
+      required final List<KeyNode> children})
+      : _children = children;
+
+  @override
+  final String name;
+  @override
+  final bool summary;
+  @override
+  final KeyFace secret;
+  @override
+  final KeyFace viewing;
+  @override
+  final String? detail;
+  final List<KeyNode> _children;
+  @override
+  List<KeyNode> get children {
+    if (_children is EqualUnmodifiableListView) return _children;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_children);
+  }
+
+  /// Create a copy of KeyNode
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @JsonKey(includeFromJson: false, includeToJson: false)
+  @pragma('vm:prefer-inline')
+  _$KeyNodeCopyWith<_KeyNode> get copyWith =>
+      __$KeyNodeCopyWithImpl<_KeyNode>(this, _$identity);
+
+  @override
+  bool operator ==(Object other) {
+    return identical(this, other) ||
+        (other.runtimeType == runtimeType &&
+            other is _KeyNode &&
+            (identical(other.name, name) || other.name == name) &&
+            (identical(other.summary, summary) || other.summary == summary) &&
+            (identical(other.secret, secret) || other.secret == secret) &&
+            (identical(other.viewing, viewing) || other.viewing == viewing) &&
+            (identical(other.detail, detail) || other.detail == detail) &&
+            const DeepCollectionEquality().equals(other._children, _children));
+  }
+
+  @override
+  int get hashCode => Object.hash(runtimeType, name, summary, secret, viewing,
+      detail, const DeepCollectionEquality().hash(_children));
+
+  @override
+  String toString() {
+    return 'KeyNode(name: $name, summary: $summary, secret: $secret, viewing: $viewing, detail: $detail, children: $children)';
+  }
+}
+
+/// @nodoc
+abstract mixin class _$KeyNodeCopyWith<$Res> implements $KeyNodeCopyWith<$Res> {
+  factory _$KeyNodeCopyWith(_KeyNode value, $Res Function(_KeyNode) _then) =
+      __$KeyNodeCopyWithImpl;
+  @override
+  @useResult
+  $Res call(
+      {String name,
+      bool summary,
+      KeyFace secret,
+      KeyFace viewing,
+      String? detail,
+      List<KeyNode> children});
+
+  @override
+  $KeyFaceCopyWith<$Res> get secret;
+  @override
+  $KeyFaceCopyWith<$Res> get viewing;
+}
+
+/// @nodoc
+class __$KeyNodeCopyWithImpl<$Res> implements _$KeyNodeCopyWith<$Res> {
+  __$KeyNodeCopyWithImpl(this._self, this._then);
+
+  final _KeyNode _self;
+  final $Res Function(_KeyNode) _then;
+
+  /// Create a copy of KeyNode
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $Res call({
+    Object? name = null,
+    Object? summary = null,
+    Object? secret = null,
+    Object? viewing = null,
+    Object? detail = freezed,
+    Object? children = null,
+  }) {
+    return _then(_KeyNode(
+      name: null == name
+          ? _self.name
+          : name // ignore: cast_nullable_to_non_nullable
+              as String,
+      summary: null == summary
+          ? _self.summary
+          : summary // ignore: cast_nullable_to_non_nullable
+              as bool,
+      secret: null == secret
+          ? _self.secret
+          : secret // ignore: cast_nullable_to_non_nullable
+              as KeyFace,
+      viewing: null == viewing
+          ? _self.viewing
+          : viewing // ignore: cast_nullable_to_non_nullable
+              as KeyFace,
+      detail: freezed == detail
+          ? _self.detail
+          : detail // ignore: cast_nullable_to_non_nullable
+              as String?,
+      children: null == children
+          ? _self._children
+          : children // ignore: cast_nullable_to_non_nullable
+              as List<KeyNode>,
+    ));
+  }
+
+  /// Create a copy of KeyNode
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $KeyFaceCopyWith<$Res> get secret {
+    return $KeyFaceCopyWith<$Res>(_self.secret, (value) {
+      return _then(_self.copyWith(secret: value));
+    });
+  }
+
+  /// Create a copy of KeyNode
+  /// with the given fields replaced by the non-null parameter values.
+  @override
+  @pragma('vm:prefer-inline')
+  $KeyFaceCopyWith<$Res> get viewing {
+    return $KeyFaceCopyWith<$Res>(_self.viewing, (value) {
+      return _then(_self.copyWith(viewing: value));
+    });
+  }
+}
+
+/// @nodoc
 mixin _$Memo {
   int get id;
   int get idTx;

@@ -32,6 +32,13 @@ Future<String> getAccountUivk(
 Future<Seed?> getAccountSeed({required int account, required Coin c}) =>
     RustLib.instance.api.crateApiAccountGetAccountSeed(account: account, c: c);
 
+/// Every key of the account as a tree: the key that created the account at
+/// the root, what derives from it below. `None` for a Ledger account, whose
+/// keys never leave the device. See `key_tree::get_account_key_tree`.
+Future<KeyNode?> getAccountKeyTree({required int account, required Coin c}) =>
+    RustLib.instance.api
+        .crateApiAccountGetAccountKeyTree(account: account, c: c);
+
 Future<String?> getAccountFingerprint(
         {required int account, required Coin c}) =>
     RustLib.instance.api
@@ -303,6 +310,33 @@ sealed class FrostParams with _$FrostParams {
     int? sibling,
     required bool quantumRecoverable,
   }) = _FrostParams;
+}
+
+/// One face of a [`KeyNode`]: what the node shows in secret or in viewing
+/// mode. `value` is `None` when the node has nothing on that face, which the
+/// page shows as N/A; `note` explains the face when it needs explaining.
+@freezed
+sealed class KeyFace with _$KeyFace {
+  const factory KeyFace({
+    required String label,
+    String? value,
+    String? note,
+  }) = _KeyFace;
+}
+
+/// A node of the key tree. The same tree serves both modes of the Key Tree
+/// page: each node carries a secret face and a viewing face, so flipping the
+/// mode changes no node and keeps what the user expanded.
+@freezed
+sealed class KeyNode with _$KeyNode {
+  const factory KeyNode({
+    required String name,
+    required bool summary,
+    required KeyFace secret,
+    required KeyFace viewing,
+    String? detail,
+    required List<KeyNode> children,
+  }) = _KeyNode;
 }
 
 @freezed

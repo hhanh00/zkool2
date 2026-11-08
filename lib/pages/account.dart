@@ -1588,7 +1588,9 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
   late final c = coinContext.coin;
   int pools = 7;
   String? uvk;
-  Seed? seed;
+  /// The account's keys as a tree; null for a Ledger account, whose keys
+  /// stay on the device. The root is the key the account was created from.
+  KeyNode? tree;
   int accountPools = 7; // default to all pools
   /// A key fetch is in flight: the selectors refuse input until it lands,
   /// so the key shown always belongs to the selection shown.
@@ -1601,7 +1603,7 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
   bool useInternal = true;
   // An incoming-only account has only its incoming key to show.
   bool incomingOnly = false;
-  bool showSeed = false;
+  bool showKeys = false;
   FrostParams? frostParams;
   String? frostBackup;
 
@@ -1609,7 +1611,7 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
   void initState() {
     super.initState();
     Future(() async {
-      seed = await getAccountSeed(account: widget.account, c: c);
+      tree = await getAccountKeyTree(account: widget.account, c: c);
       accountPools = await getAccountPools(account: widget.account, c: c);
       frostParams = await getAccountFrostParams(account: widget.account, c: c);
       final accounts = await ref.read(getAccountsProvider.future);
@@ -1630,21 +1632,23 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
       appBar: AppBar(
         title: Text('Viewing Keys'),
         actions: [
-          if (seed != null) IconButton(tooltip: "Show Seed Phrase", onPressed: onShowSeed, icon: Icon(Icons.key)),
-          if (seed == null && frostParams != null)
+          if (tree != null && frostParams == null)
+            IconButton(tooltip: "Show Backup Keys", onPressed: onShowKeys, icon: Icon(Icons.key)),
+          if (frostParams != null)
             IconButton(tooltip: "Show Backup String", onPressed: onShowFrostBackup, icon: Icon(Icons.key)),
         ],
       ),
       body: CustomScrollView(
         slivers: [
-          if (showSeed && seed != null) ...[
+          // The key the account was created from: the root of its key tree
+          // and, for a seed, the passphrase and index that go with it.
+          if (showKeys && tree != null) ...[
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 16),
                 child: Column(children: [
-                  ListTile(title: Text("Mnemonic"), subtitle: CopyableText(seed!.mnemonic)),
-                  ListTile(title: Text("Passphrase"), subtitle: CopyableText(seed!.phrase)),
-                  ListTile(title: Text("Index"), subtitle: CopyableText(seed!.aindex.toString())),
+                  for (final n in [tree!, ...tree!.children.where((n) => n.summary)]) _creationKeyTile(n),
+                  keyTreeButton,
                   Divider(),
                   Gap(8),
                 ]),
@@ -1672,6 +1676,7 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
+                  if (tree != null) keyTreeButton,
                   Divider(),
                   Gap(8),
                 ]),
@@ -1791,11 +1796,40 @@ class ViewingKeysPageState extends ConsumerState<ViewingKeysPage> {
     }
   }
 
-  void onShowSeed() async {
-    final authenticated = await authenticate(reason: "Show Seed Phrase");
-    if (!authenticated) return;
+  Widget get keyTreeButton => Align(
+        alignment: Alignment.centerRight,
+        child: TextButton.icon(
+          onPressed: () => GoRouter.of(context).push("/key_tree", extra: widget.account),
+          icon: Icon(Icons.account_tree_outlined),
+          label: Text("Show Key Tree"),
+        ),
+      );
+
+  /// A node of the creation key on the face it has: the secret one when the
+  /// account holds a secret, else the viewing one.
+  Widget _creationKeyTile(KeyNode n) {
+    final face = n.secret.value != null ? n.secret : n.viewing;
+    return ListTile(
+      title: Text(face.label),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CopyableText(face.value ?? "N/A"),
+          if (n.detail != null) Text(n.detail!, style: Theme.of(context).textTheme.bodySmall),
+        ],
+      ),
+    );
+  }
+
+  /// Shows the creation key. Only secret material is behind the biometric
+  /// prompt: a viewing key is already on this page.
+  void onShowKeys() async {
+    if (tree!.secret.value != null) {
+      final authenticated = await authenticate(reason: "Show Backup Keys");
+      if (!authenticated) return;
+    }
     setState(() {
-      showSeed = true;
+      showKeys = true;
     });
   }
 
