@@ -1,6 +1,26 @@
 # Changelog
 
 
+## [6.37.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.36.0...zkool-v6.37.0) (2026-11-08)
+
+
+### Features
+
+* back up any account from the key it was created with ([#1633](https://github.com/hhanh00/zkool2/issues/1633)) ([1fec9d3](https://github.com/hhanh00/zkool2/commit/1fec9d35b95b75bfe33b9714bae64065a67d8bb2))
+* **db:** create a wallet with a chosen network ([32c27a5](https://github.com/hhanh00/zkool2/commit/32c27a5a6e0b2f352966cec5953e8b45a988e03c))
+* FROST members can keep Use Internal Change in sync ([#1626](https://github.com/hhanh00/zkool2/issues/1626)) ([2408a5b](https://github.com/hhanh00/zkool2/commit/2408a5b3f976f5996547dbf005836ddd45e4529a))
+* **pay:** the fee per action follows ZIP 2009, with an override in settings ([#1616](https://github.com/hhanh00/zkool2/issues/1616)) ([6c1861e](https://github.com/hhanh00/zkool2/commit/6c1861e3436667edd2fe0c0580f33fd32f4ee810))
+* **ui:** pick the network when creating a database ([61a548c](https://github.com/hhanh00/zkool2/commit/61a548c5af929b260c273935ae46c1f82502f5a7))
+
+
+### Bug Fixes
+
+* **account:** a single transparent key imports without internal change ([0b4940a](https://github.com/hhanh00/zkool2/commit/0b4940ac8e46d76e4ef2c1add7cb5a8b3819479d))
+* **account:** list the stored transparent addresses on the addresses page ([#1635](https://github.com/hhanh00/zkool2/issues/1635)) ([b452dcc](https://github.com/hhanh00/zkool2/commit/b452dcc5b28eaf717b43d98032bac66463f818e4))
+* **accounts:** keep a row's height label the same size while it loads ([#1637](https://github.com/hhanh00/zkool2/issues/1637)) ([43b56eb](https://github.com/hhanh00/zkool2/commit/43b56ebd02b47f088e12d24feadf0335d49ecb1d)), closes [#1636](https://github.com/hhanh00/zkool2/issues/1636)
+* **ui:** evaluate the pool chip cutoff once, from the short format ([7b690e9](https://github.com/hhanh00/zkool2/commit/7b690e924f4af4c1e1fb3868b47e06c2f0ffa1c8))
+* **ui:** hide pool balances that display as 0.000 on the account page ([fa7d2c7](https://github.com/hhanh00/zkool2/commit/fa7d2c788ee4a8c26fc0ed58489c00047e827ff2))
+
 ## [6.36.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.35.0...zkool-v6.36.0) (2026-11-02)
 
 
