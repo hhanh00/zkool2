@@ -45,6 +45,7 @@ class _KeyCase {
   final bool orchard;
   final List<BigInt> minimum; // by pool: transparent, Sapling, Orchard, Ironwood
   final bool syncWarning;
+  final String backup; // the key the backup block shows
 
   _KeyCase(Map<String, dynamic> json)
       : name = json["name"] as String,
@@ -54,7 +55,8 @@ class _KeyCase {
         saddr = json["saddr"] as String?,
         orchard = json["orchard"] as bool,
         minimum = (json["minimum"] as List).map((v) => zecToZat(v as String)).toList(),
-        syncWarning = json["sync_warning"] as bool;
+        syncWarning = json["sync_warning"] as bool,
+        backup = json["backup"] as String;
 }
 
 void main() {
@@ -234,13 +236,13 @@ Future<void> _checkKeyTree(
     await pumpUntil(tester, () => find.text("Viewing Keys").evaluate().isNotEmpty,
         timeout: shortTimeout, what: "the viewing keys page of ${keyCase.name}",);
     await tapTooltip(tester, "Show Backup Keys");
-    await pumpUntil(tester, () => _copyable(keyCase.key).evaluate().isNotEmpty,
+    await pumpUntil(tester, () => _copyable(keyCase.backup).evaluate().isNotEmpty,
         timeout: shortTimeout, what: "the key of ${keyCase.name} on the backup block",);
     await tester.ensureVisible(find.text("Show Key Tree"));
     await tester.tap(find.text("Show Key Tree"));
     await pumpUntil(tester, () => find.text("Key Tree").evaluate().isNotEmpty,
         timeout: shortTimeout, what: "the key tree of ${keyCase.name}",);
-    await pumpUntil(tester, () => _copyable(keyCase.key).evaluate().isNotEmpty,
+    await pumpUntil(tester, () => _copyable(keyCase.backup).evaluate().isNotEmpty,
         timeout: shortTimeout, what: "the root of the key tree of ${keyCase.name}",);
   }
 
@@ -274,7 +276,9 @@ Future<void> _checkKeyTree(
     await close();
   }
 
-  // A viewing-only account opens on its viewing face and has no switch.
+  // A viewing-only account opens on its viewing face and has no switch. The
+  // S-vk import keeps only the diversifiable key, so that face is the
+  // Sapling-only unified key, not the zxviews string imported.
   final svk = byName["S-vk"]!;
   await open(svk);
   expect(find.byType(Switch), findsNothing, reason: "nothing secret to switch to");
