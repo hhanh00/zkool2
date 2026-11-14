@@ -28,7 +28,8 @@ use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_note_encryption::Domain;
 use zcash_primitives::transaction::{
     builder::{BuildConfig, Builder, BundlePadding, default_tx_expiry_delta},
-    TxVersion,
+    txid::{to_txid, TxIdDigester},
+    TxId, TxVersion,
 };
 use zcash_proofs::prover::LocalTxProver;
 use zcash_protocol::{
@@ -1268,6 +1269,20 @@ fn encode_memo(recipient: &Recipient) -> Result<Option<MemoBytes>> {
         .transpose()?;
     let memo = text_memo.or(byte_memo);
     Ok(memo)
+}
+
+/// The txid of the transaction a PCZT becomes once signed. Since ZIP 244
+/// the txid commits to the effects only, not to proofs or signatures, so
+/// it is fixed as soon as the PCZT's inputs and outputs are final: signing
+/// cannot change it. Building the same payment again gives a new txid.
+pub fn pczt_txid(package: &PcztPackage) -> Result<TxId> {
+    let pczt = Pczt::parse(&package.pczt).map_err(|error| anyhow!("invalid PCZT: {error:?}"))?;
+    let effects = pczt
+        .into_effects()
+        .map_err(|error| anyhow!("the PCZT's effects are not final: {error:?}"))?;
+    let digests = effects.digest(TxIdDigester);
+    to_txid(effects.version(), effects.consensus_branch_id(), &digests)
+        .ok_or_else(|| anyhow!("a transaction before v5 has no txid until it is signed"))
 }
 
 pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {

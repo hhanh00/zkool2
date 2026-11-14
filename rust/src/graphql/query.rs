@@ -368,8 +368,11 @@ impl Query {
         let pczt = hex::decode(&pczt)?;
         let (pczt, _) =
             bincode::decode_from_slice::<PcztPackage, _>(&pczt, crate::api::pay::pczt_config())?;
+        // A PCZT whose txid cannot be computed still decodes: recipients and
+        // fee need only the plan.
+        let txid = crate::pay::plan::pczt_txid(&pczt).ok().map(|txid| txid.to_string());
         let tx_plan = TxPlan::from_package(&context.coin.network(), &pczt)?;
-        let unsigned = tx_plan.to_unsigned_tx();
+        let unsigned = tx_plan.to_unsigned_tx(txid);
         Ok(unsigned)
     }
 
@@ -417,7 +420,7 @@ impl Query {
 }
 
 impl TxPlan {
-    pub fn to_unsigned_tx(self) -> UnsignedTx {
+    pub fn to_unsigned_tx(self, txid: Option<String>) -> UnsignedTx {
         let recipients: Vec<_> = self
             .outputs
             .into_iter()
@@ -432,7 +435,7 @@ impl TxPlan {
             })
             .collect();
         let fee = zats_to_zec(self.fee as i64);
-        UnsignedTx { recipients, fee }
+        UnsignedTx { recipients, fee, txid }
     }
 }
 
