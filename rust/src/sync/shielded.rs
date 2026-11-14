@@ -401,6 +401,10 @@ async fn shielded_sync_range(
                 write_commits,
                 "zkool write lane: busy=SQLite commit of scanned notes/tree (excl. final tail flush)"
             );
+            super::bench::record(|stats| {
+                stats.write_busy_s += write_busy.as_secs_f64();
+                stats.write_commits += write_commits;
+            });
             debug!("[db handler] stopped");
             check_witness_consistency(&mut writer_connection, &writer_account_ids).await?;
 

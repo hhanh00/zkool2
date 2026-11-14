@@ -14,6 +14,7 @@ use std::collections::HashSet;
 use sqlx::Connection;
 
 pub mod chain_log;
+pub mod bench;
 pub mod driver;
 pub mod fetch;
 pub mod plan;
