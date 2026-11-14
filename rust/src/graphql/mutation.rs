@@ -72,6 +72,11 @@ pub struct Output {
 pub struct UnsignedTx {
     pub recipients: Vec<Output>,
     pub fee: BigDecimal,
+    /// The txid the transaction will have once signed, in the form
+    /// broadcastTx returns. Signing does not change it; preparing the same
+    /// payment again builds a new transaction with a new txid. Null when
+    /// the PCZT's effects are not final, or for a transaction before v5.
+    pub txid: Option<String>,
 }
 
 /// The height a sync mutation reports. A skipped run is an error: the
