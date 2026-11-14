@@ -19,11 +19,12 @@ from test_wallet_ui import rpc
 
 DEFAULT_PORT = 8000
 LWD_URL = "http://localhost:8137"
-# A fixed seed: on a long-lived chain the account keeps earlier runs'
-# coins, which only adds to what each pool can spend.
-SPENDER_MNEMONIC = (
-    "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
-)
+# A fixed seed no other test uses: this test spends from every pool, and
+# its change lands on addresses another test's account would see (the
+# abandon ... about seed of test_key_import compares a full account with
+# single-address imports). On a long-lived chain the account keeps earlier
+# runs' coins, which only adds to what each pool can spend.
+SPENDER_MNEMONIC = "legal winner thank year wave sausage worth useful legal winner thank yellow"
 FUND = "0.05"
 SPEND = "0.001"
 POOLS = [(1, "transparent"), (2, "sapling"), (8, "ironwood")]
