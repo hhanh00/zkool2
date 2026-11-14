@@ -121,6 +121,47 @@ void main() {
     expect(find.text('External #0'), findsOneWidget);
   });
 
+  // #1642: rows were laid out at heights guessed from the text, which a key
+  // filling its last line outgrew, and the indented rows ran past the edge.
+  // The test font draws every glyph as a square of the font size, so at
+  // each width below some key fills its line to within a cursor's width.
+  testWidgets('a row fits its key at every width and stays inside the list', (tester) async {
+    final rootKey = 'r' * 28;
+    final wif = 'w' * 70;
+    final tree = KeyNode(
+      name: 'Seed',
+      summary: true,
+      secret: _face('Seed phrase', rootKey),
+      viewing: _face('Unified full viewing key', 'uview-root'),
+      detail: null,
+      children: [
+        _node(
+          'Transparent',
+          _face('Transparent xprv', 'x' * 45),
+          _face('Transparent xpub', 'xpub-key'),
+          children: [
+            _node('External #0', _face('Transparent WIF', wif), _face('Transparent public key', 'zpk-0'), detail: 't1addr'),
+          ],
+        ),
+      ],
+    );
+    addTearDown(tester.view.reset);
+    tester.view.devicePixelRatio = 1;
+    for (var width = 440.0; width <= 480; width += 1) {
+      tester.view.physicalSize = Size(width, 1200);
+      // A fresh page each time, with the addresses closed again.
+      await tester.pumpWidget(const SizedBox());
+      await open(tester, tree);
+      await tester.tap(find.byIcon(Icons.chevron_right));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull, reason: 'no row overflows at width $width');
+      for (final key in [rootKey, wif]) {
+        final rect = tester.getRect(_copyable(key));
+        expect(rect.right, lessThanOrEqualTo(width - 16), reason: '$key stays inside the list at width $width');
+      }
+    }
+  });
+
   testWidgets('a viewing-only account opens on its viewing face without a switch', (tester) async {
     await open(tester, _viewingTree);
     expect(find.byType(Switch), findsNothing);

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart' show SliverLayoutDimensions;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 import 'package:gap/gap.dart';
@@ -24,16 +23,25 @@ class KeyTreePage extends ConsumerStatefulWidget {
   ConsumerState<KeyTreePage> createState() => _KeyTreePageState();
 }
 
+/// A node on screen: its place in the tree and how deep it sits.
+class _Row {
+  final KeyNode node;
+  final String id;
+  final int depth;
+  const _Row(this.node, this.id, this.depth);
+}
+
 class _KeyTreePageState extends ConsumerState<KeyTreePage> {
   late final c = coinContext.coin;
   KeyNode? root;
   // The viewing face is shown. A viewing-only account has nothing else to
   // show and opens here; the others open on their secrets.
   bool viewing = false;
-  final controller = TreeSliverController();
-  // Built once: the faces are picked at render time, so flipping the mode
-  // changes no node and keeps the expansion state the nodes hold.
-  List<TreeSliverNode<KeyNode>> tree = [];
+  // The open nodes, by their path of child indices from the root ("0",
+  // "0/1", ...). The faces are picked at render time, so flipping the mode
+  // keeps this set and what the user opened.
+  final expanded = <String>{_rootId};
+  static const _rootId = "0";
 
   @override
   void initState() {
@@ -45,7 +53,6 @@ class _KeyTreePageState extends ConsumerState<KeyTreePage> {
         setState(() {
           root = r;
           viewing = r?.secret.value == null;
-          tree = r == null ? [] : [_node(r, 0)];
         });
       } on AnyhowException catch (e) {
         if (mounted) await showException(context, e.message);
@@ -53,9 +60,22 @@ class _KeyTreePageState extends ConsumerState<KeyTreePage> {
     });
   }
 
-  // The root opens one level; lists below it, the addresses, start closed.
-  TreeSliverNode<KeyNode> _node(KeyNode n, int depth) =>
-      TreeSliverNode(n, children: n.children.map((c) => _node(c, depth + 1)).toList(), expanded: depth == 0);
+  /// The visible nodes in order: a node, then its children while it is
+  /// open. The root opens one level; the lists below it, the addresses,
+  /// start closed.
+  List<_Row> _visible() {
+    final rows = <_Row>[];
+    void walk(KeyNode n, String id, int depth) {
+      rows.add(_Row(n, id, depth));
+      if (!expanded.contains(id)) return;
+      for (final (i, child) in n.children.indexed) {
+        walk(child, "$id/$i", depth + 1);
+      }
+    }
+
+    if (root != null) walk(root!, _rootId, 0);
+    return rows;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -63,6 +83,7 @@ class _KeyTreePageState extends ConsumerState<KeyTreePage> {
     if (pinlock.value ?? false) return PinLock();
 
     final hasSecret = root?.secret.value != null;
+    final rows = _visible();
     return Scaffold(
       appBar: AppBar(
         title: Text("Key Tree"),
@@ -83,11 +104,11 @@ class _KeyTreePageState extends ConsumerState<KeyTreePage> {
               slivers: [
                 SliverPadding(
                   padding: EdgeInsets.fromLTRB(16, 8, 16, 32),
-                  sliver: TreeSliver<KeyNode>(
-                    tree: tree,
-                    controller: controller,
-                    treeNodeBuilder: _row,
-                    treeRowExtentBuilder: _extent,
+                  // Each row is as tall as its texts: a key wraps to as many
+                  // lines as it needs.
+                  sliver: SliverList.builder(
+                    itemCount: rows.length,
+                    itemBuilder: (context, i) => _row(rows[i]),
                   ),
                 ),
               ],
@@ -96,23 +117,30 @@ class _KeyTreePageState extends ConsumerState<KeyTreePage> {
   }
 
   static const _toggleWidth = 32.0;
-  static const _indent = 10.0; // TreeSliverIndentationType.standard, per level
+  static const _indent = 10.0; // per level
   static const _rowPadding = 12.0;
 
   KeyFace _face(KeyNode n) => viewing ? n.viewing : n.secret;
 
-  Widget _row(BuildContext context, TreeSliverNode<Object?> node, AnimationStyle style) {
-    final n = node.content as KeyNode;
+  void _toggle(String id) => setState(() => expanded.contains(id) ? expanded.remove(id) : expanded.add(id));
+
+  Widget _row(_Row row) {
+    final n = row.node;
     final face = _face(n);
     final t = Theme.of(context).textTheme;
-    final toggle = node.children.isNotEmpty
-        ? TreeSliver.wrapChildToToggleNode(
-            node: node,
-            child: Icon(node.isExpanded ? Icons.expand_more : Icons.chevron_right),
+    final isOpen = expanded.contains(row.id);
+    final toggle = n.children.isNotEmpty
+        ? InkWell(
+            key: ValueKey("toggle ${row.id}"),
+            onTap: () => _toggle(row.id),
+            child: Icon(isOpen ? Icons.expand_more : Icons.chevron_right),
           )
         : SizedBox.shrink();
+    // The indent is part of the row, so the texts get the width that is
+    // left and stay inside the list.
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: _rowPadding / 2),
+      key: ValueKey(row.id),
+      padding: EdgeInsets.only(left: _indent * row.depth, top: _rowPadding / 2, bottom: _rowPadding / 2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -143,32 +171,5 @@ class _KeyTreePageState extends ConsumerState<KeyTreePage> {
         ],
       ),
     );
-  }
-
-  /// A tree sliver lays its rows out at fixed extents, so each row's height
-  /// is measured from its texts at the width the row will get.
-  double _extent(TreeSliverNode<Object?> node, SliverLayoutDimensions dimensions) {
-    final n = node.content as KeyNode;
-    final face = _face(n);
-    final t = Theme.of(context).textTheme;
-    final width = dimensions.crossAxisExtent - _toggleWidth - _indent * (node.depth ?? 0);
-    double h = _rowPadding;
-    h += _measure(n.name, t.titleMedium, width);
-    h += _measure(face.label, t.labelSmall, width);
-    h += _measure(face.value ?? "N/A", t.bodyMedium, width);
-    if (n.detail != null) h += _measure(n.detail!, t.bodySmall, width);
-    if (face.note != null) h += _measure(face.note!, t.bodySmall, width - 20);
-    return h;
-  }
-
-  double _measure(String text, TextStyle? style, double width) {
-    final painter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: TextDirection.ltr,
-      textScaler: MediaQuery.textScalerOf(context),
-    )..layout(maxWidth: width.clamp(1, double.infinity));
-    final h = painter.height;
-    painter.dispose();
-    return h;
   }
 }
