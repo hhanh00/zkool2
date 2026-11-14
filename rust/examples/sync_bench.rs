@@ -1,0 +1,233 @@
+//! Sync bench: restore one account into an empty wallet, sync it to the
+//! tip, and report the time and where it went. Everything runs in this
+//! process: no server, no HTTP.
+//!
+//! cargo run --release --features graphql --example sync_bench -- \
+//!     --server https://zec.rocks:443 --birthday 2271890
+//!
+//! Options:
+//!   --server URL       lightwalletd to sync from (required)
+//!   --birthday HEIGHT  the account's birth height (required)
+//!   --seed "WORDS"     mnemonic to restore (default: the all-`abandon` test seed)
+//!   --network N        main (default) or test
+//!   --fast             skip the memo and detail pass
+//!   --json PATH        write the result as JSON
+//!   --versus PATH      a `slipstream bench --json` result to print beside this one
+//!   --keep             keep the temporary wallet
+//!   --tip              print the server's current height and exit (no --birthday needed)
+//!
+//! The JSON uses the names of Slipstream's bench summary where the two
+//! engines measure the same thing: `total_s`, `fetch_s`, `scan_s`, `blocks`.
+
+use std::collections::HashMap;
+use std::path::PathBuf;
+
+use anyhow::{anyhow, bail, Context as _, Result};
+use rlz::api::account::{new_account, NewAccount};
+use rlz::api::coin::Coin;
+use rlz::api::sync::SyncOutcome;
+use rlz::sync::bench::SyncStats;
+use serde_json::{json, Value};
+
+const TEST_SEED: &str = "abandon abandon abandon abandon abandon abandon abandon abandon \
+                         abandon abandon abandon about";
+/// What the server's sync mutation uses.
+const ACTIONS_PER_SYNC: u32 = 100_000;
+/// Transparent, Sapling and Orchard.
+const POOLS: u8 = 7;
+
+struct Args {
+    server: String,
+    birthday: u32,
+    seed: String,
+    coin: u8,
+    fast: bool,
+    json: Option<PathBuf>,
+    versus: Option<PathBuf>,
+    keep: bool,
+    tip: bool,
+}
+
+fn parse_args() -> Result<Args> {
+    let mut values: HashMap<String, String> = HashMap::new();
+    let mut flags: Vec<String> = vec![];
+    let mut args = std::env::args().skip(1);
+    while let Some(arg) = args.next() {
+        match arg.as_str() {
+            "--fast" | "--keep" | "--tip" => flags.push(arg),
+            "--server" | "--birthday" | "--seed" | "--network" | "--json" | "--versus" => {
+                let value = args.next().ok_or_else(|| anyhow!("{arg} needs a value"))?;
+                values.insert(arg, value);
+            }
+            other => bail!("unknown option {other} (see the comment at the top of sync_bench.rs)"),
+        }
+    }
+    let coin = match values.get("--network").map(String::as_str) {
+        None | Some("main") => 0,
+        Some("test") => 1,
+        Some(other) => bail!("--network is main or test, not {other}"),
+    };
+    Ok(Args {
+        server: values.remove("--server").ok_or_else(|| anyhow!("--server is required"))?,
+        birthday: match values.get("--birthday") {
+            Some(height) => height.parse().context("--birthday")?,
+            None if flags.iter().any(|f| f == "--tip") => 0,
+            None => bail!("--birthday is required"),
+        },
+        seed: values.remove("--seed").unwrap_or_else(|| TEST_SEED.to_string()),
+        coin,
+        fast: flags.iter().any(|f| f == "--fast"),
+        json: values.remove("--json").map(PathBuf::from),
+        versus: values.remove("--versus").map(PathBuf::from),
+        keep: flags.iter().any(|f| f == "--keep"),
+        tip: flags.iter().any(|f| f == "--tip"),
+    })
+}
+
+fn duration(seconds: f64) -> String {
+    if seconds >= 60.0 {
+        format!("{}:{:05.2}", (seconds / 60.0) as u64, seconds % 60.0)
+    } else {
+        format!("{seconds:.2}s")
+    }
+}
+
+fn report(total_s: f64, height: u32, stats: &SyncStats) {
+    println!();
+    println!("zkool sync: {} to height {height}, {} blocks", duration(total_s), stats.blocks);
+    println!(
+        "  scan busy {} | scan waiting {} | block reader waiting {} | database commit {}",
+        duration(stats.scan_busy_s),
+        duration(stats.scan_wait_s),
+        duration(stats.download_wait_s),
+        duration(stats.write_busy_s),
+    );
+    if stats.slices > 0 {
+        println!(
+            "  download: {:.1} MB, {} streams at peak ({} opened, {} replaced), {} slices \
+             ({} over bytes, {} over time, {} moved), {:.0} MB buffered at peak",
+            stats.download_bytes as f64 / 1_048_576.0,
+            stats.peak_streams,
+            stats.streams_opened,
+            stats.streams_replaced,
+            stats.slices,
+            stats.slices_over_bytes,
+            stats.slices_over_time,
+            stats.slices_moved,
+            stats.max_buffered_bytes as f64 / 1_048_576.0,
+        );
+    } else {
+        println!("  download: one request");
+    }
+}
+
+fn versus(path: &PathBuf, total_s: f64, blocks: u64) -> Result<()> {
+    let text = std::fs::read_to_string(path).with_context(|| format!("reading {path:?}"))?;
+    let other: Value = serde_json::from_str(&text).with_context(|| format!("parsing {path:?}"))?;
+    let number = |key: &str| other.get(key).and_then(Value::as_f64);
+    let other_total = number("total_s").ok_or_else(|| anyhow!("{path:?} has no total_s"))?;
+    println!();
+    println!("  {:<12}{:>12}{:>12}", "engine", "sync", "blocks");
+    println!("  {:<12}{:>12}{:>12}", "zkool", duration(total_s), blocks);
+    println!(
+        "  {:<12}{:>12}{:>12}",
+        "slipstream",
+        duration(other_total),
+        number("blocks").map_or("—".to_string(), |b| format!("{b:.0}")),
+    );
+    let (fast, slow, name) = if total_s <= other_total {
+        (total_s, other_total, "zkool")
+    } else {
+        (other_total, total_s, "slipstream")
+    };
+    println!("  {name} is {:.2}x faster", slow / fast.max(0.001));
+    if let (Some(fetch), Some(scan)) = (number("fetch_s"), number("scan_s")) {
+        println!("  slipstream: fetch {} | scan {}", duration(fetch), duration(scan));
+    }
+    Ok(())
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    rustls::crypto::ring::default_provider().install_default().ok();
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
+        )
+        .with_writer(std::io::stderr)
+        .init();
+    let args = parse_args()?;
+
+    let dir = std::env::temp_dir().join(format!("zkool-sync-bench-{}", std::process::id()));
+    std::fs::create_dir_all(&dir)?;
+    let db = dir.join("wallet.db").to_string_lossy().to_string();
+    rlz::api::db::create_db(&db, None, args.coin).await?;
+    let coin = Coin::new(Some(args.coin))
+        .open_database(db, None)
+        .await?
+        .set_lwd(0, args.server.clone())?;
+
+    if args.tip {
+        println!("{}", rlz::api::network::get_current_height(&coin).await?);
+        let _ = std::fs::remove_dir_all(&dir);
+        return Ok(());
+    }
+
+    let account = new_account(
+        &NewAccount {
+            icon: None,
+            name: "bench".into(),
+            restore: false,
+            key: args.seed.clone(),
+            passphrase: None,
+            fingerprint: None,
+            aindex: 0,
+            birth: Some(args.birthday),
+            folder: String::new(),
+            pools: Some(POOLS),
+            use_internal: Some(false),
+            internal: false,
+            hw: 0,
+        },
+        &coin,
+    )
+    .await?;
+    let tip = rlz::api::network::get_current_height(&coin).await?;
+    eprintln!("syncing account {account} from {} to {tip} against {}", args.birthday, args.server);
+
+    let timed = rlz::sync::bench::sync(&coin, vec![account], tip, ACTIONS_PER_SYNC, args.fast).await?;
+    let height = match timed.outcome {
+        SyncOutcome::Synced { height } => height,
+        other => bail!("the sync did not complete: {other:?}"),
+    };
+    let total_s = timed.total.as_secs_f64();
+    report(total_s, height, &timed.stats);
+
+    if let Some(path) = &args.json {
+        let result = json!({
+            "engine": "zkool",
+            "server": args.server,
+            "birthday": args.birthday,
+            "synced_height": height,
+            "fast": args.fast,
+            // Slipstream's names for the figures both engines have.
+            "total_s": total_s,
+            "fetch_s": timed.stats.download_wait_s,
+            "scan_s": timed.stats.scan_busy_s,
+            "blocks": timed.stats.blocks,
+            "stats": timed.stats,
+        });
+        std::fs::write(path, serde_json::to_string_pretty(&result)?)?;
+        eprintln!("wrote {}", path.display());
+    }
+    if let Some(path) = &args.versus {
+        versus(path, total_s, timed.stats.blocks)?;
+    }
+    if args.keep {
+        eprintln!("wallet kept at {}", dir.display());
+    } else {
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+    Ok(())
+}

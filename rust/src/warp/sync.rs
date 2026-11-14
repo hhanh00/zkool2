@@ -209,6 +209,7 @@ pub async fn warp_sync(
         // [bench instrumentation] download lane: cumulative time awaiting blocks
         // from the network, and the reader task's total wall.
         let mut download_wait = std::time::Duration::ZERO;
+        let mut blocks_read: u64 = 0;
         let reader_started = std::time::Instant::now();
         loop {
             let iter_start = std::time::Instant::now();
@@ -229,6 +230,7 @@ pub async fn warp_sync(
                 }
                 m = blocks.next() => {
                     download_wait += iter_start.elapsed();
+                    blocks_read += 1;
                     let block = match m {
                         Some(Ok(block)) => block,
                         Some(Err(error)) => {
@@ -304,6 +306,10 @@ pub async fn warp_sync(
             reader_wall_ms = reader_started.elapsed().as_millis() as u64,
             "zkool download lane: wait=awaiting blocks from network, wall=reader task total"
         );
+        crate::sync::bench::record(|stats| {
+            stats.blocks += blocks_read;
+            stats.download_wait_s += download_wait.as_secs_f64();
+        });
         debug!("warp_sync block reader done");
     });
 
@@ -413,6 +419,11 @@ pub async fn warp_sync(
         scan_chunks,
         "zkool scan lane: busy=decrypt+tree, wait=starved waiting for downloaded blocks"
     );
+    crate::sync::bench::record(|stats| {
+        stats.scan_chunks += scan_chunks;
+        stats.scan_busy_s += scan_busy.as_secs_f64();
+        stats.scan_wait_s += scan_wait.as_secs_f64();
+    });
 
     Ok(end)
 }

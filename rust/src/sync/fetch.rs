@@ -203,6 +203,7 @@ pub(crate) async fn block_stream_with(
         starved_since: None,
         starved_acc: Duration::ZERO,
         received_window: 0,
+        received_total: 0,
         buffered_sum: 0,
         buffered_samples: 0,
         parked_window: false,
@@ -298,6 +299,7 @@ struct Fetch {
     starved_since: Option<Instant>,
     starved_acc: Duration,
     received_window: u64,
+    received_total: u64,
     buffered_sum: u128,
     buffered_samples: u64,
     /// Whether a free stream was refused a slice by the budget this window.
@@ -394,6 +396,20 @@ impl Fetch {
             max_buffered_bytes = self.stats.max_buffered.load(Ordering::Relaxed),
             "block download done"
         );
+        let load = |counter: &AtomicU64| counter.load(Ordering::Relaxed);
+        super::bench::record(|stats| {
+            stats.download_bytes += self.received_total;
+            stats.streams_opened += load(&self.stats.connections);
+            stats.peak_streams = stats.peak_streams.max(load(&self.stats.peak_connections));
+            stats.slices += load(&self.stats.pieces);
+            stats.slices_over_bytes += load(&self.stats.cuts);
+            stats.slices_over_time += load(&self.stats.timeouts);
+            stats.slices_moved += load(&self.stats.steals);
+            stats.slices_requeued += load(&self.stats.requeued);
+            stats.streams_replaced += load(&self.stats.replaced);
+            stats.budget_raises += load(&self.stats.budget_raises);
+            stats.max_buffered_bytes = stats.max_buffered_bytes.max(load(&self.stats.max_buffered));
+        });
     }
 
     fn note_starved(&mut self, starved: bool) {
@@ -414,6 +430,7 @@ impl Fetch {
         self.buffer.insert(height, (block, bytes));
         self.buffered += bytes;
         self.received_window += bytes;
+        self.received_total += bytes;
         self.stats.max_buffered.fetch_max(self.buffered, Ordering::Relaxed);
         self.avg_block = if self.avg_block == 0.0 {
             bytes as f64
