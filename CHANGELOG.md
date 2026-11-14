@@ -1,6 +1,18 @@
 # Changelog
 
 
+## [6.38.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.37.0...zkool-v6.38.0) (2026-11-14)
+
+
+### Features
+
+* **graphql:** decodePczt returns the txid of the prepared transaction ([#1647](https://github.com/hhanh00/zkool2/issues/1647)) ([7e2a6e7](https://github.com/hhanh00/zkool2/commit/7e2a6e758b7cf5ef1f617c9cc98542854df5f567))
+
+
+### Bug Fixes
+
+* **key-tree:** size each row to its key and keep it inside the list ([#1643](https://github.com/hhanh00/zkool2/issues/1643)) ([b7372b1](https://github.com/hhanh00/zkool2/commit/b7372b1b913a42b9c245138c16e1b4012a6eb5ea)), closes [#1642](https://github.com/hhanh00/zkool2/issues/1642)
+
 ## [6.37.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.36.0...zkool-v6.37.0) (2026-11-08)
 
 
