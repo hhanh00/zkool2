@@ -21,10 +21,15 @@ jobs:
       # The cargo workspace is the repository root and so is target/; the
       # crate's own directory has no target of its own, so pointing the cache
       # there kept the registry only and every run compiled the dependencies.
+      # Keyed on the lockfiles and rust-toolchain.toml, not on the installed
+      # rustc versions (the runner's unused stable moved the key at each Rust
+      # release), and saved from main only, which pull requests read.
       - name: Cache cargo artifacts
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: ". -> target"
+          add-rust-environment-hash-key: false
+          save-if: ${{ github.ref == 'refs/heads/main' }}
           cache-on-failure: true
       - name: Run tests
         run: |

@@ -31,19 +31,25 @@ jobs:
           path: target/release/zkool_graphql
           key: ${{ runner.os }}-zkool-graphql-${{ inputs.ledger-transport }}-${{ hashFiles('Cargo.lock', 'rust/Cargo.toml', 'rust/src/**', 'lib/**/*.dart', 'pubspec.yaml', 'pubspec.lock') }}
 
-      # The dependency artifacts, keyed on Cargo.lock and the toolchain, one
-      # entry per transport (the two differ by a crate), so a source change
-      # rebuilds the crate and not its 800 dependencies. The release build
-      # uses it too: the cache holds dependencies only, never the crate's own
-      # artifacts, and a tag build reads only what main saved. Saved on a
-      # failed build too, so a compile error does not throw the dependencies
-      # away.
+      # The dependency artifacts, so a source change rebuilds the crate and
+      # not its 800 dependencies. Keyed on Cargo.lock and rust-toolchain.toml
+      # only: the environment hash covers every installed rustc, and the
+      # runner's stable, which the build never uses, moved the key at each
+      # Rust release. Saved from main only (Ledger Tests builds zemu there on
+      # every push): a pull request reads main's entry, and per-PR copies of
+      # 1.2 GB pushed main's out of the 10 GB store. One entry for both
+      # transports: the ledger build (release workflow, never on main)
+      # restores it and compiles the few crates that differ. The cache holds
+      # dependencies only, never the crate's own artifacts. Saved on a failed
+      # build too, so a compile error does not throw the dependencies away.
       - name: Cache the compiled dependencies
         if: steps.cache.outputs.cache-hit != 'true'
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: ". -> target"
-          shared-key: zkool-graphql-${{ inputs.ledger-transport }}
+          shared-key: zkool-graphql
+          add-rust-environment-hash-key: false
+          save-if: ${{ github.ref == 'refs/heads/main' }}
           cache-on-failure: true
 
       - name: Build zkool_graphql

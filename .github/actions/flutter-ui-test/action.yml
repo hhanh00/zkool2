@@ -59,13 +59,18 @@ runs:
           ${{ runner.os }}-flutter-ui-app-
 
     # cargokit compiles the crate into build/rlz/build/cargokit, outside the
-    # app bundle above: keep its dependency artifacts between runs.
+    # app bundle above: keep its dependency artifacts between runs. Keyed on
+    # the lockfiles and rust-toolchain.toml, not on the installed rustc
+    # versions (the runner's unused stable moved the key at each Rust
+    # release), and saved from main only, which a branch dispatch reads.
     - name: Cache the app's compiled Rust dependencies
       if: steps.app-cache.outputs.cache-hit != 'true'
       uses: Swatinem/rust-cache@v2
       with:
         workspaces: ". -> build/rlz/build/cargokit"
         shared-key: flutter-ui-app
+        add-rust-environment-hash-key: false
+        save-if: ${{ github.ref == 'refs/heads/main' }}
         cache-on-failure: true
 
     # path_provider resolves the documents directory to ~/Documents on
