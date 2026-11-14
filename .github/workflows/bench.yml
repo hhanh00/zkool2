@@ -1,0 +1,155 @@
+name: Sync benchmark
+
+# An informational report: how long zkool takes to sync a range of mainnet
+# blocks, beside the Slipstream sync engine on the same runner, the same
+# range and the same server. Times on a shared runner and a public server
+# vary a lot from run to run, so nothing here fails on a number; read the
+# ratio within one run, not a time on its own.
+
+on:
+  workflow_dispatch:
+    inputs:
+      blocks:
+        description: Blocks to sync, counted back from the tip
+        required: false
+        default: "200000"
+      rounds:
+        description: Rounds (each runs Slipstream, then zkool)
+        required: false
+        default: "2"
+      server:
+        description: lightwalletd to sync from
+        required: false
+        default: https://zec.rocks:443
+  schedule:
+    - cron: "17 3 * * *"
+  pull_request:
+    types: [labeled, synchronize]
+
+concurrency:
+  group: bench-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # The Slipstream revision compared against. Bump it on purpose: a moving
+  # reference would change the comparison without a change here.
+  SLIPSTREAM_REPOSITORY: zodl-inc/slipstream
+  SLIPSTREAM_REF: 9a486eb42b795af8926baa65d0ed02fe0d25f964
+  # The public test mnemonic: an empty wallet, so the sync is download and
+  # trial decryption only.
+  SEED: abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about
+
+jobs:
+  bench:
+    # On a pull request, only when it carries the `benchmark` label.
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'benchmark')
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/checkout@v6
+        with:
+          repository: ${{ env.SLIPSTREAM_REPOSITORY }}
+          ref: ${{ env.SLIPSTREAM_REF }}
+          path: _slipstream
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libudev-dev pkg-config protobuf-compiler
+
+      # zkool's dependencies, as the GraphQL build compiles them: same
+      # features, same cache entry, read-only from here.
+      - name: Cache zkool dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          shared-key: zkool-graphql
+          add-rust-environment-hash-key: false
+          save-if: false
+
+      - name: Cache Slipstream dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "_slipstream -> target"
+          shared-key: bench-slipstream
+          key: ${{ env.SLIPSTREAM_REF }}
+          cache-on-failure: true
+
+      - name: Build the zkool bench
+        run: |
+          cargo build --release --manifest-path rust/Cargo.toml --example sync_bench \
+            --no-default-features --features "graphql,bundled-sapling-params,ledger"
+
+      - name: Build the Slipstream bench
+        working-directory: _slipstream
+        # Slipstream has no pinned toolchain and needs rustc 1.90 or later;
+        # zkool's pin, found from the parent directory, satisfies it.
+        run: cargo build --release -p slipstream-cli
+
+      - name: Run
+        env:
+          BLOCKS: ${{ inputs.blocks || '200000' }}
+          ROUNDS: ${{ inputs.rounds || '2' }}
+          SERVER: ${{ inputs.server || 'https://zec.rocks:443' }}
+        run: |
+          set -euo pipefail
+          zkool=target/release/examples/sync_bench
+          slipstream=_slipstream/target/release/slipstream
+          tip=$("$zkool" --server "$SERVER" --tip)
+          birthday=$((tip - BLOCKS))
+          ufvk=$("$slipstream" derive-ufvk --mnemonic "$SEED" --network main 2>/dev/null | head -1)
+          {
+            echo "Range: $BLOCKS blocks from $birthday to the tip ($tip), empty wallet, $SERVER"
+            echo "Runner: $(nproc) cores, $RUNNER_OS $RUNNER_ARCH"
+            echo "zkool $(git rev-parse --short HEAD), Slipstream ${SLIPSTREAM_REF:0:8}"
+          } | tee report.txt
+          for round in $(seq 1 "$ROUNDS"); do
+            "$slipstream" bench --network main --server "$SERVER" --ufvk "$ufvk" \
+              --birthday "$birthday" --json "slipstream-$round.json" > "slipstream-$round.log" 2>&1
+            {
+              echo
+              echo "=== round $round ==="
+              "$zkool" --server "$SERVER" --birthday "$birthday" \
+                --json "zkool-$round.json" --versus "slipstream-$round.json"
+            } 2> "zkool-$round.log" | tee -a report.txt
+          done
+
+      - name: Report
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          {
+            echo "## Sync benchmark (informational)"
+            echo
+            echo '```'
+            cat report.txt 2>/dev/null || echo "no report: the run failed before producing one"
+            echo '```'
+            echo
+            echo "Times vary widely between runs on a shared runner and a public server."
+            echo "Compare the two engines within a round; do not compare a time with another run's."
+          } > summary.md
+          cat summary.md >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$PR" ]; then
+            gh pr comment "$PR" --body-file summary.md || true
+          fi
+
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sync-bench
+          path: |
+            report.txt
+            zkool-*.json
+            zkool-*.log
+            slipstream-*.json
+            slipstream-*.log
+          if-no-files-found: ignore
