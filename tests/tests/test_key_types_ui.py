@@ -51,10 +51,12 @@ T0_COINS = 3
 T0_TOTAL = str(T0_COINS * Decimal(FUND_T0_EACH))
 
 
-def key_cases(ufvk: str, uivk: str, full: dict) -> list[dict]:
+def key_cases(ufvk: str, uivk: str, sapling_ufvk: str, full: dict) -> list[dict]:
     """What each import must show. `minimum` is by pool, in the order
     transparent, Sapling, Orchard, Ironwood. On a long-lived chain the fixed
-    keys carry earlier runs' coins too, so these are lower bounds."""
+    keys carry earlier runs' coins too, so these are lower bounds. `backup` is
+    the key the backup block shows, the imported one unless the import loses
+    part of it."""
 
     def case(
         name,
@@ -65,6 +67,7 @@ def key_cases(ufvk: str, uivk: str, full: dict) -> list[dict]:
         orchard=False,
         minimum=("0", "0", "0", "0"),
         sync_warning=False,
+        backup=None,
     ):
         return {
             "name": name,
@@ -75,6 +78,7 @@ def key_cases(ufvk: str, uivk: str, full: dict) -> list[dict]:
             "orchard": orchard,
             "minimum": list(minimum),
             "sync_warning": sync_warning,
+            "backup": backup or key,
         }
 
     t0_only = (T0_TOTAL, "0", "0", "0")
@@ -107,6 +111,9 @@ def key_cases(ufvk: str, uivk: str, full: dict) -> list[dict]:
             "watch",
             saddr=SAPLING_ADDRESS,
             minimum=("0", FUND_SAPLING, "0", "0"),
+            # Only the diversifiable key is stored, so the account backs up as
+            # the Sapling-only unified key of the same key.
+            backup=sapling_ufvk,
         ),
         case(
             "U-fvk",
@@ -177,6 +184,7 @@ async def test_key_types_flutter_ui(rpc_url, seed, zkool_binary):
         full_addresses = await addresses(wallet, full)
         ufvk = await viewing_key(wallet, full)
         uivk = await viewing_key(wallet, full, incoming=True)
+        sapling_ufvk = await viewing_key(wallet, full, pools=2)
         await pay(wallet, rpc_url, main, full_addresses["ua"], FUND_IRONWOOD)
         await pay(wallet, rpc_url, main, full_addresses["sapling"], FUND_SAPLING)
         for _ in range(T0_COINS):
@@ -185,7 +193,7 @@ async def test_key_types_flutter_ui(rpc_url, seed, zkool_binary):
         recipient = await address(wallet, main)
 
         print("\n=== Step 2: Launch the app ===")
-        cases = key_cases(ufvk, uivk, full_addresses)
+        cases = key_cases(ufvk, uivk, sapling_ufvk, full_addresses)
         rendezvous.write_config(
             db_path=ui_db_path,
             lwd=LWD_URL,
