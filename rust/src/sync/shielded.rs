@@ -17,6 +17,7 @@ use crate::Client;
 use std::mem;
 
 use super::chain_log::{self, NoteKey, NoteRow, SpendRow, TransactionRow};
+use super::fetch::ClientFactory;
 use super::{check_witness_consistency, get_heights_without_time, rewind_within, WarpSyncMessage};
 use crate::{
     api::sync::SyncProgress,
@@ -161,6 +162,38 @@ pub async fn shielded_sync(
     tx_progress: Sender<SyncProgress>,
     cancel: CancellationToken,
 ) -> Result<()> {
+    shielded_sync_with(
+        network,
+        pool,
+        client,
+        accounts,
+        start,
+        end,
+        actions_per_sync,
+        chunk_size,
+        tx_progress,
+        cancel,
+        None,
+    )
+    .await
+}
+
+/// [`shielded_sync`], able to open more connections for the block download
+/// when `more_clients` is given (see [`super::fetch`]).
+#[allow(clippy::too_many_arguments)]
+pub async fn shielded_sync_with(
+    network: &Network,
+    pool: &SqlitePool,
+    client: &mut Client,
+    accounts: &[(u32, bool)],
+    start: u32,
+    end: u32,
+    actions_per_sync: u32,
+    chunk_size: Option<u32>,
+    tx_progress: Sender<SyncProgress>,
+    cancel: CancellationToken,
+    more_clients: Option<ClientFactory>,
+) -> Result<()> {
     let activation_height: u32 = network
         .activation_height(NetworkUpgrade::Sapling)
         .unwrap()
@@ -188,6 +221,7 @@ pub async fn shielded_sync(
             actions_per_sync,
             tx_progress.clone(),
             cancel.clone(),
+            more_clients.clone(),
         )
         .await?
         {
@@ -266,6 +300,7 @@ async fn shielded_sync_range(
     actions_per_sync: u32,
     tx_progress: Sender<SyncProgress>,
     cancel: CancellationToken,
+    more_clients: Option<ClientFactory>,
 ) -> Result<RangeEnd> {
     let accounts = accounts.to_vec();
     let account_ids: Vec<u32> = accounts.iter().map(|(a, _)| *a).collect();
@@ -273,7 +308,16 @@ async fn shielded_sync_range(
         let (s, o, i) = get_tree_state(network, client, start - 1).await?;
 
         debug!("get compact block range");
-        let blocks = get_compact_block_range(network, client, start, end).await?;
+        let scan_wait = crate::warp::sync::ScanWait::new();
+        let blocks = super::fetch::block_stream(
+            network,
+            client,
+            start,
+            end,
+            more_clients,
+            Some(scan_wait.clone()),
+        )
+        .await?;
         debug!("got streaming blocks");
         let (tx_messages, mut rx_messages) = channel::<WarpSyncMessage>(100);
 
@@ -294,9 +338,13 @@ async fn shielded_sync_range(
         let writer_account_ids = account_ids.clone();
         let db_writer_task = tokio::spawn(async move {
             debug!("[db handler] starting");
+            // [bench instrumentation] wall time spent actually committing to SQLite.
+            let mut write_busy = std::time::Duration::ZERO;
+            let mut write_commits: u64 = 0;
             while let Some(msg) = rx_messages.recv().await {
                 //debug!("Received message: {:?}", msg);
                 if let WarpSyncMessage::Commit = msg {
+                    let commit_start = std::time::Instant::now();
                     let mut db_tx = writer_connection.begin().await?;
                     let mut new_messages = vec![];
                     mem::swap(&mut new_messages, &mut messages);
@@ -320,6 +368,8 @@ async fn shielded_sync_range(
                     }
                     db_tx.commit().await?;
                     debug!("Committing transaction");
+                    write_busy += commit_start.elapsed();
+                    write_commits += 1;
                 } else {
                     messages.push(msg);
                 }
@@ -346,6 +396,11 @@ async fn shielded_sync_range(
             }
             db_tx.commit().await?;
 
+            tracing::debug!(
+                write_busy_ms = write_busy.as_millis() as u64,
+                write_commits,
+                "zkool write lane: busy=SQLite commit of scanned notes/tree (excl. final tail flush)"
+            );
             debug!("[db handler] stopped");
             check_witness_consistency(&mut writer_connection, &writer_account_ids).await?;
 
@@ -368,6 +423,7 @@ async fn shielded_sync_range(
                 &i,
                 tx_messages.clone(),
                 cancel,
+                Some(scan_wait),
             )
             .await;
             if let Err(e) = &scan {

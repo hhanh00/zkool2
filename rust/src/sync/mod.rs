@@ -15,6 +15,7 @@ use sqlx::Connection;
 
 pub mod chain_log;
 pub mod driver;
+pub mod fetch;
 pub mod plan;
 pub mod session;
 mod shielded;
@@ -26,7 +27,7 @@ use session::{Held, SyncRun};
 
 pub use shielded::{
     get_compact_block_range, get_tree_state, preload_account_key_cache, shielded_sync,
-    AccountKeyCache, MIXNET_SYNC_CHUNK,
+    shielded_sync_with, AccountKeyCache, MIXNET_SYNC_CHUNK,
 };
 pub use sweep::transparent_sweep;
 pub(crate) use transparent::transparent_sync;
@@ -243,8 +244,19 @@ async fn run_range(
     // GetBlockRange stream fits in one nym-rpc session; elsewhere a
     // single stream for the whole range is cheaper.
     let chunk_size = c.is_mixnet().then_some(MIXNET_SYNC_CHUNK);
+    // Over a direct lightwalletd connection a long range is downloaded on
+    // several connections (see `fetch`); every other transport keeps its
+    // one stream.
+    let more_clients = (c.server_type == 0 && c.transport == 0 && !c.is_mixnet()).then(|| {
+        let coin = c.clone();
+        std::sync::Arc::new(move || {
+            let coin = coin.clone();
+            Box::pin(async move { coin.client().await })
+                as std::pin::Pin<Box<dyn std::future::Future<Output = Result<crate::Client>> + Send>>
+        }) as fetch::ClientFactory
+    });
     run.check_cancelled()?;
-    shielded_sync(
+    shielded_sync_with(
         &network,
         &pool,
         &mut client,
@@ -255,6 +267,7 @@ async fn run_range(
         chunk_size,
         tx_progress.clone(),
         run.cancellation(),
+        more_clients,
     )
     .await?;
 

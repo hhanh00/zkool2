@@ -63,6 +63,56 @@ pub enum ScanEnd {
 /// How long without a block before the connection is given up.
 const STALL: Duration = Duration::from_secs(60);
 
+/// How long the scan has waited for blocks so far. The scan writes it, the
+/// block download reads it: seen from the download side the scan looks
+/// hungry even while it is busy, because blocks are batched in between.
+#[derive(Debug)]
+pub struct ScanWait {
+    base: std::time::Instant,
+    waited_ns: std::sync::atomic::AtomicU64,
+    /// Nanoseconds since `base` at which the current wait began, plus one;
+    /// zero while the scan is not waiting.
+    since_ns: std::sync::atomic::AtomicU64,
+}
+
+impl ScanWait {
+    pub fn new() -> std::sync::Arc<Self> {
+        std::sync::Arc::new(Self {
+            base: std::time::Instant::now(),
+            waited_ns: 0.into(),
+            since_ns: 0.into(),
+        })
+    }
+
+    fn now_ns(&self) -> u64 {
+        self.base.elapsed().as_nanos() as u64
+    }
+
+    fn begin(&self) {
+        self.since_ns
+            .store(self.now_ns() + 1, std::sync::atomic::Ordering::Relaxed);
+    }
+
+    fn end(&self) {
+        let since = self.since_ns.swap(0, std::sync::atomic::Ordering::Relaxed);
+        if since != 0 {
+            let waited = self.now_ns().saturating_sub(since - 1);
+            self.waited_ns
+                .fetch_add(waited, std::sync::atomic::Ordering::Relaxed);
+        }
+    }
+
+    /// Total time waited, the wait in progress included.
+    pub fn total(&self) -> Duration {
+        let mut ns = self.waited_ns.load(std::sync::atomic::Ordering::Relaxed);
+        let since = self.since_ns.load(std::sync::atomic::Ordering::Relaxed);
+        if since != 0 {
+            ns += self.now_ns().saturating_sub(since - 1);
+        }
+        Duration::from_nanos(ns)
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn warp_sync(
     network: &Network,
@@ -78,6 +128,7 @@ pub async fn warp_sync(
     ironwood_state: &CommitmentTreeFrontier,
     tx_decrypted: Sender<WarpSyncMessage>,
     cancel: CancellationToken,
+    scan_wait: Option<std::sync::Arc<ScanWait>>,
 ) -> Result<ScanEnd, SyncError> {
     let sap_hasher = SaplingHasher::default();
 
@@ -155,7 +206,12 @@ pub async fn warp_sync(
         let mut prev_current_height = u32::MAX;
 
         let mut c = 0;
+        // [bench instrumentation] download lane: cumulative time awaiting blocks
+        // from the network, and the reader task's total wall.
+        let mut download_wait = std::time::Duration::ZERO;
+        let reader_started = std::time::Instant::now();
         loop {
+            let iter_start = std::time::Instant::now();
             tokio::select! {
                 _ = interval.tick() => {
                     debug!("Syncing at height {}", current_height);
@@ -172,6 +228,7 @@ pub async fn warp_sync(
                     break;
                 }
                 m = blocks.next() => {
+                    download_wait += iter_start.elapsed();
                     let block = match m {
                         Some(Ok(block)) => block,
                         Some(Err(error)) => {
@@ -242,13 +299,38 @@ pub async fn warp_sync(
             }
         }
 
+        tracing::debug!(
+            download_wait_ms = download_wait.as_millis() as u64,
+            reader_wall_ms = reader_started.elapsed().as_millis() as u64,
+            "zkool download lane: wait=awaiting blocks from network, wall=reader task total"
+        );
         debug!("warp_sync block reader done");
     });
 
     let mut end = ScanEnd::Completed;
-    while let Some(bm) = rx_blocks.recv().await {
+    // [bench instrumentation] Split the scan lane into compute-busy vs
+    // starved-waiting-for-downloaded-blocks. `scan_wait` is time blocked on the
+    // reader task (the download lane); `scan_busy` is trial-decrypt + tree work.
+    // A large scan_wait => download-bound; scan_busy ~= total => compute-bound.
+    let mut scan_busy = std::time::Duration::ZERO;
+    let scan_gauge = scan_wait;
+    let mut scan_wait = std::time::Duration::ZERO;
+    let mut scan_chunks: u64 = 0;
+    loop {
+        let waited = std::time::Instant::now();
+        if let Some(gauge) = &scan_gauge {
+            gauge.begin();
+        }
+        let received = rx_blocks.recv().await;
+        if let Some(gauge) = &scan_gauge {
+            gauge.end();
+        }
+        let Some(bm) = received else { break };
+        scan_wait += waited.elapsed();
+        let busy = std::time::Instant::now();
         match bm {
             BlockMessage::Chunk(bs) => {
+                scan_chunks += 1;
                 debug!("Processing {} blocks", bs.len());
 
                 // Send Issuance messages for asset storage before any Note
@@ -323,7 +405,14 @@ pub async fn warp_sync(
                 let _ = tx_decrypted.send(WarpSyncMessage::BlockHeader(bh)).await;
             }
         }
+        scan_busy += busy.elapsed();
     }
+    tracing::debug!(
+        scan_busy_ms = scan_busy.as_millis() as u64,
+        scan_wait_ms = scan_wait.as_millis() as u64,
+        scan_chunks,
+        "zkool scan lane: busy=decrypt+tree, wait=starved waiting for downloaded blocks"
+    );
 
     Ok(end)
 }
