@@ -61,6 +61,27 @@ pub trait ShieldedProtocol {
 
     fn derive_nf(nk: &Self::NK, position: u32, note: &mut Self::Note) -> Result<Hash32>;
 
+    /// Trial-decrypt a chunk of outputs, `(height, ivtx, vout, output)` each,
+    /// with one key. Tries them one at a time unless the protocol batches.
+    fn try_decrypt_chunk(
+        network: &Network,
+        account: u32,
+        scope: u8,
+        ivk: &Self::IVK,
+        outputs: &[(u32, u32, u32, &Self::Output)],
+    ) -> Vec<(Self::Note, Note)> {
+        outputs
+            .iter()
+            .filter_map(|&(height, ivtx, vout, output)| {
+                Self::try_decrypt(network, account, scope, ivk, height, ivtx, vout, output)
+                    .unwrap_or_else(|e| {
+                        tracing::warn!("decrypt error: {e}");
+                        None
+                    })
+            })
+            .collect()
+    }
+
     /// Process a plaintext issuance note. No trial decryption — the note fields
     /// are unencrypted. Checks if `recipient` matches `ivk`, constructs the
     /// protocol note, computes its cmx, and returns the result.
@@ -109,6 +130,13 @@ pub struct ScanTiming {
     /// Subtrees hashed whose root the server gave too: the two matched.
     pub verified: u64,
 }
+
+/// Outputs per chunk of trial decryption, at most: batched key agreement
+/// gains little past this.
+const DECRYPT_CHUNK_MAX: usize = 512;
+/// Outputs per chunk, at least: enough lanes for batched key agreement to
+/// share its inversions.
+const DECRYPT_CHUNK_MIN: usize = 64;
 
 /// Leaves of a subtree, as `GetSubtreeRoots` counts them: 2^16.
 pub const SUBTREE_DEPTH: usize = 16;
@@ -248,37 +276,35 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         let started = std::time::Instant::now();
 
         let network = self.network;
-        let outputs = blocks.into_par_iter().flat_map_iter(|b| {
-            b.vtx.iter().enumerate().flat_map(move |(ivtx, vtx)| {
-                P::extract_outputs(vtx)
-                    .iter()
-                    .enumerate()
-                    .map(move |(vout, o)| (b.height as u32, ivtx, vout, o))
+        // Outputs in chunks, each trial-decrypted with every key on a
+        // thread of the pool: a protocol may batch a chunk's work for a key.
+        let outputs: Vec<(u32, u32, u32, &P::Output)> = blocks
+            .iter()
+            .flat_map(|b| {
+                b.vtx.iter().enumerate().flat_map(move |(ivtx, vtx)| {
+                    P::extract_outputs(vtx)
+                        .iter()
+                        .enumerate()
+                        .map(move |(vout, o)| (b.height as u32, ivtx as u32, vout as u32, o))
+                })
             })
-        });
+            .collect();
 
+        // About four chunks a thread, so that a pool with few outputs in this
+        // batch still spreads over every thread.
+        let chunk = (outputs.len() / (4 * rayon::current_num_threads()))
+            .clamp(DECRYPT_CHUNK_MIN, DECRYPT_CHUNK_MAX);
         let mut notes: Vec<(
             <P as ShieldedProtocol>::Note,
             Note,
             &Option<<P as ShieldedProtocol>::NK>,
         )> = outputs
-            .flat_map_iter(|(height, ivtx, vout, o)| {
+            .par_chunks(chunk)
+            .flat_map_iter(|chunk| {
                 self.keys.iter().flat_map(move |(account, scope, ivk, nk)| {
-                    P::try_decrypt(
-                        &network,
-                        *account,
-                        *scope,
-                        ivk,
-                        height,
-                        ivtx as u32,
-                        vout as u32,
-                        o,
-                    )
-                    .unwrap_or_else(|e| {
-                        tracing::warn!("decrypt error: {e}");
-                        None
-                    })
-                    .map(|(n, dbn)| (n, dbn, nk))
+                    P::try_decrypt_chunk(&network, *account, *scope, ivk, chunk)
+                        .into_iter()
+                        .map(move |(n, dbn)| (n, dbn, nk))
                 })
             })
             .collect::<Vec<_>>();

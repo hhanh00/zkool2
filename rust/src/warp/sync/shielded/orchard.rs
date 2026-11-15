@@ -66,6 +66,17 @@ impl ShieldedProtocol for OrchardProtocol {
         try_orchard_decrypt(network, account, scope, ivk, height, ivtx, vout, output)
     }
 
+    #[cfg(feature = "zakura-udon")]
+    fn try_decrypt_chunk(
+        network: &Network,
+        account: u32,
+        scope: u8,
+        ivk: &Self::IVK,
+        outputs: &[(u32, u32, u32, &Self::Output)],
+    ) -> Vec<(Self::Note, types::Note)> {
+        super::orchard::decrypt_chunk(network, account, scope, ivk, outputs)
+    }
+
     fn compute_issuance_cmx(
         issue_note: &CompactIssueNote,
         asset_base: &AssetBase,
@@ -183,4 +194,45 @@ fn construct_issuance_note(
     let note = note.unwrap();
     let cmx = ExtractedNoteCommitment::from(note.commitment());
     Ok((note, cmx.to_bytes()))
+}
+
+/// Trial-decrypt a chunk of Orchard or Ironwood actions with one key, their
+/// key agreements batched (see [`crate::warp::batch_ka`]); one at a time if
+/// the key or an ephemeral key encoding cannot be batched.
+#[cfg(feature = "zakura-udon")]
+pub(super) fn decrypt_chunk(
+    network: &Network,
+    account: u32,
+    scope: u8,
+    ivk: &IncomingViewingKey,
+    outputs: &[(u32, u32, u32, &CompactOrchardAction)],
+) -> Vec<(Note, types::Note)> {
+    let decrypt = |(height, ivtx, vout, output): (u32, u32, u32, &CompactOrchardAction),
+                   ka: Option<[u8; 32]>| {
+        let decrypted = match ka {
+            Some(ka) => crate::warp::try_orchard_decrypt_with_secret(
+                network, account, scope, ivk, height, ivtx, vout, output, &ka,
+            ),
+            None => try_orchard_decrypt(network, account, scope, ivk, height, ivtx, vout, output),
+        };
+        decrypted.unwrap_or_else(|e| {
+            tracing::warn!("decrypt error: {e}");
+            None
+        })
+    };
+    let epks: Option<Vec<[u8; 32]>> =
+        outputs.iter().map(|(_, _, _, o)| o.ephemeral_key.as_slice().try_into().ok()).collect();
+    let secrets = crate::warp::orchard_ivk_scalar(ivk)
+        .ok()
+        .zip(epks)
+        .and_then(|(ivk, epks)| crate::warp::batch_ka::orchard_shared_secrets(&ivk, &epks));
+    match secrets {
+        // An undecodable ephemeral key has no secret and decrypts nothing.
+        Some(secrets) => outputs
+            .iter()
+            .zip(secrets)
+            .filter_map(|(&output, ka)| ka.and_then(|ka| decrypt(output, Some(ka))))
+            .collect(),
+        None => outputs.iter().filter_map(|&output| decrypt(output, None)).collect(),
+    }
 }

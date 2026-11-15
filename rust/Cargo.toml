@@ -94,6 +94,9 @@ zcash_address = "0.14"
 zcash_encoding = "0.5"
 zcash_keys = {version = "0.17", features = ["sapling", "orchard", "transparent-inputs"]}
 zcash_note_encryption = "0.5.1"
+# Batched Orchard and Ironwood key agreement for trial decryption (the
+# `zakura-udon` feature). Variable-time in the incoming viewing key.
+zakura-udon = { version = "0.3", optional = true }
 zcash_primitives = {version = "0.31", features = ["transparent-inputs", "zsa", "non-standard-fees"]}
 zcash_proofs = {version = "0.31", features = ["download-params"]}
 zcash_protocol = {version = "0.11", features = ["local-consensus"]}
@@ -184,4 +187,8 @@ graphql = ["juniper", "juniper_warp", "juniper_graphql_ws", "dataloader", "warp"
 ledger = ["hidapi", "ledger-transport"]
 nym = ["dep:nym-smolmix", "dep:nym-sdk", "dep:nym-network-defaults", "dep:bincode1"]
 zemu = ["ledger", "ledger-transport-zemu"]
+# Trial-decrypt Orchard and Ironwood actions a chunk at a time, their key
+# agreements batched with zakura-udon. Its arithmetic is variable-time in the
+# incoming viewing key: off by default.
+zakura-udon = ["dep:zakura-udon"]
 flutter_rust_bridge = ["dep:flutter_rust_bridge"]
