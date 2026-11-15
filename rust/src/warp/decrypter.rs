@@ -123,14 +123,24 @@ pub fn try_orchard_decrypt(
     vout: u32,
     ca: &CompactOrchardAction,
 ) -> Result<Option<(orchard::note::Note, Note)>> {
-    let zip212_enforcement = zip212(network, height);
-    let bb = ivk.to_bytes();
-    let ivk_bytes: [u8; 32] = bb[32..64]
-        .try_into()
-        .map_err(|_| anyhow::anyhow!("Invalid ivk length"))?;
-    let ivk_fq = Option::<Fq>::from(Fq::from_repr(ivk_bytes))
-        .ok_or_else(|| anyhow::anyhow!("Invalid ivk Fq repr"))?;
+    let ka = orchard_shared_secret(ivk, ca)?;
+    try_orchard_decrypt_with_secret(network, account, scope, ivk, height, ivtx, vout, ca, &ka)
+}
 
+/// The incoming viewing key's scalar, in its canonical bytes.
+pub fn orchard_ivk_scalar(ivk: &IncomingViewingKey) -> Result<[u8; 32]> {
+    let bb = ivk.to_bytes();
+    bb[32..64].try_into().map_err(|_| anyhow::anyhow!("Invalid ivk length"))
+}
+
+/// The key agreement of `ivk` with an action's ephemeral key, encoded as the
+/// KDF hashes it.
+pub fn orchard_shared_secret(
+    ivk: &IncomingViewingKey,
+    ca: &CompactOrchardAction,
+) -> Result<[u8; 32]> {
+    let ivk_fq = Option::<Fq>::from(Fq::from_repr(orchard_ivk_scalar(ivk)?))
+        .ok_or_else(|| anyhow::anyhow!("Invalid ivk Fq repr"))?;
     let epk_bytes: [u8; 32] = ca
         .ephemeral_key
         .clone()
@@ -139,12 +149,29 @@ pub fn try_orchard_decrypt(
     let epk = Option::<Point>::from(Point::from_bytes(&epk_bytes))
         .ok_or_else(|| anyhow::anyhow!("Invalid ephemeral key bytes"))?
         .to_affine();
-    let ka = epk * ivk_fq;
+    Ok((epk * ivk_fq).to_bytes())
+}
+
+/// Trial decryption of an action given its shared secret `ka` (see
+/// [`orchard_shared_secret`]): the KDF, the note plaintext and its checks.
+#[allow(clippy::too_many_arguments)]
+pub fn try_orchard_decrypt_with_secret(
+    network: &Network,
+    account: u32,
+    scope: u8,
+    ivk: &IncomingViewingKey,
+    height: u32,
+    ivtx: u32,
+    vout: u32,
+    ca: &CompactOrchardAction,
+    ka: &[u8; 32],
+) -> Result<Option<(orchard::note::Note, Note)>> {
+    let zip212_enforcement = zip212(network, height);
     let key = Params::new()
         .hash_length(32)
         .personal(KDF_ORCHARD_PERSONALIZATION)
         .to_state()
-        .update(&ka.to_bytes())
+        .update(ka)
         .update(&ca.ephemeral_key)
         .finalize();
     let ciphertext_len = ca.ciphertext.len();

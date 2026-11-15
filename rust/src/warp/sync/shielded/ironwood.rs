@@ -67,6 +67,17 @@ impl ShieldedProtocol for IronwoodProtocol {
         try_orchard_decrypt(network, account, scope, ivk, height, ivtx, vout, output)
     }
 
+    #[cfg(feature = "zakura-udon")]
+    fn try_decrypt_chunk(
+        network: &Network,
+        account: u32,
+        scope: u8,
+        ivk: &Self::IVK,
+        outputs: &[(u32, u32, u32, &Self::Output)],
+    ) -> Vec<(Self::Note, types::Note)> {
+        super::orchard::decrypt_chunk(network, account, scope, ivk, outputs)
+    }
+
     fn derive_nf(nk: &Self::NK, _position: u32, note: &mut Self::Note) -> Result<Hash32> {
         let nf = note.nullifier(nk);
         Ok(nf.to_bytes())
