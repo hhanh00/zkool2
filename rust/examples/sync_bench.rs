@@ -15,12 +15,18 @@
 //!   --versus PATH      a `slipstream bench --json` result to print beside this one
 //!   --keep             keep the temporary wallet
 //!   --tip              print the server's current height and exit (no --birthday needed)
+//!   --trace PATH       write the block download's scheduling events as JSON lines:
+//!                      slices, streams, the scan's waits and each response's backend
+//!   --trace-blocks     with --trace, also every block received and delivered
 //!
 //! The JSON uses the names of Slipstream's bench summary where the two
 //! engines measure the same thing: `total_s`, `fetch_s`, `scan_s`, `blocks`.
 
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufWriter, Write};
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 
 use anyhow::{anyhow, bail, Context as _, Result};
 use rlz::api::account::{new_account, NewAccount};
@@ -28,6 +34,9 @@ use rlz::api::coin::Coin;
 use rlz::api::sync::SyncOutcome;
 use rlz::sync::bench::SyncStats;
 use serde_json::{json, Value};
+use tracing_subscriber::layer::SubscriberExt as _;
+use tracing_subscriber::util::SubscriberInitExt as _;
+use tracing_subscriber::{EnvFilter, Layer as _};
 
 const TEST_SEED: &str = "abandon abandon abandon abandon abandon abandon abandon abandon \
                          abandon abandon abandon about";
@@ -46,6 +55,8 @@ struct Args {
     versus: Option<PathBuf>,
     keep: bool,
     tip: bool,
+    trace: Option<PathBuf>,
+    trace_blocks: bool,
 }
 
 fn parse_args() -> Result<Args> {
@@ -54,8 +65,8 @@ fn parse_args() -> Result<Args> {
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            "--fast" | "--keep" | "--tip" => flags.push(arg),
-            "--server" | "--birthday" | "--seed" | "--network" | "--json" | "--versus" => {
+            "--fast" | "--keep" | "--tip" | "--trace-blocks" => flags.push(arg),
+            "--server" | "--birthday" | "--seed" | "--network" | "--json" | "--versus" | "--trace" => {
                 let value = args.next().ok_or_else(|| anyhow!("{arg} needs a value"))?;
                 values.insert(arg, value);
             }
@@ -81,6 +92,8 @@ fn parse_args() -> Result<Args> {
         versus: values.remove("--versus").map(PathBuf::from),
         keep: flags.iter().any(|f| f == "--keep"),
         tip: flags.iter().any(|f| f == "--tip"),
+        trace: values.remove("--trace").map(PathBuf::from),
+        trace_blocks: flags.iter().any(|f| f == "--trace-blocks"),
     })
 }
 
@@ -150,14 +163,49 @@ fn versus(path: &PathBuf, total_s: f64, blocks: u64) -> Result<()> {
 #[tokio::main]
 async fn main() -> Result<()> {
     rustls::crypto::ring::default_provider().install_default().ok();
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
-        )
-        .with_writer(std::io::stderr)
-        .init();
     let args = parse_args()?;
+    let stderr = tracing_subscriber::fmt::layer().with_writer(std::io::stderr).with_filter(
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("warn")),
+    );
+    // Buffered, so writing the trace slows the download as little as it can;
+    // flushed before exit.
+    let trace_file = match &args.trace {
+        Some(path) => Some(Arc::new(Mutex::new(BufWriter::new(
+            File::create(path).with_context(|| path.display().to_string())?,
+        )))),
+        None => None,
+    };
+    let trace = trace_file.clone().map(|file| {
+        let level = if args.trace_blocks { "trace" } else { "debug" };
+        tracing_subscriber::fmt::layer()
+            .json()
+            .with_span_list(true)
+            .with_current_span(false)
+            .with_writer(move || TraceWriter(file.clone()))
+            .with_filter(EnvFilter::new(format!("rlz::sync::fetch={level},rlz::net::lwd=debug")))
+    });
+    tracing_subscriber::registry().with(stderr).with(trace).init();
+    let result = run(args).await;
+    if let Some(file) = trace_file {
+        file.lock().unwrap().flush()?;
+    }
+    result
+}
+
+/// The trace file, shared by every event written to it.
+struct TraceWriter(Arc<Mutex<BufWriter<File>>>);
+
+impl Write for TraceWriter {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.0.lock().unwrap().write(buf)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.0.lock().unwrap().flush()
+    }
+}
+
+async fn run(args: Args) -> Result<()> {
 
     let dir = std::env::temp_dir().join(format!("zkool-sync-bench-{}", std::process::id()));
     std::fs::create_dir_all(&dir)?;
