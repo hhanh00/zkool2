@@ -33,8 +33,9 @@ use tokio::sync::mpsc;
 use tokio::time::Instant;
 use tokio_stream::wrappers::ReceiverStream;
 use tokio_stream::StreamExt as _;
-use tracing::{debug, info};
+use tracing::{debug, debug_span, info, trace, Instrument as _};
 
+use super::routes::{Cost, Routes};
 use crate::api::coin::Network;
 use crate::lwd::CompactBlock;
 use crate::warp::sync::ScanWait;
@@ -59,10 +60,19 @@ const OVERRUN_FACTOR: u64 = 2;
 const UNPLANNED_MAX_BYTES: u64 = 4 * 1024 * 1024;
 /// …or once it took this many times its planned time.
 const BEHIND_FACTOR: f64 = 1.5;
-/// A stream is slow when a slice ran below this share of the others' median.
+/// A stream is slow when its backend is expected to fetch below this share
+/// of the best one it could reach (or, where the server is not steered, of
+/// the other streams' median).
 const SLOW_RATIO: f64 = 0.5;
 /// Consecutive slow slices before a stream is replaced.
-const SLOW_SLICES: u32 = 3;
+const SLOW_SLICES: u32 = 2;
+/// A head slice is moved when a free stream is expected to fetch the rest
+/// of it this many times sooner.
+const MOVE_HEAD_FACTOR: f64 = 2.0;
+/// Heights per bucket of the block sizes seen.
+const SIZE_BUCKET: u32 = 1000;
+/// Look-ahead is never held under this many blocks.
+const MIN_LOOKAHEAD_BLOCKS: f64 = 10_000.0;
 
 #[derive(Clone, Debug)]
 pub struct FetchConfig {
@@ -83,6 +93,14 @@ pub struct FetchConfig {
     pub window: Duration,
     /// Longest a stream may go without a block while it has a slice.
     pub piece_stall: Duration,
+    /// Regions to ask the server's front end for, where it routes by region
+    /// (see [`super::routes`]).
+    pub regions: Vec<String>,
+    /// How long a region may go unmeasured before it is tried again.
+    pub reprobe: Duration,
+    /// Slices are handed out no further ahead of the scan than it reads in
+    /// this long, so the fastest streams work near what it needs next.
+    pub lookahead: Duration,
 }
 
 impl Default for FetchConfig {
@@ -96,6 +114,14 @@ impl Default for FetchConfig {
             mem_cap: 128 * 1024 * 1024,
             window: Duration::from_secs(5),
             piece_stall: Duration::from_secs(30),
+            // Fly.io regions where zec.rocks had backends (November 2026).
+            // A server that does not route by region never names a backend,
+            // and is then not steered.
+            regions: ["syd", "nrt", "lax", "iah", "fra", "ams", "gru"]
+                .map(String::from)
+                .to_vec(),
+            reprobe: Duration::from_secs(30),
+            lookahead: Duration::from_secs(10),
         }
     }
 }
@@ -170,10 +196,15 @@ pub(crate) async fn block_stream_with(
     // any slice it is aborted if it takes too long, and streams take over.
     let short = end - start < cfg.parallel_min_blocks.saturating_sub(1);
     let first_end = if short { end } else { start.saturating_add(PROBE_BLOCKS - 1).min(end) };
-    let first = client.block_range(network, start, first_end).await?;
+    let span = debug_span!("slice", stream = "first", start, end = first_end);
+    let first = client
+        .block_range(network, start, first_end)
+        .instrument(span)
+        .await?;
     let (out, rx) = mpsc::channel(10);
     let (events_tx, events_rx) = mpsc::channel(64);
     let now = Instant::now();
+    let routes = Routes::new(cfg.regions.clone(), cfg.reprobe);
     let fetch = Fetch {
         network: *network,
         end,
@@ -195,6 +226,10 @@ pub(crate) async fn block_stream_with(
         next: start,
         contig: start,
         avg_block: 0.0,
+        sizes: BTreeMap::new(),
+        routes,
+        delivered_window: 0,
+        delivery_rate: None,
         workers: BTreeMap::new(),
         next_id: 0,
         events_tx,
@@ -207,6 +242,7 @@ pub(crate) async fn block_stream_with(
         buffered_sum: 0,
         buffered_samples: 0,
         parked_window: false,
+        parked: false,
         last_steal: now,
         avoid_head: None,
         replacements: 0,
@@ -220,6 +256,8 @@ pub(crate) async fn block_stream_with(
 enum Event {
     /// The connection is open.
     Ready(usize),
+    /// The server answered a slice's request, from this backend if it says.
+    Answered { id: usize, backend: Option<String> },
     Block { id: usize, block: CompactBlock, bytes: u64 },
     /// The slice is complete (or was stopped at its cut).
     Done(usize),
@@ -239,6 +277,12 @@ struct Piece {
     received: u64,
     started: Instant,
     first_block: Option<Instant>,
+    /// Why it was stopped short, if it was.
+    ended_by: Option<&'static str>,
+    /// Whether it held the next block to deliver when handed out.
+    head: bool,
+    /// The backend that answered, where the server says.
+    backend: Option<String>,
 }
 
 struct Worker {
@@ -247,12 +291,15 @@ struct Worker {
     stop: Arc<AtomicU32>,
     ready: bool,
     piece: Option<Piece>,
-    /// Bytes per second over its recent slices.
-    rate: Option<f64>,
+    /// The region its connection asks for.
+    region: Option<String>,
+    /// The backend that answered its last request, where the server says.
+    backend: Option<String>,
     /// Slices finished.
     slices: u32,
     /// Consecutive slices well below the other streams' rate.
     slow_slices: u32,
+    spawned: Instant,
 }
 
 struct Fetch {
@@ -283,6 +330,13 @@ struct Fetch {
     contig: u32,
     /// Recent bytes per block.
     avg_block: f64,
+    /// Bytes and blocks received per `SIZE_BUCKET` heights.
+    sizes: BTreeMap<u32, (u64, u32)>,
+    /// What each backend costs, and which region to connect to.
+    routes: Routes,
+    delivered_window: u64,
+    /// Blocks per second the scan has been reading.
+    delivery_rate: Option<f64>,
 
     workers: BTreeMap<usize, Worker>,
     next_id: usize,
@@ -304,6 +358,8 @@ struct Fetch {
     buffered_samples: u64,
     /// Whether a free stream was refused a slice by the budget this window.
     parked_window: bool,
+    /// Whether the last assignment pass stopped at the budget.
+    parked: bool,
     last_steal: Instant,
     /// The stream the head was just taken from: not given it straight back.
     avoid_head: Option<(usize, Instant)>,
@@ -364,7 +420,9 @@ impl Fetch {
                 permit = out.reserve(), if deliverable => {
                     let Ok(permit) = permit else { break };
                     if let Some((block, bytes)) = self.buffer.remove(&self.next) {
+                        trace!(t_ms = self.t_ms(), height = self.next, bytes, "fetch: delivered");
                         self.buffered -= bytes;
+                        self.delivered_window += 1;
                         self.next += 1;
                         permit.send(Ok(block));
                     }
@@ -412,12 +470,50 @@ impl Fetch {
         });
     }
 
+    /// Milliseconds since the download started, for the trace.
+    fn t_ms(&self) -> u64 {
+        self.started.elapsed().as_millis() as u64
+    }
+
+    /// Who is to fetch `height`: a stream, the first slice, or nobody yet.
+    fn holder(&self, height: u32) -> String {
+        if let Some(id) = self.workers.iter().find_map(|(id, w)| {
+            let piece = w.piece.as_ref()?;
+            (piece.next <= height && height <= piece.end).then_some(*id)
+        }) {
+            return format!("stream {id}");
+        }
+        if self.first.is_some() && self.first_next <= height && height <= self.first_end {
+            return "first".to_string();
+        }
+        match self.returned.range(..=height).next_back() {
+            Some((_, &end)) if height <= end => "returned".to_string(),
+            _ => "unassigned".to_string(),
+        }
+    }
+
     fn note_starved(&mut self, starved: bool) {
         match (self.starved_since, starved) {
-            (None, true) => self.starved_since = Some(Instant::now()),
+            (None, true) => {
+                self.starved_since = Some(Instant::now());
+                debug!(
+                    t_ms = self.t_ms(),
+                    height = self.next,
+                    holder = self.holder(self.contig),
+                    buffered_bytes = self.buffered,
+                    frontier = self.frontier,
+                    "fetch: scan waiting"
+                );
+            }
             (Some(since), false) => {
                 self.starved_acc += since.elapsed();
                 self.starved_since = None;
+                debug!(
+                    t_ms = self.t_ms(),
+                    height = self.next,
+                    waited_ms = since.elapsed().as_millis() as u64,
+                    "fetch: scan resumed"
+                );
             }
             _ => {}
         }
@@ -432,6 +528,9 @@ impl Fetch {
         self.received_window += bytes;
         self.received_total += bytes;
         self.stats.max_buffered.fetch_max(self.buffered, Ordering::Relaxed);
+        let size = self.sizes.entry(height / SIZE_BUCKET).or_default();
+        size.0 += bytes;
+        size.1 += 1;
         self.avg_block = if self.avg_block == 0.0 {
             bytes as f64
         } else {
@@ -450,10 +549,18 @@ impl Fetch {
             Some(Ok(block)) => {
                 let height = block.height as u32;
                 let bytes = block.encoded_len() as u64;
+                trace!(
+                    t_ms = self.t_ms(),
+                    stream = "first",
+                    height,
+                    bytes,
+                    "fetch: block"
+                );
                 self.first_next = height.saturating_add(1);
                 self.insert(height, block, bytes);
                 if height >= self.first_end {
                     self.first = None;
+                    debug!(t_ms = self.t_ms(), end = height, "fetch: first slice done");
                 }
             }
             Some(Err(error)) => {
@@ -473,6 +580,13 @@ impl Fetch {
 
     /// Give up on the first slice: what it did not deliver is unassigned.
     fn drop_first(&mut self) {
+        debug!(
+            t_ms = self.t_ms(),
+            next = self.first_next,
+            end = self.first_end,
+            error = self.last_error.as_ref().map(|e| format!("{e:#}")),
+            "fetch: first slice dropped"
+        );
         self.first = None;
         if self.first_next <= self.first_end {
             self.returned.insert(self.first_next, self.first_end);
@@ -485,12 +599,34 @@ impl Fetch {
     fn on_event(&mut self, event: Event) {
         match event {
             Event::Ready(id) => {
+                let t_ms = self.t_ms();
                 if let Some(worker) = self.workers.get_mut(&id) {
                     worker.ready = true;
+                    debug!(
+                        t_ms,
+                        stream = id,
+                        connect_ms = worker.spawned.elapsed().as_millis() as u64,
+                        "fetch: stream ready"
+                    );
                 }
+            }
+            Event::Answered { id, backend } => {
+                let t_ms = self.t_ms();
+                let Some(worker) = self.workers.get_mut(&id) else {
+                    return;
+                };
+                worker.backend = backend.clone();
+                if let Some(piece) = worker.piece.as_mut() {
+                    piece.backend = backend.clone();
+                }
+                let region = worker.region.clone();
+                self.routes.answered(region.as_deref(), backend.as_deref());
+                debug!(t_ms, stream = id, region, backend, "fetch: slice answered");
             }
             Event::Block { id, block, bytes } => {
                 let height = block.height as u32;
+                let t_ms = self.t_ms();
+                let head = height == self.contig;
                 let Some(piece) = self.workers.get_mut(&id).and_then(|w| w.piece.as_mut()) else {
                     return;
                 };
@@ -504,7 +640,17 @@ impl Fetch {
                 }
                 piece.next = height + 1;
                 piece.received += bytes;
-                piece.first_block.get_or_insert_with(Instant::now);
+                trace!(t_ms, stream = id, height, bytes, head, "fetch: block");
+                if piece.first_block.is_none() {
+                    piece.first_block = Some(Instant::now());
+                    debug!(
+                        t_ms,
+                        stream = id,
+                        start = piece.start,
+                        first_block_ms = piece.started.elapsed().as_millis() as u64,
+                        "fetch: slice first block"
+                    );
+                }
                 let limit = if piece.planned > 0 {
                     OVERRUN_FACTOR * piece.planned
                 } else {
@@ -513,50 +659,62 @@ impl Fetch {
                 let overrun = piece.received > limit && piece.next <= piece.end;
                 self.insert(height, block, bytes);
                 if overrun {
-                    self.abort(id);
+                    self.cut(id, "over_bytes");
                     self.stats.cuts.fetch_add(1, Ordering::Relaxed);
                 }
             }
             Event::Done(id) => {
+                let t_ms = self.t_ms();
                 let Some(worker) = self.workers.get_mut(&id) else {
                     return;
                 };
                 let Some(piece) = worker.piece.take() else {
                     return;
                 };
-                let rate = piece.first_block.and_then(|first| {
-                    let secs = first.elapsed().as_secs_f64();
-                    (secs > 0.001 && piece.received > 0).then(|| piece.received as f64 / secs)
-                });
-                if let Some(rate) = rate {
-                    worker.rate = Some(worker.rate.map_or(rate, |old| (old + rate) / 2.0));
-                }
                 worker.slices += 1;
-                let judged = worker.slices >= 2;
+                let key = Routes::key(piece.backend.as_deref(), id);
+                let blocks = piece.next - piece.start;
+                let elapsed = piece.started.elapsed().as_secs_f64();
+                let first_block = piece
+                    .first_block
+                    .map(|first| (first - piece.started).as_secs_f64());
+                let transfer = piece
+                    .first_block
+                    .map_or(0.0, |first| first.elapsed().as_secs_f64());
+                let cost = self.routes.costs.entry(key.clone()).or_default();
+                let predicted = cost.seconds(f64::from(blocks), piece.received as f64);
+                // A slice ended before its first block tells only that the
+                // wait was at least this long.
+                let wait = first_block.or((elapsed > cost.first_block()).then_some(elapsed));
+                cost.observe(wait, blocks, piece.received, transfer);
+                debug!(
+                    t_ms,
+                    stream = id,
+                    start = piece.start,
+                    end = piece.end,
+                    blocks_planned = piece.blocks,
+                    blocks = piece.next - piece.start,
+                    planned_bytes = piece.planned,
+                    bytes = piece.received,
+                    elapsed_ms = piece.started.elapsed().as_millis() as u64,
+                    first_block_ms = piece
+                        .first_block
+                        .map(|first| (first - piece.started).as_millis() as u64),
+                    predicted_ms = predicted.map(|s| (s * 1000.0) as u64),
+                    backend = key,
+                    head = piece.head,
+                    reason = piece.ended_by.unwrap_or("done"),
+                    "fetch: slice ended"
+                );
                 if piece.next <= piece.end {
                     self.returned.insert(piece.next, piece.end);
                 }
-                if let (Some(rate), true) = (rate, judged) {
-                    self.judge_slow(id, rate);
+                if piece.first_block.is_some() {
+                    self.judge(id);
                 }
             }
             Event::Failed { id, error } => self.fail_worker(id, error),
         }
-    }
-
-    /// Abort a slice that turned out bigger or slower than planned: what it
-    /// delivered is kept, the rest goes back to the queue, and the stream's
-    /// rate is set to what it managed, so its next slice is sized on that.
-    fn abort(&mut self, id: usize) {
-        if let Some(worker) = self.workers.get_mut(&id) {
-            if let Some(piece) = worker.piece.as_ref() {
-                let secs = piece.started.elapsed().as_secs_f64();
-                if secs > 0.001 {
-                    worker.rate = Some(piece.received as f64 / secs);
-                }
-            }
-        }
-        self.cut(id);
     }
 
     /// Abort every slice past its time limit, wherever it is in the range.
@@ -579,14 +737,16 @@ impl Fetch {
             .collect();
         for id in late {
             debug!(stream = id, "block download: slice timed out");
-            self.abort(id);
+            self.cut(id, "timed_out");
             self.stats.timeouts.fetch_add(1, Ordering::Relaxed);
         }
     }
 
     /// Stop a stream's slice at the last block it delivered; the rest goes
-    /// back to the queue.
-    fn cut(&mut self, id: usize) {
+    /// back to the queue. What it did is counted when the stream reports it
+    /// stopped, so its backend's cost follows a slice that went badly too.
+    fn cut(&mut self, id: usize, reason: &'static str) {
+        let t_ms = self.t_ms();
         let Some(worker) = self.workers.get_mut(&id) else {
             return;
         };
@@ -596,44 +756,122 @@ impl Fetch {
         if piece.next > piece.end {
             return;
         }
+        piece.ended_by.get_or_insert(reason);
+        debug!(
+            t_ms,
+            stream = id,
+            start = piece.start,
+            at = piece.next,
+            end = piece.end,
+            bytes = piece.received,
+            planned_bytes = piece.planned,
+            elapsed_ms = piece.started.elapsed().as_millis() as u64,
+            reason,
+            "fetch: slice cut"
+        );
         self.returned.insert(piece.next, piece.end);
         piece.end = piece.next - 1;
         worker.stop.store(piece.end, Ordering::SeqCst);
     }
 
-    /// Replace a stream that stays well below the others: a new connection
-    /// may land on a better path.
-    fn judge_slow(&mut self, id: usize, rate: f64) {
-        let mut others: Vec<f64> = self
-            .workers
-            .iter()
-            .filter(|(other, _)| **other != id)
-            .filter_map(|(_, w)| w.rate)
-            .collect();
-        if others.len() < 2 {
+    /// Replace a stream whose backend stays well below the best: where the
+    /// server routes by region, by one to the best region; elsewhere by a
+    /// new connection, which may land on a better path.
+    fn judge(&mut self, id: usize) {
+        let piece = self.cfg.piece.as_secs_f64();
+        let block_bytes = self.block_bytes(self.frontier);
+        let Some(worker) = self.workers.get(&id) else {
             return;
-        }
-        others.sort_by(|a, b| a.total_cmp(b));
-        let median = others[others.len() / 2];
+        };
+        let key = Routes::key(worker.backend.as_deref(), id);
+        let Some(rate) = self
+            .routes
+            .costs
+            .get(&key)
+            .filter(|cost| cost.measured(piece))
+            .and_then(|cost| cost.blocks_per_second(piece, block_bytes))
+        else {
+            return;
+        };
+        let best = if self.routes.steerable() {
+            self.routes.best_region_rate(piece, block_bytes)
+        } else {
+            let mut others: Vec<f64> = self
+                .workers
+                .keys()
+                .filter(|other| **other != id)
+                .filter_map(|other| self.stream_rate(*other, block_bytes))
+                .collect();
+            others.sort_by(f64::total_cmp);
+            (others.len() >= 2).then(|| others[others.len() / 2])
+        };
+        let Some(best) = best else {
+            return;
+        };
         let Some(worker) = self.workers.get_mut(&id) else {
             return;
         };
-        if rate < SLOW_RATIO * median {
+        if rate < SLOW_RATIO * best {
             worker.slow_slices += 1;
         } else {
             worker.slow_slices = 0;
         }
-        if worker.slow_slices >= SLOW_SLICES && (self.replacements as usize) < self.cfg.max_streams
+        if worker.slow_slices >= SLOW_SLICES
+            && (self.replacements as usize) < 2 * self.cfg.max_streams
         {
             info!(
-                "block download: stream {id} stayed slow ({rate:.0} B/s, others {median:.0}): \
-                 replacing it"
+                "block download: stream {id} on {key} stayed slow ({rate:.0} blocks/s, \
+                 best {best:.0}): replacing it"
             );
             self.workers.remove(&id);
+            debug!(
+                t_ms = self.t_ms(),
+                stream = id,
+                backend = key,
+                blocks_per_s = rate as u64,
+                best_blocks_per_s = best as u64,
+                "fetch: stream replaced"
+            );
             self.replacements += 1;
             self.stats.replaced.fetch_add(1, Ordering::Relaxed);
-            self.spawn_worker();
+            let region = self.next_region();
+            self.spawn_worker(region);
         }
+    }
+
+    /// Where the server routes by region and one has gone unmeasured for a
+    /// while, move the slowest free stream there to measure it again.
+    fn reprobe(&mut self) {
+        if !self.routes.steerable() || self.workers.len() < 2 {
+            return;
+        }
+        let in_use: Vec<&str> = self
+            .workers
+            .values()
+            .filter_map(|w| w.region.as_deref())
+            .collect();
+        let Some(region) = self.routes.stale_region(&in_use) else {
+            return;
+        };
+        let block_bytes = self.block_bytes(self.frontier);
+        let slowest = self
+            .workers
+            .iter()
+            .filter(|(_, w)| w.ready && w.piece.is_none())
+            .map(|(id, _)| (*id, self.stream_rate(*id, block_bytes).unwrap_or(0.0)))
+            .min_by(|a, b| a.1.total_cmp(&b.1));
+        let Some((id, _)) = slowest else {
+            return;
+        };
+        self.routes.probed();
+        self.workers.remove(&id);
+        debug!(
+            t_ms = self.t_ms(),
+            stream = id,
+            region,
+            "fetch: region probed again"
+        );
+        self.spawn_worker(Some(region));
     }
 
     /// Drop a stream; the rest of its slice goes back to the queue. A failed
@@ -642,6 +880,15 @@ impl Fetch {
         let Some(worker) = self.workers.remove(&id) else {
             return;
         };
+        debug!(
+            t_ms = self.t_ms(),
+            stream = id,
+            start = worker.piece.as_ref().map(|p| p.start),
+            at = worker.piece.as_ref().map(|p| p.next),
+            end = worker.piece.as_ref().map(|p| p.end),
+            error = format!("{error:#}"),
+            "fetch: stream failed"
+        );
         if let Some(piece) = worker.piece {
             if piece.next <= piece.end {
                 self.returned.insert(piece.next, piece.end);
@@ -657,38 +904,72 @@ impl Fetch {
         self.last_error = Some(error);
     }
 
-    /// Bytes per second all streams fetch together.
-    fn total_rate(&self) -> f64 {
-        self.workers.values().filter_map(|w| w.rate).sum()
+    /// Bytes per block expected at `height`: what arrived nearest below it.
+    fn block_bytes(&self, height: u32) -> f64 {
+        self.sizes
+            .range(..=height / SIZE_BUCKET)
+            .next_back()
+            .map(|(_, &(bytes, blocks))| bytes as f64 / f64::from(blocks.max(1)))
+            .unwrap_or(self.avg_block)
+            .max(1.0)
     }
 
-    /// The rate to plan with for a stream whose own is not known.
-    fn mean_rate(&self) -> f64 {
-        let known = self.workers.values().filter(|w| w.rate.is_some()).count();
-        if known == 0 {
-            1024.0 * 1024.0
-        } else {
-            self.total_rate() / known as f64
+    /// The cost a stream is expected to have: its backend's once it has
+    /// one, else that of the backend its region reached last.
+    fn stream_cost(&self, id: usize) -> Option<&Cost> {
+        let worker = self.workers.get(&id)?;
+        let own = self
+            .routes
+            .costs
+            .get(&Routes::key(worker.backend.as_deref(), id));
+        match own {
+            Some(cost) if cost.samples() > 0 => Some(cost),
+            _ => self.routes.cost_of(worker.region.as_deref()?),
         }
     }
 
-    /// Blocks in a stream's next slice: what it fetches in `piece` at its
-    /// rate, or a probe while nothing is known of it.
-    fn piece_blocks(&self, slices: u32, rate: Option<f64>) -> u32 {
-        if slices == 0 || self.avg_block == 0.0 {
+    /// Blocks per second a stream is expected to fetch.
+    fn stream_rate(&self, id: usize, block_bytes: f64) -> Option<f64> {
+        self.stream_cost(id)?
+            .blocks_per_second(self.cfg.piece.as_secs_f64(), block_bytes)
+    }
+
+    /// Blocks in a stream's next slice from `start`: what its backend is
+    /// expected to fetch in a slice's time. A backend not measured enough
+    /// yet gets half a usual slice, long enough to measure it, and a probe
+    /// while nothing is known at all.
+    fn piece_blocks(&self, id: usize, start: u32) -> u32 {
+        if self.avg_block == 0.0 {
             return PROBE_BLOCKS;
         }
-        let rate = rate.unwrap_or_else(|| self.mean_rate());
-        let bytes = (rate * self.cfg.piece.as_secs_f64()).min(self.cfg.mem_cap as f64 / 4.0);
-        let blocks = (bytes / self.avg_block.max(1.0)).ceil();
-        (blocks.min(u32::MAX as f64) as u32).max(PROBE_BLOCKS)
+        let piece = self.cfg.piece.as_secs_f64();
+        let block_bytes = self.block_bytes(start);
+        let planned = |cost: &Cost| cost.blocks_in(cost.slice_seconds(piece), block_bytes);
+        let cost = self.stream_cost(id);
+        let blocks = cost
+            .filter(|cost| cost.measured(piece))
+            .and_then(planned)
+            .or_else(|| self.routes.typical_blocks(piece, block_bytes).map(|b| b / 2.0))
+            .or_else(|| cost.and_then(planned));
+        let Some(blocks) = blocks else {
+            return PROBE_BLOCKS;
+        };
+        let most = self.cfg.mem_cap as f64 / 4.0 / block_bytes;
+        (blocks.min(most).ceil().min(u32::MAX as f64) as u32).max(PROBE_BLOCKS)
+    }
+
+    /// The region for the next connection (see [`Routes::pick_region`]).
+    fn next_region(&mut self) -> Option<String> {
+        let block_bytes = self.block_bytes(self.frontier);
+        self.routes
+            .pick_region(self.cfg.piece.as_secs_f64(), block_bytes)
     }
 
     fn has_unassigned(&self) -> bool {
         !self.returned.is_empty() || self.frontier <= self.end
     }
 
-    fn spawn_worker(&mut self) -> usize {
+    fn spawn_worker(&mut self, region: Option<String>) -> usize {
         let id = self.next_id;
         self.next_id += 1;
         let (assign, assignments) = mpsc::channel(1);
@@ -697,6 +978,7 @@ impl Fetch {
             id,
             self.network,
             self.factory.clone(),
+            region.clone(),
             assignments,
             stop.clone(),
             self.events_tx.clone(),
@@ -704,9 +986,26 @@ impl Fetch {
         ));
         self.workers.insert(
             id,
-            Worker { assign, stop, ready: false, piece: None, rate: None, slices: 0, slow_slices: 0 },
+            Worker {
+                assign,
+                stop,
+                ready: false,
+                piece: None,
+                region: region.clone(),
+                backend: None,
+                slices: 0,
+                slow_slices: 0,
+                spawned: Instant::now(),
+            },
         );
         self.stats.connections.fetch_add(1, Ordering::Relaxed);
+        debug!(
+            t_ms = self.t_ms(),
+            stream = id,
+            region,
+            streams = self.workers.len(),
+            "fetch: stream opened"
+        );
         self.stats
             .peak_connections
             .fetch_max(self.workers.len() as u64, Ordering::Relaxed);
@@ -716,7 +1015,8 @@ impl Fetch {
     /// Open streams up to the number wanted.
     fn top_up(&mut self) {
         while self.workers.len() < self.target && self.has_unassigned() {
-            self.spawn_worker();
+            let region = self.next_region();
+            self.spawn_worker(region);
         }
     }
 
@@ -728,17 +1028,23 @@ impl Fetch {
             .sum()
     }
 
-    /// Hand the next slices to free streams, fastest first, while they fit
-    /// the budget.
+    /// Hand the next slices to free streams, fastest first, so the head goes
+    /// to the best of them, while they fit the budget and the look-ahead.
     fn assign(&mut self) {
-        let mut free: Vec<(usize, u32, Option<f64>)> = self
+        let block_bytes = self.block_bytes(self.frontier);
+        let mut free: Vec<(usize, f64)> = self
             .workers
             .iter()
             .filter(|(_, w)| w.ready && w.piece.is_none())
-            .map(|(id, w)| (*id, w.slices, w.rate))
+            .map(|(id, _)| (*id, self.stream_rate(*id, block_bytes).unwrap_or(0.0)))
             .collect();
-        free.sort_by(|a, b| b.2.unwrap_or(0.0).total_cmp(&a.2.unwrap_or(0.0)));
-        for (id, slices, rate) in free {
+        free.sort_by(|a, b| b.1.total_cmp(&a.1));
+        let free_count = free.len();
+        let mut parked = false;
+        let lookahead = self
+            .delivery_rate
+            .map(|rate| (rate * self.cfg.lookahead.as_secs_f64()).max(MIN_LOOKAHEAD_BLOCKS));
+        for (id, _) in free {
             let (start, limit) = match self.returned.first_key_value() {
                 Some((&start, &end)) => (start, end),
                 None if self.frontier <= self.end => (self.frontier, self.end),
@@ -754,20 +1060,61 @@ impl Fetch {
                     }
                 }
             }
-            let blocks = self.piece_blocks(slices, rate);
-            let end = start.saturating_add(blocks - 1).min(limit);
-            let planned = (f64::from(end - start + 1) * self.avg_block) as u64;
-            if !head && self.buffered + self.inflight_remaining() + planned > self.budget {
-                self.parked_window = true;
+            if !head && lookahead.is_some_and(|ahead| f64::from(start - self.next) > ahead) {
                 break;
             }
-            if self.returned.remove(&start).is_some() {
+            let blocks = self.piece_blocks(id, start);
+            let end = start.saturating_add(blocks - 1).min(limit);
+            let planned = (f64::from(end - start + 1) * self.block_bytes(start)) as u64;
+            let inflight = self.inflight_remaining();
+            if !head && self.buffered + inflight + planned > self.budget {
+                self.parked_window = true;
+                parked = true;
+                if !self.parked {
+                    debug!(
+                        t_ms = self.t_ms(),
+                        free = free_count,
+                        buffered_bytes = self.buffered,
+                        inflight_bytes = inflight,
+                        planned_bytes = planned,
+                        budget_bytes = self.budget,
+                        "fetch: budget parked"
+                    );
+                }
+                break;
+            }
+            let requeued = self.returned.remove(&start).is_some();
+            if requeued {
                 if end < limit {
                     self.returned.insert(end + 1, limit);
                 }
             } else {
                 self.frontier = end + 1;
             }
+            debug!(
+                t_ms = self.t_ms(),
+                stream = id,
+                start,
+                end,
+                blocks = end - start + 1,
+                planned_bytes = planned,
+                predicted_ms = self
+                    .stream_cost(id)
+                    .and_then(|cost| cost.seconds(f64::from(end - start + 1), planned as f64))
+                    .map(|s| (s * 1000.0) as u64),
+                region = self.workers.get(&id).and_then(|w| w.region.clone()),
+                backend = self.workers.get(&id).and_then(|w| w.backend.clone()),
+                block_bytes = self.block_bytes(start) as u64,
+                head,
+                requeued,
+                next = self.next,
+                contig = self.contig,
+                frontier = self.frontier,
+                buffered_bytes = self.buffered,
+                inflight_bytes = inflight,
+                budget_bytes = self.budget,
+                "fetch: slice assigned"
+            );
             let Some(worker) = self.workers.get_mut(&id) else {
                 continue;
             };
@@ -781,11 +1128,24 @@ impl Fetch {
                 received: 0,
                 started: Instant::now(),
                 first_block: None,
+                ended_by: None,
+                head,
+                backend: None,
             });
             self.stats.pieces.fetch_add(1, Ordering::Relaxed);
             if worker.assign.try_send((start, end)).is_err() {
                 self.fail_worker(id, anyhow!("stream task ended"));
             }
+        }
+        if self.parked && !parked && free_count > 0 {
+            debug!(
+                t_ms = self.t_ms(),
+                buffered_bytes = self.buffered,
+                "fetch: budget unparked"
+            );
+        }
+        if free_count > 0 {
+            self.parked = parked;
         }
     }
 
@@ -814,11 +1174,19 @@ impl Fetch {
         let head = self.contig;
         let holder = self.workers.iter().find_map(|(id, w)| {
             let piece = w.piece.as_ref()?;
-            (piece.next == head && piece.next <= piece.end && self.behind(piece)).then_some(*id)
+            (piece.next == head && piece.next <= piece.end).then_some(*id)
         });
         let Some(holder) = holder else {
             return;
         };
+        let behind = self.workers[&holder]
+            .piece
+            .as_ref()
+            .is_some_and(|p| self.behind(p));
+        let better = self.better_for_head(holder);
+        if !behind && better.is_none() {
+            return;
+        }
         let free = self
             .workers
             .iter()
@@ -841,25 +1209,63 @@ impl Fetch {
             let Some((_, furthest)) = furthest else {
                 return;
             };
-            self.cut(furthest);
+            self.cut(furthest, "yield_to_head");
         }
         debug!(
             holder,
             height = head,
-            rate = self.workers.get(&holder).and_then(|w| w.rate).unwrap_or(0.0) as u64,
+            backend = self.workers.get(&holder).and_then(|w| w.backend.clone()),
+            behind,
+            expected_s = better.map(|(holder_s, _)| holder_s),
+            elsewhere_s = better.map(|(_, other_s)| other_s),
             buffered_bytes = self.buffered,
             "block download: head slice fell behind: moving it"
         );
-        self.abort(holder);
+        self.cut(holder, "moved");
         self.avoid_head = Some((holder, Instant::now()));
         self.stats.steals.fetch_add(1, Ordering::Relaxed);
         self.last_steal = Instant::now();
     }
 
+    /// Where the head slice's stream is expected to take much longer over
+    /// the rest of it than a free stream would: the seconds each would take.
+    fn better_for_head(&self, holder: usize) -> Option<(f64, f64)> {
+        let piece = self.workers.get(&holder)?.piece.as_ref()?;
+        let left = f64::from(piece.end - piece.next + 1);
+        let bytes = left * self.block_bytes(piece.next);
+        let done = piece.next - piece.start;
+        // What it is doing now, once it has started; what its backend is
+        // expected to do before.
+        let holder_s = match piece.first_block {
+            Some(first) if done > 0 => first.elapsed().as_secs_f64() * left / f64::from(done),
+            _ => {
+                let cost = self.stream_cost(holder)?;
+                let waited = piece.started.elapsed().as_secs_f64();
+                cost.seconds(left, bytes)? - waited.min(cost.first_block())
+            }
+        };
+        if holder_s < self.cfg.piece.as_secs_f64() / 2.0 {
+            return None; // nearly done: moving it would not pay
+        }
+        let other_s = self
+            .workers
+            .iter()
+            .filter(|(id, w)| **id != holder && w.ready && w.piece.is_none())
+            .filter_map(|(id, _)| self.stream_cost(*id)?.seconds(left, bytes))
+            .min_by(f64::total_cmp)?;
+        (other_s * MOVE_HEAD_FACTOR < holder_s).then_some((holder_s, other_s))
+    }
+
     /// Whether enough of the range is left for another stream to help.
     fn worth_adding(&self) -> bool {
         let left = self.end.saturating_sub(self.frontier);
-        left > self.piece_blocks(1, None).saturating_mul(2)
+        let slice = self
+            .workers
+            .keys()
+            .map(|id| self.piece_blocks(*id, self.frontier))
+            .max()
+            .unwrap_or(PROBE_BLOCKS);
+        left > slice.saturating_mul(2)
     }
 
     /// End of a window: read the scanner and the buffer (see the module doc).
@@ -887,15 +1293,45 @@ impl Fetch {
             (self.buffered_sum / u128::from(self.buffered_samples)) as u64
         };
         let parked = self.parked_window;
+        let delivered = self.delivered_window as f64 / secs;
+        self.delivery_rate = Some(
+            self.delivery_rate
+                .map_or(delivered, |old| (old + delivered) / 2.0),
+        );
+        self.delivered_window = 0;
         self.starved_acc = Duration::ZERO;
         self.received_window = 0;
         self.buffered_sum = 0;
         self.buffered_samples = 0;
         self.parked_window = false;
         // "Small": no more than the slices in flight would explain.
-        let in_flight = (self.total_rate() * self.cfg.piece.as_secs_f64()) as u64;
+        let block_bytes = self.block_bytes(self.frontier);
+        let blocks_per_s: f64 = self
+            .workers
+            .keys()
+            .filter_map(|id| self.stream_rate(*id, block_bytes))
+            .sum();
+        let in_flight = (blocks_per_s * block_bytes * self.cfg.piece.as_secs_f64()) as u64;
         let small = buffered <= in_flight.max(1);
+        for (backend, cost) in &self.routes.costs {
+            if let Some((per_block, per_byte)) = cost.terms() {
+                debug!(
+                    t_ms = self.t_ms(),
+                    backend,
+                    samples = cost.samples(),
+                    first_block_ms = (cost.first_block() * 1000.0) as u64,
+                    per_block_us = (per_block * 1e6) as u64,
+                    mb_per_s = (per_byte > 0.0).then(|| 1.0 / per_byte / 1048576.0),
+                    blocks_per_s = cost
+                        .blocks_per_second(self.cfg.piece.as_secs_f64(), block_bytes)
+                        .map(|r| r as u64),
+                    "fetch: backend cost"
+                );
+            }
+        }
+        self.reprobe();
         debug!(
+            t_ms = self.t_ms(),
             rate_bps = rate as u64,
             waiting_pct = (waiting * 100.0) as u32,
             buffered_bytes = buffered,
@@ -932,10 +1368,12 @@ impl Fetch {
 }
 
 /// One stream: fetches the slices it is assigned, one at a time.
+#[allow(clippy::too_many_arguments)]
 async fn worker(
     id: usize,
     network: Network,
     factory: ClientFactory,
+    region: Option<String>,
     mut assignments: mpsc::Receiver<(u32, u32)>,
     stop: Arc<AtomicU32>,
     events: mpsc::Sender<Event>,
@@ -953,17 +1391,30 @@ async fn worker(
             return;
         }
     };
+    client.prefer_region(region.as_deref());
     if events.send(Event::Ready(id)).await.is_err() {
         return;
     }
     while let Some((start, end)) = assignments.recv().await {
-        let mut stream = match client.block_range(&network, start, end).await {
+        let span = debug_span!("slice", stream = id, start, end);
+        let mut stream = match client
+            .block_range(&network, start, end)
+            .instrument(span)
+            .await
+        {
             Ok(stream) => stream,
             Err(error) => {
                 let _ = events.send(failed(error)).await;
                 return;
             }
         };
+        let answered = Event::Answered {
+            id,
+            backend: client.last_backend(),
+        };
+        if events.send(answered).await.is_err() {
+            return;
+        }
         let mut last = start.saturating_sub(1);
         loop {
             let item = match tokio::time::timeout(stall, stream.next()).await {
@@ -1028,6 +1479,12 @@ mod tests {
         /// The stream fails after this many blocks of a request.
         fails_after_blocks: Option<u32>,
         asked: Arc<Mutex<Vec<(u32, u32)>>>,
+        /// Per region, the delay a block: a server that routes by region and
+        /// names its backends (`be-<region>`).
+        regions: Option<Arc<dyn Fn(&str) -> Duration + Send + Sync>>,
+        region: Option<String>,
+        /// The region each request went to.
+        served: Arc<Mutex<Vec<String>>>,
     }
 
     impl Fake {
@@ -1039,6 +1496,9 @@ mod tests {
                 fails_after: None,
                 fails_after_blocks: None,
                 asked: Arc::new(Mutex::new(vec![])),
+                regions: None,
+                region: None,
+                served: Arc::new(Mutex::new(vec![])),
             }
         }
     }
@@ -1061,7 +1521,11 @@ mod tests {
             end: u32,
         ) -> Result<Self::CompactBlockStream> {
             self.asked.lock().unwrap().push((start, end));
-            let fake = self.clone();
+            let mut fake = self.clone();
+            if let (Some(delays), Some(region)) = (&self.regions, &self.region) {
+                fake.delay = delays(region);
+                self.served.lock().unwrap().push(region.clone());
+            }
             let (tx, rx) = mpsc::channel(10);
             tokio::spawn(async move {
                 for (sent, height) in (start..=end).enumerate() {
@@ -1110,6 +1574,15 @@ mod tests {
         async fn tree_state(&mut self, _: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)> {
             unimplemented!()
         }
+
+        fn prefer_region(&mut self, region: Option<&str>) {
+            self.region = region.map(String::from);
+        }
+
+        fn last_backend(&self) -> Option<String> {
+            self.regions.as_ref()?;
+            Some(format!("be-{}", self.region.as_deref()?))
+        }
     }
 
     fn cfg(mem_cap: u64) -> FetchConfig {
@@ -1122,6 +1595,9 @@ mod tests {
             mem_cap,
             window: Duration::from_millis(50),
             piece_stall: Duration::from_secs(5),
+            regions: vec![],
+            reprobe: Duration::from_secs(3600),
+            lookahead: Duration::from_secs(3600),
         }
     }
 
@@ -1332,5 +1808,36 @@ mod tests {
         assert_eq!(heights.len(), 9000);
         assert!(stats.replaced.load(Ordering::Relaxed) >= 1, "the slow stream was kept");
         assert!(opened.load(Ordering::Relaxed) >= 5);
+    }
+
+    #[tokio::test]
+    async fn connections_go_to_the_faster_region() {
+        // Two regions: "slow" takes 6 ms a block, "fast" 1 ms.
+        let mut server = Fake::new(1, 100);
+        server.regions = Some(Arc::new(|region: &str| {
+            Duration::from_millis(if region == "slow" { 6 } else { 1 })
+        }));
+        let served = server.served.clone();
+        let (more, _) = factory(None, server.clone());
+        let mut config = cfg(64 << 20);
+        config.initial_streams = 4;
+        config.regions = vec!["slow".into(), "fast".into()];
+        let (mut stream, stats) = open(server, more, 12_000, config).await;
+        let (heights, error) = drain(&mut stream).await;
+        assert_eq!(error, None);
+        assert_eq!(heights, (1..=12_000).collect::<Vec<_>>());
+        assert!(
+            stats.replaced.load(Ordering::Relaxed) >= 1,
+            "no stream left the slow region"
+        );
+        // Once both were measured, the streams open to the fast one.
+        let served = served.lock().unwrap();
+        let late = &served[served.len() / 2..];
+        let fast = late.iter().filter(|region| *region == "fast").count();
+        assert!(
+            fast * 4 >= late.len() * 3,
+            "{fast} of the last {} requests went to fast",
+            late.len()
+        );
     }
 }

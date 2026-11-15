@@ -18,6 +18,7 @@ pub mod bench;
 pub mod driver;
 pub mod fetch;
 pub mod plan;
+mod routes;
 pub mod session;
 mod shielded;
 mod sweep;

@@ -293,7 +293,7 @@ impl Coin {
                         endpoint.connect().await?
                     }
                 };
-                let client = CompactTxStreamerClient::new(channel);
+                let client = crate::net::lwd::LwdClient::new(CompactTxStreamerClient::new(channel));
                 Ok(Box::new(client) as Client)
             }
 
