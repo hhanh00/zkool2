@@ -3,8 +3,12 @@
 //! connection gets an equal slice and one GetBlockRange.
 //!
 //! cargo run --release --features graphql --example dl_bench -- \
-//!     https://zec.rocks:443 3000000 3200000 6 3
-//! (url, start, end, max connections, rounds)
+//!     https://zec.rocks:443 3000000 3200000 6 3 [syd,nrt,lax]
+//! (url, start, end, max connections, rounds, regions)
+//!
+//! With regions, connection i asks for region i mod n through Fly.io's
+//! `fly-prefer-region` header. Each connection's line shows the backend
+//! that answered (`x-backend`), as servers behind Fly.io report it.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
@@ -13,6 +17,7 @@ use std::time::Instant;
 use prost::Message as _;
 use rlz::lwd::{compact_tx_streamer_client::CompactTxStreamerClient, BlockId, BlockRange};
 use tonic::transport::{Channel, ClientTlsConfig};
+use tonic::Request;
 
 const MB: f64 = 1_048_576.0;
 
@@ -29,9 +34,19 @@ struct ConnStats {
     first_block_ms: f64,
     secs: f64,
     bytes: u64,
+    blocks: u64,
+    region: String,
+    backend: String,
 }
 
-async fn run(url: &str, start: u64, end: u64, k: u64, round: u32) -> anyhow::Result<()> {
+async fn run(
+    url: &str,
+    start: u64,
+    end: u64,
+    k: u64,
+    round: u32,
+    regions: &[String],
+) -> anyhow::Result<()> {
     let connect_started = Instant::now();
     let mut clients = Vec::new();
     for _ in 0..k {
@@ -52,15 +67,29 @@ async fn run(url: &str, start: u64, end: u64, k: u64, round: u32) -> anyhow::Res
         let e = start + span * (i + 1) / k - 1;
         let total = Arc::clone(&total);
         let first_done = Arc::clone(&first_done);
+        let region = if regions.is_empty() {
+            String::new()
+        } else {
+            regions[i as usize % regions.len()].clone()
+        };
         tasks.push(tokio::spawn(async move {
-            let mut blocks = client
-                .get_block_range(BlockRange {
-                    start: Some(BlockId { height: s, hash: vec![] }),
-                    end: Some(BlockId { height: e, hash: vec![] }),
-                    ..Default::default()
-                })
-                .await?
-                .into_inner();
+            let mut request = Request::new(BlockRange {
+                start: Some(BlockId { height: s, hash: vec![] }),
+                end: Some(BlockId { height: e, hash: vec![] }),
+                ..Default::default()
+            });
+            if !region.is_empty() {
+                request.metadata_mut().insert("fly-prefer-region", region.parse()?);
+            }
+            let response = client.get_block_range(request).await?;
+            let backend = response
+                .metadata()
+                .get("x-backend")
+                .and_then(|value| value.to_str().ok())
+                .unwrap_or("-")
+                .to_string();
+            let mut blocks = response.into_inner();
+            let mut count = 0u64;
             let mut bytes = 0u64;
             let mut first_block_ms = 0.0;
             while let Some(block) = blocks.message().await? {
@@ -68,6 +97,7 @@ async fn run(url: &str, start: u64, end: u64, k: u64, round: u32) -> anyhow::Res
                     first_block_ms = started.elapsed().as_secs_f64() * 1e3;
                 }
                 let n = block.encoded_len() as u64;
+                count += 1;
                 bytes += n;
                 total.fetch_add(n, Ordering::Relaxed);
             }
@@ -76,7 +106,14 @@ async fn run(url: &str, start: u64, end: u64, k: u64, round: u32) -> anyhow::Res
             if first.is_none() {
                 *first = Some((secs, total.load(Ordering::Relaxed)));
             }
-            Ok::<_, anyhow::Error>(ConnStats { first_block_ms, secs, bytes })
+            Ok::<_, anyhow::Error>(ConnStats {
+                first_block_ms,
+                secs,
+                bytes,
+                blocks: count,
+                region,
+                backend,
+            })
         }));
     }
     let mut stats = Vec::new();
@@ -91,15 +128,23 @@ async fn run(url: &str, start: u64, end: u64, k: u64, round: u32) -> anyhow::Res
         .map(|s| format!("{:.2}", s.bytes as f64 / MB / s.secs))
         .collect();
     let first_block: Vec<String> = stats.iter().map(|s| format!("{:.0}", s.first_block_ms)).collect();
+    let blocks_per_s: Vec<String> =
+        stats.iter().map(|s| format!("{:.0}", s.blocks as f64 / s.secs)).collect();
+    let backends: Vec<String> = stats
+        .iter()
+        .map(|s| if s.region.is_empty() { s.backend.clone() } else { format!("{}:{}", s.region, s.backend) })
+        .collect();
     println!(
         "round={round} k={k} total_mb={:.1} wall_s={:.1} overall_mbps={:.2} all_active_mbps={:.2} \
-         per_conn_mbps=[{}] first_block_ms=[{}] connect_ms={:.0}",
+         per_conn_mbps=[{}] per_conn_blocks_s=[{}] first_block_ms=[{}] backends=[{}] connect_ms={:.0}",
         bytes as f64 / MB,
         wall,
         bytes as f64 / MB / wall,
         fb as f64 / MB / fs,
         per_conn.join(","),
+        blocks_per_s.join(","),
         first_block.join(","),
+        backends.join(","),
         connect_ms,
     );
     Ok(())
@@ -109,12 +154,19 @@ async fn run(url: &str, start: u64, end: u64, k: u64, round: u32) -> anyhow::Res
 async fn main() -> anyhow::Result<()> {
     rustls::crypto::ring::default_provider().install_default().ok();
     let args: Vec<String> = std::env::args().collect();
-    anyhow::ensure!(args.len() == 6, "usage: dl_bench <url> <start> <end> <max_conns> <rounds>");
+    anyhow::ensure!(
+        args.len() == 6 || args.len() == 7,
+        "usage: dl_bench <url> <start> <end> <max_conns> <rounds> [region,region,...]"
+    );
     let (url, start, end) = (&args[1], args[2].parse::<u64>()?, args[3].parse::<u64>()?);
     let (max_k, rounds) = (args[4].parse::<u64>()?, args[5].parse::<u32>()?);
+    let regions: Vec<String> = args
+        .get(6)
+        .map(|list| list.split(',').filter(|r| !r.is_empty()).map(String::from).collect())
+        .unwrap_or_default();
     for round in 1..=rounds {
         for k in 1..=max_k {
-            run(url, start, end, k, round).await?;
+            run(url, start, end, k, round, &regions).await?;
         }
     }
     Ok(())
