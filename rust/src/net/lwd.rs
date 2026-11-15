@@ -3,6 +3,7 @@ use tracing::debug;
 use zcash_primitives::transaction::Transaction;
 
 use tokio_stream::wrappers::ReceiverStream;
+use tonic::metadata::{Ascii, MetadataValue};
 use tonic::{async_trait, Request};
 use zcash_protocol::consensus::{BlockHeight, BranchId};
 
@@ -41,47 +42,7 @@ impl LwdServer for GRPCClient {
         start: u32,
         end: u32,
     ) -> Result<Self::CompactBlockStream> {
-        debug!("Fetching block range from {} to {}", start, end);
-        let mut blocks = self
-            .get_block_range(Request::new(BlockRange {
-                start: Some(BlockId {
-                    height: start as u64,
-                    hash: vec![],
-                }),
-                end: Some(BlockId {
-                    height: end as u64,
-                    hash: vec![],
-                }),
-                spam_filter_threshold: 0,
-            }))
-            .await?
-            .into_inner();
-        let (tx, rx) = tokio::sync::mpsc::channel::<Result<CompactBlock>>(10);
-        tokio::spawn(async move {
-            // The error goes down the channel as the last item: a stream
-            // that failed must not look like one that ended (#1474).
-            loop {
-                // A consumer that dropped the stream ends the task at once,
-                // not at the next block the server sends (#1538).
-                let message = tokio::select! {
-                    _ = tx.closed() => break,
-                    message = blocks.message() => message,
-                };
-                match message {
-                    Ok(Some(block)) => {
-                        if tx.send(Ok(block)).await.is_err() {
-                            break; // the consumer is gone
-                        }
-                    }
-                    Ok(None) => break,
-                    Err(e) => {
-                        let _ = tx.send(Err(e.into())).await;
-                        break;
-                    }
-                }
-            }
-        });
-        Ok(ReceiverStream::new(rx))
+        Ok(block_range_request(self, start, end, None).await?.0)
     }
 
     async fn transaction(&mut self, network: &Network, txid: &[u8]) -> Result<(u32, Transaction)> {
@@ -239,6 +200,167 @@ impl LwdServer for GRPCClient {
             hex::decode(&state.orchard_tree).expect("Failed to decode sapling tree hex");
         let ironwood_tree = hex::decode(&state.ironwood_tree).unwrap_or_default();
         Ok((sapling_tree, orchard_tree, ironwood_tree))
+    }
+}
+
+/// The block range `start..=end`, asking a load-balancing front end for
+/// `region` (Fly.io's `fly-prefer-region`), and the backend that answered,
+/// where the server says (`x-backend`).
+async fn block_range_request(
+    client: &mut GRPCClient,
+    start: u32,
+    end: u32,
+    region: Option<&MetadataValue<Ascii>>,
+) -> Result<(ReceiverStream<Result<CompactBlock>>, Option<String>)> {
+    debug!("Fetching block range from {} to {}", start, end);
+    let mut request = Request::new(BlockRange {
+        start: Some(BlockId {
+            height: start as u64,
+            hash: vec![],
+        }),
+        end: Some(BlockId {
+            height: end as u64,
+            hash: vec![],
+        }),
+        spam_filter_threshold: 0,
+    });
+    if let Some(region) = region {
+        request
+            .metadata_mut()
+            .insert("fly-prefer-region", region.clone());
+    }
+    let response = client.get_block_range(request).await?;
+    // Which machine behind the server's address answered, where the
+    // server says (Fly.io and its cache layer do).
+    let header = |name: &str| {
+        response
+            .metadata()
+            .get(name)
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("-")
+            .to_string()
+    };
+    debug!(
+        start,
+        end,
+        backend = header("x-backend"),
+        cache = header("x-cache"),
+        region = header("x-region"),
+        request_id = header("fly-request-id"),
+        "block range response"
+    );
+    let backend = response
+        .metadata()
+        .get("x-backend")
+        .and_then(|value| value.to_str().ok())
+        .map(String::from);
+    let mut blocks = response.into_inner();
+    let (tx, rx) = tokio::sync::mpsc::channel::<Result<CompactBlock>>(10);
+    tokio::spawn(async move {
+        // The error goes down the channel as the last item: a stream
+        // that failed must not look like one that ended (#1474).
+        loop {
+            // A consumer that dropped the stream ends the task at once,
+            // not at the next block the server sends (#1538).
+            let message = tokio::select! {
+                _ = tx.closed() => break,
+                message = blocks.message() => message,
+            };
+            match message {
+                Ok(Some(block)) => {
+                    if tx.send(Ok(block)).await.is_err() {
+                        break; // the consumer is gone
+                    }
+                }
+                Ok(None) => break,
+                Err(e) => {
+                    let _ = tx.send(Err(e.into())).await;
+                    break;
+                }
+            }
+        }
+    });
+    Ok((ReceiverStream::new(rx), backend))
+}
+
+/// A lightwalletd client that can ask the server's front end for a region,
+/// and remembers which backend answered its last block range. A server
+/// that is not behind such a front end ignores the one and never sends the
+/// other.
+pub struct LwdClient {
+    client: GRPCClient,
+    region: Option<MetadataValue<Ascii>>,
+    backend: Option<String>,
+}
+
+impl LwdClient {
+    pub fn new(client: GRPCClient) -> Self {
+        Self {
+            client,
+            region: None,
+            backend: None,
+        }
+    }
+}
+
+#[async_trait]
+impl LwdServer for LwdClient {
+    async fn latest_height(&mut self) -> Result<u32> {
+        self.client.latest_height().await
+    }
+
+    async fn block(&mut self, network: &Network, height: u32) -> Result<CompactBlock> {
+        self.client.block(network, height).await
+    }
+
+    type CompactBlockStream = ReceiverStream<Result<CompactBlock>>;
+    async fn block_range(
+        &mut self,
+        _network: &Network,
+        start: u32,
+        end: u32,
+    ) -> Result<Self::CompactBlockStream> {
+        let (blocks, backend) =
+            block_range_request(&mut self.client, start, end, self.region.as_ref()).await?;
+        self.backend = backend;
+        Ok(blocks)
+    }
+
+    async fn transaction(&mut self, network: &Network, txid: &[u8]) -> Result<(u32, Transaction)> {
+        self.client.transaction(network, txid).await
+    }
+
+    async fn post_transaction(&mut self, height: u32, tx: &[u8]) -> Result<String> {
+        self.client.post_transaction(height, tx).await
+    }
+
+    type TransactionStream = ReceiverStream<Result<(u32, Transaction, usize)>>;
+    async fn taddress_txs(
+        &mut self,
+        network: &Network,
+        taddress: &str,
+        start: u32,
+        end: u32,
+    ) -> Result<Self::TransactionStream> {
+        self.client
+            .taddress_txs(network, taddress, start, end)
+            .await
+    }
+
+    async fn mempool_stream(&mut self, network: &Network) -> Result<Self::TransactionStream> {
+        self.client.mempool_stream(network).await
+    }
+
+    async fn tree_state(&mut self, height: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)> {
+        self.client.tree_state(height).await
+    }
+
+    fn prefer_region(&mut self, region: Option<&str>) {
+        self.region = region.and_then(|region| region.parse().ok());
+    }
+
+    fn last_backend(&self) -> Option<String> {
+        self.backend.clone()
     }
 }
 

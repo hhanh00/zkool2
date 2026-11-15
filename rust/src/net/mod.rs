@@ -49,4 +49,15 @@ pub trait LwdServer: Send {
     async fn mempool_stream(&mut self, network: &Network) -> Result<Self::TransactionStream>;
 
     async fn tree_state(&mut self, height: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)>;
+
+    /// Ask the server's front end to send this connection's requests to
+    /// `region`, where it routes by region (Fly.io's `fly-prefer-region`).
+    /// Only a preference: the front end may still send them elsewhere.
+    fn prefer_region(&mut self, _region: Option<&str>) {}
+
+    /// The backend that answered the last block range, where the server
+    /// says (`x-backend`).
+    fn last_backend(&self) -> Option<String> {
+        None
+    }
 }
