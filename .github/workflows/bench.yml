@@ -21,6 +21,10 @@ on:
         description: lightwalletd to sync from
         required: false
         default: https://zec.rocks:443
+      features:
+        description: Extra cargo features for zkool, comma-separated (e.g. zakura-udon)
+        required: false
+        default: ""
   schedule:
     - cron: "17 3 * * *"
   pull_request:
@@ -83,9 +87,11 @@ jobs:
           cache-on-failure: true
 
       - name: Build the zkool bench
+        env:
+          EXTRA_FEATURES: ${{ inputs.features }}
         run: |
           cargo build --release --manifest-path rust/Cargo.toml --example sync_bench \
-            --no-default-features --features "graphql,bundled-sapling-params,ledger"
+            --no-default-features --features "graphql,bundled-sapling-params,ledger${EXTRA_FEATURES:+,$EXTRA_FEATURES}"
 
       - name: Build the Slipstream bench
         working-directory: _slipstream
@@ -98,6 +104,7 @@ jobs:
           BLOCKS: ${{ inputs.blocks || '200000' }}
           ROUNDS: ${{ inputs.rounds || '2' }}
           SERVER: ${{ inputs.server || 'https://zec.rocks:443' }}
+          EXTRA_FEATURES: ${{ inputs.features }}
         run: |
           set -euo pipefail
           zkool=target/release/examples/sync_bench
@@ -108,7 +115,7 @@ jobs:
           {
             echo "Range: $BLOCKS blocks from $birthday to the tip ($tip), empty wallet, $SERVER"
             echo "Runner: $(nproc) cores, $RUNNER_OS $RUNNER_ARCH"
-            echo "zkool $(git rev-parse --short HEAD), Slipstream ${SLIPSTREAM_REF:0:8}"
+            echo "zkool $(git rev-parse --short HEAD)${EXTRA_FEATURES:+ (features: $EXTRA_FEATURES)}, Slipstream ${SLIPSTREAM_REF:0:8}"
           } | tee report.txt
           for round in $(seq 1 "$ROUNDS"); do
             "$slipstream" bench --network main --server "$SERVER" --ufvk "$ufvk" \
