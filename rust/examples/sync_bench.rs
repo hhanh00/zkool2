@@ -66,7 +66,8 @@ fn parse_args() -> Result<Args> {
     while let Some(arg) = args.next() {
         match arg.as_str() {
             "--fast" | "--keep" | "--tip" | "--trace-blocks" => flags.push(arg),
-            "--server" | "--birthday" | "--seed" | "--network" | "--json" | "--versus" | "--trace" => {
+            "--server" | "--birthday" | "--seed" | "--network" | "--json" | "--versus"
+            | "--trace" => {
                 let value = args.next().ok_or_else(|| anyhow!("{arg} needs a value"))?;
                 values.insert(arg, value);
             }
@@ -132,20 +133,67 @@ fn report(total_s: f64, height: u32, stats: &SyncStats) {
     } else {
         println!("  download: one request");
     }
+    for pool in &stats.pools {
+        println!(
+            "  {} scan: decrypt {} | tree {} | other {} ({} outputs, {} grafted, {} roots checked)",
+            pool.pool,
+            duration(pool.decrypt_s),
+            duration(pool.tree_s),
+            duration(pool.other_s),
+            pool.outputs,
+            pool.grafted,
+            pool.verified,
+        );
+    }
+    let blocks: u64 = stats.backends.iter().map(|b| b.blocks).sum();
+    if blocks > 0 {
+        println!(
+            "  {:<16}{:>7}{:>8}{:>6}{:>10}{:>7}{:>13}",
+            "backend", "blocks", "slices", "head", "blocks/s", "MB/s", "first block"
+        );
+        for b in &stats.backends {
+            let per_s = |n: f64| if b.transfer_s > 0.0 { n / b.transfer_s } else { 0.0 };
+            println!(
+                "  {:<16}{:>6.0}%{:>8}{:>6}{:>10.0}{:>7.1}{:>10.0} ms",
+                b.backend,
+                100.0 * b.blocks as f64 / blocks as f64,
+                b.slices,
+                b.head_slices,
+                per_s(b.blocks as f64),
+                per_s(b.bytes as f64 / 1_048_576.0),
+                if b.waits > 0 { 1000.0 * b.wait_s / b.waits as f64 } else { 0.0 },
+            );
+        }
+    }
 }
 
-fn versus(path: &PathBuf, total_s: f64, blocks: u64) -> Result<()> {
+fn versus(path: &PathBuf, total_s: f64, stats: &SyncStats) -> Result<()> {
     let text = std::fs::read_to_string(path).with_context(|| format!("reading {path:?}"))?;
     let other: Value = serde_json::from_str(&text).with_context(|| format!("parsing {path:?}"))?;
     let number = |key: &str| other.get(key).and_then(Value::as_f64);
     let other_total = number("total_s").ok_or_else(|| anyhow!("{path:?} has no total_s"))?;
+    let seconds = |s: Option<f64>| s.map_or("—".to_string(), duration);
+    // The figures both engines have: the scan busy, and the scan waiting
+    // for blocks from the download.
     println!();
-    println!("  {:<12}{:>12}{:>12}", "engine", "sync", "blocks");
-    println!("  {:<12}{:>12}{:>12}", "zkool", duration(total_s), blocks);
     println!(
-        "  {:<12}{:>12}{:>12}",
+        "  {:<12}{:>10}{:>10}{:>16}{:>12}",
+        "engine", "sync", "scan", "scan waiting", "blocks"
+    );
+    println!(
+        "  {:<12}{:>10}{:>10}{:>16}{:>12}",
+        "zkool",
+        duration(total_s),
+        duration(stats.scan_busy_s),
+        duration(stats.scan_wait_s),
+        stats.blocks
+    );
+    println!(
+        "  {:<12}{:>10}{:>10}{:>16}{:>12}",
         "slipstream",
         duration(other_total),
+        seconds(number("scan_s")),
+        seconds(number("scan_recv_wait_s")),
         number("blocks").map_or("—".to_string(), |b| format!("{b:.0}")),
     );
     let (fast, slow, name) = if total_s <= other_total {
@@ -154,8 +202,21 @@ fn versus(path: &PathBuf, total_s: f64, blocks: u64) -> Result<()> {
         (other_total, total_s, "slipstream")
     };
     println!("  {name} is {:.2}x faster", slow / fast.max(0.001));
-    if let (Some(fetch), Some(scan)) = (number("fetch_s"), number("scan_s")) {
-        println!("  slipstream: fetch {} | scan {}", duration(fetch), duration(scan));
+    // Everything else Slipstream measured, as it names it.
+    let shown = ["total_s", "scan_s", "scan_recv_wait_s", "blocks"];
+    let rest: Vec<String> = other
+        .as_object()
+        .into_iter()
+        .flatten()
+        .filter(|(key, _)| !shown.contains(&key.as_str()))
+        .filter_map(|(key, value)| {
+            let n = value.as_f64().filter(|n| *n != 0.0)?;
+            let n = if n.fract() == 0.0 { format!("{n}") } else { format!("{n:.2}") };
+            Some(format!("{key}={n}"))
+        })
+        .collect();
+    for line in rest.chunks(6) {
+        println!("  slipstream: {}", line.join(" "));
     }
     Ok(())
 }
@@ -164,9 +225,9 @@ fn versus(path: &PathBuf, total_s: f64, blocks: u64) -> Result<()> {
 async fn main() -> Result<()> {
     rustls::crypto::ring::default_provider().install_default().ok();
     let args = parse_args()?;
-    let stderr = tracing_subscriber::fmt::layer().with_writer(std::io::stderr).with_filter(
-        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("warn")),
-    );
+    let stderr = tracing_subscriber::fmt::layer()
+        .with_writer(std::io::stderr)
+        .with_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("warn")));
     // Buffered, so writing the trace slows the download as little as it can;
     // flushed before exit.
     let trace_file = match &args.trace {
@@ -206,7 +267,6 @@ impl Write for TraceWriter {
 }
 
 async fn run(args: Args) -> Result<()> {
-
     let dir = std::env::temp_dir().join(format!("zkool-sync-bench-{}", std::process::id()));
     std::fs::create_dir_all(&dir)?;
     let db = dir.join("wallet.db").to_string_lossy().to_string();
@@ -244,7 +304,8 @@ async fn run(args: Args) -> Result<()> {
     let tip = rlz::api::network::get_current_height(&coin).await?;
     eprintln!("syncing account {account} from {} to {tip} against {}", args.birthday, args.server);
 
-    let timed = rlz::sync::bench::sync(&coin, vec![account], tip, ACTIONS_PER_SYNC, args.fast).await?;
+    let timed =
+        rlz::sync::bench::sync(&coin, vec![account], tip, ACTIONS_PER_SYNC, args.fast).await?;
     let height = match timed.outcome {
         SyncOutcome::Synced { height } => height,
         other => bail!("the sync did not complete: {other:?}"),
@@ -270,7 +331,7 @@ async fn run(args: Args) -> Result<()> {
         eprintln!("wrote {}", path.display());
     }
     if let Some(path) = &args.versus {
-        versus(path, total_s, timed.stats.blocks)?;
+        versus(path, total_s, &timed.stats)?;
     }
     if args.keep {
         eprintln!("wallet kept at {}", dir.display());

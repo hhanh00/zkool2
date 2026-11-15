@@ -117,7 +117,8 @@ jobs:
               echo
               echo "=== round $round ==="
               "$zkool" --server "$SERVER" --birthday "$birthday" \
-                --json "zkool-$round.json" --versus "slipstream-$round.json"
+                --json "zkool-$round.json" --versus "slipstream-$round.json" \
+                --trace "zkool-$round.trace.jsonl"
             } 2> "zkool-$round.log" | tee -a report.txt
           done
 
@@ -149,6 +150,7 @@ jobs:
           path: |
             report.txt
             zkool-*.json
+            zkool-*.trace.jsonl
             zkool-*.log
             slipstream-*.json
             slipstream-*.log
