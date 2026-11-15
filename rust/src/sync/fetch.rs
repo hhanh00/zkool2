@@ -228,6 +228,7 @@ pub(crate) async fn block_stream_with(
         avg_block: 0.0,
         sizes: BTreeMap::new(),
         routes,
+        served: BTreeMap::new(),
         delivered_window: 0,
         delivery_rate: None,
         workers: BTreeMap::new(),
@@ -334,6 +335,8 @@ struct Fetch {
     sizes: BTreeMap<u32, (u64, u32)>,
     /// What each backend costs, and which region to connect to.
     routes: Routes,
+    /// What each backend served, for the benchmark's record.
+    served: BTreeMap<String, super::bench::BackendStats>,
     delivered_window: u64,
     /// Blocks per second the scan has been reading.
     delivery_rate: Option<f64>,
@@ -467,6 +470,16 @@ impl Fetch {
             stats.streams_replaced += load(&self.stats.replaced);
             stats.budget_raises += load(&self.stats.budget_raises);
             stats.max_buffered_bytes = stats.max_buffered_bytes.max(load(&self.stats.max_buffered));
+            for (backend, served) in &self.served {
+                match stats.backends.iter_mut().find(|b| b.backend == *backend) {
+                    Some(known) => known.add(served),
+                    None => stats.backends.push(super::bench::BackendStats {
+                        backend: backend.clone(),
+                        ..served.clone()
+                    }),
+                }
+            }
+            stats.backends.sort_by_key(|b| std::cmp::Reverse(b.blocks));
         });
     }
 
@@ -687,6 +700,16 @@ impl Fetch {
                 // wait was at least this long.
                 let wait = first_block.or((elapsed > cost.first_block()).then_some(elapsed));
                 cost.observe(wait, blocks, piece.received, transfer);
+                let served = self.served.entry(key.clone()).or_default();
+                served.slices += 1;
+                served.head_slices += u64::from(piece.head);
+                served.blocks += u64::from(blocks);
+                served.bytes += piece.received;
+                served.transfer_s += transfer;
+                if let Some(wait) = first_block {
+                    served.wait_s += wait;
+                    served.waits += 1;
+                }
                 debug!(
                     t_ms,
                     stream = id,
