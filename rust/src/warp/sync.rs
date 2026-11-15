@@ -2,6 +2,7 @@ use std::{collections::HashSet, time::Duration};
 
 use anyhow::{Context as _, Result};
 use shielded::Synchronizer;
+pub use shielded::{ScanTiming, SubtreeRoots, SUBTREE_DEPTH};
 use sqlx::SqliteConnection;
 use tokio::sync::mpsc::Sender;
 use tokio_util::sync::CancellationToken;
@@ -126,6 +127,7 @@ pub async fn warp_sync(
     sapling_state: &CommitmentTreeFrontier,
     orchard_state: &CommitmentTreeFrontier,
     ironwood_state: &CommitmentTreeFrontier,
+    subtree_roots: [SubtreeRoots; 3],
     tx_decrypted: Sender<WarpSyncMessage>,
     cancel: CancellationToken,
     scan_wait: Option<std::sync::Arc<ScanWait>>,
@@ -177,6 +179,12 @@ pub async fn warp_sync(
         None
     };
 
+    let [sapling_roots, orchard_roots, ironwood_roots] = subtree_roots;
+    sap_dec.subtree_roots = sapling_roots;
+    orch_dec.subtree_roots = orchard_roots;
+    if let Some(dec) = ironwood_dec.as_mut() {
+        dec.subtree_roots = ironwood_roots;
+    }
     let ironwood_has_keys = ironwood_dec.as_ref().map_or(false, |d| !d.has_no_keys());
     if sap_dec.has_no_keys() && orch_dec.has_no_keys() && !ironwood_has_keys {
         debug!("No keys to sync");
@@ -419,10 +427,25 @@ pub async fn warp_sync(
         scan_chunks,
         "zkool scan lane: busy=decrypt+tree, wait=starved waiting for downloaded blocks"
     );
+    let mut timings = vec![("sapling", &sap_dec.timing), ("orchard", &orch_dec.timing)];
+    if let Some(ironwood_dec) = &ironwood_dec {
+        timings.push(("ironwood", &ironwood_dec.timing));
+    }
     crate::sync::bench::record(|stats| {
         stats.scan_chunks += scan_chunks;
         stats.scan_busy_s += scan_busy.as_secs_f64();
         stats.scan_wait_s += scan_wait.as_secs_f64();
+        for (pool, timing) in timings {
+            match stats.pools.iter_mut().find(|p| p.pool == pool) {
+                Some(known) => known.add(timing),
+                None => {
+                    let mut scan =
+                        crate::sync::bench::PoolScan { pool: pool.to_string(), ..Default::default() };
+                    scan.add(timing);
+                    stats.pools.push(scan);
+                }
+            }
+        }
     });
 
     Ok(end)

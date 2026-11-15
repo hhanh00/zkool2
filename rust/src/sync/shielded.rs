@@ -24,7 +24,7 @@ use crate::{
     lwd::CompactBlock,
     warp::{
         legacy::CommitmentTreeFrontier,
-        sync::{warp_sync, ScanEnd},
+        sync::{warp_sync, ScanEnd, SubtreeRoots, SUBTREE_DEPTH},
     },
 };
 use bincode::config;
@@ -88,6 +88,25 @@ pub async fn get_tree_state(
     let ironwood = decode_tree_state(&ironwood_tree);
 
     Ok((sapling, orchard, ironwood))
+}
+
+/// The server's roots of the completed subtrees of each pool's tree (Sapling,
+/// Orchard, Ironwood), from the subtree each frontier is in: the scan grafts
+/// them instead of hashing those subtrees. None for a pool, or all, where
+/// the server does not serve them: those subtrees are hashed as before.
+async fn get_subtree_roots(
+    client: &mut Client,
+    frontiers: [&CommitmentTreeFrontier; 3],
+) -> [SubtreeRoots; 3] {
+    let mut roots: [SubtreeRoots; 3] = Default::default();
+    for (pool, (frontier, roots)) in frontiers.into_iter().zip(roots.iter_mut()).enumerate() {
+        let first = (frontier.size() >> SUBTREE_DEPTH) as u32;
+        match client.subtree_roots(pool as i32, first).await {
+            Ok(found) => *roots = SubtreeRoots { first, roots: found },
+            Err(e) => debug!("no subtree roots for pool {pool} from the server: {e:#}"),
+        }
+    }
+    roots
 }
 
 /// Preload all Sapling and Orchard account keys from the database.
@@ -306,6 +325,7 @@ async fn shielded_sync_range(
     let account_ids: Vec<u32> = accounts.iter().map(|(a, _)| *a).collect();
     let (db_writer_task, scan_task) = {
         let (s, o, i) = get_tree_state(network, client, start - 1).await?;
+        let subtree_roots = get_subtree_roots(client, [&s, &o, &i]).await;
 
         debug!("get compact block range");
         let scan_wait = crate::warp::sync::ScanWait::new();
@@ -425,6 +445,7 @@ async fn shielded_sync_range(
                 &s,
                 &o,
                 &i,
+                subtree_roots,
                 tx_messages.clone(),
                 cancel,
                 Some(scan_wait),

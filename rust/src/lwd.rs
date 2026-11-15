@@ -4,6 +4,7 @@
 /// 1. Detect a payment to your shielded Sapling address
 /// 1. Detect a spend of your shielded Sapling notes
 /// 1. Update your witnesses to generate new Sapling spend proofs.
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CompactBlock {
     /// the version of this wire format, for storage
@@ -28,9 +29,11 @@ pub struct CompactBlock {
     #[prost(message, repeated, tag = "7")]
     pub vtx: ::prost::alloc::vec::Vec<CompactTx>,
 }
-/// CompactTx contains the minimum information for a wallet to know if this transaction
-/// is relevant to it (either pays to it or spends from it) via shielded elements
-/// only. This message will not encode a transparent-to-transparent transaction.
+/// CompactTx contains the minimum information for a wallet to know if this
+/// transaction is relevant to it (either pays to it or spends from it) via
+/// shielded elements only. This message will not encode a
+/// transparent-to-transparent transaction.
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CompactTx {
     /// the index within the full block
@@ -63,6 +66,7 @@ pub struct CompactTx {
 }
 /// CompactIssueNote carries the unencrypted note fields for a single note
 /// within an IssueAction.
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CompactIssueNote {
     /// 43 bytes — recipient address encoding
@@ -81,6 +85,7 @@ pub struct CompactIssueNote {
 /// CompactIssuance contains the minimal data needed for a light client to
 /// record a ZSA issuance event. Each message corresponds to one IssueAction
 /// within a transaction's IssueBundle (ZIP-227).
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct CompactIssuance {
     /// \[32\] BLAKE2b-256 hash of the asset description string
@@ -99,8 +104,9 @@ pub struct CompactIssuance {
     #[prost(message, repeated, tag = "5")]
     pub notes: ::prost::alloc::vec::Vec<CompactIssueNote>,
 }
-/// CompactSaplingSpend is a Sapling Spend Description as described in 7.3 of the Zcash
-/// protocol specification.
+/// CompactSaplingSpend is a Sapling Spend Description as described in 7.3 of the
+/// Zcash protocol specification.
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CompactSaplingSpend {
     /// nullifier (see the Zcash protocol specification)
@@ -109,6 +115,7 @@ pub struct CompactSaplingSpend {
 }
 /// output is a Sapling Output Description as described in section 7.4 of the
 /// Zcash protocol spec. Total size is 948.
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CompactSaplingOutput {
     /// note commitment u-coordinate
@@ -123,6 +130,7 @@ pub struct CompactSaplingOutput {
 }
 /// <https://github.com/zcash/zips/blob/main/zip-0225.rst#orchard-action-description-orchardaction>
 /// (but not all fields are needed)
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct CompactOrchardAction {
     /// \[32\] The nullifier of the input note
@@ -140,6 +148,7 @@ pub struct CompactOrchardAction {
 }
 /// A BlockID message contains identifiers to select a block: a height or a
 /// hash. Specification by hash is not implemented, but may be in the future.
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct BlockId {
     #[prost(uint64, tag = "1")]
@@ -149,6 +158,7 @@ pub struct BlockId {
 }
 /// BlockRange specifies a series of blocks from start to end inclusive.
 /// Both BlockIDs must be heights; specification by hash is not yet supported.
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct BlockRange {
     #[prost(message, optional, tag = "1")]
@@ -161,6 +171,7 @@ pub struct BlockRange {
 /// A TxFilter contains the information needed to identify a particular
 /// transaction: either a block and an index, or a direct transaction hash.
 /// Currently, only specification by hash is supported.
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct TxFilter {
     /// block identifier, height or hash
@@ -173,9 +184,10 @@ pub struct TxFilter {
     #[prost(bytes = "vec", tag = "3")]
     pub hash: ::prost::alloc::vec::Vec<u8>,
 }
-/// RawTransaction contains the complete transaction data. It also optionally includes
-/// the block height in which the transaction was included, or, when returned
-/// by GetMempoolStream(), the latest block height.
+/// RawTransaction contains the complete transaction data. It also optionally
+/// includes the block height in which the transaction was included, or, when
+/// returned by GetMempoolStream(), the latest block height.
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct RawTransaction {
     /// exact data returned by Zcash 'getrawtransaction'
@@ -188,6 +200,7 @@ pub struct RawTransaction {
 /// A SendResponse encodes an error code and a string. It is currently used
 /// only by SendTransaction(). If error code is zero, the operation was
 /// successful; if non-zero, it and the message specify the failure.
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct SendResponse {
     #[prost(int32, tag = "1")]
@@ -196,13 +209,16 @@ pub struct SendResponse {
     pub error_message: ::prost::alloc::string::String,
 }
 /// Chainspec is a placeholder to allow specification of a particular chain fork.
+#[allow(clippy::all)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct ChainSpec {}
 /// Empty is for gRPCs that take no arguments, currently only GetLightdInfo.
+#[allow(clippy::all)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Empty {}
 /// LightdInfo returns various information about this lightwalletd instance
 /// and the state of the blockchain.
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct LightdInfo {
     #[prost(string, tag = "1")]
@@ -244,6 +260,7 @@ pub struct LightdInfo {
 }
 /// TransparentAddressBlockFilter restricts the results to the given address
 /// or block range.
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct TransparentAddressBlockFilter {
     /// t-address
@@ -256,6 +273,7 @@ pub struct TransparentAddressBlockFilter {
 /// Duration is currently used only for testing, so that the Ping rpc
 /// can simulate a delay, to create many simultaneous connections. Units
 /// are microseconds.
+#[allow(clippy::all)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Duration {
     #[prost(int64, tag = "1")]
@@ -264,6 +282,7 @@ pub struct Duration {
 /// PingResponse is used to indicate concurrency, how many Ping rpcs
 /// are executing upon entry and upon exit (after the delay).
 /// This rpc is used for testing only.
+#[allow(clippy::all)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct PingResponse {
     #[prost(int64, tag = "1")]
@@ -271,27 +290,32 @@ pub struct PingResponse {
     #[prost(int64, tag = "2")]
     pub exit: i64,
 }
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Address {
     #[prost(string, tag = "1")]
     pub address: ::prost::alloc::string::String,
 }
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct AddressList {
     #[prost(string, repeated, tag = "1")]
     pub addresses: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
 }
+#[allow(clippy::all)]
 #[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Balance {
     #[prost(int64, tag = "1")]
     pub value_zat: i64,
 }
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct Exclude {
     #[prost(bytes = "vec", repeated, tag = "1")]
     pub txid: ::prost::alloc::vec::Vec<::prost::alloc::vec::Vec<u8>>,
 }
 /// The TreeState is derived from the Zcash z_gettreestate rpc.
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct TreeState {
     /// "main" or "test"
@@ -316,8 +340,33 @@ pub struct TreeState {
     #[prost(string, tag = "7")]
     pub ironwood_tree: ::prost::alloc::string::String,
 }
-/// Results are sorted by height, which makes it easy to issue another
-/// request that picks up from where the previous left off.
+#[allow(clippy::all)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetSubtreeRootsArg {
+    /// Index identifying where to start returning subtree roots
+    #[prost(uint32, tag = "1")]
+    pub start_index: u32,
+    /// Shielded protocol to return subtree roots for
+    #[prost(enumeration = "ShieldedProtocol", tag = "2")]
+    pub shielded_protocol: i32,
+    /// Maximum number of entries to return, or 0 for all entries.
+    #[prost(uint32, tag = "3")]
+    pub max_entries: u32,
+}
+#[allow(clippy::all)]
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct SubtreeRoot {
+    /// The 32-byte Merkle root of the subtree.
+    #[prost(bytes = "vec", tag = "2")]
+    pub root_hash: ::prost::alloc::vec::Vec<u8>,
+    /// The hash of the block that completed this subtree.
+    #[prost(bytes = "vec", tag = "3")]
+    pub completing_block_hash: ::prost::alloc::vec::Vec<u8>,
+    /// The height of the block that completed this subtree in the main chain.
+    #[prost(uint64, tag = "4")]
+    pub completing_block_height: u64,
+}
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetAddressUtxosArg {
     #[prost(string, repeated, tag = "1")]
@@ -328,6 +377,7 @@ pub struct GetAddressUtxosArg {
     #[prost(uint32, tag = "3")]
     pub max_entries: u32,
 }
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
 pub struct GetAddressUtxosReply {
     #[prost(string, tag = "6")]
@@ -343,10 +393,43 @@ pub struct GetAddressUtxosReply {
     #[prost(uint64, tag = "5")]
     pub height: u64,
 }
+#[allow(clippy::all)]
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct GetAddressUtxosReplyList {
     #[prost(message, repeated, tag = "1")]
     pub address_utxos: ::prost::alloc::vec::Vec<GetAddressUtxosReply>,
+}
+/// Results are sorted by height, which makes it easy to issue another
+/// request that picks up from where the previous left off.
+#[allow(clippy::all)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ShieldedProtocol {
+    Sapling = 0,
+    Orchard = 1,
+    Ironwood = 2,
+}
+impl ShieldedProtocol {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Sapling => "sapling",
+            Self::Orchard => "orchard",
+            Self::Ironwood => "ironwood",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "sapling" => Some(Self::Sapling),
+            "orchard" => Some(Self::Orchard),
+            "ironwood" => Some(Self::Ironwood),
+            _ => None,
+        }
+    }
 }
 /// Generated client implementations.
 pub mod compact_tx_streamer_client {
@@ -536,7 +619,8 @@ pub mod compact_tx_streamer_client {
             ));
             self.inner.unary(req, path, codec).await
         }
-        /// Return the txids corresponding to the given t-address within the given block range
+        /// Return the txids corresponding to the given t-address within the given
+        /// block range
         pub async fn get_taddress_txids(
             &mut self,
             request: impl tonic::IntoRequest<super::TransparentAddressBlockFilter>,
@@ -624,8 +708,9 @@ pub mod compact_tx_streamer_client {
             ));
             self.inner.server_streaming(req, path, codec).await
         }
-        /// Return a stream of current Mempool transactions. This will keep the output stream open while
-        /// there are mempool transactions. It will close the returned stream when a new block is mined.
+        /// Return a stream of current Mempool transactions. This will keep the output
+        /// stream open while there are mempool transactions. It will close the
+        /// returned stream when a new block is mined.
         pub async fn get_mempool_stream(
             &mut self,
             request: impl tonic::IntoRequest<super::Empty>,
@@ -647,10 +732,10 @@ pub mod compact_tx_streamer_client {
             ));
             self.inner.server_streaming(req, path, codec).await
         }
-        /// GetTreeState returns the note commitment tree state corresponding to the given block.
-        /// See section 3.7 of the Zcash protocol specification. It returns several other useful
-        /// values also (even though they can be obtained using GetBlock).
-        /// The block can be specified by either height or hash.
+        /// GetTreeState returns the note commitment tree state corresponding to the
+        /// given block. See section 3.7 of the Zcash protocol specification. It
+        /// returns several other useful values also (even though they can be obtained
+        /// using GetBlock). The block can be specified by either height or hash.
         pub async fn get_tree_state(
             &mut self,
             request: impl tonic::IntoRequest<super::BlockId>,
@@ -668,6 +753,29 @@ pub mod compact_tx_streamer_client {
                 "GetTreeState",
             ));
             self.inner.unary(req, path, codec).await
+        }
+        /// Returns a stream of information about roots of subtrees of the note commitment tree
+        /// for the specified shielded pool (Sapling, Orchard, or Ironwood).
+        pub async fn get_subtree_roots(
+            &mut self,
+            request: impl tonic::IntoRequest<super::GetSubtreeRootsArg>,
+        ) -> std::result::Result<
+            tonic::Response<tonic::codec::Streaming<super::SubtreeRoot>>,
+            tonic::Status,
+        > {
+            self.inner.ready().await.map_err(|e| {
+                tonic::Status::unknown(format!("Service was not ready: {}", e.into()))
+            })?;
+            let codec = tonic_prost::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/cash.z.wallet.sdk.rpc.CompactTxStreamer/GetSubtreeRoots",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut().insert(GrpcMethod::new(
+                "cash.z.wallet.sdk.rpc.CompactTxStreamer",
+                "GetSubtreeRoots",
+            ));
+            self.inner.server_streaming(req, path, codec).await
         }
         pub async fn get_address_utxos(
             &mut self,
@@ -728,7 +836,8 @@ pub mod compact_tx_streamer_client {
             ));
             self.inner.unary(req, path, codec).await
         }
-        /// Testing-only, requires lightwalletd --ping-very-insecure (do not enable in production)
+        /// Testing-only, requires lightwalletd --ping-very-insecure (do not enable in
+        /// production)
         pub async fn ping(
             &mut self,
             request: impl tonic::IntoRequest<super::Duration>,
@@ -797,7 +906,8 @@ pub mod compact_tx_streamer_server {
                 Item = std::result::Result<super::RawTransaction, tonic::Status>,
             > + std::marker::Send
             + 'static;
-        /// Return the txids corresponding to the given t-address within the given block range
+        /// Return the txids corresponding to the given t-address within the given
+        /// block range
         async fn get_taddress_txids(
             &self,
             request: tonic::Request<super::TransparentAddressBlockFilter>,
@@ -833,20 +943,32 @@ pub mod compact_tx_streamer_server {
                 Item = std::result::Result<super::RawTransaction, tonic::Status>,
             > + std::marker::Send
             + 'static;
-        /// Return a stream of current Mempool transactions. This will keep the output stream open while
-        /// there are mempool transactions. It will close the returned stream when a new block is mined.
+        /// Return a stream of current Mempool transactions. This will keep the output
+        /// stream open while there are mempool transactions. It will close the
+        /// returned stream when a new block is mined.
         async fn get_mempool_stream(
             &self,
             request: tonic::Request<super::Empty>,
         ) -> std::result::Result<tonic::Response<Self::GetMempoolStreamStream>, tonic::Status>;
-        /// GetTreeState returns the note commitment tree state corresponding to the given block.
-        /// See section 3.7 of the Zcash protocol specification. It returns several other useful
-        /// values also (even though they can be obtained using GetBlock).
-        /// The block can be specified by either height or hash.
+        /// GetTreeState returns the note commitment tree state corresponding to the
+        /// given block. See section 3.7 of the Zcash protocol specification. It
+        /// returns several other useful values also (even though they can be obtained
+        /// using GetBlock). The block can be specified by either height or hash.
         async fn get_tree_state(
             &self,
             request: tonic::Request<super::BlockId>,
         ) -> std::result::Result<tonic::Response<super::TreeState>, tonic::Status>;
+        /// Server streaming response type for the GetSubtreeRoots method.
+        type GetSubtreeRootsStream: tonic::codegen::tokio_stream::Stream<
+                Item = std::result::Result<super::SubtreeRoot, tonic::Status>,
+            > + std::marker::Send
+            + 'static;
+        /// Returns a stream of information about roots of subtrees of the note commitment tree
+        /// for the specified shielded pool (Sapling, Orchard, or Ironwood).
+        async fn get_subtree_roots(
+            &self,
+            request: tonic::Request<super::GetSubtreeRootsArg>,
+        ) -> std::result::Result<tonic::Response<Self::GetSubtreeRootsStream>, tonic::Status>;
         async fn get_address_utxos(
             &self,
             request: tonic::Request<super::GetAddressUtxosArg>,
@@ -865,7 +987,8 @@ pub mod compact_tx_streamer_server {
             &self,
             request: tonic::Request<super::Empty>,
         ) -> std::result::Result<tonic::Response<super::LightdInfo>, tonic::Status>;
-        /// Testing-only, requires lightwalletd --ping-very-insecure (do not enable in production)
+        /// Testing-only, requires lightwalletd --ping-very-insecure (do not enable in
+        /// production)
         async fn ping(
             &self,
             request: tonic::Request<super::Duration>,
@@ -1394,6 +1517,50 @@ pub mod compact_tx_streamer_server {
                                 max_encoding_message_size,
                             );
                         let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/cash.z.wallet.sdk.rpc.CompactTxStreamer/GetSubtreeRoots" => {
+                    #[allow(non_camel_case_types)]
+                    struct GetSubtreeRootsSvc<T: CompactTxStreamer>(pub Arc<T>);
+                    impl<T: CompactTxStreamer>
+                        tonic::server::ServerStreamingService<super::GetSubtreeRootsArg>
+                        for GetSubtreeRootsSvc<T>
+                    {
+                        type Response = super::SubtreeRoot;
+                        type ResponseStream = T::GetSubtreeRootsStream;
+                        type Future =
+                            BoxFuture<tonic::Response<Self::ResponseStream>, tonic::Status>;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::GetSubtreeRootsArg>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as CompactTxStreamer>::get_subtree_roots(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let method = GetSubtreeRootsSvc(inner);
+                        let codec = tonic_prost::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.server_streaming(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)

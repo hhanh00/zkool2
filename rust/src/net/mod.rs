@@ -4,7 +4,7 @@ use zcash_primitives::transaction::Transaction;
 
 use tonic::async_trait;
 
-use crate::{api::coin::Network, lwd::*};
+use crate::{api::coin::Network, lwd::*, Hash32};
 
 pub mod http;
 pub mod lwd;
@@ -49,6 +49,14 @@ pub trait LwdServer: Send {
     async fn mempool_stream(&mut self, network: &Network) -> Result<Self::TransactionStream>;
 
     async fn tree_state(&mut self, height: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)>;
+
+    /// Roots of the completed subtrees of a pool's note commitment tree
+    /// (`GetSubtreeRoots`; `pool` 0 is Sapling, 1 Orchard, 2 Ironwood), from
+    /// subtree `start` on: `roots[i]` is subtree `start + i`. None where the
+    /// server does not serve them.
+    async fn subtree_roots(&mut self, _pool: i32, _start: u32) -> Result<Vec<Hash32>> {
+        Ok(vec![])
+    }
 
     /// Ask the server's front end to send this connection's requests to
     /// `region`, where it routes by region (Fly.io's `fly-prefer-region`).

@@ -1,6 +1,5 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::marker::PhantomData;
-use std::mem::swap;
 
 use anyhow::{Context as _, Result};
 use bincode::config::legacy;
@@ -93,6 +92,44 @@ pub trait ShieldedProtocol {
     }
 }
 
+/// Where one pool's scan spent its time, for benchmarks.
+#[derive(Debug, Default, Clone)]
+pub struct ScanTiming {
+    /// Outputs (or actions) trial-decrypted, each against every key.
+    pub outputs: u64,
+    /// Trial decryption, on all cores.
+    pub decrypt: std::time::Duration,
+    /// Hashing the note commitment tree and updating witnesses.
+    pub tree: std::time::Duration,
+    /// The rest: issuance, and handing notes, witnesses and spends to the
+    /// writer, waiting on it when it is behind.
+    pub other: std::time::Duration,
+    /// Leaves not hashed: their subtree's root was grafted instead.
+    pub grafted: u64,
+    /// Subtrees hashed whose root the server gave too: the two matched.
+    pub verified: u64,
+}
+
+/// Leaves of a subtree, as `GetSubtreeRoots` counts them: 2^16.
+pub const SUBTREE_DEPTH: usize = 16;
+/// Every this many subtrees, one is hashed even when it could be grafted,
+/// and its root checked against the server's.
+const VERIFY_EVERY: u32 = 16;
+
+/// Roots of completed subtrees of a pool's tree, as the server gives them:
+/// `roots[i]` is subtree `first + i`.
+#[derive(Debug, Default, Clone)]
+pub struct SubtreeRoots {
+    pub first: u32,
+    pub roots: Vec<Hash32>,
+}
+
+impl SubtreeRoots {
+    fn get(&self, index: u32) -> Option<&Hash32> {
+        self.roots.get(index.checked_sub(self.first)? as usize)
+    }
+}
+
 #[derive(Debug)]
 pub struct Synchronizer<P: ShieldedProtocol> {
     pub hasher: P::Hasher,
@@ -103,6 +140,11 @@ pub struct Synchronizer<P: ShieldedProtocol> {
     pub utxos: HashMap<Vec<u8>, UTXO>,
     pub tree_state: Edge,
     pub tx_decrypted: Sender<WarpSyncMessage>,
+    pub timing: ScanTiming,
+    /// Roots of completed subtrees, grafted in place of hashing them.
+    pub subtree_roots: SubtreeRoots,
+    /// Leaves after `position` not hashed yet (see `Tree::pending`).
+    pending: Vec<Hash32>,
     pub _data: PhantomData<P>,
 }
 
@@ -188,6 +230,9 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             utxos,
             tree_state,
             tx_decrypted,
+            timing: ScanTiming::default(),
+            subtree_roots: SubtreeRoots::default(),
+            pending: vec![],
             _data: Default::default(),
         })
     }
@@ -200,6 +245,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         if blocks.is_empty() {
             return Ok(());
         }
+        let started = std::time::Instant::now();
 
         let network = self.network;
         let outputs = blocks.into_par_iter().flat_map_iter(|b| {
@@ -236,6 +282,12 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
                 })
             })
             .collect::<Vec<_>>();
+        let decrypt = started.elapsed();
+        self.timing.outputs += blocks
+            .iter()
+            .flat_map(|b| b.vtx.iter())
+            .map(|tx| P::extract_outputs(tx).len() as u64)
+            .sum::<u64>();
 
         // Process issuance notes from vtx.issuances — plaintext, no trial
         // decryption needed.  Per tx we track the cmxs (for tree building)
@@ -318,7 +370,8 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
         let mut note_iterator = notes.iter_mut();
         let mut note = note_iterator.next();
 
-        let mut position = self.position;
+        // Leaves in the tree so far, those waiting to be hashed included.
+        let mut position = self.position + self.pending.len() as u32;
         let mut height = 0;
         for cb in blocks.iter() {
             height = cb.height as u32;
@@ -369,7 +422,7 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             }
         }
 
-        let mut new_utxos = notes
+        let new_utxos = notes
             .into_iter()
             .map(|(_, dbn, _)| UTXO {
                 id: dbn.id,
@@ -384,40 +437,262 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             })
             .collect::<Vec<_>>();
 
-        let mut cmxs = vec![];
-        let mut count_cmxs = 0;
+        let tree_started = std::time::Instant::now();
+        // The batch's leaves in tree order: each transaction's outputs, then
+        // the notes it issued.
+        let issuance_cmx_map: HashMap<(u32, u32), &[[u8; 32]]> = issuance_cmxs
+            .iter()
+            .map(|(h, i, c)| ((*h, *i), c.as_slice()))
+            .collect();
+        let mut leaves: Vec<Hash32> = vec![];
+        for cb in blocks.iter() {
+            for (ivtx, vtx) in cb.vtx.iter().enumerate() {
+                leaves.extend(P::extract_outputs(vtx).iter().map(P::extract_cmx));
+                if let Some(iss_cmxs) = issuance_cmx_map.get(&(cb.height as u32, ivtx as u32)) {
+                    leaves.extend_from_slice(iss_cmxs);
+                }
+            }
+        }
+        tracing::debug!("Old notes #{}", self.utxos.len());
+        tracing::debug!("New notes #{}", new_utxos.len());
+        let mut tree = Tree {
+            hasher: &self.hasher,
+            position: &mut self.position,
+            edge: &mut self.tree_state,
+            pending: &mut self.pending,
+            utxos: &mut self.utxos,
+        };
+        let (grafted, mut verified) =
+            tree.add_leaves(&leaves, new_utxos, &self.subtree_roots, SUBTREE_DEPTH)?;
+        if enabled!(target: "warp", tracing::Level::DEBUG) {
+            // The anchors checked below need the edge up to date.
+            verified += tree.flush(&self.subtree_roots, SUBTREE_DEPTH)?;
+        }
+        self.timing.grafted += grafted;
+        self.timing.verified += verified;
+        let tree = tree_started.elapsed();
+        let auth_path = self.tree_state.to_auth_path(&self.hasher);
+        let mut root: Option<[u8; 32]> = None;
+        for utxo in self.utxos.values_mut() {
+            if enabled!(target: "warp", tracing::Level::DEBUG) {
+                let w = &mut utxo.witness;
+                let anchor = w.root(&auth_path.0, &self.hasher);
+                w.anchor = anchor;
+                if let Some(root) = root {
+                    if root != anchor {
+                        tracing::error!("Anchor mismatch for UTXO {utxo:?}");
+                    }
+                } else {
+                    root = Some(anchor);
+                }
+            }
+            self.tx_decrypted
+                .send(WarpSyncMessage::Witness(
+                    utxo.account,
+                    height,
+                    utxo.cmx.clone(),
+                    utxo.witness.clone(),
+                ))
+                .await
+                .context("sending witness")?;
+        }
+        let accounts = self
+            .keys
+            .iter()
+            .map(|(account, _, _, _)| *account)
+            .collect::<Vec<_>>();
 
-        for depth in 0..MERKLE_DEPTH as usize {
-            let mut position = self.position >> depth;
+        for cb in blocks.iter() {
+            for vtx in cb.vtx.iter() {
+                for sp in P::extract_inputs(vtx).iter() {
+                    let nf = P::extract_nf(sp);
+                    let nf = nf.as_slice();
+                    for account in accounts.iter() {
+                        let mut key = account.to_be_bytes().to_vec();
+                        key.extend_from_slice(nf);
+
+                        if let Some(mut utxo) = self.utxos.remove(&key) {
+                            utxo.txid = vtx.hash.clone();
+                            let tx = Transaction {
+                                account: utxo.account,
+                                height: cb.height as u32,
+                                time: cb.time,
+                                txid: (*vtx.hash).into(),
+                                ..Transaction::default()
+                            };
+                            self.tx_decrypted
+                                .send(WarpSyncMessage::Transaction(tx))
+                                .await
+                                .context("sending transaction")?;
+                            self.tx_decrypted
+                                .send(WarpSyncMessage::Spend(utxo))
+                                .await
+                                .context("sending spend")?;
+                        }
+                    }
+                }
+            }
+        }
+        self.tx_decrypted
+            .send(WarpSyncMessage::Checkpoint(accounts, self.pool, height))
+            .await
+            .context("sending checkpoint")?;
+
+        self.timing.decrypt += decrypt;
+        self.timing.tree += tree;
+        self.timing.other += started.elapsed().saturating_sub(decrypt + tree);
+        Ok(())
+    }
+}
+
+/// A pool's note commitment tree as the scan keeps it: the leaves hashed so
+/// far, the edge (the left nodes still waiting for a right sibling), the
+/// leaves after them not hashed yet, and the unspent notes with their
+/// witnesses.
+struct Tree<'a, H: Hasher> {
+    hasher: &'a H,
+    /// Leaves hashed; the edge is the tree's as of this one.
+    position: &'a mut u32,
+    edge: &'a mut Edge,
+    /// The leaves after `position`, all in one subtree that is not complete
+    /// and holds no note: hashed or grafted once it completes.
+    pending: &'a mut Vec<Hash32>,
+    utxos: &'a mut HashMap<Vec<u8>, UTXO>,
+}
+
+impl<H: Hasher> Tree<'_, H> {
+    /// Append a batch's leaves, with the notes found among them.
+    ///
+    /// A subtree of `2^subtree_depth` leaves is not hashed when it completes,
+    /// the server gave its root, and no unspent note is in it: its root is
+    /// grafted in its place, and the edge below it, all inside it, is
+    /// dropped. No witness needs a node inside such a subtree. Every
+    /// `VERIFY_EVERY`th subtree is hashed regardless and its root checked
+    /// against the server's.
+    ///
+    /// Until the last subtree completes, its leaves wait in `pending` while
+    /// no note is in it, so that it can still be grafted whole. Only the
+    /// edge lags meanwhile: a witness takes nothing from a subtree that is
+    /// not complete, and nothing outside the scan reads the edge (spends
+    /// build their paths from the server's tree state). A note found in it
+    /// has the waiting leaves hashed with the new ones, as if they never
+    /// waited. Returns the leaves grafted and the subtree roots checked.
+    fn add_leaves(
+        &mut self,
+        leaves: &[Hash32],
+        mut new_utxos: Vec<UTXO>,
+        roots: &SubtreeRoots,
+        subtree_depth: usize,
+    ) -> Result<(u64, u64)> {
+        let mut all = std::mem::take(self.pending);
+        all.extend_from_slice(leaves);
+        let leaves = all;
+        let start = u64::from(*self.position);
+        let end = start + leaves.len() as u64;
+        let size = 1u64 << subtree_depth;
+        let noted: HashSet<u64> = self
+            .utxos
+            .values()
+            .chain(new_utxos.iter())
+            .map(|utxo| u64::from(utxo.position) >> subtree_depth)
+            .collect();
+        let graftable = |k: u64| {
+            (k + 1) * size <= end
+                && !noted.contains(&k)
+                && k % u64::from(VERIFY_EVERY) != 0
+                && roots.get(k as u32).is_some()
+        };
+        // The last subtree, not complete, waits while no note is in it.
+        let waits = |k: u64| (k + 1) * size > end && !noted.contains(&k);
+        new_utxos.sort_by_key(|utxo| utxo.position);
+        let mut new_utxos = new_utxos.into_iter().peekable();
+        let mut grafted = 0;
+        let mut verified = 0;
+        let mut at = start;
+        while at < end {
+            let first = at >> subtree_depth;
+            let mut k = first;
+            if graftable(k) {
+                let mut layer = vec![];
+                while k * size < end && graftable(k) {
+                    layer.push(Some(*roots.get(k as u32).unwrap()));
+                    k += 1;
+                }
+                grafted += k * size - at;
+                // The edge below the subtree level is inside the first
+                // subtree, and its root replaces it.
+                self.edge.0[..subtree_depth].fill(None);
+                *self.position = (first * size) as u32;
+                self.append_layer(subtree_depth, layer, vec![], None)?;
+                at = k * size;
+            } else if waits(k) {
+                self.pending.extend_from_slice(&leaves[(at - start) as usize..]);
+                at = end;
+            } else {
+                while k * size < end && !graftable(k) && !waits(k) {
+                    k += 1;
+                }
+                let to = (k * size).min(end);
+                let layer = leaves[(at - start) as usize..(to - start) as usize]
+                    .iter()
+                    .map(|leaf| Some(*leaf))
+                    .collect();
+                let mut found = vec![];
+                while new_utxos.peek().is_some_and(|utxo| u64::from(utxo.position) < to) {
+                    found.extend(new_utxos.next());
+                }
+                verified += self.append_layer(0, layer, found, Some((roots, subtree_depth)))?;
+                at = to;
+            }
+        }
+        Ok((grafted, verified))
+    }
+
+    /// Hash the leaves waiting, bringing the edge up to date. The subtree
+    /// they are in can no longer be grafted. Returns the roots checked.
+    fn flush(&mut self, roots: &SubtreeRoots, subtree_depth: usize) -> Result<u64> {
+        let pending = std::mem::take(self.pending);
+        if pending.is_empty() {
+            return Ok(0);
+        }
+        let layer = pending.into_iter().map(Some).collect();
+        self.append_layer(0, layer, vec![], Some((roots, subtree_depth)))
+    }
+
+    /// Append `layer`, consecutive nodes at `depth0` starting where the tree
+    /// is, and hash them up to the root: the new notes' witnesses, the older
+    /// notes' missing ommers and the edge are updated on the way. Subtree
+    /// roots met at `check`'s depth are checked against the server's; the
+    /// number checked is returned.
+    fn append_layer(
+        &mut self,
+        depth0: usize,
+        mut cmxs: Vec<Option<Hash32>>,
+        mut new_utxos: Vec<UTXO>,
+        check: Option<(&SubtreeRoots, usize)>,
+    ) -> Result<u64> {
+        let count = cmxs.len() as u32;
+        let mut verified = 0;
+        for depth in depth0..MERKLE_DEPTH as usize {
+            let mut position = *self.position >> depth;
             if position % 2 == 1 {
-                cmxs.insert(0, Some(self.tree_state.0[depth].unwrap()));
+                cmxs.insert(0, Some(self.edge.0[depth].unwrap()));
                 position -= 1;
             }
 
-            if depth == 0 {
-                // Build lookup for issuance cmxs per (height, ivtx)
-                let issuance_cmx_map: std::collections::HashMap<(u32, u32), &[[u8; 32]]> =
-                    issuance_cmxs
-                        .iter()
-                        .map(|(h, i, c)| ((*h, *i), c.as_slice()))
-                        .collect();
-
-                for cb in blocks.iter() {
-                    for (ivtx, vtx) in cb.vtx.iter().enumerate() {
-                        for co in P::extract_outputs(vtx).iter() {
-                            let cmx = P::extract_cmx(co);
-                            cmxs.push(Some(cmx));
+            if let Some((roots, subtree_depth)) = check {
+                if depth == subtree_depth {
+                    // A node taken from the edge was checked, or grafted, before.
+                    let from_edge = usize::from(*self.position >> depth != position);
+                    for (i, node) in cmxs.iter().enumerate().skip(from_edge) {
+                        let index = position + i as u32;
+                        if let (Some(node), Some(root)) = (node, roots.get(index)) {
+                            anyhow::ensure!(
+                                node == root,
+                                "the server's root of subtree {index} is not the one hashed"
+                            );
+                            verified += 1;
                         }
-                        // Append issuance note cmxs after actions within the same tx
-                        if let Some(iss_cmxs) =
-                            issuance_cmx_map.get(&(cb.height as u32, ivtx as u32))
-                        {
-                            for cmx in *iss_cmxs {
-                                cmxs.push(Some(*cmx));
-                            }
-                            count_cmxs += iss_cmxs.len();
-                        }
-                        count_cmxs += P::extract_outputs(vtx).len();
                     }
                 }
             }
@@ -467,91 +742,197 @@ impl<P: ShieldedProtocol> Synchronizer<P> {
             }
 
             if len % 2 == 1 {
-                self.tree_state.0[depth] = cmxs[len - 1];
+                self.edge.0[depth] = cmxs[len - 1];
             } else {
-                self.tree_state.0[depth] = None;
+                self.edge.0[depth] = None;
             }
 
             let pairs = len / 2;
-            let mut cmxs2 = self.hasher.parallel_combine_opt(depth as u8, &cmxs, pairs);
-            swap(&mut cmxs, &mut cmxs2);
+            cmxs = self.hasher.parallel_combine_opt(depth as u8, &cmxs, pairs);
         }
-
-        tracing::debug!("Old notes #{}", self.utxos.len());
-        tracing::debug!("New notes #{}", new_utxos.len());
-        for utxo in new_utxos.into_iter() {
+        *self.position += count << depth0;
+        for utxo in new_utxos {
             let mut key = utxo.account.to_be_bytes().to_vec();
             key.extend_from_slice(&utxo.nullifier);
             self.utxos.insert(key, utxo);
         }
-        let auth_path = self.tree_state.to_auth_path(&self.hasher);
-        let mut root: Option<[u8; 32]> = None;
-        for utxo in self.utxos.values_mut() {
-            if enabled!(target: "warp", tracing::Level::DEBUG) {
-                let w = &mut utxo.witness;
-                let anchor = w.root(&auth_path.0, &self.hasher);
-                w.anchor = anchor;
-                if let Some(root) = root {
-                    if root != anchor {
-                        tracing::error!("Anchor mismatch for UTXO {utxo:?}");
-                    }
-                } else {
-                    root = Some(anchor);
-                }
-            }
-            self.tx_decrypted
-                .send(WarpSyncMessage::Witness(
-                    utxo.account,
-                    height,
-                    utxo.cmx.clone(),
-                    utxo.witness.clone(),
-                ))
-                .await
-                .context("sending witness")?;
+        Ok(verified)
+    }
+}
+
+#[cfg(test)]
+mod graft_tests {
+    use super::*;
+    use crate::warp::hasher::OrchardHasher;
+
+    /// Subtrees of 8 leaves, so that many fit in a test.
+    const DEPTH: usize = 3;
+
+    /// A leaf that is a valid field element.
+    fn leaf(i: u32) -> Hash32 {
+        let mut leaf = [0u8; 32];
+        leaf[..4].copy_from_slice(&i.to_le_bytes());
+        leaf[4] = 7;
+        leaf
+    }
+
+    fn note(position: u32) -> UTXO {
+        UTXO { account: 1, position, nullifier: position.to_be_bytes().to_vec(), ..UTXO::default() }
+    }
+
+    /// The root of subtree `k`, hashed directly.
+    fn subtree_root(hasher: &OrchardHasher, k: u32) -> Hash32 {
+        let size = 1 << DEPTH;
+        let mut layer: Vec<Hash32> = (k * size..(k + 1) * size).map(leaf).collect();
+        for depth in 0..DEPTH {
+            layer = layer.chunks(2).map(|p| hasher.combine(depth as u8, &p[0], &p[1])).collect();
         }
-        self.position += count_cmxs as u32;
-        let accounts = self
-            .keys
-            .iter()
-            .map(|(account, _, _, _)| *account)
-            .collect::<Vec<_>>();
+        layer[0]
+    }
 
-        for cb in blocks.iter() {
-            for vtx in cb.vtx.iter() {
-                for sp in P::extract_inputs(vtx).iter() {
-                    let nf = P::extract_nf(sp);
-                    let nf = nf.as_slice();
-                    for account in accounts.iter() {
-                        let mut key = account.to_be_bytes().to_vec();
-                        key.extend_from_slice(nf);
+    struct State {
+        position: u32,
+        edge: Edge,
+        utxos: HashMap<Vec<u8>, UTXO>,
+    }
 
-                        if let Some(mut utxo) = self.utxos.remove(&key) {
-                            utxo.txid = vtx.hash.clone();
-                            let tx = Transaction {
-                                account: utxo.account,
-                                height: cb.height as u32,
-                                time: cb.time,
-                                txid: (*vtx.hash).into(),
-                                ..Transaction::default()
-                            };
-                            self.tx_decrypted
-                                .send(WarpSyncMessage::Transaction(tx))
-                                .await
-                                .context("sending transaction")?;
-                            self.tx_decrypted
-                                .send(WarpSyncMessage::Spend(utxo))
-                                .await
-                                .context("sending spend")?;
-                        }
-                    }
-                }
+    /// How a run builds the tree.
+    #[derive(Clone, Copy, PartialEq)]
+    enum Mode {
+        /// Every leaf hashed by the plain loop, as before grafting: the
+        /// reference.
+        Hash,
+        /// Grafting, the leaves waiting hashed after each batch.
+        Graft,
+        /// Grafting, leaves waiting for their subtree to complete.
+        Wait,
+    }
+
+    /// Feeds `batches` leaves at a time, with notes at `notes`: the state
+    /// after each batch, after a last flush, and the leaves grafted in all.
+    fn run(
+        roots: &SubtreeRoots,
+        batches: &[u32],
+        notes: &[u32],
+        mode: Mode,
+    ) -> Result<(Vec<State>, State, u64)> {
+        let hasher = OrchardHasher::default();
+        let mut state = State { position: 0, edge: Edge::default(), utxos: HashMap::new() };
+        let mut pending = vec![];
+        let mut states = vec![];
+        let mut grafted = 0;
+        let snapshot = |state: &State| State {
+            position: state.position,
+            edge: state.edge.clone(),
+            utxos: state
+                .utxos
+                .iter()
+                .map(|(k, u)| (k.clone(), UTXO { witness: u.witness.clone(), ..note(u.position) }))
+                .collect(),
+        };
+        let mut next = 0;
+        for &n in batches {
+            let leaves: Vec<Hash32> = (next..next + n).map(leaf).collect();
+            let found =
+                notes.iter().filter(|p| (next..next + n).contains(*p)).map(|p| note(*p)).collect();
+            next += n;
+            let mut tree = Tree {
+                hasher: &hasher,
+                position: &mut state.position,
+                edge: &mut state.edge,
+                pending: &mut pending,
+                utxos: &mut state.utxos,
+            };
+            if mode == Mode::Hash {
+                tree.append_layer(0, leaves.into_iter().map(Some).collect(), found, None)?;
+            } else {
+                grafted += tree.add_leaves(&leaves, found, roots, DEPTH)?.0;
             }
+            if mode == Mode::Graft {
+                tree.flush(roots, DEPTH)?;
+            }
+            let expected = notes.iter().filter(|p| **p < next).count();
+            assert_eq!(state.utxos.len(), expected, "notes lost");
+            // What the scan numbers new notes from.
+            assert_eq!(state.position + pending.len() as u32, next, "leaves lost or doubled");
+            states.push(snapshot(&state));
         }
-        self.tx_decrypted
-            .send(WarpSyncMessage::Checkpoint(accounts, self.pool, height))
-            .await
-            .context("sending checkpoint")?;
+        let mut tree = Tree {
+            hasher: &hasher,
+            position: &mut state.position,
+            edge: &mut state.edge,
+            pending: &mut pending,
+            utxos: &mut state.utxos,
+        };
+        tree.flush(roots, DEPTH)?;
+        Ok((states, snapshot(&state), grafted))
+    }
 
-        Ok(())
+    fn all_roots(count: u32) -> SubtreeRoots {
+        let hasher = OrchardHasher::default();
+        SubtreeRoots { first: 0, roots: (0..count).map(|k| subtree_root(&hasher, k)).collect() }
+    }
+
+    fn same_witnesses(a: &State, b: &State, what: &str) {
+        assert_eq!(a.utxos.len(), b.utxos.len(), "{what}");
+        for (key, utxo) in &a.utxos {
+            let at = utxo.position;
+            assert!(utxo.witness == b.utxos[key].witness, "{what}: the note at {at}");
+        }
+    }
+
+    fn same_tree(a: &State, b: &State, what: &str) {
+        assert_eq!(a.position, b.position, "{what}");
+        assert_eq!(a.edge, b.edge, "{what}");
+        same_witnesses(a, b, what);
+    }
+
+    #[test]
+    fn grafting_gives_the_tree_and_witnesses_hashing_gives() {
+        // Batches straddling subtrees and spanning several, some ending on a
+        // subtree's last leaf (32, 120), others not, some smaller than a
+        // subtree; notes in a few subtrees, one found while its subtree
+        // straddles two batches, one (130) after its subtree's leaves waited.
+        let notes = [2, 40, 41, 75, 130];
+        let patterns: [&[u32]; 3] = [
+            &[5, 20, 3, 30, 1, 49, 13, 40],
+            &[5, 20, 3, 4, 26, 1, 49, 12, 41],
+            &[3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 30, 2, 2, 2, 2, 75],
+        ];
+        for batches in patterns {
+            let (hashed, hashed_end, none) = run(&all_roots(40), batches, &notes, Mode::Hash).unwrap();
+            let (grafted, grafted_end, some) =
+                run(&all_roots(40), batches, &notes, Mode::Graft).unwrap();
+            let (waited, waited_end, most) =
+                run(&all_roots(40), batches, &notes, Mode::Wait).unwrap();
+            assert_eq!(none, 0);
+            assert!(some > 40, "{batches:?}: only {some} leaves grafted");
+            assert!(most >= some, "{batches:?}: {most} grafted waiting, {some} without");
+            for (i, ((a, b), c)) in hashed.iter().zip(&grafted).zip(&waited).enumerate() {
+                let what = format!("{batches:?}, batch {i}");
+                same_tree(a, b, &what);
+                same_witnesses(a, c, &what);
+            }
+            same_tree(&hashed_end, &grafted_end, &format!("{batches:?}, at the end"));
+            same_tree(&hashed_end, &waited_end, &format!("{batches:?}, at the end"));
+        }
+    }
+
+    #[test]
+    fn leaves_waiting_are_grafted_once_their_subtree_completes() {
+        // Subtree 1 (leaves 8 to 15) arrives three leaves at a time.
+        let (_, _, grafted) = run(&all_roots(4), &[8, 3, 3, 2], &[], Mode::Wait).unwrap();
+        assert_eq!(grafted, 8);
+        let (_, _, grafted) = run(&all_roots(4), &[8, 3, 3, 2], &[], Mode::Graft).unwrap();
+        assert_eq!(grafted, 2, "without waiting, only the last part is grafted");
+    }
+
+    #[test]
+    fn a_wrong_root_from_the_server_fails_the_scan() {
+        // Subtree 0 is always hashed and checked.
+        let mut roots = all_roots(10);
+        roots.roots[0][0] ^= 1;
+        let error = run(&roots, &[30], &[], Mode::Wait).err().expect("the wrong root was taken");
+        assert!(format!("{error}").contains("subtree 0"), "{error}");
     }
 }

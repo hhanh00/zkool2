@@ -11,7 +11,7 @@ use crate::{
     api::{coin::Network, network::LWDInfo},
     lwd::*,
     net::LwdServer,
-    GRPCClient,
+    GRPCClient, Hash32,
 };
 
 #[async_trait]
@@ -201,6 +201,27 @@ impl LwdServer for GRPCClient {
         let ironwood_tree = hex::decode(&state.ironwood_tree).unwrap_or_default();
         Ok((sapling_tree, orchard_tree, ironwood_tree))
     }
+
+    async fn subtree_roots(&mut self, pool: i32, start: u32) -> Result<Vec<Hash32>> {
+        let mut stream = self
+            .get_subtree_roots(Request::new(GetSubtreeRootsArg {
+                start_index: start,
+                shielded_protocol: pool,
+                max_entries: 0,
+            }))
+            .await?
+            .into_inner();
+        let mut roots = vec![];
+        while let Some(root) = stream.message().await? {
+            let hash: Hash32 = root
+                .root_hash
+                .as_slice()
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("a subtree root of {} bytes", root.root_hash.len()))?;
+            roots.push(hash);
+        }
+        Ok(roots)
+    }
 }
 
 /// The block range `start..=end`, asking a load-balancing front end for
@@ -355,6 +376,10 @@ impl LwdServer for LwdClient {
         self.client.tree_state(height).await
     }
 
+    async fn subtree_roots(&mut self, pool: i32, start: u32) -> Result<Vec<Hash32>> {
+        self.client.subtree_roots(pool, start).await
+    }
+
     fn prefer_region(&mut self, region: Option<&str>) {
         self.region = region.and_then(|region| region.parse().ok());
     }
@@ -477,6 +502,7 @@ mod producer_tests {
         type GetMempoolTxStream = Stalled<CompactTx>;
         type GetMempoolStreamStream = Stalled<RawTransaction>;
         type GetAddressUtxosStreamStream = Stalled<GetAddressUtxosReply>;
+        type GetSubtreeRootsStream = Stalled<SubtreeRoot>;
 
         async fn get_block_range(
             &self,
@@ -527,6 +553,12 @@ mod producer_tests {
             &self,
             _: Request<GetAddressUtxosArg>,
         ) -> std::result::Result<tonic::Response<GetAddressUtxosReplyList>, tonic::Status> {
+            unimplemented!()
+        }
+        async fn get_subtree_roots(
+            &self,
+            _: Request<GetSubtreeRootsArg>,
+        ) -> std::result::Result<tonic::Response<Self::GetSubtreeRootsStream>, tonic::Status> {
             unimplemented!()
         }
         async fn get_address_utxos_stream(
