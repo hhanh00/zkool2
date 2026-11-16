@@ -1,6 +1,26 @@
 # Changelog
 
 
+## [6.38.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.37.0...zkool-v6.38.0-rc) (2026-11-16)
+
+
+### Features
+
+* **bench:** add an in-process sync bench ([e06f6d5](https://github.com/hhanh00/zkool2/commit/e06f6d5e91df998fb3d4083557ba505661f19cc4))
+* **bench:** ask dl_bench connections for a region ([c480be3](https://github.com/hhanh00/zkool2/commit/c480be34a86c3ea4369daac24f09b6fced9084ea))
+* **bench:** report the scan by pool and the download by backend ([d1c8d7a](https://github.com/hhanh00/zkool2/commit/d1c8d7a50801b0d1205a57f047d43db4b1bd07ec))
+* **bench:** write the download's scheduling trace from the sync bench ([e239854](https://github.com/hhanh00/zkool2/commit/e239854becf7f597f184dc5b2461b0726fc8a460))
+* **graphql:** decodePczt returns the txid of the prepared transaction ([#1647](https://github.com/hhanh00/zkool2/issues/1647)) ([7e2a6e7](https://github.com/hhanh00/zkool2/commit/7e2a6e758b7cf5ef1f617c9cc98542854df5f567))
+* **sync:** batch Orchard and Ironwood key agreement with zakura-udon ([4db6a36](https://github.com/hhanh00/zkool2/commit/4db6a369b034b885c3739bd8ddd05c5e2dc51899))
+* **sync:** download blocks over several connections ([85cabf2](https://github.com/hhanh00/zkool2/commit/85cabf2a4b2b949228e63dc0e89f9046a393209a))
+* **sync:** fetch blocks from the fastest backends ([00b83a0](https://github.com/hhanh00/zkool2/commit/00b83a0a25028fdd94fd9e3a7f7f0b0662765b80))
+* **sync:** graft the server's subtree roots instead of hashing ([dc56b98](https://github.com/hhanh00/zkool2/commit/dc56b98815b7bf8d7ae1c7e697bfc45c77fa614e))
+
+
+### Bug Fixes
+
+* **key-tree:** size each row to its key and keep it inside the list ([#1643](https://github.com/hhanh00/zkool2/issues/1643)) ([b7372b1](https://github.com/hhanh00/zkool2/commit/b7372b1b913a42b9c245138c16e1b4012a6eb5ea)), closes [#1642](https://github.com/hhanh00/zkool2/issues/1642)
+
 ## [6.37.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.36.0...zkool-v6.37.0) (2026-11-08)
 
 
