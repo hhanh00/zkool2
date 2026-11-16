@@ -256,18 +256,6 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
                     ],
                   ),
                 ),
-                Tooltip(
-                  message: "Number actions per synchronization chunk",
-                  child: FormBuilderTextField(
-                    name: "actions_per_sync",
-                    decoration: const InputDecoration(labelText: "Actions per Sync"),
-                    initialValue: settings.actionsPerSync,
-                    onChanged: onChangedActionsPerSync,
-                    validator: FormBuilderValidators.integer(),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  ),
-                ),
                 Gap(16),
                 Tooltip(
                   message: "Network fee per logical action, in zatoshis. Leave empty to follow the network schedule "
@@ -1088,17 +1076,6 @@ class SettingsFormState extends ConsumerState<SettingsForm> {
       compressDialog?.dismiss();
       if (mounted) await showException(context, e.message);
     }
-  }
-
-  onChangedActionsPerSync(String? value) async {
-    if (value == null) return;
-    if (int.tryParse(value) == null) {
-      return;
-    }
-    setState(() {
-      settings = settings.copyWith(actionsPerSync: value);
-      widget.onChanged(settings);
-    });
   }
 
   onChangedFeePerAction(String? value) async {

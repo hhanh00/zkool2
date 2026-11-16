@@ -43,7 +43,6 @@ const _accountW = "Alice (watch)";
 // Values no setting has by default, so a saved change is told from the original.
 const _proxy = "socks5h://127.0.0.1:19050";
 const _votingUrl = "https://example.invalid/voting-config.json";
-const _actionsPerSync = "123";
 const _coingeckoKey = "wallet-ext-key";
 const _blockExplorer = "https://example.invalid/tx/";
 const _qrDelay = "250";
@@ -170,7 +169,6 @@ void main() {
         transport: 3,
         proxy: _proxy,
         votingConfigUrl: _votingUrl,
-        actionsPerSync: _actionsPerSync,
         syncInterval: "0",
         offline: !original.offline,
         getFx: !original.getFx,
@@ -211,7 +209,6 @@ void main() {
       await _selectTransport(tester, "Proxy", proxyEnabled: true);
       await _enterField(tester, "proxy", _proxy);
       await _enterField(tester, "voting_config_url", _votingUrl);
-      await _enterField(tester, "actions_per_sync", _actionsPerSync);
 
       step("cancel sync zeroes the autosync interval");
       await tapTooltip(tester, "This will cancel the current sync and disable AutoSync");
@@ -257,7 +254,6 @@ void main() {
       await _selectTransport(tester, _transportLabels[original.transport]!, proxyEnabled: original.transport == 3);
       await _enterField(tester, "proxy", original.proxy);
       await _enterField(tester, "voting_config_url", original.votingConfigUrl);
-      await _enterField(tester, "actions_per_sync", original.actionsPerSync);
       await _enterField(tester, "autosync", original.syncInterval);
       await _tapSwitch(tester, switchNamed("offline"));
       await _tapSwitch(tester, switchNamed("fx"));
@@ -1063,7 +1059,6 @@ Future<void> _expectSettingsSaved(
   expect(s.transport, expected.transport, reason: "transport");
   expect(s.proxy, expected.proxy, reason: "proxy");
   expect(s.votingConfigUrl, expected.votingConfigUrl, reason: "voting config url");
-  expect(s.actionsPerSync, expected.actionsPerSync, reason: "actions per sync");
   expect(s.syncInterval, expected.syncInterval, reason: "autosync interval");
   expect(s.offline, expected.offline, reason: "offline");
   expect(s.getFx, expected.getFx, reason: "auto fetch price");

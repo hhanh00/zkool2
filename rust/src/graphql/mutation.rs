@@ -96,7 +96,6 @@ async fn synchronize(
             crate::sync::driver::SyncRequest {
                 accounts,
                 current_height,
-                actions_per_sync: 100_000,
                 checkpoint_age: 10_000,
                 skip_details: fast,
             },

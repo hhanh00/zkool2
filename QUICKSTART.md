@@ -68,8 +68,6 @@ linkability
 - Server URL
     - Enter URL like: https://zec.rocks
     - Full Nodes are supported but "Light node" should be toggled off
-- Actions per Sync is the size of the batches of sync. Increase to process
-more blocks at once but it increases memory requirement
 - AutoSync Interval is the minimum number of blocks before Auto Syncing activates
 Set to 0 to disable autosync. Tap on Cancel to stop the current sync.
 Alternatively, close the app. Synchronization will resume from the last checkpoint

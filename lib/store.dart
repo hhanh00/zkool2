@@ -404,7 +404,6 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final syncInterval = (hasDb ? await getProp(key: "sync_interval", c: c) : null) ?? "30";
     final votingConfigUrl =
         (hasDb ? await getProp(key: "voting_config_url", c: c) : null) ?? "";
-    final actionsPerSync = (hasDb ? await getProp(key: "actions_per_sync", c: c) : null) ?? "10000";
     // Fee per logical action, in zatoshis. Empty means automatic (ZIP 2009).
     final feePerAction = (hasDb ? await getProp(key: "fee_per_action", c: c) : null) ?? "";
     final blockExplorer = (hasDb ? await getProp(key: "block_explorer", c: c) : null) ?? defaultBlockExplorerFor(net);
@@ -448,7 +447,6 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
       coingecko: coingecko,
       recovery: recovery,
       syncInterval: syncInterval,
-      actionsPerSync: actionsPerSync,
       feePerAction: feePerAction,
       blockExplorer: blockExplorer,
       qrSettings: qrSettings,
@@ -540,7 +538,6 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     await putProp(key: "is_light_node", value: settings.isLightNode.toString(), c: c);
     await putProp(key: "lwd", value: settings.lwd, c: c);
     await putProp(key: "block_explorer", value: settings.blockExplorer, c: c);
-    await putProp(key: "actions_per_sync", value: settings.actionsPerSync, c: c);
     await putProp(key: "fee_per_action", value: settings.feePerAction, c: c);
     await putProp(key: "sync_interval", value: settings.syncInterval, c: c);
     await prefs.setBool("pin_lock", settings.needPin);
@@ -638,7 +635,6 @@ sealed class AppSettings with _$AppSettings {
     required String lwd,
     required String blockExplorer,
     required String syncInterval, // in blocks
-    required String actionsPerSync,
     required String feePerAction, // zatoshis per logical action, empty = automatic
     required int transport,
     required String proxy,
@@ -860,7 +856,6 @@ void runLogListener() async {
 //     net = await getNetworkName();
 //     lwd = await getProp(key: "lwd") ?? lwd;
 //     syncInterval = await getProp(key: "sync_interval") ?? syncInterval;
-//     actionsPerSync = await getProp(key: "actions_per_sync") ?? actionsPerSync;
 //     blockExplorer = await getProp(key: "block_explorer") ?? blockExplorer;
 //   }
 
@@ -1028,7 +1023,6 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
         final progress = synchronize(
           accounts: accounts.map((a) => a.id).toList(),
           currentHeight: syncHeight,
-          actionsPerSync: int.parse(settings.actionsPerSync),
           checkpointAge: 500_000,
           fast: true,
           c: c,
