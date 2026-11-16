@@ -29,7 +29,6 @@ pub async fn synchronize(
     progress: StreamSink<SyncEvent>,
     accounts: Vec<u32>,
     current_height: u32,
-    actions_per_sync: u32,
     checkpoint_age: u32,
     fast: bool,
     c: &Coin,
@@ -45,7 +44,6 @@ pub async fn synchronize(
     let request = SyncRequest {
         accounts,
         current_height,
-        actions_per_sync,
         checkpoint_age,
         skip_details: fast,
     };

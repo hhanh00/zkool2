@@ -22,14 +22,12 @@ part 'sync.freezed.dart';
 Stream<SyncEvent> synchronize(
         {required List<int> accounts,
         required int currentHeight,
-        required int actionsPerSync,
         required int checkpointAge,
         required bool fast,
         required Coin c}) =>
     RustLib.instance.api.crateApiSyncSynchronize(
         accounts: accounts,
         currentHeight: currentHeight,
-        actionsPerSync: actionsPerSync,
         checkpointAge: checkpointAge,
         fast: fast,
         c: c);

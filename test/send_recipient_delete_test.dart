@@ -71,7 +71,6 @@ class _Settings extends AppSettingsNotifier {
         lwd: '',
         blockExplorer: '',
         syncInterval: '',
-        actionsPerSync: '',
         feePerAction: '',
         transport: 0,
         proxy: '',

@@ -25,7 +25,6 @@ class _Api implements RustLibApi {
   Stream<SyncEvent> crateApiSyncSynchronize({
     required List<int> accounts,
     required int currentHeight,
-    required int actionsPerSync,
     required int checkpointAge,
     required bool fast,
     required Coin c,
@@ -64,7 +63,6 @@ class _Settings extends AppSettingsNotifier {
         lwd: '',
         blockExplorer: '',
         syncInterval: interval,
-        actionsPerSync: '100',
         feePerAction: '',
         transport: 0,
         proxy: '',

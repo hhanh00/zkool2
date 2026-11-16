@@ -93,7 +93,6 @@ pub enum Apply {
 pub struct SyncRequest {
     pub accounts: Vec<u32>,
     pub current_height: u32,
-    pub actions_per_sync: u32,
     pub checkpoint_age: u32,
     /// Skip the detail pass; the app fetches details afterwards.
     pub skip_details: bool,
@@ -335,7 +334,6 @@ impl Ops for WalletOps {
             progress,
             request.accounts,
             request.current_height,
-            request.actions_per_sync,
             request.checkpoint_age,
             request.skip_details,
             c,
@@ -490,7 +488,6 @@ mod tests {
         SyncRequest {
             accounts: vec![1],
             current_height: height,
-            actions_per_sync: 1,
             checkpoint_age: 1,
             skip_details: true,
         }
