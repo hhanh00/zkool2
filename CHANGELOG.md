@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [6.38.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.38.0-rc...zkool-v6.38.0-rc.1) (2026-11-16)
+
+
+### Features
+
+* **sync:** hand blocks to the scan on a timer, not an action count ([#1651](https://github.com/hhanh00/zkool2/issues/1651)) ([716aade](https://github.com/hhanh00/zkool2/commit/716aadec3f24f40949bb8d8285fb5e5fa9158022))
+
 ## [6.38.0-rc](https://github.com/hhanh00/zkool2/compare/zkool-v6.37.0...zkool-v6.38.0-rc) (2026-11-16)
 
 
