@@ -10,7 +10,7 @@ use crate::{
     api::coin::Coin,
     frost::dkg::{get_dkg_params, get_mailbox_account},
     frost::keys::CURRENT_DKG_VERSION,
-    sync::{session::SyncRun, synchronize_within, DEFAULT_ACTIONS_PER_SYNC},
+    sync::{session::SyncRun, synchronize_within},
 };
 use crate::api::sync::SyncOutcome;
 use crate::frost::driver::{Cancel, Driver};
@@ -149,7 +149,6 @@ pub(crate) async fn sync_frost_accounts(
         (),
         accounts,
         height,
-        DEFAULT_ACTIONS_PER_SYNC,
         100,
         false,
         c,

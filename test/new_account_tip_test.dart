@@ -88,7 +88,6 @@ class _Settings extends AppSettingsNotifier {
         lwd: '',
         blockExplorer: '',
         syncInterval: '0', // autosync off: nothing polls the height
-        actionsPerSync: '',
         feePerAction: '',
         transport: 0,
         proxy: '',

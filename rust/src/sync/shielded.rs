@@ -176,7 +176,6 @@ pub async fn shielded_sync(
     accounts: &[(u32, bool)],
     start: u32,
     end: u32,
-    actions_per_sync: u32,
     chunk_size: Option<u32>,
     tx_progress: Sender<SyncProgress>,
     cancel: CancellationToken,
@@ -188,7 +187,6 @@ pub async fn shielded_sync(
         accounts,
         start,
         end,
-        actions_per_sync,
         chunk_size,
         tx_progress,
         cancel,
@@ -207,7 +205,6 @@ pub async fn shielded_sync_with(
     accounts: &[(u32, bool)],
     start: u32,
     end: u32,
-    actions_per_sync: u32,
     chunk_size: Option<u32>,
     tx_progress: Sender<SyncProgress>,
     cancel: CancellationToken,
@@ -237,7 +234,6 @@ pub async fn shielded_sync_with(
             accounts,
             chunk_start,
             chunk_end,
-            actions_per_sync,
             tx_progress.clone(),
             cancel.clone(),
             more_clients.clone(),
@@ -316,7 +312,6 @@ async fn shielded_sync_range(
     accounts: &[(u32, bool)],
     start: u32,
     end: u32,
-    actions_per_sync: u32,
     tx_progress: Sender<SyncProgress>,
     cancel: CancellationToken,
     more_clients: Option<ClientFactory>,
@@ -324,21 +319,34 @@ async fn shielded_sync_range(
     let accounts = accounts.to_vec();
     let account_ids: Vec<u32> = accounts.iter().map(|(a, _)| *a).collect();
     let (db_writer_task, scan_task) = {
-        let (s, o, i) = get_tree_state(network, client, start - 1).await?;
-        let subtree_roots = get_subtree_roots(client, [&s, &o, &i]).await;
-
-        debug!("get compact block range");
         let scan_wait = crate::warp::sync::ScanWait::new();
-        let blocks = super::fetch::block_stream(
-            network,
-            client,
-            start,
-            end,
-            more_clients,
-            Some(scan_wait.clone()),
-        )
-        .await?;
-        debug!("got streaming blocks");
+        // The server is asked three things before any block is scanned. A
+        // cancel does not wait for a server that answers none of them.
+        let setup = async {
+            let (s, o, i) = get_tree_state(network, client, start - 1).await?;
+            let subtree_roots = get_subtree_roots(client, [&s, &o, &i]).await;
+
+            debug!("get compact block range");
+            let blocks = super::fetch::block_stream(
+                network,
+                client,
+                start,
+                end,
+                more_clients,
+                Some(scan_wait.clone()),
+            )
+            .await?;
+            debug!("got streaming blocks");
+            Ok::<_, anyhow::Error>((s, o, i, subtree_roots, blocks))
+        };
+        let (s, o, i, subtree_roots, blocks) = tokio::select! {
+            biased;
+            _ = cancel.cancelled() => {
+                debug!("Sync cancelled before the scan started");
+                return Ok(RangeEnd::Cancelled);
+            }
+            setup = setup => setup?,
+        };
         let (tx_messages, mut rx_messages) = channel::<WarpSyncMessage>(100);
 
         let mut connection = pool.acquire().await?;
@@ -441,7 +449,6 @@ async fn shielded_sync_range(
                 &accounts,
                 blocks,
                 heights_without_time,
-                actions_per_sync,
                 &s,
                 &o,
                 &i,
@@ -689,6 +696,8 @@ mod stream_tests {
         FailsAfter(u32),
         /// Every block, but this one does not connect to its predecessor.
         Broken(u32),
+        /// The server never answers the request.
+        Hangs,
     }
 
     /// A block source following a script, one entry per `block_range` call,
@@ -737,6 +746,9 @@ mod stream_tests {
             } else {
                 *self.script.front().unwrap()
             };
+            if let Serve::Hangs = serve {
+                std::future::pending::<()>().await;
+            }
             let (tx, rx) = tokio::sync::mpsc::channel(1024);
             for h in start..=end {
                 match serve {
@@ -825,6 +837,16 @@ mod stream_tests {
     /// Scans 1..=end with the scripted source; returns the outcome and the
     /// ranges the source was asked for.
     async fn scan(pool: &SqlitePool, script: &[Serve], end: u32) -> (Result<()>, Vec<(u32, u32)>) {
+        scan_until(pool, script, end, CancellationToken::new()).await
+    }
+
+    /// [`scan`], under a token the test may cancel.
+    async fn scan_until(
+        pool: &SqlitePool,
+        script: &[Serve],
+        end: u32,
+        cancel: CancellationToken,
+    ) -> (Result<()>, Vec<(u32, u32)>) {
         let asked = Arc::new(Mutex::new(vec![]));
         let mut client: Client = Box::new(Blocks {
             script: script.iter().copied().collect(),
@@ -838,14 +860,32 @@ mod stream_tests {
             &[(1, false)],
             1,
             end,
-            1000,
             None,
             progress,
-            CancellationToken::new(),
+            cancel,
         )
         .await;
         let asked = asked.lock().unwrap().clone();
         (r, asked)
+    }
+
+    #[tokio::test]
+    async fn a_cancel_does_not_wait_for_a_server_that_never_opens_the_stream() -> Result<()> {
+        let (pool, path) = wallet("hangs").await?;
+        let cancel = CancellationToken::new();
+        let user = cancel.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            user.cancel();
+        });
+        let scan = scan_until(&pool, &[Serve::Hangs], 10, cancel);
+        let (r, asked) = tokio::time::timeout(std::time::Duration::from_secs(5), scan)
+            .await
+            .expect("the cancel waited for the server");
+        r?;
+        assert_eq!(asked, vec![(1, 10)], "the server was asked, and never answered");
+        let _ = std::fs::remove_file(path);
+        Ok(())
     }
 
     #[tokio::test]

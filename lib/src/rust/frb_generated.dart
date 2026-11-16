@@ -713,7 +713,6 @@ abstract class RustLibApi extends BaseApi {
   Stream<SyncEvent> crateApiSyncSynchronize(
       {required List<int> accounts,
       required int currentHeight,
-      required int actionsPerSync,
       required int checkpointAge,
       required bool fast,
       required Coin c});
@@ -6186,7 +6185,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
   Stream<SyncEvent> crateApiSyncSynchronize(
       {required List<int> accounts,
       required int currentHeight,
-      required int actionsPerSync,
       required int checkpointAge,
       required bool fast,
       required Coin c}) {
@@ -6197,7 +6195,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         sse_encode_StreamSink_sync_event_Sse(progress, serializer);
         sse_encode_list_prim_u_32_loose(accounts, serializer);
         sse_encode_u_32(currentHeight, serializer);
-        sse_encode_u_32(actionsPerSync, serializer);
         sse_encode_u_32(checkpointAge, serializer);
         sse_encode_bool(fast, serializer);
         sse_encode_Auto_Ref_RustOpaque_flutter_rust_bridgefor_generatedRustAutoOpaqueInnerCoin(
@@ -6210,15 +6207,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
         decodeErrorData: sse_decode_AnyhowException,
       ),
       constMeta: kCrateApiSyncSynchronizeConstMeta,
-      argValues: [
-        progress,
-        accounts,
-        currentHeight,
-        actionsPerSync,
-        checkpointAge,
-        fast,
-        c
-      ],
+      argValues: [progress, accounts, currentHeight, checkpointAge, fast, c],
       apiImpl: this,
     )));
     return progress.stream;
@@ -6230,7 +6219,6 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           "progress",
           "accounts",
           "currentHeight",
-          "actionsPerSync",
           "checkpointAge",
           "fast",
           "c"

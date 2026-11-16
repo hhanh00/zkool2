@@ -40,8 +40,6 @@ use tracing_subscriber::{EnvFilter, Layer as _};
 
 const TEST_SEED: &str = "abandon abandon abandon abandon abandon abandon abandon abandon \
                          abandon abandon abandon about";
-/// What the server's sync mutation uses.
-const ACTIONS_PER_SYNC: u32 = 100_000;
 /// Transparent, Sapling and Orchard.
 const POOLS: u8 = 7;
 
@@ -305,7 +303,7 @@ async fn run(args: Args) -> Result<()> {
     eprintln!("syncing account {account} from {} to {tip} against {}", args.birthday, args.server);
 
     let timed =
-        rlz::sync::bench::sync(&coin, vec![account], tip, ACTIONS_PER_SYNC, args.fast).await?;
+        rlz::sync::bench::sync(&coin, vec![account], tip, args.fast).await?;
     let height = match timed.outcome {
         SyncOutcome::Synced { height } => height,
         other => bail!("the sync did not complete: {other:?}"),

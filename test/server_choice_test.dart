@@ -22,7 +22,6 @@ AppSettings draft({int transport = 3, bool isLightNode = false}) => AppSettings(
       lwd: 'https://old.example',
       blockExplorer: '',
       syncInterval: '',
-      actionsPerSync: '',
       feePerAction: '',
       transport: transport,
       proxy: 'socks5h://127.0.0.1:9050',

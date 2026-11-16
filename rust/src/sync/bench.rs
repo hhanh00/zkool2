@@ -140,7 +140,6 @@ pub async fn sync(
     coin: &Coin,
     accounts: Vec<u32>,
     current_height: u32,
-    actions_per_sync: u32,
     skip_details: bool,
 ) -> Result<TimedSync> {
     take();
@@ -153,7 +152,6 @@ pub async fn sync(
             super::driver::SyncRequest {
                 accounts,
                 current_height,
-                actions_per_sync,
                 checkpoint_age: 10_000,
                 skip_details,
             },
