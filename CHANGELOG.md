@@ -1,6 +1,19 @@
 # Changelog
 
 
+## [6.38.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.38.0-rc.1...zkool-v6.38.0-rc.2) (2026-11-17)
+
+
+### Bug Fixes
+
+* **mempool:** reopen the stream when it times out for being idle ([5db528f](https://github.com/hhanh00/zkool2/commit/5db528f9ccb325197d338a4bd88c1265524f5374)), closes [#1654](https://github.com/hhanh00/zkool2/issues/1654)
+* **net:** bound lightwalletd connects and keep connections alive ([5b1e320](https://github.com/hhanh00/zkool2/commit/5b1e320bf902099cd8e35e5d0feaa0d438819253)), closes [#1654](https://github.com/hhanh00/zkool2/issues/1654)
+* **net:** fail a lightwalletd call after an idle window ([621291f](https://github.com/hhanh00/zkool2/commit/621291f90ba8f1823dfeb3397ae427983e39ab5b)), closes [#1654](https://github.com/hhanh00/zkool2/issues/1654)
+* **net:** time out Zebra JSON-RPC calls ([ff2ce30](https://github.com/hhanh00/zkool2/commit/ff2ce30b2fdb36105d46bdb7a05ce651c6af4d69)), closes [#1654](https://github.com/hhanh00/zkool2/issues/1654)
+* **sync:** detect reorgs in ranges with no shielded keys ([#1661](https://github.com/hhanh00/zkool2/issues/1661)) ([ce0c0a0](https://github.com/hhanh00/zkool2/commit/ce0c0a049d8051898b221d614c6ae34440576ebd)), closes [#1658](https://github.com/hhanh00/zkool2/issues/1658)
+* **sync:** require witnesses for ZSA notes in the consistency check ([#1660](https://github.com/hhanh00/zkool2/issues/1660)) ([8cf2a04](https://github.com/hhanh00/zkool2/commit/8cf2a041ddec76771a324495e72891d76edf93e8)), closes [#1659](https://github.com/hhanh00/zkool2/issues/1659)
+* **sync:** trim a reorg to a safe point per account and re-plan ([#1657](https://github.com/hhanh00/zkool2/issues/1657)) ([812b9a0](https://github.com/hhanh00/zkool2/commit/812b9a03e522e5dcbd5405bf05c769a343c2239b)), closes [#1653](https://github.com/hhanh00/zkool2/issues/1653)
+
 ## [6.38.0-rc.1](https://github.com/hhanh00/zkool2/compare/zkool-v6.38.0-rc...zkool-v6.38.0-rc.1) (2026-11-16)
 
 
