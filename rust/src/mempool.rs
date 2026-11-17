@@ -109,6 +109,14 @@ pub async fn run_mempool_impl<S: Sink<MempoolMsg> + Send + 'static>(
                 }
                 r = mempool_txs.next() => {
                     match r {
+                        // A stream silent for the client's whole idle
+                        // window is most likely a long wait for a block
+                        // (testnet, regtest), not a fault: reopen it, as at
+                        // a new block (#1654).
+                        Some(Err(e)) if crate::net::idle::is_idle_timeout(&e) => {
+                            tracing::info!("the mempool stream was idle; reopening it: {e:#}");
+                            break;
+                        }
                         Some(Err(e)) => {
                             return Err(e.context("the mempool stream failed"));
                         }
@@ -360,4 +368,107 @@ pub async fn get_mempool_tx(
     tx_id.reverse();
     let (_, tx) = client.transaction(network, &tx_id).await?;
     Ok(tx)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::lwd::CompactBlock;
+    use crate::net::LwdServer;
+    use sqlx::Connection as _;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::Arc;
+    use tokio::sync::mpsc;
+    use tokio_stream::wrappers::ReceiverStream;
+    use tonic::async_trait;
+
+    type TxStream = ReceiverStream<Result<(u32, Transaction, usize)>>;
+
+    /// A server whose first mempool stream ends on an idle timeout and
+    /// whose later ones stay open. Counts the streams opened.
+    struct IdleOnce {
+        opened: Arc<AtomicUsize>,
+        /// Keeps the later streams open.
+        open: Vec<mpsc::Sender<Result<(u32, Transaction, usize)>>>,
+    }
+
+    #[async_trait]
+    impl LwdServer for IdleOnce {
+        type CompactBlockStream = ReceiverStream<Result<CompactBlock>>;
+        type TransactionStream = TxStream;
+
+        async fn latest_height(&mut self) -> Result<u32> {
+            Ok(100)
+        }
+        async fn block(&mut self, _: &Network, _: u32) -> Result<CompactBlock> {
+            unimplemented!()
+        }
+        async fn block_range(
+            &mut self,
+            _: &Network,
+            _: u32,
+            _: u32,
+        ) -> Result<Self::CompactBlockStream> {
+            unimplemented!()
+        }
+        async fn transaction(&mut self, _: &Network, _: &[u8]) -> Result<(u32, Transaction)> {
+            unimplemented!()
+        }
+        async fn post_transaction(&mut self, _: u32, _: &[u8]) -> Result<String> {
+            unimplemented!()
+        }
+        async fn taddress_txs(
+            &mut self,
+            _: &Network,
+            _: &str,
+            _: u32,
+            _: u32,
+        ) -> Result<Self::TransactionStream> {
+            unimplemented!()
+        }
+        async fn mempool_stream(&mut self, _: &Network) -> Result<Self::TransactionStream> {
+            let (tx, rx) = mpsc::channel(1);
+            if self.opened.fetch_add(1, Ordering::SeqCst) == 0 {
+                let idle = tonic::Status::deadline_exceeded("no data for 300s on GetMempoolStream");
+                tx.send(Err(anyhow::Error::from(idle))).await.unwrap();
+            } else {
+                self.open.push(tx);
+            }
+            Ok(ReceiverStream::new(rx))
+        }
+        async fn tree_state(&mut self, _: u32) -> Result<(Vec<u8>, Vec<u8>, Vec<u8>)> {
+            unimplemented!()
+        }
+    }
+
+    /// A mempool stream that times out for being idle is reopened rather
+    /// than ending the monitor, since on testnet or regtest a block can
+    /// take longer than the window (#1654).
+    #[tokio::test]
+    async fn an_idle_stream_is_reopened() -> Result<()> {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        crate::db::create_schema(&mut db).await?;
+        let opened = Arc::new(AtomicUsize::new(0));
+        let mut client: Client = Box::new(IdleOnce { opened: opened.clone(), open: vec![] });
+        let (sink, _messages) = mpsc::channel::<MempoolMsg>(16);
+        let cancel = CancellationToken::new();
+        let monitor = {
+            let cancel = cancel.clone();
+            async move {
+                run_mempool_impl(sink, &Network::Main, &mut db, &mut client, cancel).await
+            }
+        };
+        let monitor = tokio::spawn(monitor);
+        for _ in 0..100 {
+            if opened.load(Ordering::SeqCst) >= 2 {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        }
+        assert!(!monitor.is_finished(), "the monitor ended on the idle timeout");
+        assert_eq!(opened.load(Ordering::SeqCst), 2, "the stream was not reopened");
+        cancel.cancel();
+        monitor.await??;
+        Ok(())
+    }
 }
