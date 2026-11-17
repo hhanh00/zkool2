@@ -951,34 +951,134 @@ pub async fn init_checkpoints(
     Ok(())
 }
 
-/// Height of the account's last witness checkpoint strictly below `height`,
-/// the point a rewind can trim back to.
-pub async fn last_checkpoint_before(
+/// Blocks at least this deep below the tip are final: zcashd
+/// (`MAX_REORG_LENGTH`) and Zebra (`MAX_BLOCK_REORG_HEIGHT`) refuse to
+/// reorganize more than 99 blocks. A rewind never needs to go below them,
+/// and pruning never removes anything above them.
+pub const FINALITY_DEPTH: u32 = 100;
+
+/// Whether the block at `height` is final when the chain is at `tip`.
+pub fn is_final(height: u32, tip: u32) -> bool {
+    height.saturating_add(FINALITY_DEPTH) <= tip
+}
+
+/// The condition for resuming a scan above `t` (bound as `c.height`): every
+/// shielded note the account still held unspent at `t` has a witness at
+/// `t`, since the scan loads unspent notes by their witness at
+/// `start - 1`. Transparent notes have no witness and need none.
+const RESUMABLE_AT: &str = "NOT EXISTS (
+    SELECT 1 FROM notes n
+    WHERE n.account = ?1 AND n.pool > 0 AND n.height <= c.height
+      AND NOT EXISTS (SELECT 1 FROM spends s
+        WHERE s.id_note = n.id_note AND s.height <= c.height)
+      AND NOT EXISTS (SELECT 1 FROM witnesses w
+        WHERE w.note = n.id_note AND w.height = c.height))";
+
+/// Whether the account has a Sapling or Orchard pool (Ironwood shares the
+/// Orchard keys): only those scan blocks and keep headers at checkpoints.
+async fn has_shielded_pool(conn: &mut SqliteConnection, account: u32) -> Result<bool> {
+    let has: bool = sqlx::query_scalar(
+        "SELECT EXISTS(SELECT 1 FROM sapling_accounts WHERE account = ?1)
+            OR EXISTS(SELECT 1 FROM orchard_accounts WHERE account = ?1)",
+    )
+    .bind(account)
+    .fetch_one(&mut *conn)
+    .await?;
+    Ok(has)
+}
+
+/// The latest height strictly below `height` a rewind can land on (#1653):
+/// - not above any of the account's pool checkpoints, so a rewind never
+///   moves a pool forward;
+/// - every shielded note unspent there has a witness there;
+/// - for an account with a shielded pool, it holds the block's header
+///   there, so the next scan checks that the chain continues from it and a
+///   deeper fork is found by the retry.
+///
+/// An account without unspent notes needs no witness, so its previous sync
+/// qualifies; an account without a shielded pool keeps no headers at its
+/// checkpoints and needs none. `None` when no height qualifies.
+pub async fn last_rewind_point_before(
     conn: &mut SqliteConnection,
     account: u32,
     height: u32,
 ) -> Result<Option<u32>> {
-    let h =
-        sqlx::query_scalar("SELECT MAX(height) FROM witnesses WHERE height < ? AND account = ?")
-            .bind(height)
+    let lowest: Option<u32> =
+        sqlx::query_scalar("SELECT MIN(height) FROM sync_heights WHERE account = ?")
             .bind(account)
             .fetch_one(&mut *conn)
             .await?;
+    let (Some(lowest), Some(below)) = (lowest, height.checked_sub(1)) else {
+        return Ok(None);
+    };
+    let top = lowest.min(below);
+    if !has_shielded_pool(conn, account).await? {
+        return Ok(Some(top));
+    }
+    // Headers are scanned from the top down on their primary key, so the
+    // usual answer, the previous sync, is the first row tried.
+    let h = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+        "SELECT c.height FROM headers c
+        WHERE c.account = ?1 AND c.height <= ?2 AND {RESUMABLE_AT}
+        ORDER BY c.height DESC LIMIT 1"
+    )))
+    .bind(account)
+    .bind(top)
+    .fetch_optional(&mut *conn)
+    .await?;
     Ok(h)
 }
 
-/// Drop witnesses older than `height`; they are only needed at the
-/// checkpoints a rewind can land on.
-pub async fn prune_witnesses_before(
+/// The latest height at or below `height` a scan can resume from, needing
+/// witnesses for the unspent shielded notes and nothing else: the account's
+/// state when a run starts, where the header is checked by the scan itself.
+/// `height` when it qualifies, which is the case for any account the scan
+/// left consistent.
+pub async fn last_resumable_at_or_below(
     conn: &mut SqliteConnection,
     account: u32,
     height: u32,
-) -> Result<()> {
-    sqlx::query("DELETE FROM witnesses WHERE account = ? AND height < ?")
+) -> Result<Option<u32>> {
+    // Audited: `RESUMABLE_AT` is a constant.
+    let at: bool = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+        "SELECT {RESUMABLE_AT} FROM (SELECT ?2 AS height) c"
+    )))
+    .bind(account)
+    .bind(height)
+    .fetch_one(&mut *conn)
+    .await?;
+    if at {
+        return Ok(Some(height));
+    }
+    // Below it, a note held unspent needs a witness, so only the heights
+    // with witnesses or headers can qualify.
+    let h = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+        "WITH c(height) AS (
+            SELECT height FROM witnesses WHERE account = ?1 AND height < ?2
+            UNION SELECT height FROM headers WHERE account = ?1 AND height < ?2)
+        SELECT c.height FROM c WHERE {RESUMABLE_AT}
+        ORDER BY c.height DESC LIMIT 1"
+    )))
+    .bind(account)
+    .bind(height)
+    .fetch_optional(&mut *conn)
+    .await?;
+    Ok(h)
+}
+
+/// Drop the account's witnesses and headers below `height`: the rewind
+/// point kept below the final blocks (see [`crate::sync::prune_old_checkpoints`]).
+pub async fn prune_before(conn: &mut SqliteConnection, account: u32, height: u32) -> Result<()> {
+    for table in ["witnesses", "headers"] {
+        // Audited: `table` comes from the fixed list above.
+        sqlx::query(sqlx::AssertSqlSafe(format!(
+            "DELETE FROM {table} WHERE account = ? AND height < ?"
+        )))
         .bind(account)
         .bind(height)
         .execute(&mut *conn)
         .await?;
+    }
     Ok(())
 }
 
