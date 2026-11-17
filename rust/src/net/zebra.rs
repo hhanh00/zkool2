@@ -29,6 +29,13 @@ use tonic::async_trait;
 use zcash_protocol::consensus::{BlockHeight, BranchId};
 
 const COMPACT_NOTE_SIZE: usize = 52;
+/// How long to wait for a connection to a Zebra node to open.
+const CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
+/// How long a call waits for the node to send more of its answer.
+const READ_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(60);
+/// A whole call over Tor or Nym, which bypasses reqwest: circuit, request
+/// and the full answer.
+const SLOW_CALL_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
 
 use crate::{api::coin::Network, lwd::*, net::LwdServer, IntoAnyhow};
 
@@ -51,14 +58,16 @@ impl ZebraClient {
         // when the Proxy transport (3) is selected.
         // reqwest natively supports socks5/socks5h/http/https proxy URLs.
         let proxy = crate::net::http::proxy_url(transport, proxy);
-        let client = if !proxy.is_empty() {
-            reqwest::Client::builder()
-                .proxy(reqwest::Proxy::all(proxy).anyhow()?)
-                .build()
-                .anyhow()?
-        } else {
-            reqwest::Client::new()
-        };
+        // A node that stops answering fails the call instead of hanging it
+        // (#1654). `read_timeout` restarts at each read, so a large block
+        // that keeps arriving is not cut off.
+        let mut builder = reqwest::Client::builder()
+            .connect_timeout(CONNECT_TIMEOUT)
+            .read_timeout(READ_TIMEOUT);
+        if !proxy.is_empty() {
+            builder = builder.proxy(reqwest::Proxy::all(proxy).anyhow()?);
+        }
+        let client = builder.build().anyhow()?;
 
         let url = Url::parse(url).anyhow()?;
         let host = url.host_str().ok_or(anyhow::anyhow!("No host in URL"))?;
@@ -92,6 +101,13 @@ impl ZebraClient {
     }
 }
 
+/// `call` over Tor or Nym, failed after [`SLOW_CALL_TIMEOUT`] (#1654).
+async fn bounded<T>(call: impl std::future::Future<Output = Result<T>>) -> Result<T> {
+    tokio::time::timeout(SLOW_CALL_TIMEOUT, call)
+        .await
+        .map_err(|_| anyhow::anyhow!("no answer from the node in {SLOW_CALL_TIMEOUT:?}"))?
+}
+
 trait AsyncRW: AsyncRead + AsyncWrite {}
 impl<T: AsyncRead + AsyncWrite + Send> AsyncRW for T {}
 
@@ -119,15 +135,21 @@ impl ZebraClient {
             // Tor and Nym hand a raw stream to post_stream; Direct and
             // Proxy keep the reqwest path.
             1 => {
-                let tor_client = crate::api::coin::get_tor_client().await.lock().await;
-                let stream = tor_client.connect((self.host.clone(), self.port)).await?;
-                drop(tor_client);
-                self.post_stream(Box::pin(stream), req).await?
+                bounded(async {
+                    let tor_client = crate::api::coin::get_tor_client().await.lock().await;
+                    let stream = tor_client.connect((self.host.clone(), self.port)).await?;
+                    drop(tor_client);
+                    self.post_stream(Box::pin(stream), req).await
+                })
+                .await?
             }
             #[cfg(feature = "nym")]
             2 => {
-                let stream = crate::net::nym::nym_connect(&self.host, self.port).await?;
-                self.post_stream(Box::pin(stream), req).await?
+                bounded(async {
+                    let stream = crate::net::nym::nym_connect(&self.host, self.port).await?;
+                    self.post_stream(Box::pin(stream), req).await
+                })
+                .await?
             }
             #[cfg(not(feature = "nym"))]
             2 => anyhow::bail!("Nym transport is not enabled in this build"),
