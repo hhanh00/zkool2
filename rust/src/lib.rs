@@ -41,7 +41,8 @@ pub mod voting;
 pub mod warp;
 
 pub type Hash32 = [u8; 32];
-pub type GRPCClient = CompactTxStreamerClient<tonic::transport::Channel>;
+pub type GRPCClient =
+    CompactTxStreamerClient<crate::net::idle::IdleTimeout<tonic::transport::Channel>>;
 pub type Client = Box<
     dyn LwdServer<
         CompactBlockStream = ReceiverStream<anyhow::Result<CompactBlock>>,

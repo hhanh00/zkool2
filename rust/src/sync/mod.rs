@@ -220,7 +220,7 @@ async fn run_range(
     );
 
     let pool = c.get_pool()?;
-    let mut client = c.client().await?;
+    let mut client = c.sync_client().await?;
 
     // A cancel is checked before every stage and inside the two loops that
     // have no scanner of their own, so none of them runs to completion
@@ -248,7 +248,7 @@ async fn run_range(
         let coin = c.clone();
         std::sync::Arc::new(move || {
             let coin = coin.clone();
-            Box::pin(async move { coin.client().await })
+            Box::pin(async move { coin.sync_client().await })
                 as std::pin::Pin<Box<dyn std::future::Future<Output = Result<crate::Client>> + Send>>
         }) as fetch::ClientFactory
     });

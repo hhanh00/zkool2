@@ -9782,6 +9782,7 @@ dependencies = [
  "hickory-resolver 0.24.4",
  "hidapi",
  "hmac 0.12.1",
+ "http-body 1.1.0",
  "http-body-util",
  "httparse",
  "hyper 1.11.0",

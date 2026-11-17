@@ -12,6 +12,8 @@ use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use sqlx::{Sqlite, SqlitePool};
 use tokio::sync::{Mutex, OnceCell};
 use tonic::transport::{Channel, ClientTlsConfig, Endpoint, Uri};
+
+use crate::net::idle::IdleTimeout;
 use tor_rtcompat::PreferredRuntime;
 use tower::service_fn;
 use zcash_protocol::consensus::{BlockHeight, OrchardMode};
@@ -252,7 +254,26 @@ impl Coin {
         }
     }
 
+    /// A client for any caller but the sync. A lightwalletd call fails after
+    /// [`DEFAULT_IDLE`](crate::net::idle::DEFAULT_IDLE) without data from the
+    /// server.
     pub(crate) async fn client(&self) -> Result<Client> {
+        self.client_idle(crate::net::idle::DEFAULT_IDLE).await
+    }
+
+    /// A client for the sync, whose lightwalletd calls give up on a silent
+    /// server sooner than other callers' do, so a stalled sync fails and the
+    /// next one starts on a fresh connection (#1654).
+    pub(crate) async fn sync_client(&self) -> Result<Client> {
+        let window = if self.transport == 0 && !self.is_mixnet() {
+            crate::net::idle::SYNC_IDLE
+        } else {
+            crate::net::idle::SYNC_IDLE_SLOW
+        };
+        self.client_idle(window).await
+    }
+
+    async fn client_idle(&self, idle: std::time::Duration) -> Result<Client> {
         #[cfg(feature = "nym")]
         {
             // Mixnet-native endpoint (nym:// URL, a nym-rpc service): bypasses
@@ -262,7 +283,7 @@ impl Coin {
                     anyhow::bail!("Nym service addresses only support lightwalletd (gRPC) servers");
                 }
                 let channel = crate::net::nym_service::grpc_channel(recipient).await?;
-                let client = CompactTxStreamerClient::new(channel);
+                let client = CompactTxStreamerClient::new(IdleTimeout::new(channel, idle));
                 return Ok(Box::new(client) as Client);
             }
         }
@@ -285,7 +306,9 @@ impl Coin {
                     }
                     _ => lwd_endpoint(&self.url, false)?.connect().await?,
                 };
-                let client = crate::net::lwd::LwdClient::new(CompactTxStreamerClient::new(channel));
+                let client = crate::net::lwd::LwdClient::new(CompactTxStreamerClient::new(
+                    IdleTimeout::new(channel, idle),
+                ));
                 Ok(Box::new(client) as Client)
             }
 
