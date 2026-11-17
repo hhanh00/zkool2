@@ -457,6 +457,7 @@ mod producer_tests {
     use std::sync::Arc;
     use std::task::{Context, Poll};
     use std::time::Duration;
+    use tokio_stream::StreamExt;
 
     /// A server stream that never yields and counts itself as live until
     /// the server drops it, which happens when the client lets go of the
@@ -489,15 +490,44 @@ mod producer_tests {
         }
     }
 
-    /// A lightwalletd whose mempool and block streams open and then say
-    /// nothing, as a quiet mempool does between blocks.
+    /// A lightwalletd whose mempool stream opens and then says nothing, as
+    /// a quiet mempool does between blocks, and that never answers a
+    /// request for the latest block. Its block stream depends on the start
+    /// of the range:
+    /// - from [`SILENT`], it opens and says nothing;
+    /// - from [`STOPS`], it sends three blocks and then says nothing;
+    /// - from [`STEADY`], it sends a block every [`GAP`] to the end.
     struct Quiet {
         live: Arc<AtomicUsize>,
     }
 
+    const SILENT: u32 = 1;
+    const STOPS: u32 = 100;
+    const STEADY: u32 = 200;
+    const GAP: Duration = Duration::from_millis(50);
+
+    type BlockStream = Pin<
+        Box<dyn tokio_stream::Stream<Item = std::result::Result<CompactBlock, tonic::Status>> + Send>,
+    >;
+
+    /// Blocks `start..=end`, one every [`GAP`].
+    fn drip(start: u32, end: u32) -> BlockStream {
+        Box::pin(futures::stream::unfold(start, move |height| async move {
+            if height > end {
+                return None;
+            }
+            tokio::time::sleep(GAP).await;
+            let block = CompactBlock {
+                height: height as u64,
+                ..Default::default()
+            };
+            Some((Ok(block), height + 1))
+        }))
+    }
+
     #[async_trait]
     impl CompactTxStreamer for Quiet {
-        type GetBlockRangeStream = Stalled<CompactBlock>;
+        type GetBlockRangeStream = BlockStream;
         type GetTaddressTxidsStream = Stalled<RawTransaction>;
         type GetMempoolTxStream = Stalled<CompactTx>;
         type GetMempoolStreamStream = Stalled<RawTransaction>;
@@ -506,9 +536,20 @@ mod producer_tests {
 
         async fn get_block_range(
             &self,
-            _: Request<BlockRange>,
+            request: Request<BlockRange>,
         ) -> std::result::Result<tonic::Response<Self::GetBlockRangeStream>, tonic::Status> {
-            Ok(tonic::Response::new(Stalled::new(&self.live)))
+            let range = request.into_inner();
+            let start = range.start.map_or(0, |b| b.height as u32);
+            let end = range.end.map_or(0, |b| b.height as u32);
+            let blocks: BlockStream = match start {
+                STOPS => Box::pin(futures::StreamExt::chain(
+                    drip(start, start + 2),
+                    Stalled::new(&self.live),
+                )),
+                STEADY => drip(start, end),
+                _ => Box::pin(Stalled::new(&self.live)),
+            };
+            Ok(tonic::Response::new(blocks))
         }
         async fn get_mempool_stream(
             &self,
@@ -517,7 +558,7 @@ mod producer_tests {
             Ok(tonic::Response::new(Stalled::new(&self.live)))
         }
         async fn get_latest_block(&self, _: Request<ChainSpec>) -> std::result::Result<tonic::Response<BlockId>, tonic::Status> {
-            unimplemented!()
+            std::future::pending().await
         }
         async fn get_block(&self, _: Request<BlockId>) -> std::result::Result<tonic::Response<CompactBlock>, tonic::Status> {
             unimplemented!()
@@ -576,7 +617,9 @@ mod producer_tests {
     }
 
     /// Starts the quiet server and connects a client to it.
-    async fn quiet_server() -> (GRPCClient, Arc<AtomicUsize>) {
+    /// Starts the quiet server and connects a client to it whose calls
+    /// time out after `idle` without data.
+    async fn quiet_server_idle(idle: Duration) -> (GRPCClient, Arc<AtomicUsize>) {
         let live = Arc::new(AtomicUsize::new(0));
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
@@ -586,10 +629,21 @@ mod producer_tests {
                 .add_service(service)
                 .serve_with_incoming(tonic::transport::server::TcpIncoming::from(listener)),
         );
-        let client = crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient::connect(format!("http://127.0.0.1:{port}"))
+        let channel = tonic::transport::Endpoint::from_shared(format!("http://127.0.0.1:{port}"))
+            .unwrap()
+            .connect()
             .await
             .unwrap();
+        let client = crate::lwd::compact_tx_streamer_client::CompactTxStreamerClient::new(
+            crate::net::idle::IdleTimeout::new(channel, idle),
+        );
         (client, live)
+    }
+
+    /// Starts the quiet server and connects a client whose calls do not
+    /// time out during a test.
+    async fn quiet_server() -> (GRPCClient, Arc<AtomicUsize>) {
+        quiet_server_idle(Duration::from_secs(3600)).await
     }
 
     async fn wait_for(live: &AtomicUsize, expected: usize) -> bool {
@@ -618,5 +672,74 @@ mod producer_tests {
         assert!(wait_for(&live, 1).await, "the block stream is open on the server");
         drop(blocks);
         assert!(wait_for(&live, 0).await, "the server's block stream was released");
+    }
+
+    const IDLE: Duration = Duration::from_millis(300);
+
+    fn assert_idle_timeout(error: &anyhow::Error) {
+        assert!(
+            crate::net::idle::is_idle_timeout(error),
+            "not an idle timeout: {error:#}"
+        );
+    }
+
+    /// A call the server never answers fails once the window is over,
+    /// instead of waiting forever (#1654).
+    #[tokio::test]
+    async fn a_call_the_server_never_answers_times_out() {
+        let (mut client, _) = quiet_server_idle(IDLE).await;
+        let started = std::time::Instant::now();
+        let error = tokio::time::timeout(Duration::from_secs(5), client.latest_height())
+            .await
+            .expect("the call hung")
+            .unwrap_err();
+        assert_idle_timeout(&error);
+        assert!(started.elapsed() >= IDLE);
+        assert!(format!("{error:#}").contains("GetLatestBlock"), "{error:#}");
+    }
+
+    /// A stream that stops sending fails after the window, with the
+    /// blocks it sent first delivered.
+    #[tokio::test]
+    async fn a_stream_that_stops_times_out() {
+        let (mut client, _) = quiet_server_idle(IDLE).await;
+        let mut blocks = client.block_range(&Network::Main, STOPS, STOPS + 50).await.unwrap();
+        for height in STOPS..STOPS + 3 {
+            let block = blocks.next().await.unwrap().unwrap();
+            assert_eq!(block.height, height as u64);
+        }
+        let error = tokio::time::timeout(Duration::from_secs(5), blocks.next())
+            .await
+            .expect("the stream hung")
+            .unwrap()
+            .unwrap_err();
+        assert_idle_timeout(&error);
+    }
+
+    /// A stream that keeps sending is not cut off, however long it runs
+    /// past the window.
+    #[tokio::test]
+    async fn a_steady_stream_outlasts_the_window() {
+        let (mut client, _) = quiet_server_idle(IDLE).await;
+        let end = STEADY + 19; // 20 blocks, 50 ms apart: 1 s, over 3 windows
+        let mut blocks = client.block_range(&Network::Main, STEADY, end).await.unwrap();
+        let mut last = 0;
+        while let Some(block) = blocks.next().await {
+            last = block.unwrap().height;
+        }
+        assert_eq!(last, end as u64);
+    }
+
+    /// A stream that opens but never sends fails the same way.
+    #[tokio::test]
+    async fn a_silent_stream_times_out() {
+        let (mut client, _) = quiet_server_idle(IDLE).await;
+        let mut blocks = client.block_range(&Network::Main, SILENT, 10).await.unwrap();
+        let error = tokio::time::timeout(Duration::from_secs(5), blocks.next())
+            .await
+            .expect("the stream hung")
+            .unwrap()
+            .unwrap_err();
+        assert_idle_timeout(&error);
     }
 }
