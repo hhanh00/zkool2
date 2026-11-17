@@ -283,15 +283,7 @@ impl Coin {
                     3 if !self.proxy.is_empty() => {
                         connect_over_proxy(&self.url, &self.proxy).await?
                     }
-                    _ => {
-                        let mut endpoint =
-                            tonic::transport::Channel::from_shared(self.url.clone())?;
-                        if self.url.starts_with("https") {
-                            let tls = ClientTlsConfig::new().with_enabled_roots();
-                            endpoint = endpoint.tls_config(tls)?;
-                        }
-                        endpoint.connect().await?
-                    }
+                    _ => lwd_endpoint(&self.url, false)?.connect().await?,
                 };
                 let client = crate::net::lwd::LwdClient::new(CompactTxStreamerClient::new(channel));
                 Ok(Box::new(client) as Client)
@@ -408,6 +400,39 @@ async fn build_tor(directory: &str) -> anyhow::Result<TorClient<PreferredRuntime
     Ok(tor_client)
 }
 
+/// How long to wait for a connection to lightwalletd to open.
+const CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(15);
+/// The same over Tor, Nym or a proxy, where opening a circuit or a session
+/// comes first.
+const SLOW_CONNECT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(120);
+/// How often to ping a connection with calls in flight. Stock lightwalletd
+/// keeps grpc-go's default policy, which allows a client one ping every 5
+/// minutes and none on a connection without calls; a client that pings
+/// more often gets `GOAWAY too_many_pings` and loses every call on the
+/// connection.
+const KEEPALIVE_INTERVAL: std::time::Duration = std::time::Duration::from_secs(5 * 60);
+/// How long to wait for the answer to a ping before closing the connection.
+const KEEPALIVE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(20);
+/// TCP keepalive on a direct connection.
+const TCP_KEEPALIVE: std::time::Duration = std::time::Duration::from_secs(60);
+
+/// The endpoint for a lightwalletd at `url`, with a bounded connect and a
+/// keepalive that closes a dead connection (#1654). `slow` is for Tor, Nym
+/// and proxies.
+fn lwd_endpoint(url: &str, slow: bool) -> anyhow::Result<Endpoint> {
+    let mut endpoint = Endpoint::from_shared(url.to_string())?
+        .connect_timeout(if slow { SLOW_CONNECT_TIMEOUT } else { CONNECT_TIMEOUT })
+        .http2_keep_alive_interval(KEEPALIVE_INTERVAL)
+        .keep_alive_timeout(KEEPALIVE_TIMEOUT)
+        .keep_alive_while_idle(false)
+        .tcp_keepalive(Some(TCP_KEEPALIVE));
+    if url.starts_with("https") {
+        let tls = ClientTlsConfig::new().with_enabled_roots();
+        endpoint = endpoint.tls_config(tls)?;
+    }
+    Ok(endpoint)
+}
+
 async fn connect_over_tor(url: &str) -> anyhow::Result<Channel> {
     let uri = url.parse::<Uri>()?;
 
@@ -438,13 +463,9 @@ async fn connect_over_tor(url: &str) -> anyhow::Result<Channel> {
         }
     });
 
-    let mut endpoint = Endpoint::from_shared(url.to_string())?;
-    if url.starts_with("https") {
-        let tls = ClientTlsConfig::new().with_enabled_roots();
-        endpoint = endpoint.tls_config(tls)?;
-    }
-
-    Ok(endpoint.connect_with_connector(connector).await?)
+    Ok(lwd_endpoint(url, true)?
+        .connect_with_connector(connector)
+        .await?)
 }
 
 #[cfg(feature = "nym")]
@@ -473,13 +494,9 @@ async fn connect_over_nym(url: &str) -> anyhow::Result<Channel> {
         }
     });
 
-    let mut endpoint = Endpoint::from_shared(url.to_string())?;
-    if url.starts_with("https") {
-        let tls = ClientTlsConfig::new().with_enabled_roots();
-        endpoint = endpoint.tls_config(tls)?;
-    }
-
-    Ok(endpoint.connect_with_connector(connector).await?)
+    Ok(lwd_endpoint(url, true)?
+        .connect_with_connector(connector)
+        .await?)
 }
 
 /// Build a tonic Channel to `url` whose TCP connection is established through an
@@ -509,13 +526,9 @@ async fn connect_over_proxy(url: &str, proxy: &str) -> anyhow::Result<Channel> {
         }
     });
 
-    let mut endpoint = Endpoint::from_shared(url.to_string())?;
-    if url.starts_with("https") {
-        let tls = ClientTlsConfig::new().with_enabled_roots();
-        endpoint = endpoint.tls_config(tls)?;
-    }
-
-    Ok(endpoint.connect_with_connector(connector).await?)
+    Ok(lwd_endpoint(url, true)?
+        .connect_with_connector(connector)
+        .await?)
 }
 
 /// Open a TCP stream to (`target_host`, `target_port`) through `proxy`.
