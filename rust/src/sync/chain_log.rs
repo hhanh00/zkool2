@@ -711,7 +711,8 @@ pub async fn record_witness(
     Ok(())
 }
 
-/// Unspent shielded ZEC notes with no witness at their pool's checkpoint.
+/// Unspent shielded notes, ZSA included, with no witness at their pool's
+/// checkpoint.
 /// Empty when the database is consistent.
 pub async fn notes_missing_witness(
     conn: &mut SqliteConnection,
@@ -728,7 +729,7 @@ pub async fn notes_missing_witness(
         JOIN db_height d ON d.account = u.account AND d.pool = u.pool
         LEFT JOIN witnesses w ON u.id_note = w.note AND w.account = u.account
         AND w.height = d.height
-        WHERE w.id_witness IS NULL AND u.pool <> 0 AND u.id_asset IS NULL
+        WHERE w.id_witness IS NULL AND u.pool <> 0
         AND u.account IN ({placeholders})"
     );
     // Audited: `placeholders` is a generated `?, ?, ...` list; the account
@@ -1437,6 +1438,34 @@ mod tests {
         // a spent note needs no witness
         let _ = id_note;
         assert!(notes_missing_witness(&mut db, &[]).await?.is_empty());
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn a_zsa_note_needs_its_witness_like_a_zec_note() -> Result<()> {
+        let mut db = db().await?;
+        set_checkpoint(&mut db, 1, 2, 200).await?;
+        let id_asset = asset_id_for_base(&mut db, &[3; 32], 100).await?;
+        let id_tx = tx(&mut db, 1, 1, 100).await?;
+        let note = NoteRow {
+            pool: 2,
+            id_asset,
+            ..shielded(id_tx, 100, b"nf", b"cmx")
+        };
+        record_note(&mut db, 1, &note).await?.unwrap();
+        let missing = notes_missing_witness(&mut db, &[1]).await?;
+        assert_eq!(
+            missing,
+            vec![MissingWitness {
+                account: 1,
+                pool: 2,
+                height: 100,
+                value: 1000,
+                checkpoint: 200
+            }]
+        );
+        record_witness(&mut db, 1, NoteKey::Cmx(b"cmx"), 200, b"w").await?;
+        assert!(notes_missing_witness(&mut db, &[1]).await?.is_empty());
         Ok(())
     }
 
