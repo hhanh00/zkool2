@@ -975,30 +975,16 @@ const RESUMABLE_AT: &str = "NOT EXISTS (
       AND NOT EXISTS (SELECT 1 FROM witnesses w
         WHERE w.note = n.id_note AND w.height = c.height))";
 
-/// Whether the account has a Sapling or Orchard pool (Ironwood shares the
-/// Orchard keys): only those scan blocks and keep headers at checkpoints.
-async fn has_shielded_pool(conn: &mut SqliteConnection, account: u32) -> Result<bool> {
-    let has: bool = sqlx::query_scalar(
-        "SELECT EXISTS(SELECT 1 FROM sapling_accounts WHERE account = ?1)
-            OR EXISTS(SELECT 1 FROM orchard_accounts WHERE account = ?1)",
-    )
-    .bind(account)
-    .fetch_one(&mut *conn)
-    .await?;
-    Ok(has)
-}
-
 /// The latest height strictly below `height` a rewind can land on (#1653):
 /// - not above any of the account's pool checkpoints, so a rewind never
 ///   moves a pool forward;
 /// - every shielded note unspent there has a witness there;
-/// - for an account with a shielded pool, it holds the block's header
-///   there, so the next scan checks that the chain continues from it and a
-///   deeper fork is found by the retry.
+/// - the account holds the block's header there, so the next range checks
+///   that the chain continues from it and the retry finds a deeper fork
+///   (#1658: transparent-only accounts included).
 ///
 /// An account without unspent notes needs no witness, so its previous sync
-/// qualifies; an account without a shielded pool keeps no headers at its
-/// checkpoints and needs none. `None` when no height qualifies.
+/// qualifies. `None` when no height qualifies.
 pub async fn last_rewind_point_before(
     conn: &mut SqliteConnection,
     account: u32,
@@ -1013,9 +999,6 @@ pub async fn last_rewind_point_before(
         return Ok(None);
     };
     let top = lowest.min(below);
-    if !has_shielded_pool(conn, account).await? {
-        return Ok(Some(top));
-    }
     // Headers are scanned from the top down on their primary key, so the
     // usual answer, the previous sync, is the first row tried.
     let h = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(

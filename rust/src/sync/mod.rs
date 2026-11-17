@@ -14,6 +14,7 @@ use sqlx::Connection;
 
 pub mod chain_log;
 pub mod bench;
+mod continuity;
 pub mod driver;
 pub mod fetch;
 pub mod plan;
@@ -193,6 +194,8 @@ async fn run_sync<S: Sink<SyncEvent> + Send + 'static>(
         debug!("Current network height: {}", params.current_height);
         let states = observe_accounts(&mut connection, accounts).await?;
         let plan = plan_sync(&states, params.current_height);
+        // Fetched again after a reorg: the server's chain has changed.
+        let mut server_headers = continuity::ServerHeaders::default();
         debug!(
             "Sync plan: {:?}",
             plan.iter()
@@ -202,7 +205,8 @@ async fn run_sync<S: Sink<SyncEvent> + Send + 'static>(
 
         for range in &plan {
             if let ShieldedEnd::Rewound { detected_at } =
-                run_range(&mut connection, range, params, &tx_progress, run, c).await?
+                run_range(&mut connection, range, params, &tx_progress, run, c, &mut server_headers)
+                    .await?
             {
                 check_reorg_progress(last_reorg, detected_at)?;
                 info!("reorg detected at {detected_at}; planning again from the rewound heights");
@@ -219,8 +223,9 @@ async fn run_sync<S: Sink<SyncEvent> + Send + 'static>(
     Ok(())
 }
 
-/// Scan one range for its accounts: transparent, then shielded, then the
-/// block times of the transactions found, then the detail pass.
+/// Scan one range for its accounts: the continuity check, transparent,
+/// then shielded, then the block times of the transactions found, then the
+/// detail pass.
 async fn run_range(
     connection: &mut SqliteConnection,
     range: &SyncRange,
@@ -228,6 +233,7 @@ async fn run_range(
     tx_progress: &Sender<SyncProgress>,
     run: &SyncRun<'_>,
     c: &Coin,
+    server_headers: &mut continuity::ServerHeaders,
 ) -> Result<ShieldedEnd> {
     let network = c.network();
     let account_ids = range.account_ids();
@@ -242,6 +248,28 @@ async fn run_range(
     // A cancel is checked before every stage and inside the two loops that
     // have no scanner of their own, so none of them runs to completion
     // after the user asked to stop (#1571).
+
+    // The transparent scan sees no blocks, so the range checks that the
+    // server's chain continues from what the accounts hold, and fetches the
+    // block at its end before the scan: if the server switches forks
+    // during the scan, the next check finds the stored header stale
+    // instead of passing with the transactions of the old fork (#1658).
+    run.check_cancelled()?;
+    if let Some(detected_at) = continuity::check_range_start(
+        &network,
+        connection,
+        &mut *client,
+        server_headers,
+        &account_ids,
+        range.start,
+        params.current_height,
+    )
+    .await?
+    {
+        return Ok(ShieldedEnd::Rewound { detected_at });
+    }
+    let end_header = server_headers.get(&mut *client, &network, range.end).await?;
+
     run.check_cancelled()?;
     transparent_sync(
         &network,
@@ -253,6 +281,7 @@ async fn run_range(
         run.cancellation(),
     )
     .await?;
+    continuity::record_range_end(connection, &account_ids, &end_header).await?;
 
     // Over the mixnet, download blocks in small chunks so each
     // GetBlockRange stream fits in one nym-rpc session; elsewhere a
@@ -836,10 +865,12 @@ mod rewind_tests {
     }
 
     #[tokio::test]
-    async fn an_account_without_a_shielded_pool_needs_no_header() -> Result<()> {
+    async fn a_transparent_only_account_rewinds_to_its_latest_header() -> Result<()> {
         let mut db = wallet().await?;
         synced(&mut db, 1, 300).await?;
-        assert_eq!(last_rewind_point_before(&mut db, 1, 300).await?, Some(299));
+        assert_eq!(last_rewind_point_before(&mut db, 1, 300).await?, None);
+        headers(&mut db, 1, &[200, 250, 300]).await?;
+        assert_eq!(last_rewind_point_before(&mut db, 1, 300).await?, Some(250));
         Ok(())
     }
 
