@@ -38,9 +38,6 @@ pub enum BlockMessage {
     /// The user cancelled. The scan reads the token itself (see
     /// [`next_message`]); the reader never sends this.
     Cancel,
-    /// No block arrived for a whole stall interval; `reached` is the last
-    /// height seen.
-    StallAbort { reached: u32 },
     /// The stream ended before `end`: `reached` is the last height seen.
     Interrupted { reached: u32 },
     /// The stream failed after `reached`.
@@ -63,8 +60,6 @@ pub enum ScanEnd {
     Reorg { detected_at: u32 },
 }
 
-/// How long without a block before the connection is given up.
-const STALL: Duration = Duration::from_secs(60);
 /// The blocks read go to the scan this long after the previous hand-off:
 /// one scan pass and one commit, so this is also how far apart the
 /// checkpoints are and how often the progress moves.
@@ -91,7 +86,6 @@ struct BlockReader {
     frontier_hashes: Vec<Vec<u8>>,
     heights_without_time: HashSet<u32>,
     flush: Flush,
-    stall: Duration,
 }
 
 /// Hand the blocks read so far to the scan and start a new chunk. False
@@ -142,20 +136,16 @@ async fn read_blocks(
         frontier_hashes,
         mut heights_without_time,
         flush,
-        stall,
     } = reader;
     let mut prev_hash: Option<Vec<u8>> = None;
     let mut bs = vec![];
 
-    let mut interval = tokio::time::interval(stall);
-    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     // A timer of its own, not a check made when a block arrives: what was
     // read is scanned and saved even while the download is stalled.
     let flush_at = tokio::time::sleep(flush.every);
     tokio::pin!(flush_at);
     // The last height seen; `start_height - 1` until the first block.
     let mut current_height = start_height.saturating_sub(1);
-    let mut prev_current_height = u32::MAX;
 
     let mut c = 0;
     // [bench instrumentation] download lane: cumulative time awaiting blocks
@@ -166,19 +156,6 @@ async fn read_blocks(
     loop {
         let iter_start = std::time::Instant::now();
         tokio::select! {
-            _ = interval.tick() => {
-                debug!("Syncing at height {}", current_height);
-                if prev_current_height == current_height {
-                    debug!("Connection stalled. Aborting...");
-                    // Keep what was scanned, then report the break.
-                    if !bs.is_empty() && !hand_off(&tx_blocks, &cancel, &mut bs, &mut c).await {
-                        break;
-                    }
-                    let _ = tx_blocks.send(BlockMessage::StallAbort { reached: current_height }).await;
-                    break;
-                }
-                prev_current_height = current_height;
-            }
             _ = cancel.cancelled() => {
                 // The scan reads the token too; the blocks not handed to
                 // it are dropped.
@@ -424,7 +401,6 @@ pub async fn warp_sync(
             frontier_hashes,
             heights_without_time,
             flush: Flush { every: FLUSH_INTERVAL, max_actions: FLUSH_ACTIONS },
-            stall: STALL,
         },
     ));
 
@@ -498,12 +474,6 @@ pub async fn warp_sync(
                 debug!("Cancelling...");
                 end = ScanEnd::Cancelled;
                 break;
-            }
-            BlockMessage::StallAbort { reached } => {
-                return Err(SyncError::Other(anyhow::anyhow!(
-                    "no block received for {} s after height {reached}, {end_height} asked",
-                    STALL.as_secs()
-                )));
             }
             BlockMessage::Interrupted { reached } => {
                 return Err(SyncError::Other(anyhow::anyhow!(
@@ -594,7 +564,7 @@ mod tests {
 
     /// A reader of heights 101 to 200 whose scan holds `queued` messages
     /// before the reader waits on it.
-    fn reader(flush: Flush, stall: Duration, queued: usize) -> Reader {
+    fn reader(flush: Flush, queued: usize) -> Reader {
         let (blocks, download) = mpsc::channel(64);
         let (tx_blocks, scan) = mpsc::channel(queued);
         let cancel = CancellationToken::new();
@@ -609,7 +579,6 @@ mod tests {
                 frontier_hashes: vec![],
                 heights_without_time: HashSet::new(),
                 flush,
-                stall,
             },
         ));
         Reader { blocks, scan, cancel, task }
@@ -626,7 +595,7 @@ mod tests {
     #[tokio::test]
     async fn blocks_go_to_the_scan_when_the_interval_ends_though_no_more_arrive() {
         let flush = Flush { every: Duration::from_millis(300), max_actions: usize::MAX };
-        let mut r = reader(flush, NEVER, 2);
+        let mut r = reader(flush, 2);
         for h in 101..=103 {
             r.blocks.send(Ok(block(h, 1))).await.unwrap();
         }
@@ -648,7 +617,7 @@ mod tests {
     #[tokio::test]
     async fn blocks_go_to_the_scan_at_the_cap_without_waiting_for_the_interval() {
         let flush = Flush { every: NEVER, max_actions: 10 };
-        let mut r = reader(flush, NEVER, 2);
+        let mut r = reader(flush, 2);
         for h in 101..=104 {
             r.blocks.send(Ok(block(h, 4))).await.unwrap();
         }
@@ -660,7 +629,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_cancel_ends_a_stalled_download_and_drops_what_was_not_scanned() {
-        let mut r = reader(Flush { every: NEVER, max_actions: usize::MAX }, NEVER, 2);
+        let mut r = reader(Flush { every: NEVER, max_actions: usize::MAX }, 2);
         r.blocks.send(Ok(block(101, 1))).await.unwrap();
         tokio::time::sleep(Duration::from_millis(50)).await;
         r.cancel.cancel();
@@ -671,7 +640,7 @@ mod tests {
     #[tokio::test]
     async fn a_cancel_ends_a_hand_off_the_scan_is_not_taking() {
         // Each block is a chunk; the scan takes none, so the second waits.
-        let mut r = reader(Flush { every: NEVER, max_actions: 1 }, NEVER, 1);
+        let mut r = reader(Flush { every: NEVER, max_actions: 1 }, 1);
         for h in 101..=103 {
             r.blocks.send(Ok(block(h, 1))).await.unwrap();
         }
@@ -684,19 +653,8 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn a_stall_hands_over_what_was_read_before_it_aborts() {
-        let flush = Flush { every: NEVER, max_actions: usize::MAX };
-        let mut r = reader(flush, Duration::from_millis(100), 2);
-        r.blocks.send(Ok(block(101, 1))).await.unwrap();
-        let chunk = timeout(SOON, r.scan.recv()).await.expect("no flush before the abort");
-        assert_eq!(heights(chunk), vec![101]);
-        let abort = timeout(SOON, r.scan.recv()).await.unwrap();
-        assert!(matches!(abort, Some(BlockMessage::StallAbort { reached: 101 })));
-    }
-
-    #[tokio::test]
     async fn the_end_of_the_stream_hands_over_the_last_blocks() {
-        let mut r = reader(Flush { every: NEVER, max_actions: usize::MAX }, NEVER, 2);
+        let mut r = reader(Flush { every: NEVER, max_actions: usize::MAX }, 2);
         for h in 101..=200 {
             r.blocks.send(Ok(block(h, 0))).await.unwrap();
         }
