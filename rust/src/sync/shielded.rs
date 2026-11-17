@@ -168,6 +168,21 @@ fn resolve_diversifier_index(
 /// session only costs the current chunk.
 pub const MIXNET_SYNC_CHUNK: u32 = 1000;
 
+/// How a shielded scan of a range ended.
+#[derive(Debug, PartialEq, Eq)]
+pub enum ShieldedEnd {
+    /// The range was scanned, or the scan stopped on a cancel (the caller
+    /// reads its token).
+    Done,
+    /// The block at `detected_at` does not connect to the chain the
+    /// accounts hold. The writer rewound every account of the range below
+    /// it, each to a height of its own, and nothing above that was kept.
+    /// The caller plans again from where the database stands: resuming at
+    /// the range's start would skip the blocks between each account's
+    /// rewind point and that start, and scan without its notes (#1653).
+    Rewound { detected_at: u32 },
+}
+
 #[allow(clippy::too_many_arguments)]
 pub async fn shielded_sync(
     network: &Network,
@@ -176,10 +191,11 @@ pub async fn shielded_sync(
     accounts: &[(u32, bool)],
     start: u32,
     end: u32,
+    tip: u32,
     chunk_size: Option<u32>,
     tx_progress: Sender<SyncProgress>,
     cancel: CancellationToken,
-) -> Result<()> {
+) -> Result<ShieldedEnd> {
     shielded_sync_with(
         network,
         pool,
@@ -187,6 +203,7 @@ pub async fn shielded_sync(
         accounts,
         start,
         end,
+        tip,
         chunk_size,
         tx_progress,
         cancel,
@@ -205,11 +222,12 @@ pub async fn shielded_sync_with(
     accounts: &[(u32, bool)],
     start: u32,
     end: u32,
+    tip: u32,
     chunk_size: Option<u32>,
     tx_progress: Sender<SyncProgress>,
     cancel: CancellationToken,
     more_clients: Option<ClientFactory>,
-) -> Result<()> {
+) -> Result<ShieldedEnd> {
     let activation_height: u32 = network
         .activation_height(NetworkUpgrade::Sapling)
         .unwrap()
@@ -219,12 +237,6 @@ pub async fn shielded_sync_with(
 
     let chunk_size = chunk_size.unwrap_or(u32::MAX).max(1);
     let mut chunk_start = start;
-    // Where the last reorg was detected. A reorg is absorbed here: the
-    // writer rewinds, the scan restarts from where the database stands, and
-    // the caller never hears of it. Each one must be detected strictly
-    // below the previous one, or the server is serving the same blocks that
-    // do not connect, and the run fails instead of looping (#1474).
-    let mut last_reorg: Option<u32> = None;
     loop {
         let chunk_end = chunk_start.saturating_add(chunk_size - 1).min(end);
         match shielded_sync_range(
@@ -234,6 +246,7 @@ pub async fn shielded_sync_with(
             accounts,
             chunk_start,
             chunk_end,
+            tip,
             tx_progress.clone(),
             cancel.clone(),
             more_clients.clone(),
@@ -241,22 +254,8 @@ pub async fn shielded_sync_with(
         .await?
         {
             RangeEnd::Cancelled => break,
-            RangeEnd::Reorg {
-                detected_at,
-                restart_from,
-            } => {
-                if let Some(previous) = last_reorg {
-                    if detected_at >= previous {
-                        anyhow::bail!(
-                            "the server's blocks do not connect at height {detected_at} \
-                             after a rewind for the same height: giving up"
-                        );
-                    }
-                }
-                info!("reorg detected at {detected_at}; rescanning from {restart_from}");
-                last_reorg = Some(detected_at);
-                chunk_start = restart_from.max(start);
-                continue;
+            RangeEnd::Reorg { detected_at } => {
+                return Ok(ShieldedEnd::Rewound { detected_at });
             }
             RangeEnd::Completed => {}
         }
@@ -271,37 +270,17 @@ pub async fn shielded_sync_with(
         }
         chunk_start = chunk_end + 1;
     }
-    Ok(())
+    Ok(ShieldedEnd::Done)
 }
 
 /// How one range scan ended. A range that stopped short is an error from
 /// `shielded_sync_range`, never a variant.
 #[derive(Debug, PartialEq, Eq)]
-pub enum RangeEnd {
+enum RangeEnd {
     Completed,
     Cancelled,
-    /// The writer rewound the accounts; `restart_from` is the first height
-    /// they have not synced now.
-    Reorg { detected_at: u32, restart_from: u32 },
-}
-
-/// The first height none of `accounts` has synced: one past the lowest
-/// checkpoint among them.
-async fn restart_height(connection: &mut SqliteConnection, accounts: &[u32]) -> Result<u32> {
-    let mut lowest: Option<u32> = None;
-    for account in accounts {
-        let (height,): (Option<u32>,) =
-            sqlx::query_as("SELECT MIN(height) FROM sync_heights WHERE account = ?")
-                .bind(account)
-                .fetch_one(&mut *connection)
-                .await?;
-        if let Some(height) = height {
-            lowest = Some(lowest.map_or(height, |l| l.min(height)));
-        }
-    }
-    lowest
-        .map(|h| h + 1)
-        .ok_or_else(|| anyhow::anyhow!("no checkpoint left to restart the scan from"))
+    /// The writer rewound the accounts below `detected_at`.
+    Reorg { detected_at: u32 },
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -312,6 +291,7 @@ async fn shielded_sync_range(
     accounts: &[(u32, bool)],
     start: u32,
     end: u32,
+    tip: u32,
     tx_progress: Sender<SyncProgress>,
     cancel: CancellationToken,
     more_clients: Option<ClientFactory>,
@@ -446,6 +426,7 @@ async fn shielded_sync_range(
                 &mut connection,
                 start,
                 end,
+                tip,
                 &accounts,
                 blocks,
                 heights_without_time,
@@ -486,14 +467,7 @@ async fn shielded_sync_range(
     match scan {
         ScanEnd::Completed => Ok(RangeEnd::Completed),
         ScanEnd::Cancelled => Ok(RangeEnd::Cancelled),
-        ScanEnd::Reorg { detected_at } => {
-            let mut connection = pool.acquire().await?;
-            let restart_from = restart_height(&mut connection, &account_ids).await?;
-            Ok(RangeEnd::Reorg {
-                detected_at,
-                restart_from,
-            })
-        }
+        ScanEnd::Reorg { detected_at } => Ok(RangeEnd::Reorg { detected_at }),
     }
 }
 
@@ -836,8 +810,22 @@ mod stream_tests {
 
     /// Scans 1..=end with the scripted source; returns the outcome and the
     /// ranges the source was asked for.
-    async fn scan(pool: &SqlitePool, script: &[Serve], end: u32) -> (Result<()>, Vec<(u32, u32)>) {
-        scan_until(pool, script, end, CancellationToken::new()).await
+    async fn scan(
+        pool: &SqlitePool,
+        script: &[Serve],
+        end: u32,
+    ) -> (Result<ShieldedEnd>, Vec<(u32, u32)>) {
+        scan_from(pool, script, 1, end).await
+    }
+
+    /// Scans start..=end with the scripted source, as a later run would.
+    async fn scan_from(
+        pool: &SqlitePool,
+        script: &[Serve],
+        start: u32,
+        end: u32,
+    ) -> (Result<ShieldedEnd>, Vec<(u32, u32)>) {
+        scan_range(pool, script, start, end, end, CancellationToken::new()).await
     }
 
     /// [`scan`], under a token the test may cancel.
@@ -846,7 +834,18 @@ mod stream_tests {
         script: &[Serve],
         end: u32,
         cancel: CancellationToken,
-    ) -> (Result<()>, Vec<(u32, u32)>) {
+    ) -> (Result<ShieldedEnd>, Vec<(u32, u32)>) {
+        scan_range(pool, script, 1, end, end, cancel).await
+    }
+
+    async fn scan_range(
+        pool: &SqlitePool,
+        script: &[Serve],
+        start: u32,
+        end: u32,
+        tip: u32,
+        cancel: CancellationToken,
+    ) -> (Result<ShieldedEnd>, Vec<(u32, u32)>) {
         let asked = Arc::new(Mutex::new(vec![]));
         let mut client: Client = Box::new(Blocks {
             script: script.iter().copied().collect(),
@@ -858,8 +857,9 @@ mod stream_tests {
             pool,
             &mut client,
             &[(1, false)],
-            1,
+            start,
             end,
+            tip,
             None,
             progress,
             cancel,
@@ -912,25 +912,58 @@ mod stream_tests {
     }
 
     #[tokio::test]
-    async fn a_reorg_is_rescanned_from_where_the_database_stands() -> Result<()> {
+    async fn a_reorg_rewinds_and_hands_the_retry_to_the_caller() -> Result<()> {
         let (pool, path) = wallet("reorg").await?;
         let (r, asked) = scan(&pool, &[Serve::Broken(5), Serve::Whole], 8).await;
-        r?;
-        // Nothing of the first pass was committed, so the rewind went back to
-        // the birth checkpoint and the rescan starts just above it.
-        assert_eq!(asked, vec![(1, 8), (2, 8)]);
-        assert_eq!(synced_height(&pool).await?, 8);
+        assert_eq!(r?, ShieldedEnd::Rewound { detected_at: 5 });
+        // No second request: the caller plans the retry from the database.
+        assert_eq!(asked, vec![(1, 8)]);
+        // Nothing of the pass was committed, so the rewind went back to the
+        // birth checkpoint.
+        assert_eq!(synced_height(&pool).await?, 1);
         let _ = std::fs::remove_file(path);
         Ok(())
     }
 
     #[tokio::test]
-    async fn a_reorg_repeated_at_the_same_height_fails_the_run() -> Result<()> {
-        let (pool, path) = wallet("reorg_twice").await?;
-        let (r, asked) = scan(&pool, &[Serve::Broken(5)], 8).await;
+    async fn a_reorg_on_the_first_block_rewinds_one_sync_and_the_retry_rescans_the_gap(
+    ) -> Result<()> {
+        // #1653: two earlier syncs ended at 6 and 10, the account has no
+        // notes, and the next sync finds that block 11 does not connect to
+        // the 10 it holds.
+        let (pool, path) = wallet("reorg_first_block").await?;
+        assert_eq!(scan_from(&pool, &[Serve::Whole], 1, 6).await.0?, ShieldedEnd::Done);
+        assert_eq!(scan_from(&pool, &[Serve::Whole], 7, 10).await.0?, ShieldedEnd::Done);
+        assert_eq!(synced_height(&pool).await?, 10);
+
+        let (r, _) = scan_from(&pool, &[Serve::Broken(11)], 11, 14).await;
+        assert_eq!(r?, ShieldedEnd::Rewound { detected_at: 11 });
+        // Back to the previous sync, the last block below the fork it holds,
+        // and not to its birth for want of a witness.
+        assert_eq!(synced_height(&pool).await?, 6);
+
+        // The retry starts where the account stands, below the range that
+        // found the reorg, so block 10 of the new chain is scanned too.
+        let (r, asked) = scan_from(&pool, &[Serve::Whole], 7, 14).await;
+        assert_eq!(r?, ShieldedEnd::Done);
+        assert_eq!(asked, vec![(7, 14)]);
+        assert_eq!(synced_height(&pool).await?, 14);
+        let _ = std::fs::remove_file(path);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn a_mismatch_at_a_final_block_fails_the_run_and_trims_nothing() -> Result<()> {
+        // An account that last synced at 6 with the chain now at 1000: block 6
+        // is final, so a block 7 that does not connect to it comes from a
+        // server on another chain, not from a fork.
+        let (pool, path) = wallet("reorg_final").await?;
+        assert_eq!(scan_from(&pool, &[Serve::Whole], 1, 6).await.0?, ShieldedEnd::Done);
+        let (r, _) =
+            scan_range(&pool, &[Serve::Broken(7)], 7, 10, 1000, CancellationToken::new()).await;
         let err = format!("{:#}", r.unwrap_err());
-        assert!(err.contains("do not connect at height 5"), "{err}");
-        assert_eq!(asked.len(), 2, "one rewind, then no third attempt");
+        assert!(err.contains("does not connect to the final block 6"), "{err}");
+        assert_eq!(synced_height(&pool).await?, 6);
         let _ = std::fs::remove_file(path);
         Ok(())
     }

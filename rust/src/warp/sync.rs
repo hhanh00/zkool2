@@ -308,6 +308,7 @@ pub async fn warp_sync(
     connection: &mut SqliteConnection,
     start_height: u32,
     end_height: u32,
+    tip: u32,
     accounts: &[(u32, bool)],
     blocks: ReceiverStream<anyhow::Result<CompactBlock>>,
     heights_without_time: HashSet<u32>,
@@ -486,6 +487,16 @@ pub async fn warp_sync(
                 ))));
             }
             BlockMessage::Reorg(accounts, height) => {
+                // A fork cannot reach a final block: the server's chain does
+                // not connect to what the accounts hold, and trimming would
+                // only rescan what is already right.
+                if crate::sync::chain_log::is_final(height, tip) {
+                    return Err(SyncError::Other(anyhow::anyhow!(
+                        "the server's block {} does not connect to the final block {height} \
+                         the accounts hold (tip {tip}): not rewinding",
+                        height + 1
+                    )));
+                }
                 let _ = tx_decrypted
                     .send(WarpSyncMessage::Rewind(accounts, height))
                     .await;

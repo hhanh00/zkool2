@@ -1,8 +1,7 @@
 use anyhow::{Context as _, Result};
 use sqlx::SqliteConnection;
-use sqlx::{sqlite::SqliteRow, Row};
 use tokio::sync::mpsc::{channel, Sender};
-use tracing::debug;
+use tracing::{debug, info};
 
 use crate::api::coin::{Coin, Network};
 use crate::api::sync::{SyncEvent, SyncOutcome, SyncProgress};
@@ -29,7 +28,7 @@ use session::{Held, SyncRun};
 
 pub use shielded::{
     get_compact_block_range, get_tree_state, preload_account_key_cache, shielded_sync,
-    shielded_sync_with, AccountKeyCache, MIXNET_SYNC_CHUNK,
+    shielded_sync_with, AccountKeyCache, ShieldedEnd, MIXNET_SYNC_CHUNK,
 };
 pub use sweep::transparent_sweep;
 pub(crate) use transparent::transparent_sync;
@@ -164,22 +163,15 @@ async fn run_sync<S: Sink<SyncEvent> + Send + 'static>(
 ) -> Result<()> {
     let mut connection = c.get_connection().await?;
 
-    let checkpoint_cutoff = params.current_height.saturating_sub(params.checkpoint_age);
     for account in accounts {
-        prune_old_checkpoints(&mut connection, *account, checkpoint_cutoff).await?;
+        prune_old_checkpoints(
+            &mut connection,
+            *account,
+            params.current_height,
+            params.checkpoint_age,
+        )
+        .await?;
     }
-    recover_from_partial_sync(&mut connection, accounts).await?;
-
-    debug!("Current network height: {}", params.current_height);
-    let states = observe_accounts(&mut connection, accounts).await?;
-    let plan = plan_sync(&states, params.current_height);
-    debug!(
-        "Sync plan: {:?}",
-        plan.iter()
-            .map(|r| (r.start, r.end, r.account_ids()))
-            .collect::<Vec<_>>()
-    );
-
     let (tx_progress, mut rx_progress) = channel::<SyncProgress>(1);
     tokio::spawn(async move {
         while let Some(p) = rx_progress.recv().await {
@@ -192,8 +184,33 @@ async fn run_sync<S: Sink<SyncEvent> + Send + 'static>(
         }
     });
 
-    for range in &plan {
-        run_range(&mut connection, range, params, &tx_progress, run, c).await?;
+    // A reorg trims the fork and the run plans again from where the
+    // database stands, each account from its own height (#1653).
+    let mut last_reorg: Option<u32> = None;
+    'plan: loop {
+        recover_from_partial_sync(&c.network(), &mut connection, accounts).await?;
+
+        debug!("Current network height: {}", params.current_height);
+        let states = observe_accounts(&mut connection, accounts).await?;
+        let plan = plan_sync(&states, params.current_height);
+        debug!(
+            "Sync plan: {:?}",
+            plan.iter()
+                .map(|r| (r.start, r.end, r.account_ids()))
+                .collect::<Vec<_>>()
+        );
+
+        for range in &plan {
+            if let ShieldedEnd::Rewound { detected_at } =
+                run_range(&mut connection, range, params, &tx_progress, run, c).await?
+            {
+                check_reorg_progress(last_reorg, detected_at)?;
+                info!("reorg detected at {detected_at}; planning again from the rewound heights");
+                last_reorg = Some(detected_at);
+                continue 'plan;
+            }
+        }
+        break;
     }
 
     for account in accounts {
@@ -211,7 +228,7 @@ async fn run_range(
     tx_progress: &Sender<SyncProgress>,
     run: &SyncRun<'_>,
     c: &Coin,
-) -> Result<()> {
+) -> Result<ShieldedEnd> {
     let network = c.network();
     let account_ids = range.account_ids();
     debug!(
@@ -253,19 +270,25 @@ async fn run_range(
         }) as fetch::ClientFactory
     });
     run.check_cancelled()?;
-    shielded_sync_with(
+    let end = shielded_sync_with(
         &network,
         &pool,
         &mut client,
         &range.accounts,
         range.start,
         range.end,
+        params.current_height,
         chunk_size,
         tx_progress.clone(),
         run.cancellation(),
         more_clients,
     )
     .await?;
+    if let ShieldedEnd::Rewound { .. } = end {
+        // The rewind trimmed the fork from every table, transparent ones
+        // included; the next plan scans it again.
+        return Ok(end);
+    }
 
     debug!("heights_without_time");
     let heights_without_time =
@@ -305,32 +328,57 @@ async fn run_range(
         "Sync completed for height range {}-{}",
         range.start, range.end
     );
+    Ok(ShieldedEnd::Done)
+}
+
+/// A reorg must be detected strictly below the previous one in the same
+/// run. One at the same or a higher height means the server keeps serving
+/// blocks that do not connect, and the run fails instead of looping (#1474).
+fn check_reorg_progress(last_reorg: Option<u32>, detected_at: u32) -> Result<()> {
+    if let Some(previous) = last_reorg {
+        if detected_at >= previous {
+            anyhow::bail!(
+                "the server's blocks do not connect at height {detected_at} \
+                 after a rewind for the same height: giving up"
+            );
+        }
+    }
     Ok(())
 }
 
+/// Bring each account back to a state a scan can resume from, before a run
+/// plans its ranges:
+/// - every pool at the same height, the lowest one: a run that stopped
+///   between the transparent and the shielded scan left them apart;
+/// - every shielded note unspent at that height has a witness there. A scan
+///   that resumed above a rewound account (#1653) left notes without one,
+///   and those notes were never loaded again. Such an account goes back to
+///   its last height where they all have one, or to its birth.
 pub async fn recover_from_partial_sync(
+    network: &Network,
     connection: &mut SqliteConnection,
     accounts: &[u32],
 ) -> Result<()> {
-    for account in accounts {
-        let account_heights = sqlx::query(
-            "SELECT account, MIN(height) FROM sync_heights
-            WHERE account = ?",
-        )
-        .bind(account)
-        .map(|row: SqliteRow| {
-            let account: u32 = row.get(0);
-            let height: u32 = row.get(1);
-            (account, height)
-        })
-        .fetch_all(&mut *connection)
-        .await?;
-
-        for (account, height) in account_heights {
-            trim_sync_data(&mut *connection, account, height).await?;
+    for &account in accounts {
+        let lowest: Option<u32> =
+            sqlx::query_scalar("SELECT MIN(height) FROM sync_heights WHERE account = ?")
+                .bind(account)
+                .fetch_one(&mut *connection)
+                .await?;
+        let Some(lowest) = lowest else { continue };
+        match chain_log::last_resumable_at_or_below(&mut *connection, account, lowest).await? {
+            Some(height) => {
+                if height < lowest {
+                    info!("account {account}: notes without a witness at {lowest}; rescanning from {height}");
+                }
+                trim_sync_data(&mut *connection, account, height).await?;
+            }
+            None => {
+                info!("account {account}: notes without a witness at {lowest} and no earlier point; rescanning from birth");
+                crate::account::reset_within(network, &mut *connection, account).await?;
+            }
         }
     }
-
     Ok(())
 }
 
@@ -375,8 +423,9 @@ pub async fn check_witness_consistency(
     Ok(())
 }
 
-/// Rewind `account` to its last checkpoint at or before `height`, or to
-/// its birth when it has none. For a caller holding the session: the sync
+/// Rewind `account` to the last height below `height` a scan can resume
+/// from (see [`chain_log::last_rewind_point_before`]), or to its birth
+/// when it has none. For a caller holding the session: the sync
 /// driver, for the user's rewind.
 pub async fn rewind_sync(
     network: &Network,
@@ -395,7 +444,8 @@ pub(crate) async fn rewind_within(
     account: u32,
     height: u32,
 ) -> Result<()> {
-    let prev_height = chain_log::last_checkpoint_before(&mut *connection, account, height).await?;
+    let prev_height =
+        chain_log::last_rewind_point_before(&mut *connection, account, height).await?;
 
     if let Some(prev_height) = prev_height {
         trim_sync_data(&mut *connection, account, prev_height).await?;
@@ -406,16 +456,23 @@ pub(crate) async fn rewind_within(
     Ok(())
 }
 
+/// Drop the witnesses and headers of `account` that no rewind can need:
+/// those below its latest rewind point at or below the cutoff, which is
+/// `checkpoint_age` below the tip and never above the final blocks. The
+/// point itself is kept, and it is never above the account's own sync
+/// height, so an account behind the cutoff keeps where it resumes from.
 pub async fn prune_old_checkpoints(
     connection: &mut SqliteConnection,
     account: u32,
-    height: u32,
+    tip: u32,
+    checkpoint_age: u32,
 ) -> Result<()> {
-    // keep the witnesses from the latest checkpoint before the given height
-    if let Some(checkpoint_height) =
-        chain_log::last_checkpoint_before(&mut *connection, account, height).await?
+    let cutoff = tip.saturating_sub(checkpoint_age.max(chain_log::FINALITY_DEPTH));
+    if let Some(point) =
+        chain_log::last_rewind_point_before(&mut *connection, account, cutoff.saturating_add(1))
+            .await?
     {
-        chain_log::prune_witnesses_before(&mut *connection, account, checkpoint_height).await?;
+        chain_log::prune_before(&mut *connection, account, point).await?;
     }
     Ok(())
 }
@@ -557,6 +614,17 @@ mod header_tests {
                 .await?;
             }
         }
+        // Account 1 holds an unspent Sapling note with a witness only at
+        // 100, so that is where a rewind can land.
+        sqlx::query("INSERT INTO sapling_accounts(account) VALUES (1)")
+            .execute(&mut db)
+            .await?;
+        sqlx::query(
+            "INSERT INTO notes(id_note, height, account, pool, nullifier, tx, value)
+            VALUES (0, 90, 1, 1, X'00', 0, 1)",
+        )
+        .execute(&mut db)
+        .await?;
         sqlx::query(
             "INSERT INTO witnesses(account, height, note, witness) VALUES (1, 100, 0, X'00')",
         )
@@ -621,5 +689,264 @@ mod header_tests {
             .is_empty());
         assert!(get_db_height(&mut db, 3).await.is_err());
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod rewind_tests {
+    use super::*;
+    use crate::db::create_schema;
+    use chain_log::{is_final, last_rewind_point_before, set_checkpoint, FINALITY_DEPTH};
+
+    async fn wallet() -> Result<SqliteConnection> {
+        let mut db = SqliteConnection::connect("sqlite::memory:").await?;
+        create_schema(&mut db).await?;
+        Ok(db)
+    }
+
+    async fn shielded(db: &mut SqliteConnection, account: u32) -> Result<()> {
+        sqlx::query("INSERT INTO sapling_accounts(account) VALUES (?)")
+            .bind(account)
+            .execute(&mut *db)
+            .await?;
+        Ok(())
+    }
+
+    /// Every pool of the account at `height`.
+    async fn synced(db: &mut SqliteConnection, account: u32, height: u32) -> Result<()> {
+        for pool in 0..3 {
+            set_checkpoint(db, account, pool, height).await?;
+        }
+        Ok(())
+    }
+
+    async fn headers(db: &mut SqliteConnection, account: u32, heights: &[u32]) -> Result<()> {
+        for &height in heights {
+            chain_log::store_header(
+                db,
+                account,
+                &BlockHeader {
+                    height,
+                    hash: vec![1; 32],
+                    time: height,
+                },
+            )
+            .await?;
+        }
+        Ok(())
+    }
+
+    async fn note(db: &mut SqliteConnection, account: u32, id: u32, height: u32) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO notes(id_note, height, account, pool, nullifier, tx, value)
+            VALUES (?1, ?2, ?3, 1, ?4, 0, 1)",
+        )
+        .bind(id)
+        .bind(height)
+        .bind(account)
+        .bind(id.to_le_bytes().to_vec())
+        .execute(&mut *db)
+        .await?;
+        Ok(())
+    }
+
+    async fn spend(db: &mut SqliteConnection, account: u32, id: u32, height: u32) -> Result<()> {
+        sqlx::query(
+            "INSERT INTO spends(id_note, height, account, pool, tx, value)
+            VALUES (?, ?, ?, 1, 0, 1)",
+        )
+        .bind(id)
+        .bind(height)
+        .bind(account)
+        .execute(&mut *db)
+        .await?;
+        Ok(())
+    }
+
+    async fn witnesses(
+        db: &mut SqliteConnection,
+        account: u32,
+        id: u32,
+        heights: &[u32],
+    ) -> Result<()> {
+        for &height in heights {
+            sqlx::query(
+                "INSERT INTO witnesses(account, height, note, witness) VALUES (?, ?, ?, X'00')",
+            )
+            .bind(account)
+            .bind(height)
+            .bind(id)
+            .execute(&mut *db)
+            .await?;
+        }
+        Ok(())
+    }
+
+    async fn heights(db: &mut SqliteConnection, table: &str, account: u32) -> Result<Vec<u32>> {
+        let h = sqlx::query_scalar(sqlx::AssertSqlSafe(format!(
+            "SELECT DISTINCT height FROM {table} WHERE account = ? ORDER BY height"
+        )))
+        .bind(account)
+        .fetch_all(&mut *db)
+        .await?;
+        Ok(h)
+    }
+
+    #[tokio::test]
+    async fn an_account_without_notes_goes_back_one_sync_not_to_its_birth() -> Result<()> {
+        let mut db = wallet().await?;
+        shielded(&mut db, 1).await?;
+        synced(&mut db, 1, 300).await?;
+        headers(&mut db, 1, &[100, 200, 300]).await?;
+        rewind_within(&Network::Main, &mut db, 1, 300).await?;
+        assert_eq!(get_db_height(&mut db, 1).await?.height, 200);
+        assert_eq!(heights(&mut db, "headers", 1).await?, vec![100, 200]);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn the_witness_of_a_spent_note_does_not_hold_the_rewind_back() -> Result<()> {
+        // Account 8 of #1653: its only witness belongs to a note spent since.
+        let mut db = wallet().await?;
+        shielded(&mut db, 1).await?;
+        synced(&mut db, 1, 300).await?;
+        headers(&mut db, 1, &[100, 200, 300]).await?;
+        note(&mut db, 1, 1, 50).await?;
+        witnesses(&mut db, 1, 1, &[100]).await?;
+        spend(&mut db, 1, 1, 150).await?;
+        assert_eq!(last_rewind_point_before(&mut db, 1, 300).await?, Some(200));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn a_note_unspent_at_the_point_needs_its_witness_there() -> Result<()> {
+        let mut db = wallet().await?;
+        shielded(&mut db, 1).await?;
+        synced(&mut db, 1, 300).await?;
+        // 250 is a transaction's header, not a checkpoint: no witness there.
+        headers(&mut db, 1, &[100, 200, 250, 300]).await?;
+        note(&mut db, 1, 1, 50).await?;
+        witnesses(&mut db, 1, 1, &[100, 200, 300]).await?;
+        assert_eq!(last_rewind_point_before(&mut db, 1, 300).await?, Some(200));
+        // A note received after the point does not need a witness there.
+        note(&mut db, 1, 2, 220).await?;
+        witnesses(&mut db, 1, 2, &[300]).await?;
+        assert_eq!(last_rewind_point_before(&mut db, 1, 300).await?, Some(200));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn an_account_without_a_shielded_pool_needs_no_header() -> Result<()> {
+        let mut db = wallet().await?;
+        synced(&mut db, 1, 300).await?;
+        assert_eq!(last_rewind_point_before(&mut db, 1, 300).await?, Some(299));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn a_rewind_never_moves_a_pool_forward() -> Result<()> {
+        let mut db = wallet().await?;
+        shielded(&mut db, 1).await?;
+        synced(&mut db, 1, 300).await?;
+        set_checkpoint(&mut db, 1, 1, 200).await?;
+        headers(&mut db, 1, &[100, 200, 250, 300]).await?;
+        assert_eq!(last_rewind_point_before(&mut db, 1, 300).await?, Some(200));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn no_point_when_nothing_qualifies() -> Result<()> {
+        let mut db = wallet().await?;
+        shielded(&mut db, 1).await?;
+        synced(&mut db, 1, 300).await?;
+        headers(&mut db, 1, &[100, 200, 300]).await?;
+        note(&mut db, 1, 1, 50).await?;
+        witnesses(&mut db, 1, 1, &[300]).await?;
+        assert_eq!(last_rewind_point_before(&mut db, 1, 300).await?, None);
+        // An account that never synced has no checkpoint at all.
+        assert_eq!(last_rewind_point_before(&mut db, 2, 300).await?, None);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn a_run_rolls_back_an_account_whose_notes_lost_their_witnesses() -> Result<()> {
+        // Accounts 7, 9 and 13 of #1653: synced to 300, but the note's
+        // witnesses stopped at 100.
+        let mut db = wallet().await?;
+        shielded(&mut db, 1).await?;
+        synced(&mut db, 1, 300).await?;
+        headers(&mut db, 1, &[100, 300]).await?;
+        note(&mut db, 1, 1, 50).await?;
+        witnesses(&mut db, 1, 1, &[100]).await?;
+        // A healthy account next to it does not move.
+        shielded(&mut db, 2).await?;
+        synced(&mut db, 2, 300).await?;
+        headers(&mut db, 2, &[100, 300]).await?;
+        note(&mut db, 2, 2, 50).await?;
+        witnesses(&mut db, 2, 2, &[100, 300]).await?;
+
+        recover_from_partial_sync(&Network::Main, &mut db, &[1, 2]).await?;
+        assert_eq!(get_db_height(&mut db, 1).await?.height, 100);
+        assert_eq!(heights(&mut db, "headers", 1).await?, vec![100]);
+        assert_eq!(get_db_height(&mut db, 2).await?.height, 300);
+        assert_eq!(heights(&mut db, "witnesses", 2).await?, vec![100, 300]);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn a_run_levels_the_pools_as_before() -> Result<()> {
+        let mut db = wallet().await?;
+        synced(&mut db, 1, 300).await?;
+        set_checkpoint(&mut db, 1, 0, 250).await?;
+        recover_from_partial_sync(&Network::Main, &mut db, &[1]).await?;
+        let pools: Vec<u32> =
+            sqlx::query_scalar("SELECT height FROM sync_heights WHERE account = 1")
+                .fetch_all(&mut db)
+                .await?;
+        assert_eq!(pools, vec![250, 250, 250]);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn pruning_keeps_one_point_below_the_cutoff_and_every_block_that_is_not_final(
+    ) -> Result<()> {
+        let mut db = wallet().await?;
+        shielded(&mut db, 1).await?;
+        synced(&mut db, 1, 1000).await?;
+        headers(&mut db, 1, &[850, 880, 905, 950, 1000]).await?;
+        note(&mut db, 1, 1, 800).await?;
+        witnesses(&mut db, 1, 1, &[850, 880, 905, 950, 1000]).await?;
+        // An age below the finality depth is raised to it: the cutoff is 900.
+        prune_old_checkpoints(&mut db, 1, 1000, 1).await?;
+        assert_eq!(heights(&mut db, "headers", 1).await?, vec![880, 905, 950, 1000]);
+        assert_eq!(heights(&mut db, "witnesses", 1).await?, vec![880, 905, 950, 1000]);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn pruning_keeps_where_an_account_behind_the_cutoff_resumes() -> Result<()> {
+        let mut db = wallet().await?;
+        shielded(&mut db, 1).await?;
+        synced(&mut db, 1, 300).await?;
+        headers(&mut db, 1, &[200, 300]).await?;
+        prune_old_checkpoints(&mut db, 1, 1000, 1).await?;
+        assert_eq!(heights(&mut db, "headers", 1).await?, vec![300]);
+        assert_eq!(get_db_height(&mut db, 1).await?.height, 300);
+        Ok(())
+    }
+
+    #[test]
+    fn blocks_a_hundred_deep_are_final() {
+        assert!(is_final(900, 900 + FINALITY_DEPTH));
+        assert!(!is_final(901, 900 + FINALITY_DEPTH));
+        assert!(!is_final(0, 50));
+    }
+
+    #[test]
+    fn each_reorg_of_a_run_must_be_found_lower_than_the_last() {
+        assert!(check_reorg_progress(None, 500).is_ok());
+        assert!(check_reorg_progress(Some(500), 499).is_ok());
+        assert!(check_reorg_progress(Some(500), 500).is_err());
+        assert!(check_reorg_progress(Some(500), 501).is_err());
     }
 }
