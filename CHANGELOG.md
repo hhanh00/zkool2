@@ -1,6 +1,15 @@
 # Changelog
 
 
+## [6.38.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.38.0-rc.2...zkool-v6.38.0-rc.3) (2026-11-18)
+
+
+### Bug Fixes
+
+* **pay:** drop the TX HEX toast and reword the send toasts ([#1668](https://github.com/hhanh00/zkool2/issues/1668)) ([f31abdf](https://github.com/hhanh00/zkool2/commit/f31abdf7580600e083fce667ebd420be356941c7)), closes [#1667](https://github.com/hhanh00/zkool2/issues/1667)
+* **sync:** remove the start/complete sync popups ([#1666](https://github.com/hhanh00/zkool2/issues/1666)) ([c680121](https://github.com/hhanh00/zkool2/commit/c680121cfc4b117f8e021f8ce110fce5abc914c8)), closes [#1665](https://github.com/hhanh00/zkool2/issues/1665)
+* **ui:** remove the Height label from the sync bar ([#1663](https://github.com/hhanh00/zkool2/issues/1663)) ([3c277c2](https://github.com/hhanh00/zkool2/commit/3c277c2d1976705764d49675b24ab5c000ca8e45)), closes [#1662](https://github.com/hhanh00/zkool2/issues/1662)
+
 ## [6.38.0-rc.2](https://github.com/hhanh00/zkool2/compare/zkool-v6.38.0-rc.1...zkool-v6.38.0-rc.2) (2026-11-17)
 
 
