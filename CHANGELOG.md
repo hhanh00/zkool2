@@ -1,6 +1,14 @@
 # Changelog
 
 
+## [6.38.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.38.0-rc.3...zkool-v6.38.0-rc.4) (2026-11-18)
+
+
+### Bug Fixes
+
+* **android:** the Android 12 splash icon is not cropped ([#1671](https://github.com/hhanh00/zkool2/issues/1671)) ([5b0f465](https://github.com/hhanh00/zkool2/commit/5b0f465cb56231c5ab3cc2c5ade2d75aec1d7e22))
+* **ui:** the balance panel gradient fills the row at 0 balance ([#1669](https://github.com/hhanh00/zkool2/issues/1669)) ([df07fee](https://github.com/hhanh00/zkool2/commit/df07feeeecebf21c32738adc13c047ce736dfec4))
+
 ## [6.38.0-rc.3](https://github.com/hhanh00/zkool2/compare/zkool-v6.38.0-rc.2...zkool-v6.38.0-rc.3) (2026-11-18)
 
 
