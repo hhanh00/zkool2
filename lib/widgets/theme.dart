@@ -11,6 +11,7 @@ class DisplayPanel extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
 
     return Container(
+      width: double.infinity,
       padding: EdgeInsetsGeometry.all(16),
       decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
