@@ -995,9 +995,6 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
       late Duration delay;
       try {
         logger.i("Starting Synchronization");
-        if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
-          showSnackbar("Starting Synchronization");
-        }
         final syncHeight = requestedHeight ?? await blockHeightService.fetchCurrent();
         requestedHeight = null;
         if (state.cancelling) return;
@@ -1047,9 +1044,6 @@ class SynchronizerNotifier extends _$SynchronizerNotifier {
             logger.i("Synchronization cancelled");
             return;
           default:
-        }
-        if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
-          showSnackbar("Synchronization Completed");
         }
         logger.i("Synchronization Completed");
         // Fetch tx details in the background for all accounts
