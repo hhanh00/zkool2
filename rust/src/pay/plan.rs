@@ -22,7 +22,7 @@ use rand_core::Rng;
 use rand_core::UnwrapErr;
 use sapling_crypto::PaymentAddress;
 use sqlx::{sqlite::SqliteRow, Row, SqliteConnection};
-use tracing::{debug, event, info, span, Level};
+use tracing::{event, info, span, Level};
 use zcash_address::{unified::Receiver, ConversionError, TryFromAddress, ZcashAddress};
 use zcash_keys::{address::UnifiedAddress, encoding::AddressCodec as _};
 use zcash_note_encryption::Domain;
@@ -1288,7 +1288,7 @@ pub fn pczt_txid(package: &PcztPackage) -> Result<TxId> {
 pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
     let span = span!(Level::INFO, "transaction");
     span.in_scope(|| {
-        info!("Extracting Tx");
+        info!("Building tx");
     });
 
     let pczt = Pczt::parse(&package.pczt)
@@ -1313,9 +1313,6 @@ pub async fn extract_transaction(package: &PcztPackage) -> Result<Vec<u8>> {
             tx.write(&mut tx_bytes).unwrap();
             info!("Tx Extracted");
             span.in_scope(|| {
-                // Multi-kilobyte; only wanted when inspecting a specific
-                // transaction, and it drowns out everything else in a log.
-                debug!("TX HEX: {}", hex::encode(&tx_bytes));
                 info!("Tx Ready - {} bytes", tx_bytes.len());
             });
             return Ok(tx_bytes);
