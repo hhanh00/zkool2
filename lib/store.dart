@@ -232,23 +232,7 @@ class HeroProgressWidget extends StatelessWidget {
       ));
     });
 
-    return DisplayPanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                "Height",
-                style: t.bodyLarge,
-              ),
-            ],
-          ),
-          child,
-        ],
-      ),
-    );
+    return DisplayPanel(child: child);
   }
 }
 
