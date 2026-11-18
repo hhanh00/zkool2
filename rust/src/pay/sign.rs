@@ -277,7 +277,7 @@ async fn sign_transaction(
     let pczt = signer.finish();
 
     span.in_scope(|| {
-        info!("Adding Proofs to PCZT");
+        info!("Adding ZK proofs");
     });
     let sapling_prover = get_sapling_prover().await?;
 
