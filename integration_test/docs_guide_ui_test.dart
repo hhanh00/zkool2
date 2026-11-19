@@ -117,6 +117,9 @@ void main() {
       await tapTooltip(tester, "Save");
       await pumpUntil(tester, () => find.text(_seedDialog).evaluate().isNotEmpty && find.text("Ok").evaluate().isNotEmpty,
           timeout: shortTimeout, what: "the seed phrase dialog",);
+      // The phrase opens masked; the docs show it.
+      await tester.tap(find.text("Show seed phrase"));
+      await tester.pump();
       await shots.take("guide/images/03.seed");
       await tester.tap(find.text("Ok").last);
       await waitForAccountView(tester, _main);
