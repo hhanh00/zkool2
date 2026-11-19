@@ -320,16 +320,54 @@ Future<void> showSeed(BuildContext context, String message) async {
       children: [
         Text("SEED PHRASE - SAVE IT OR YOU CAN LOSE YOUR FUNDS", style: t.headlineSmall),
         Gap(16),
-        CopyableText(
-          message,
-          textAlign: TextAlign.center,
-        ),
+        _SeedReveal(message),
       ],
     ),
     desc: message,
     btnOkOnPress: () {},
     autoDismiss: true,
   ).show();
+}
+
+/// A seed phrase that stays masked until the user ticks "Show seed phrase".
+/// The mask is four bullets per word whatever its length, and both texts are
+/// laid out at once so that revealing never resizes the dialog. The phrase
+/// can only be copied while it is shown.
+class _SeedReveal extends StatefulWidget {
+  final String seed;
+  const _SeedReveal(this.seed);
+
+  @override
+  State<_SeedReveal> createState() => _SeedRevealState();
+}
+
+class _SeedRevealState extends State<_SeedReveal> {
+  bool revealed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final mask = widget.seed.trim().split(RegExp(r"\s+")).map((_) => "••••").join(" ");
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IndexedStack(
+          index: revealed ? 1 : 0,
+          alignment: Alignment.center,
+          children: [
+            Text(mask, textAlign: TextAlign.center),
+            CopyableText(widget.seed, textAlign: TextAlign.center),
+          ],
+        ),
+        CheckboxListTile(
+          value: revealed,
+          onChanged: (v) => setState(() => revealed = v ?? false),
+          title: const Text("Show seed phrase"),
+          controlAffinity: ListTileControlAffinity.leading,
+          contentPadding: EdgeInsets.zero,
+        ),
+      ],
+    );
+  }
 }
 
 void showSnackbar(String message) => ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
