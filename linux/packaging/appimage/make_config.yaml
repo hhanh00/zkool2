@@ -1,11 +1,11 @@
-display_name: Zkool
+display_name: ZKool
 
 icon: misc/app_icon.png
 
 keywords:
   - Zcash
 
-generic_name: Zkool
+generic_name: ZKool
 
 metainfo: linux/packaging/zkool.appdata.xml
 

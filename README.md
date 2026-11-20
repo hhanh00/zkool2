@@ -1,6 +1,6 @@
 ## What is this?
 
-Zkool is a multi-account wallet for Zcash.
+ZKool is a multi-account wallet for Zcash.
 
 **Linux:** You can build and run as [Flatpak](flatpak/README.md) (recommended), or use the [AppImage/Deb](.github/actions/linux) from the release artifacts.
 
@@ -64,7 +64,7 @@ Zkool is a multi-account wallet for Zcash.
     The entire data (notes, spends, witnesses, etc) gets saved into an
     *encrypted* file.
     - Wallet files can be also encrypted.
-    - Zkool supports more than one account and does not lock you to the list of accounts[^1]
+    - ZKool supports more than one account and does not lock you to the list of accounts[^1]
 - Its shielded features are as good as Ywallet. In particular, it will
     - minimize cross pool usage
     - allow you to select your pools
@@ -76,7 +76,7 @@ Zkool is a multi-account wallet for Zcash.
     - shielded wallets tend to handle the lack of privacy of
     transparent addresses by mandating the shielding of transparent
     funds before they can be spent (Zashi, Zingo, ...). Instead,
-    Zkool supports address rotation for the users[^2]
+    ZKool supports address rotation for the users[^2]
 - Your wallet file can be encrypted *at rest*
 - Selectable direct, Tor, Nym, or external proxy transports for supported
   Zcash server connections; Tor is used only when the Tor transport is selected

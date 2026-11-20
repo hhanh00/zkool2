@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Zkool</string>
+	<string>ZKool</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>zkool</string>
+	<string>ZKool</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -33,7 +33,7 @@
 	<key>NSContactsUsageDescription</key>
 	<string>We need access to your contacts to import Zcash addresses.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Zkool may use your location when capturing an image so iOS can include location metadata with the photo. Your location is not otherwise collected or stored.</string>
+	<string>ZKool may use your location when capturing an image so iOS can include location metadata with the photo. Your location is not otherwise collected or stored.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need access to your photo library to import QR codes if requested.</string>
 	<key>UIApplicationSceneManifest</key>

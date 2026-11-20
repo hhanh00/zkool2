@@ -367,7 +367,7 @@ class AppSettingsNotifier extends _$AppSettingsNotifier {
     final c = coinContext.coin;
     final hasDb = ref.watch(hasDbProvider);
     final prefs = SharedPreferencesAsync();
-    String dbName = await prefs.getString("database") ?? appName;
+    String dbName = await prefs.getString("database") ?? defaultDbName;
     final needPin = await prefs.getBool("pin_lock") ?? false;
     final offline = await prefs.getBool("offline") ?? false;
     final proxy = (hasDb ? await getProp(key: "proxy", c: c) : null) ?? "";

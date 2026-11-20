@@ -1,10 +1,10 @@
-# Flatpak build for Zkool
+# Flatpak build for ZKool
 
 ## Contents
 
-- **cc.methyl.Zkool.yml** – Flatpak manifest (desktop file, icon, metainfo, sandbox permissions).
-- **cc.methyl.Zkool.metainfo.xml** – AppData for app stores and `flatpak run`.
-- **linux/cc.methyl.Zkool.desktop** – Desktop entry (menu integration).
+- **cc.methyl.zkool.yml** – Flatpak manifest (desktop file, icon, metainfo, sandbox permissions).
+- **cc.methyl.zkool.metainfo.xml** – AppData for app stores and `flatpak run`.
+- **linux/cc.methyl.zkool.desktop** – Desktop entry (menu integration).
 
 ## Prerequisites
 
@@ -47,7 +47,7 @@ You need **1.4.0 or higher**. If you see 1.2.x:
 From the **repository root**:
 
 ```bash
-flatpak-builder --force-clean flatpak-build flatpak/cc.methyl.Zkool.yml
+flatpak-builder --force-clean flatpak-build flatpak/cc.methyl.zkool.yml
 ```
 
 ## Export and single-file bundle
@@ -61,27 +61,27 @@ flatpak build-export export flatpak-build
 To create a single-file `.flatpak` for distribution:
 
 ```bash
-flatpak build-bundle export zkool.flatpak cc.methyl.Zkool
+flatpak build-bundle export zkool.flatpak cc.methyl.zkool
 ```
 
 Users can install with:
 
 ```bash
 flatpak install --user zkool.flatpak
-flatpak run cc.methyl.Zkool
+flatpak run cc.methyl.zkool
 ```
 
 ## Run (without installing)
 
 ```bash
-flatpak-builder --run flatpak-build flatpak/cc.methyl.Zkool.yml /app/bin/zkool-wrapper
+flatpak-builder --run flatpak-build flatpak/cc.methyl.zkool.yml /app/bin/zkool-wrapper
 ```
 
 ## Install from local build
 
 ```bash
-flatpak-builder --install --user --force-clean flatpak-build flatpak/cc.methyl.Zkool.yml
-flatpak run cc.methyl.Zkool
+flatpak-builder --install --user --force-clean flatpak-build flatpak/cc.methyl.zkool.yml
+flatpak run cc.methyl.zkool
 ```
 
 ## CI
@@ -92,7 +92,7 @@ The Linux build workflow (`.github/actions/linux`) builds the Flatpak after the 
 
 | Item | Value |
 |------|--------|
-| App ID | `cc.methyl.Zkool` |
+| App ID | `cc.methyl.zkool` |
 | Runtime | org.freedesktop.Platform 25.08 |
 | Command | `zkool-wrapper` |
 | Permissions | ipc, fallback-x11, wayland, dri, pulseaudio, network, home, xdg-documents |
@@ -101,4 +101,4 @@ Desktop file and icon are installed so the app appears in the application menu w
 
 ## Different runtime version
 
-To use e.g. 24.08: set `runtime-version: '24.08'` in `cc.methyl.Zkool.yml` and install that runtime and SDK.
+To use e.g. 24.08: set `runtime-version: '24.08'` in `cc.methyl.zkool.yml` and install that runtime and SDK.

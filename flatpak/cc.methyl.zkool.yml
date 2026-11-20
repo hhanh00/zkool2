@@ -1,10 +1,10 @@
-# Production-ready Flatpak manifest for Zkool wallet
+# Production-ready Flatpak manifest for ZKool wallet
 # Ref: Cake Wallet (com.cakewallet.CakeWallet.yml)
-# Build: flutter build linux && flatpak-builder --force-clean flatpak-build flatpak/cc.methyl.Zkool.yml
+# Build: flutter build linux && flatpak-builder --force-clean flatpak-build flatpak/cc.methyl.zkool.yml
 # Export: flatpak build-export export flatpak-build
-# Bundle: flatpak build-bundle export zkool.flatpak cc.methyl.Zkool
+# Bundle: flatpak build-bundle export zkool.flatpak cc.methyl.zkool
 
-app-id: cc.methyl.Zkool
+app-id: cc.methyl.zkool
 runtime: org.freedesktop.Platform
 runtime-version: '25.08'
 sdk: org.freedesktop.Sdk
@@ -44,11 +44,11 @@ modules:
           > /app/bin/zkool-wrapper
         chmod 755 /app/bin/zkool-wrapper
         mkdir -p /app/share/applications
-        cp linux/cc.methyl.Zkool.desktop /app/share/applications/
+        cp linux/cc.methyl.zkool.desktop /app/share/applications/
         mkdir -p /app/share/icons/hicolor/256x256/apps
-        cp flatpak/cc.methyl.Zkool.icon.png /app/share/icons/hicolor/256x256/apps/cc.methyl.Zkool.png
+        cp flatpak/cc.methyl.zkool.icon.png /app/share/icons/hicolor/256x256/apps/cc.methyl.zkool.png
         mkdir -p /app/share/metainfo
-        cp flatpak/cc.methyl.Zkool.metainfo.xml /app/share/metainfo/cc.methyl.Zkool.metainfo.xml
+        cp flatpak/cc.methyl.zkool.metainfo.xml /app/share/metainfo/cc.methyl.zkool.metainfo.xml
     sources:
       - type: dir
         path: ..

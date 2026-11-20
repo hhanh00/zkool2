@@ -818,7 +818,7 @@ bool get passkeySupported => Platform.isAndroid || (!kReleaseMode && Platform.is
 // domain associated with zkool,
 // ie the author's github account
 const rpId = 'hhanh00.github.io';
-const rpName = 'zkool';
+const rpName = 'ZKool';
 
 // Credential ID storage removed - always show picker, user selects key each time
 
