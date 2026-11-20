@@ -19,7 +19,12 @@ import 'package:zkool/widgets/error_display.dart';
 
 final logger = Logger(filter: ProductionFilter(), printer: ErrorLogPrinter());
 
-const String appName = "zkool";
+/// The name of the app as users see it.
+const String appName = "ZKool";
+
+/// The default database file name (without `.db`). It stays lowercase so
+/// existing wallets keep opening; do not derive it from [appName].
+const String defaultDbName = "zkool";
 
 final appKey = GlobalKey();
 
@@ -114,6 +119,7 @@ class ZkoolApp extends StatelessWidget {
             final darkTheme = FlexThemeData.dark(scheme: scheme).copyWith(useMaterial3: true);
             return MaterialApp.router(
               key: appKey,
+              title: appName,
               routerConfig: router,
               builder: (context, child) => SafeArea(
                 top: false,

@@ -3,7 +3,7 @@
     <id>zkool</id>
     <metadata_license>CC0-1.0</metadata_license>
     <project_license>MIT</project_license>
-    <name>Zkool</name>
+    <name>ZKool</name>
     <summary>Crypto wallet for Zcash</summary>
     <description>
         <p>A multi account crypto wallet for the Zcash currency</p>

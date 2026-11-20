@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "cc.methyl" "\0"
-            VALUE "FileDescription", "zkool" "\0"
+            VALUE "FileDescription", "ZKool" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "zkool" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 Methyl. All rights reserved." "\0"
             VALUE "OriginalFilename", "zkool.exe" "\0"
-            VALUE "ProductName", "zkool" "\0"
+            VALUE "ProductName", "ZKool" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
