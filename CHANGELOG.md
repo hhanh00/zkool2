@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [6.38.0-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.38.0-rc.5...zkool-v6.38.0-rc.6) (2026-11-20)
+
+
+### Bug Fixes
+
+* **ui:** the app is named ZKool and the Flatpak ID is cc.methyl.zkool ([#1679](https://github.com/hhanh00/zkool2/issues/1679)) ([0091540](https://github.com/hhanh00/zkool2/commit/0091540edf6659a28657239e62b8040907138206))
+
 ## [6.38.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.38.0-rc.4...zkool-v6.38.0-rc.5) (2026-11-20)
 
 
