@@ -1,15 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>cc.methyl.Zkool</id>
+  <id>cc.methyl.zkool</id>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>MIT</project_license>
-  <name>Zkool</name>
+  <name>ZKool</name>
   <summary>Crypto wallet for Zcash</summary>
   <description>
-    <p>Zkool is a multi-account crypto wallet for the Zcash currency.</p>
+    <p>ZKool is a multi-account crypto wallet for the Zcash currency.</p>
     <p>Features: Transparent, Sapling, and Orchard pools; multiple and hidden accounts; encrypted database; FROST multi-signature; Ledger support; TOR proxy; full and light nodes.</p>
   </description>
-  <launchable type="desktop-id">cc.methyl.Zkool.desktop</launchable>
+  <launchable type="desktop-id">cc.methyl.zkool.desktop</launchable>
+  <replaces>
+    <id>cc.methyl.Zkool</id>
+  </replaces>
   <url type="homepage">https://github.com/hhanh00/zkool2</url>
   <releases>
     <release version="6.9.0" date="2025-02-10"/>

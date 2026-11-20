@@ -182,7 +182,7 @@ locally on a normal distro):
 - **`.deb`** — Debian/Ubuntu.
 - **`.flatpak`** — uses the `org.freedesktop.Platform//25.08` runtime, which
   supplies its own GTK/WebKit; the most robust option. Build locally with
-  `flatpak-builder --force-clean flatpak-build flatpak/cc.methyl.Zkool.yml`.
+  `flatpak-builder --force-clean flatpak-build flatpak/cc.methyl.zkool.yml`.
 
 See `.github/actions/linux/action.yml` (via `fastforge`) for the CI pipeline.
 

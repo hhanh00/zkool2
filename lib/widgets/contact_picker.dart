@@ -29,7 +29,7 @@ Future<List<ContactCandidate>?> showContactPicker(
     if (context.mounted) {
       await showMessage(
         context,
-        "Zkool needs access to your contacts to import Zcash addresses. "
+        "ZKool needs access to your contacts to import Zcash addresses. "
         "Please grant contacts access in your device Settings.",
         title: "Permission Required",
       );
