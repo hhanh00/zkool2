@@ -1,6 +1,6 @@
 # flutter pub run flutter_launcher_icons
 flutter_launcher_icons:
-  image_path: "misc/icon.png"
+  image_path: "misc/app_icon.png"
 
   android: "launcher_icon"
   # image_path_android: "assets/icon/icon.png"
@@ -19,9 +19,9 @@ flutter_launcher_icons:
 
   windows:
     generate: true
-    image_path: "misc/icon.png"
+    image_path: "misc/app_icon.png"
     icon_size: 48 # min:48, max:256, default: 48
 
   macos:
     generate: true
-    image_path: "misc/icon.png"
+    image_path: "misc/app_icon.png"
