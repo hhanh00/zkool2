@@ -1,6 +1,6 @@
 flutter_native_splash:
   color: "#42a5f5"
-  image: misc/icon.png
+  image: misc/splash.png
   android_12:
     # Android 12+ masks the icon to a circle 2/3 of the image width,
     # so this image pads the icon to fit inside that circle.
