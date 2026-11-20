@@ -1,6 +1,18 @@
 # Changelog
 
 
+## [6.38.0-rc.5](https://github.com/hhanh00/zkool2/compare/zkool-v6.38.0-rc.4...zkool-v6.38.0-rc.5) (2026-11-20)
+
+
+### Features
+
+* **account:** hide the new account seed phrase until asked ([#1673](https://github.com/hhanh00/zkool2/issues/1673)) ([06e3904](https://github.com/hhanh00/zkool2/commit/06e390427fa044a1949aa5288744626d7430e337)), closes [#1672](https://github.com/hhanh00/zkool2/issues/1672)
+
+
+### Bug Fixes
+
+* **icon:** add padding around the app icon ([#1675](https://github.com/hhanh00/zkool2/issues/1675)) ([35ca0ef](https://github.com/hhanh00/zkool2/commit/35ca0efbbd9f923977c26e48c2ff22f7bd84bad3))
+
 ## [6.38.0-rc.4](https://github.com/hhanh00/zkool2/compare/zkool-v6.38.0-rc.3...zkool-v6.38.0-rc.4) (2026-11-18)
 
 
