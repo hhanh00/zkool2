@@ -50,7 +50,11 @@ class AccountListPageState extends ConsumerState<AccountListPage> {
 
     final pageDataAV = ref.watch(accountsPageDataProvider);
 
+    // A reload (the accounts changed, e.g. a delete) keeps the current rows
+    // until the new ones arrive, instead of blanking the page and tearing
+    // down the list mid-animation (#1681).
     return pageDataAV.when(
+      skipLoadingOnReload: true,
       loading: () => blank(context),
       error: (error, stack) => showError(error),
       data: (pageData) {
@@ -136,6 +140,14 @@ class AccountListPageState extends ConsumerState<AccountListPage> {
                   await deleteAccount(account: a.id, c: coinContext.coin);
                 }
                 ref.invalidate(getAccountsProvider);
+                // The list is pushed over the selected account's page. That
+                // page is hidden, so it does not see its account go (#1681);
+                // replace the stack so the list becomes the root page, as at
+                // startup with no accounts.
+                final selected = ref.read(selectedAccountIdProvider);
+                if (context.mounted && accounts.any((a) => a.id == selected)) {
+                  GoRouter.of(context).go("/accounts");
+                }
               }
             },
             isEqual: (a, b) => a.id == b.id,
