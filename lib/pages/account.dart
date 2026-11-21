@@ -235,9 +235,14 @@ class AccountViewPageState extends ConsumerState<AccountViewPage> with SingleTic
       error: (error, stack) => showError(error),
       data: (accounts) {
         if (!accounts.any((a) => a.id == widget.account)) {
-          // The account is gone (deleted): fall back to the account list.
+          // The account is gone (opened for an account that no longer
+          // exists): fall back to the account list. `go` removes this page,
+          // so the fallback runs at most once; a second callback queued
+          // before then finds the page unmounted. This page is hidden while
+          // the list is pushed over it, so it does not see a deletion made
+          // there; the list handles that itself (#1681).
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (GoRouter.of(context).state.matchedLocation == '/accounts') return;
+            if (!context.mounted) return;
             GoRouter.of(context).go("/accounts");
           });
           return blank(context);
