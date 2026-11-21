@@ -66,6 +66,10 @@ class AccountListPageState extends ConsumerState<AccountListPage> {
 
         final visibleAccounts = pageData.accounts.where((a) => !a.internal).toList();
 
+        // The account the app is currently on: its row is tinted.
+        final currentAccount = ref.watch(selectedAccountIdProvider);
+        final currentColor = Theme.of(context).colorScheme.secondaryContainer.withValues(alpha: 0.5);
+
         return Tooltip(
           message: "List of Accounts. Tap on a row to select. Long tap then drag and drop to reorder",
           child: EditableList<Account>(
@@ -94,6 +98,7 @@ class AccountListPageState extends ConsumerState<AccountListPage> {
               });
               return Material(
                 key: ValueKey(account.id),
+                color: account.id == currentAccount ? currentColor : null,
                 child: Column(
                   children: [
                     GestureDetector(
