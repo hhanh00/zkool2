@@ -44,10 +44,11 @@ packages:
   animated_reorderable_list:
     dependency: "direct main"
     description:
-      name: animated_reorderable_list
-      sha256: "5de5cca556a8c9c8f7b65234ae4b683593dc6e167db498744a5e389302f24d13"
-      url: "https://pub.dev"
-    source: hosted
+      path: "."
+      ref: e07a13f532d1ca2901d06586126b25716336cd11
+      resolved-ref: e07a13f532d1ca2901d06586126b25716336cd11
+      url: "https://github.com/hhanh00/animated_reorderable_list.git"
+    source: git
     version: "1.3.0"
   ansicolor:
     dependency: transitive

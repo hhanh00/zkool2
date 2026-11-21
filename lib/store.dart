@@ -100,9 +100,12 @@ sealed class SyncState with _$SyncState {
 @riverpod
 class SyncStateAccount extends _$SyncStateAccount {
   @override
-  Future<SyncProgressAccount> build(int accountId) async {
+  /// Null for an account that is gone: a deleted account's row is still on
+  /// screen, removed with an animation, after the accounts reload (#1681).
+  Future<SyncProgressAccount?> build(int accountId) async {
     final accounts = await ref.watch(getAccountsProvider.future);
-    final account = accounts.firstWhere((a) => a.id == accountId);
+    final account = accounts.firstWhereOrNull((a) => a.id == accountId);
+    if (account == null) return null;
     final ss = ref.watch(synchronizerProvider);
     if (ss.accounts.any((a) => a.id == account.id)) {
       return SyncProgressAccount(
@@ -124,7 +127,7 @@ class SyncStateAccount extends _$SyncStateAccount {
   }
 
   void updateHeight(int height, int time) {
-    state = state.whenData((s) => s.copyWith(height: height, time: time));
+    state = state.whenData((s) => s?.copyWith(height: height, time: time));
   }
 }
 
@@ -163,7 +166,8 @@ class ProgressWidget extends ConsumerWidget {
     // While the provider loads, the widget keeps its size: the previous
     // value when the provider is refreshing, else the account's stored
     // height, which is what the provider returns for an account that is
-    // not syncing. A placeholder of another size here made the account
+    // not syncing. The stored height also stands in for an account that is
+    // gone, while its deleted row animates out. A placeholder of another size here made the account
     // list vibrate at the end of a bounce (#1636): the provider is
     // auto-disposed, so a row leaving and re-entering the list's build
     // window changed height on its first frame, moving the list extent

@@ -120,7 +120,7 @@ abstract class _$SelectedAccountId extends $Notifier<int> {
 const syncStateAccountProvider = SyncStateAccountFamily._();
 
 final class SyncStateAccountProvider
-    extends $AsyncNotifierProvider<SyncStateAccount, SyncProgressAccount> {
+    extends $AsyncNotifierProvider<SyncStateAccount, SyncProgressAccount?> {
   const SyncStateAccountProvider._(
       {required SyncStateAccountFamily super.from, required int super.argument})
       : super(
@@ -156,12 +156,12 @@ final class SyncStateAccountProvider
   }
 }
 
-String _$syncStateAccountHash() => r'cb3d58d81b59192492c0aab60de138055b823f7f';
+String _$syncStateAccountHash() => r'97e16ab0b1711d118ed3564141cfec06ce0d0250';
 
 final class SyncStateAccountFamily extends $Family
     with
-        $ClassFamilyOverride<SyncStateAccount, AsyncValue<SyncProgressAccount>,
-            SyncProgressAccount, FutureOr<SyncProgressAccount>, int> {
+        $ClassFamilyOverride<SyncStateAccount, AsyncValue<SyncProgressAccount?>,
+            SyncProgressAccount?, FutureOr<SyncProgressAccount?>, int> {
   const SyncStateAccountFamily._()
       : super(
           retry: null,
@@ -180,11 +180,11 @@ final class SyncStateAccountFamily extends $Family
   String toString() => r'syncStateAccountProvider';
 }
 
-abstract class _$SyncStateAccount extends $AsyncNotifier<SyncProgressAccount> {
+abstract class _$SyncStateAccount extends $AsyncNotifier<SyncProgressAccount?> {
   late final _$args = ref.$arg as int;
   int get accountId => _$args;
 
-  FutureOr<SyncProgressAccount> build(
+  FutureOr<SyncProgressAccount?> build(
     int accountId,
   );
   @$mustCallSuper
@@ -193,11 +193,11 @@ abstract class _$SyncStateAccount extends $AsyncNotifier<SyncProgressAccount> {
     final created = build(
       _$args,
     );
-    final ref =
-        this.ref as $Ref<AsyncValue<SyncProgressAccount>, SyncProgressAccount>;
+    final ref = this.ref
+        as $Ref<AsyncValue<SyncProgressAccount?>, SyncProgressAccount?>;
     final element = ref.element as $ClassProviderElement<
-        AnyNotifier<AsyncValue<SyncProgressAccount>, SyncProgressAccount>,
-        AsyncValue<SyncProgressAccount>,
+        AnyNotifier<AsyncValue<SyncProgressAccount?>, SyncProgressAccount?>,
+        AsyncValue<SyncProgressAccount?>,
         Object?,
         Object?>;
     element.handleValue(ref, created);
@@ -611,7 +611,7 @@ final class AppSettingsNotifierProvider
 }
 
 String _$appSettingsNotifierHash() =>
-    r'6134ad64f8a3c225d7fbdbe6eb15f28bd1828c2f';
+    r'cfe71fa7151a88f8a98025badd679cda6c5425b8';
 
 abstract class _$AppSettingsNotifier extends $AsyncNotifier<AppSettings> {
   FutureOr<AppSettings> build();
@@ -895,7 +895,7 @@ final class SynchronizerNotifierProvider
 }
 
 String _$synchronizerNotifierHash() =>
-    r'd114a858deea1fc0f264f278c3f2fe255632435e';
+    r'8431c7d1b4ced650e439d6f8448bd302d242ea8d';
 
 abstract class _$SynchronizerNotifier extends $Notifier<SyncState> {
   SyncState build();
