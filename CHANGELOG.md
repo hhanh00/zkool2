@@ -1,6 +1,13 @@
 # Changelog
 
 
+## [6.38.0-rc.7](https://github.com/hhanh00/zkool2/compare/zkool-v6.38.0-rc.6...zkool-v6.38.0-rc.7) (2026-11-21)
+
+
+### Bug Fixes
+
+* **accounts:** make the list the root page when the account under it is deleted ([#1682](https://github.com/hhanh00/zkool2/issues/1682)) ([64b8476](https://github.com/hhanh00/zkool2/commit/64b8476d942bd15101bde62cc5449d84933db1d3))
+
 ## [6.38.0-rc.6](https://github.com/hhanh00/zkool2/compare/zkool-v6.38.0-rc.5...zkool-v6.38.0-rc.6) (2026-11-20)
 
 
