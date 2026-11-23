@@ -4,13 +4,13 @@ title: Database/Wallet Files
 
 ## Database File
 
-Zkool keeps all the account data and some of the settings in wallet files, which
+ZKool keeps all the account data and some of the settings in wallet files, which
 are Sqlite/SqlCipher database files.
 
 They are regular files that can be copied, moved and renamed outside of the
-Zkool *when they are not in use*.
+ZKool *when they are not in use*.
 
-Zkool has a database manager to perform these tasks because the directory where
+ZKool has a database manager to perform these tasks because the directory where
 the app stores its data is out of reach of regular file managers unless the
 device is rooted.
 
@@ -39,7 +39,7 @@ app. Restart the app[^1].
 Some of the options are only available once you check the box next to the
 database name in the list.
 
-> Tap on a database name to open it as the current database. Zkool
+> Tap on a database name to open it as the current database. ZKool
 > shows its accounts and asks for confirmation.
 
 [^1]: If you have a database password set, you can also open the database

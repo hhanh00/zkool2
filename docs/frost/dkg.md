@@ -6,19 +6,19 @@ title: Key Generation
 
 - A funding account with some ZEC to pay for transaction fees. A minimum of 0.001 ZEC but 0.01 ZEC is safer.
 - Between two and seven participants. Everyone must be present for the DKG.
-- The same version of Zkool on every device.
+- The same version of ZKool on every device.
 
 ## Overview
 
 - There can only be one DKG in progress at any given time[^1].
 - The process is _distributed_. The participants do not have to be in the same
   place. They do not have to run the DKG concurrently. But the process needs
-  their Zkool open to make progress. Otherwise, the DKG pauses until then.
+  their ZKool open to make progress. Otherwise, the DKG pauses until then.
 
 ## Example
 
 Let's say Alice, Bob and Charlie want to create a MultiSig Account with two required signers.
-They should have their copy of Zkool running.
+They should have their copy of ZKool running.
 We'll describe from Alice point of view. The other participants are expected to do the same
 thing.
 
@@ -59,7 +59,7 @@ Next, we need to fill the following form.
 5. The name of the funding account. Select the account from the dropdown box.
 
 Once you finished filling the form, press the "Next" button. If the funding
-account holds less than 0.001 ZEC, Zkool warns you before going on.
+account holds less than 0.001 ZEC, ZKool warns you before going on.
 
 ## Participant Addresses
 
@@ -78,7 +78,7 @@ the DKG will not succeed.
 ::: tip
 Now that the DKG has started, **to cancel the DKG you need to tap the cancel button**.
 If you simply want to pause it and do something else, tap the back button or
-close the app. Resume it by starting the DKG again. Zkool will not ask you to fill
+close the app. Resume it by starting the DKG again. ZKool will not ask you to fill
 the form if a DKG is in progress.
 :::
 
@@ -86,16 +86,16 @@ the form if a DKG is in progress.
 
 Once we filled the addresses of the other participants, we can go to the next step.
 
-Zkool prepares and broadcasts the first messages. The steps at the top of the
+ZKool prepares and broadcasts the first messages. The steps at the top of the
 page show where the DKG is: the participants exchange their keys, then two
 rounds of packages, and finally derive the shared key. The status line says
-what Zkool is doing or waiting for, and how many participants have sent their
+what ZKool is doing or waiting for, and how many participants have sent their
 message so far.
 
 ![DKG Round 1 =450x](./images/06.dkg_r1.png)
 
 The DKG process continues when every participant has broadcast their
-message. Zkool will keep synchronizing automatically when the DKG page is
+message. ZKool will keep synchronizing automatically when the DKG page is
 opened.
 If you close the app, you can resume the DKG by restarting it, but do not cancel it.
 
@@ -103,7 +103,7 @@ If you close the app, you can resume the DKG by restarting it, but do not cancel
 
 ::: tip
 At this point, DKG is fully automated as long as all the participants leave
-their Zkool running. This is the easiest method but **still will take a few blocks**.
+their ZKool running. This is the easiest method but **still will take a few blocks**.
 The DKG takes about 5-10 minutes.
 :::
 

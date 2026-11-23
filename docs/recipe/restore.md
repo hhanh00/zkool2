@@ -12,12 +12,12 @@ purposes.
 The website [Mnemonic Code Converter](https://iancoleman.io/bip39/)
 
 is a useful tool for experimenting with seed phrases. We'll use it to illustrate
-the key types supported by Zkool.
+the key types supported by ZKool.
 
 ![https://iancoleman.io/bip39/](./images/01.ian.png)
 
-Zkool supports 12, 15, 18, 21, 24 word seed phrases[^1]. 3, 6, 9 word are deemed
-too insecure. We recommend using 24 word seed phrases. Zkool will only generate
+ZKool supports 12, 15, 18, 21, 24 word seed phrases[^1]. 3, 6, 9 word are deemed
+too insecure. We recommend using 24 word seed phrases. ZKool will only generate
 this type of seed phrase.
 
 ![https://iancoleman.io/bip39/](./images/02.password.png)
@@ -38,7 +38,7 @@ was assigned 133)[^3].
 
 The remaining options are "Account" and "External/Internal".
 
-Account is the *Account Index* in Zkool. External should be left to 0 for imported
+Account is the *Account Index* in ZKool. External should be left to 0 for imported
 accounts. Other values are used internally for change and temporary
 addresses.
 
@@ -55,7 +55,7 @@ announce force throw slush" with no password and account index 0 gives
 and
 "xpub6Boo6neqHPEEgv2siBQLsHDVfZ5zo2MbkdDMyyooc6LnU3AfnmWNtueX6CnUeX9RfWvbn8jQ8isr7Ff1JSSm8BHvTt9Kr7shdvNfBYcU6AZ".
 
-The xprv key allows Zkool to derive secret keys and addresses. The xpub keys
+The xprv key allows ZKool to derive secret keys and addresses. The xpub keys
 only allows the derivation of addresses.
 
 xprv keys are derived further into secret keys and addresses, using the
@@ -93,11 +93,11 @@ Then Sapling derives *expanded spending keys*[^4] from the seed and the account
 index[^5].
 
 The Sapling key has an external encoding. It begins with
-`secret-extended-key-main`. Zkool can import them.
+`secret-extended-key-main`. ZKool can import them.
 
 Orchard derives a *spending key* too. It has different components than Sapling
 but has the same capabilities. Orchard has an encoding too:
-`secret-orchard-extsk-main` but these are *not* supported by Zkool[^6].
+`secret-orchard-extsk-main` but these are *not* supported by ZKool[^6].
 
 ## Viewing Keys
 
@@ -127,9 +127,9 @@ and Orchard), ie a sapling and an orchard receiver but not two orchard receivers
 The same applies to viewing keys. A Unified Full Viewing Key (UFVK) can also
 contain one instance of a viewing key for one of the active pools[^7].
 
-Zkool supports any type of UFVK[^8].
+ZKool supports any type of UFVK[^8].
 
-Zkool also supports Unified *Incoming* Viewing Keys (`uivk`). An account
+ZKool also supports Unified *Incoming* Viewing Keys (`uivk`). An account
 restored from one only sees the payments it receives: it cannot see its
 spends or its change, and cannot spend. The Viewing Keys page of an account
 exports either kind (see [Edit an Account](./account.md#show-keys)).
@@ -137,7 +137,7 @@ exports either kind (see [Edit an Account](./account.md#show-keys)).
 ::: important
 There are more types of keys such as outgoing viewing keys,
 unified secret keys, etc. At the moment, there are not used much in
-production and Zkool does not support them.
+production and ZKool does not support them.
 :::
 
 ::: tip

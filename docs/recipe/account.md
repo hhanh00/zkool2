@@ -48,7 +48,7 @@ only accounts belonging to the currently selected folder.
 If you selected several accounts, the edit page shows the values
 they have in common and the change applies to all of them.
 
-If you leave the page with unsaved changes, Zkool asks whether
+If you leave the page with unsaved changes, ZKool asks whether
 to save them.
 
 The buttons on the app bar are for:

@@ -9,7 +9,7 @@ import { markdownChartPlugin } from '@vuepress/plugin-markdown-chart'
 import { searchPlugin } from '@vuepress/plugin-search'
 
 export default defineUserConfig({
-  title: "Zkool Documentation",
+  title: "ZKool Documentation",
   base: '/zkool2/',
   bundler: viteBundler(),
   theme: defaultTheme({

@@ -2,7 +2,7 @@
 title: Contacts
 ---
 
-Contacts are Zkool's address book: a name, one or more Zcash addresses and
+Contacts are ZKool's address book: a name, one or more Zcash addresses and
 a note. They belong to the wallet database, not to an account, so every
 account can pay a contact and sees its name in its history.
 
@@ -28,7 +28,7 @@ edit it.
 
 1. The name. It is required and must be unique.
 2. Import the addresses published under an OpenAlias (see below)
-3. An address. Zkool accepts unified, transparent and Sapling addresses and
+3. An address. ZKool accepts unified, transparent and Sapling addresses and
    rejects anything else.
 4. Scan the address from a QR code
 5. Remove this address. The first address has no remove button.
@@ -36,7 +36,7 @@ edit it.
 7. Free text notes
 
 There is no save button. Leaving the page with the back arrow saves the
-contact, and Zkool refuses to leave while the name is missing or an address
+contact, and ZKool refuses to leave while the name is missing or an address
 is invalid. Leaving a form you have not touched saves nothing.
 
 When you edit an existing contact, the app bar has a trash icon that
@@ -51,11 +51,11 @@ list, but they fill the form with one contact instead of saving a batch.
 
 ![Contact picker =450x](./images/39.contact_at.png)
 
-On the Send page, type `@` in the address field. Zkool lists your contacts
+On the Send page, type `@` in the address field. ZKool lists your contacts
 under the field, and typing more letters narrows the list by name. Tap on a
 contact to put its first address in the field.
 
-You can also type the full `@name` and leave it. Zkool resolves it to the
+You can also type the full `@name` and leave it. ZKool resolves it to the
 contact's first address when you send, and reports an unknown contact
 instead of sending.
 
@@ -70,7 +70,7 @@ per pool: transparent, Sapling and Orchard. A transaction output always
 goes to exactly one receiver. When you pay someone, your wallet picks one
 receiver out of their bundle, and when someone pays you, their wallet does
 the same, so what a transaction records is a single receiver, never the
-full unified address you saved. Zkool takes this into account: a contact
+full unified address you saved. ZKool takes this into account: a contact
 saved with a unified address is recognised when a transaction uses any one
 of its receivers, and a contact saved with a bare transparent or Sapling
 address is recognised when that receiver appears inside a unified address.
@@ -91,14 +91,14 @@ NOTE:Pays for the coffee\n\nZcash addresses:\nzcash:u1...\nzcash:t1...
 END:VCARD
 ```
 
-"Import from vCard" reads such a file back. For each card, Zkool scans the
+"Import from vCard" reads such a file back. For each card, ZKool scans the
 note line by line: a `zcash:` URI or a bare Zcash address becomes an
 address of the contact, and every other line stays in the notes. Cards
 that carry their addresses in `X-ZCASH-ADDRESS` properties, as older
-versions of Zkool wrote them, are read too. A card without a single valid
+versions of ZKool wrote them, are read too. A card without a single valid
 Zcash address is ignored.
 
-When a card has the same name as an existing contact, Zkool updates that
+When a card has the same name as an existing contact, ZKool updates that
 contact: the addresses of the card are added to the ones it already has,
 without duplicates.
 
@@ -109,9 +109,9 @@ address on its own line in the contact's notes, with or without the
 ## Import from the phone's contacts
 
 On Android and iOS, "Import from Contacts" asks for access to the phone's
-address book and shows a picker. Zkool looks for Zcash addresses in the
+address book and shows a picker. ZKool looks for Zcash addresses in the
 notes, the websites and the social media fields of each contact, and lists
-the contacts that have at least one. Pick the ones you want and Zkool
+the contacts that have at least one. Pick the ones you want and ZKool
 creates them with the name, the addresses and the notes it found.
 
 ::: tip
@@ -119,7 +119,7 @@ Two reasons a contact does not show up or does not import:
 
 - iOS does not let apps read the notes of a contact, so on an iPhone the
   address has to be in a website or social media field.
-- A contact whose name already exists in Zkool is skipped.
+- A contact whose name already exists in ZKool is skipped.
 :::
 
 ## OpenAlias
@@ -132,20 +132,20 @@ the alias `hanh@methyl.cc` is the record of `hanh.methyl.cc`:
 oa1:zcash recipient_address=u14w0sxek2wnrwmtz0cg8nec2wwm39vs3r2k5x69pc2fla3ucv5ejgptfsdh2egjpfp9q2l2mfpy03ta2gueqh4t729qsu57cjzcvrwm0l;
 ```
 
-Zkool resolves OpenAlias names in two places:
+ZKool resolves OpenAlias names in two places:
 
 - On the Send page, type the alias with a `#` prefix, as in
-  `#hanh@methyl.cc`. Zkool looks it up when you send and pays the
+  `#hanh@methyl.cc`. ZKool looks it up when you send and pays the
   address it finds. If the record has a `tx_description`, it becomes the
   memo.
 - In the contact editor, "Import from OpenAlias" asks for the alias and
   adds the addresses it finds to the contact. Keep the contact and you no
   longer depend on DNS for later payments.
 
-DNS answers can be forged, so Zkool checks the DNSSEC signature of the
+DNS answers can be forged, so ZKool checks the DNSSEC signature of the
 record and reacts to what it finds:
 
-| Status | Meaning | What Zkool does |
+| Status | Meaning | What ZKool does |
 | --- | --- | --- |
 | verified | The domain is signed and the answer checks out | Uses the address |
 | unsigned | The domain has no DNSSEC, the answer cannot be verified | Shows "DNSSEC not available" and asks whether to proceed |

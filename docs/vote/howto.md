@@ -31,7 +31,7 @@ Open the "Voting" option of the account page menu.
 
 ![Menu =450x](./images/02.menu.png)
 
-Zkool fetches and verifies the configuration, then lists the rounds with
+ZKool fetches and verifies the configuration, then lists the rounds with
 their status, their snapshot height and their number of bundles. Tap on an
 "Active" round, or on its "Start voting" button.
 
@@ -53,7 +53,7 @@ it later. The last proposal has the "Submit" button.
 
 ## Submission
 
-Zkool first checks which of your notes are eligible and shows the result:
+ZKool first checks which of your notes are eligible and shows the result:
 the number of notes, the voting weight in ZEC, and, when the round has one,
 whether you meet its minimum voting rule. Some rounds withhold a few small
 notes for privacy; the preview says how much.
@@ -65,7 +65,7 @@ Votes are final once the submission starts. There is no way to change them
 after confirmation.
 :::
 
-Tap "Submit votes". The page reads "Submitting votes" while Zkool proves
+Tap "Submit votes". The page reads "Submitting votes" while ZKool proves
 your notes and sends the ballot to the voting servers.
 
 ![Progress =450x](./images/06.progress.png)

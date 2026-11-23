@@ -8,12 +8,12 @@ It is not sufficient to be disconnected _most of the time_. For instance, a wall
 
 To make a payment, there needs to be another wallet that connects to the Zcash network and synchronizes the blockchain data. This wallet has the account _viewing key_ to properly identify the wallet transactions but is not capable of spending any funds. We'll call it the "Hot Viewing Wallet"[^1].
 
-You have two copies of Zkool: The "Hot Viewing Wallet" (HVW) and the "Cold
+You have two copies of ZKool: The "Hot Viewing Wallet" (HVW) and the "Cold
 Wallet" (CW).
 
 ::: tip
 To make sure the Cold Wallet does not connect to the Internet, you can turn off
-WIFI and Mobile Data. Zkool has the "Offline" switch in the Settings page
+WIFI and Mobile Data. ZKool has the "Offline" switch in the Settings page
 as well.
 :::
 
@@ -58,7 +58,7 @@ Use a *clean* USB drive to move the PCZT file. The file does not have secret
 data but contains the details of the transaction. It is better not to put it
 online if the transaction has to remain absolutely private.
 If your devices have cameras, turn on "File Transmission via QR Codes"
-in the Settings of both wallets. Zkool then shows the file as a series of
+in the Settings of both wallets. ZKool then shows the file as a series of
 QR codes instead of saving it, and scans them instead of opening a file.
 :::
 

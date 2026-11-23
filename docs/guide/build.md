@@ -1,9 +1,9 @@
 ---
-title: Building Zkool from source
+title: Building ZKool from source
 ---
 ## Requirements
 
-Zkool has only 2 build requirements:
+ZKool has only 2 build requirements:
 - [rust](https://www.rust-lang.org/tools/install)
 - [flutter](https://docs.flutter.dev/install)
 
@@ -43,7 +43,7 @@ export PATH=$PWD:$PATH
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 export PATH=$HOME/.cargo/bin:$PATH
 ```
-- Build Zkool
+- Build ZKool
 ```
 cd zkool2
 flutter build linux

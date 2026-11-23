@@ -96,7 +96,7 @@ The main thing to know is that:
 
 > All the shielded addresses (of an account) use the same decryption key.
 
-When you receive funds at any shielded address, Zkool will be able to decrypt
+When you receive funds at any shielded address, ZKool will be able to decrypt
 them and credit your account **in one try**.
 
 Synchronization is a lot of trial and error. We have one key and millions
@@ -121,14 +121,14 @@ address index).
 > Transparent addresses use different decryption keys (but
 derived from the same seed)
 
-Zkool monitors a few transparent addresses, but it cannot monitor all the
+ZKool monitors a few transparent addresses, but it cannot monitor all the
 addresses because there are billions. When you generate a new set, the wallet
 adds it to its pool of known addresses. This way, it will still recognize
 transactions that use previous addresses.
 
 > Wallet apps are expected to use indices sequentially.
 
-For recovery, Zkool just needs to scan a range of indices and stop when it
+For recovery, ZKool just needs to scan a range of indices and stop when it
 cannot find any funds after a certain number of attempts[^6].
 
 This takes time and it is not done by default.
@@ -143,7 +143,7 @@ pool. Then you need to reset the account (in the account edit page)
 and synchronize again from the birth height.
 :::
 
-You do not need to do that when you create new diversified addresses in Zkool
+You do not need to do that when you create new diversified addresses in ZKool
 because it knows the addresses it has created[^7].
 
 [^1]: Just like with Bitcoin. You are opting out of all privacy features.
@@ -156,4 +156,4 @@ skip the whole set, including the Transparent and Orchard parts.
 completely defeat privacy.
 [^6]: For example if there are no transaction for 50 consecutive addresses.
 [^7]: But you need to scan when you restore the account on a different copy
-of Zkool.
+of ZKool.

@@ -5,7 +5,7 @@ title: Overview
 The **Cloud Vault** keeps an encrypted copy of your account keys in your
 Google Drive, so that a lost or broken device does not mean lost accounts.
 It stores the seed phrase of each account with its account index, its birth
-height, its change setting and its name: everything Zkool needs to recreate
+height, its change setting and its name: everything ZKool needs to recreate
 the account. Nothing else leaves the device, and nothing in the vault can be
 read without your master password or one of your passkeys.
 
@@ -19,10 +19,10 @@ a replacement for writing the seed phrases down.
 
 - **Only you can read it.** The accounts are encrypted on the device before
   they are uploaded. Google holds the encrypted bytes and cannot decrypt them,
-  and neither can Zkool's author.
+  and neither can ZKool's author.
 - **It lives in the app data folder of your Drive.** The files are not
   visible in Drive, do not count against your view of it, and are removed if
-  you remove Zkool from your Google account.
+  you remove ZKool from your Google account.
 - **Two ways in.** A master password, chosen when the vault is created,
   always opens it. On a device with passkeys, a passkey registered for the
   vault opens it with Face ID or Touch ID instead.
@@ -34,7 +34,7 @@ a replacement for writing the seed phrases down.
 
 ## How it is protected
 
-The vault is a log of entries that Zkool only appends to. The first entry
+The vault is a log of entries that ZKool only appends to. The first entry
 holds an X25519 key pair: the public key in clear, the secret key encrypted
 with ChaCha20-Poly1305 under a key derived from your master password with
 Argon2id and a random salt. Each device that registers a passkey adds an

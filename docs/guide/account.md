@@ -33,7 +33,7 @@ If the mempool has transactions for this account,
 the unconfirmed amount is shown under the balance.
 
 ::: warning
-All funds are made available immediately. Zkool
+All funds are made available immediately. ZKool
 does not have a note maturity requirement.
 :::
 
@@ -48,7 +48,7 @@ and how many blocks it is behind the tip of the blockchain
 (i.e. the latest block), as "tip-XYZ".
 
 ::: note
-If you haven't refreshed the current block height[^1], Zkool will not show "tip-XYZ" because it does not know the current height.
+If you haven't refreshed the current block height[^1], ZKool will not show "tip-XYZ" because it does not know the current height.
 :::
 
 ### Transaction History

@@ -35,7 +35,7 @@ or `@` to pick a [contact](../recipe/contacts.md).
 
 Click on the send button to continue to the next step.
 
-If the account is behind the current height, Zkool offers
+If the account is behind the current height, ZKool offers
 to synchronize it first.
 
 ![Send 2 =450x](./images/13.send_3.png)
@@ -45,18 +45,18 @@ to synchronize it first.
 
 Here's what the form means.
 
-1. Choose which pools you allow Zkool to use. Zkool will try to maximize your
+1. Choose which pools you allow ZKool to use. ZKool will try to maximize your
 privacy by choosing notes that give the most private transaction. But it is not
-always possible. For example, if you have Transparent funds, Zkool can use
+always possible. For example, if you have Transparent funds, ZKool can use
 them if there isn't enough Sapling or Orchard funds. By deselecting a pool,
-you tell Zkool not to use it.
+you tell ZKool not to use it.
 
 > This is unlike most shielded wallets that **NEVER** use transparent
 funds of your wallet to send to an external address.
 
 2. By default, you pay for the transaction fees and you
 spend more than the amount you indicated on the previous page.
-If you switch this on, you tell Zkool to deduct the fees from the amount
+If you switch this on, you tell ZKool to deduct the fees from the amount
 sent to the recipient. Fees are automatically calculated based on the network
 rules.
 3. Optionally, assign a spending category to the transaction.
@@ -74,7 +74,7 @@ See [Payment URI](../recipe/puri.md)
 
 Click on the "Send" button to continue.
 
-Zkool calculates a transaction and proposes it to you.
+ZKool calculates a transaction and proposes it to you.
 
 ![Tx Plan =450x](./images/14.tx_plan.png)
 

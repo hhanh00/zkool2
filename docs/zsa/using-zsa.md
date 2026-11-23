@@ -1,8 +1,8 @@
 ---
-title: Using ZSA with Zkool
+title: Using ZSA with ZKool
 ---
 
-# Using ZSA with Zkool
+# Using ZSA with ZKool
 
 ZSA can be used from two perspectives: through the wallet app, or through the
 GraphQL API for applications.

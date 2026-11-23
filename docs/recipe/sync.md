@@ -63,7 +63,7 @@ addresses.
 Accounts that have the same address have the same key (and therefore the same
 balance). _However accounts that have different addresses may also have the
 same key_ (using different diversified addresses or different receivers of the
-UA). If your address in Zkool differs from the one in your original wallet app,
+UA). If your address in ZKool differs from the one in your original wallet app,
 it may stil work.
 
 > Your account may not be synchronized.
@@ -72,9 +72,9 @@ Manually Synchronize if the account height is behind.
 
 > Your account birth height may be too high.
 
-Zkool starts scanning block from the birth height. If it is too high, it will
+ZKool starts scanning block from the birth height. If it is too high, it will
 miss the transactions that happened earlier. To solve it, edit the account birth
-height and save. Zkool resets the synchronization data and you resync.
+height and save. ZKool resets the synchronization data and you resync.
 
 ![Edit =450x](./images/13.edit.png)
 
@@ -83,7 +83,7 @@ height and save. Zkool resets the synchronization data and you resync.
 If you restore from a seed phrase a wallet that uses address rotation, it would
 have generated additional transparent addresses. In this case, you need to scan
 for these transparent addresses too. On the receive page, tap the "search"
-button. Zkool asks for the gap limit: the number of consecutive unused
+button. ZKool asks for the gap limit: the number of consecutive unused
 addresses after which it stops. Tap "Run" and wait for the scan to finish. Then go to the
 account edit page to reset the synchronization data and resync.
 
@@ -99,8 +99,8 @@ transparent addresses are known by tapping on the "eye" icon.
 
 > When I send the transaction, the server reports that a note has been used.
 
-This is likely because Zkool was not synchronized to the latest block and
-thought some of the notes were unused. Zkool does not mark notes as spent until
+This is likely because ZKool was not synchronized to the latest block and
+thought some of the notes were unused. ZKool does not mark notes as spent until
 it sees them used in a block. In particular, making a tx does not mark the notes
 as spent until it is mined.
 
@@ -138,7 +138,7 @@ using another server running a different node software.
 
 ## Bad Anchor
 
-> When you prepare the transaction, Zkool returns an error related to a "bad
+> When you prepare the transaction, ZKool returns an error related to a "bad
 > anchor".
 
 This is also probably related to an issue at the server where in case of a block
