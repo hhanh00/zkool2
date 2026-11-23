@@ -1,6 +1,43 @@
 # Changelog
 
 
+## [6.38.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.37.0...zkool-v6.38.0) (2026-11-23)
+
+
+### Features
+
+* **account:** hide the new account seed phrase until asked ([#1673](https://github.com/hhanh00/zkool2/issues/1673)) ([02f1620](https://github.com/hhanh00/zkool2/commit/02f1620b717af0a338ac94bf41d70cbf3eed293e)), closes [#1672](https://github.com/hhanh00/zkool2/issues/1672)
+* **bench:** add an in-process sync bench ([8c2eaa1](https://github.com/hhanh00/zkool2/commit/8c2eaa19a9e6de14824f4dac7e31a6aa86eb1c66))
+* **bench:** ask dl_bench connections for a region ([d0172b5](https://github.com/hhanh00/zkool2/commit/d0172b529c560ec295829e9f154643738a5b009c))
+* **bench:** report the scan by pool and the download by backend ([8564acf](https://github.com/hhanh00/zkool2/commit/8564acf1af0d39a59558f6281fcb99ada7bbdf34))
+* **bench:** write the download's scheduling trace from the sync bench ([94ed12d](https://github.com/hhanh00/zkool2/commit/94ed12d1ad662ba37089aec22f1e9169eeac2df2))
+* **graphql:** decodePczt returns the txid of the prepared transaction ([#1647](https://github.com/hhanh00/zkool2/issues/1647)) ([7e2a6e7](https://github.com/hhanh00/zkool2/commit/7e2a6e758b7cf5ef1f617c9cc98542854df5f567))
+* **sync:** batch Orchard and Ironwood key agreement with zakura-udon ([7924c30](https://github.com/hhanh00/zkool2/commit/7924c3090446d54bc36099c21dd565b78454832f))
+* **sync:** download blocks over several connections ([50b4eb3](https://github.com/hhanh00/zkool2/commit/50b4eb3ad50a8a645ec0ee7272c796cfb2efac23))
+* **sync:** fetch blocks from the fastest backends ([553466d](https://github.com/hhanh00/zkool2/commit/553466d1b43ab5acd2050da16752d8e5184a3795))
+* **sync:** graft the server's subtree roots instead of hashing ([ff8c05d](https://github.com/hhanh00/zkool2/commit/ff8c05d52faaf279250272db5bd1681481752890))
+* **sync:** hand blocks to the scan on a timer, not an action count ([#1651](https://github.com/hhanh00/zkool2/issues/1651)) ([3573cf1](https://github.com/hhanh00/zkool2/commit/3573cf175b95e2644db4866526db4d4785bc845f))
+
+
+### Bug Fixes
+
+* **accounts:** make the list the root page when the account under it is deleted ([#1682](https://github.com/hhanh00/zkool2/issues/1682)) ([93b2956](https://github.com/hhanh00/zkool2/commit/93b295646052ac9511d4377128c9b63d95338251))
+* **android:** the Android 12 splash icon is not cropped ([#1671](https://github.com/hhanh00/zkool2/issues/1671)) ([5405e52](https://github.com/hhanh00/zkool2/commit/5405e52c03aefd937fa66b30d1a640b843037ee7))
+* **icon:** add padding around the app icon ([#1675](https://github.com/hhanh00/zkool2/issues/1675)) ([1ffa716](https://github.com/hhanh00/zkool2/commit/1ffa716e58495ee5a8248dce07f21f510ca1000b))
+* **key-tree:** size each row to its key and keep it inside the list ([#1643](https://github.com/hhanh00/zkool2/issues/1643)) ([b7372b1](https://github.com/hhanh00/zkool2/commit/b7372b1b913a42b9c245138c16e1b4012a6eb5ea)), closes [#1642](https://github.com/hhanh00/zkool2/issues/1642)
+* **mempool:** reopen the stream when it times out for being idle ([a55f1aa](https://github.com/hhanh00/zkool2/commit/a55f1aa7aed6d074954411cb332f1dd7a36d8d6a)), closes [#1654](https://github.com/hhanh00/zkool2/issues/1654)
+* **net:** bound lightwalletd connects and keep connections alive ([387ca08](https://github.com/hhanh00/zkool2/commit/387ca08427d2c721fce56eed21f907481a0ee9e3)), closes [#1654](https://github.com/hhanh00/zkool2/issues/1654)
+* **net:** fail a lightwalletd call after an idle window ([adf2937](https://github.com/hhanh00/zkool2/commit/adf2937f558b0149e2be79a5c78542602d37af28)), closes [#1654](https://github.com/hhanh00/zkool2/issues/1654)
+* **net:** time out Zebra JSON-RPC calls ([f21cf01](https://github.com/hhanh00/zkool2/commit/f21cf01a2b9c06a9d1b7589aba98e2c03f2864ec)), closes [#1654](https://github.com/hhanh00/zkool2/issues/1654)
+* **pay:** drop the TX HEX toast and reword the send toasts ([#1668](https://github.com/hhanh00/zkool2/issues/1668)) ([c19ea12](https://github.com/hhanh00/zkool2/commit/c19ea12b69afdda5c963e0643c78945a50f0bf10)), closes [#1667](https://github.com/hhanh00/zkool2/issues/1667)
+* **sync:** detect reorgs in ranges with no shielded keys ([#1661](https://github.com/hhanh00/zkool2/issues/1661)) ([f3156ad](https://github.com/hhanh00/zkool2/commit/f3156adfb67d809724c92a68b2e4887ecb328ed5)), closes [#1658](https://github.com/hhanh00/zkool2/issues/1658)
+* **sync:** remove the start/complete sync popups ([#1666](https://github.com/hhanh00/zkool2/issues/1666)) ([f71ba94](https://github.com/hhanh00/zkool2/commit/f71ba9406c61e765aa7d4883836c397d1a45318d)), closes [#1665](https://github.com/hhanh00/zkool2/issues/1665)
+* **sync:** require witnesses for ZSA notes in the consistency check ([#1660](https://github.com/hhanh00/zkool2/issues/1660)) ([738992f](https://github.com/hhanh00/zkool2/commit/738992fac26970f4e787b72099240e1ed57c695a)), closes [#1659](https://github.com/hhanh00/zkool2/issues/1659)
+* **sync:** trim a reorg to a safe point per account and re-plan ([#1657](https://github.com/hhanh00/zkool2/issues/1657)) ([3baabcf](https://github.com/hhanh00/zkool2/commit/3baabcfcf7c07ffaad2bf05304f45bcbe5a398fd)), closes [#1653](https://github.com/hhanh00/zkool2/issues/1653)
+* **ui:** remove the Height label from the sync bar ([#1663](https://github.com/hhanh00/zkool2/issues/1663)) ([0f482ff](https://github.com/hhanh00/zkool2/commit/0f482ffba08f73159230f80a85741df838ce2d07)), closes [#1662](https://github.com/hhanh00/zkool2/issues/1662)
+* **ui:** the app is named ZKool and the Flatpak ID is cc.methyl.zkool ([#1679](https://github.com/hhanh00/zkool2/issues/1679)) ([0241057](https://github.com/hhanh00/zkool2/commit/024105773ec9772f4549bd0318168d08af6709a7))
+* **ui:** the balance panel gradient fills the row at 0 balance ([#1669](https://github.com/hhanh00/zkool2/issues/1669)) ([828c4c4](https://github.com/hhanh00/zkool2/commit/828c4c47a2059f13b90ab16b5f2580e8611ac8e3))
+
 ## [6.37.0](https://github.com/hhanh00/zkool2/compare/zkool-v6.36.0...zkool-v6.37.0) (2026-11-08)
 
 
