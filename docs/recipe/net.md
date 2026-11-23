@@ -3,7 +3,7 @@ title: Mainnet, Testnet, Regtest
 ---
 ## Networks
 Every database (wallet file) belongs to one network, chosen when it is
-created. By default, Zkool creates mainnet wallets.
+created. By default, ZKool creates mainnet wallets.
 
 In the Database Manager, tap the **+** button. The *Create New Database* dialog
 has a **Network** dropdown with Mainnet, Testnet, Regtest and ZSA Regtest. It

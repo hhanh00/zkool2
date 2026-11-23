@@ -2,7 +2,7 @@
 title: Ledger
 ---
 
-Zkool works with two Ledger apps for Zcash:
+ZKool works with two Ledger apps for Zcash:
 
 - the **official** Zcash app by Ledger. It supports the transparent
 and the Orchard / Ironwood pools, and follows the regular derivation
@@ -20,12 +20,12 @@ the current version can sign.**
 
 If you have funds locked in a Zondax account, you cannot use its
 seed phrase in another wallet because of its custom derivation.
-However, Zkool restores a Zondax seed phrase *when you toggle the H/W
+However, ZKool restores a Zondax seed phrase *when you toggle the H/W
 Ledger switch and choose the Zondax app*.
 
 ## Requirements
 
-Zkool is compatible with the Ledger NanoS+, NanoX, Stax, Flex and later.
+ZKool is compatible with the Ledger NanoS+, NanoX, Stax, Flex and later.
 It is _not_ compatible with the Ledger NanoS.
 
 Install the app using Ledger Live.
@@ -35,7 +35,7 @@ Install the app using Ledger Live.
 ::: important
 The Ledger apps can be finnicky. They sometimes stop responding to commands from the
 host app without notice. I have the best experience when **I connect the
-device, unlock it and launch the Zcash app before starting Zkool**.
+device, unlock it and launch the Zcash app before starting ZKool**.
 :::
 
 ## For Linux Users
@@ -73,7 +73,7 @@ app MUST be running. Ledger Live or other apps that use the Ledger MUST NOT be r
 > requested to review some addresses/keys on the device and approve.
 
 If the import fails or takes too long, disconnect/reconnect the device and
-restart Zkool.
+restart ZKool.
 
 :::tip
 When the Ledger performs a task, its UI freezes and the buttons
@@ -89,7 +89,7 @@ always uses an internal address for the change, the Zondax app never does.
 ## Scan Transparent Addresses
 
 If you have received funds in this account, be sure to scan for alternative
-addresses because the Ledger Live app rotates addresses. Zkool offers
+addresses because the Ledger Live app rotates addresses. ZKool offers
 the scan when the account is created.
 
 ## Sync

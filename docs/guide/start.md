@@ -3,11 +3,11 @@ title: Getting Started
 ---
 
 This page covers the basic functionalities
-of Zkool.
+of ZKool.
 
 ::: tip
 I highly recommend to read this section once
-because Zkool does not always work like other wallets.
+because ZKool does not always work like other wallets.
 :::
 
 I am using the MacOS version but the app behaves
@@ -15,8 +15,8 @@ similarly on other platforms.
 
 # Installation
 
-Zkool is available on the Google Play Store and the Apple Store.
-The easiest way to find it is to search by its name `zkool`.
+ZKool is available on the Google Play Store and the Apple Store.
+The easiest way to find it is to search by its name `ZKool`.
 
 The app store versions may be behind the "latest and greatest".
 The latest version is on the Github release page.
@@ -32,7 +32,7 @@ and iOS.
 ## Disclaimer
 
 Next, you must accept the disclaimer that states
-that Zkool is a non custodian wallet.
+that ZKool is a non custodian wallet.
 
 ::: important
 You have full control of your secret keys.
@@ -52,7 +52,7 @@ switch and click on the "Continue" button.
 
 ## Device Authentication
 
-Zkool does not ask for your device authentication when
+ZKool does not ask for your device authentication when
 it starts. It asks for it when you do something
 sensitive:
 
@@ -68,7 +68,7 @@ to set a PIN, a fingerprint or face lock.
 
 ::: tip
 "Pin Lock" is off by default. When it is on and you come back
-to Zkool after it spent more than 30 seconds in the background,
+to ZKool after it spent more than 30 seconds in the background,
 it shows a locked screen. Tap on the logo to authenticate and unlock it.
 The option is in the Settings page.
 :::

@@ -2,7 +2,7 @@
 title: Charts
 ---
 
-Zkool currently has two report charts[^1]. Open them with the "Charts" option
+ZKool currently has two report charts[^1]. Open them with the "Charts" option
 of the account page menu. Both of them can be limited to a given time period
 with the "From" and "To" dates at the top of the page.
 

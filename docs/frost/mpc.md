@@ -67,7 +67,7 @@ the recipient, the memo and the group's viewing key. Send it only to the
 other signers, over a private channel.
 :::
 
-Once the file is saved, Zkool offers to start the signing session as the
+Once the file is saved, ZKool offers to start the signing session as the
 coordinator.
 
 ![Offer =450x](./images/18.offer.png)
@@ -112,7 +112,7 @@ Tap the NEXT button to start the MPC SIGN.
 ## The session
 
 The steps at the top of the page show where the signing is, and the status
-line says what Zkool is doing or waiting for, with how many participants
+line says what ZKool is doing or waiting for, with how many participants
 have answered.
 
 ### Coordinator
@@ -147,7 +147,7 @@ history of every participant[^2].
 ![History =450x](./images/15.history.png)
 
 ::: tip
-As with DKG, the SIGN is automatic as long as Zkool is opened on the multisig
+As with DKG, the SIGN is automatic as long as ZKool is opened on the multisig
 page. If you close it, the "Send" button of the MultiSig Account brings you
 back to the session in progress.
 :::

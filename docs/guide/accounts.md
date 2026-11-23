@@ -35,7 +35,7 @@ the new account.
 
 ![seed =450x](./images/03.seed.png)
 
-Zkool will show you the new account seed phrase.
+ZKool will show you the new account seed phrase.
 
 ::: important
 You **should** save your seed phrase (the 24 words)
@@ -54,7 +54,7 @@ spaces, capitalization, or change the order.
 
 Press the Ok button once you are finished.
 
-Zkool opens the page of the new account.
+ZKool opens the page of the new account.
 You should have something like:
 
 ![First Account =450x](./images/04.first_account.png)
@@ -85,7 +85,7 @@ The page may be too long for your device screen
 and you may need to scroll down.
 :::
 
-Zkool accepts various kinds of keys. The most common
+ZKool accepts various kinds of keys. The most common
 case is the seed phrase (12, 18, 21 or 24 words),
 but you can also recover accounts from
 - a Sapling shielded secret key,
@@ -95,7 +95,7 @@ or a Sapling viewing key,
 - a transparent private key (starting with K or L).
 
 In doubt, just try the key you have. If it is not
-supported, Zkool will display an error.
+supported, ZKool will display an error.
 
 ::: tip
 The button next to the key field generates a new seed phrase.
@@ -110,11 +110,11 @@ was created.
 ::: important
 Entering a birth height is needed
 when you restore an old account because it defaults
-to the current height. If you leave it blank, Zkool asks
+to the current height. If you leave it blank, ZKool asks
 you to confirm.
 :::
 
-Zkool will not scan blocks prior the birth height and
+ZKool will not scan blocks prior the birth height and
 therefore will not recognize any transaction that happened
 before. This is to save on bandwidth and computation since
 there may be millions of transactions to scan before
@@ -158,22 +158,22 @@ the ZIP-316 use internal change.
 ::: important
 Turn off "Use Internal Change" only if the wallet
 you are restoring from does not send its change to an
-internal address. Otherwise, Zkool will not find
+internal address. Otherwise, ZKool will not find
 your change notes.
 :::
 
 ### Pools
-By default, Zkool will restore a wallet that has every
+By default, ZKool will restore a wallet that has every
 pool derived by your key. For a seed phrase, that's every
 pool. However, you can decide to discard some pools.
 
 ::: tip
 Discarding pools can increase your privacy and synchronization
-speed because Zkool will not request any data from the
+speed because ZKool will not request any data from the
 server for the discarded pools.
 :::
 
-In fact, Zkool will not even derive the keys for the
+In fact, ZKool will not even derive the keys for the
 pools you exclude.
 
 For example, if you do not want to use any transparent transaction, you can
@@ -186,7 +186,7 @@ on a Ledger device. See the [Ledger](../recipe/ledger.md) recipe.
 
 Press the Save button once you are finished.
 
-If the restored account has a transparent pool, Zkool offers
+If the restored account has a transparent pool, ZKool offers
 to scan for alternative transparent addresses.
 
 ![Scan Prompt =450x](./images/17.scan_prompt.png)
@@ -196,7 +196,7 @@ rotates its addresses (Ledger, Exodus, etc). The scan is explained
 in the [Addresses](./addresses.md) page and can be started
 later from the receive page.
 
-Finally, Zkool asks if you want to synchronize the account now.
+Finally, ZKool asks if you want to synchronize the account now.
 
 ::: tip
 If you have more than one account to restore, restore
@@ -208,6 +208,6 @@ and synchronize from the account manager when you are done.
 [extra word]: https://trezor.io/guides/backups-recovery/advanced-wallets/what-is-a-passphrase
 
 [^1]: device crash, lost, app bug, etc.
-[^2]: it's a new account for zkool, even though
+[^2]: it's a new account for ZKool, even though
 it is an "old" account for you.
-[^3]: Zkool can synchronize several accounts concurrently.
+[^3]: ZKool can synchronize several accounts concurrently.

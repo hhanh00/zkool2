@@ -10,7 +10,7 @@ From the [GraphQL site](https://graphql.org/learn/introduction/)
 > variety of programming languages. GraphQL isn’t tied to any specific database or
 > storage engine—it is backed by your existing code and data.
 
-`zkool_graphql` is a GraphQL server for the Zkool wallet engine. It offers a
+`zkool_graphql` is a GraphQL server for the ZKool wallet engine. It offers a
 typesafe API to wallet creation, synchronization, address generation and
 payments.
 

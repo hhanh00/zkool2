@@ -21,7 +21,7 @@ experiment with it.
 - **Faucet**: dispenses free tZEC test funds, so developers always have funds
   to issue assets and pay fees. Currently running on the ZSA testnet network at
   `faucet.zsa.methyl.cc`.
-- **Wallet (zkool)**: the reference wallet, ready to issue and transfer
+- **Wallet (ZKool)**: the reference wallet, ready to issue and transfer
   assets. Use a database name containing `zsa` and connect it to a ZSA
   testnet server `https://zsa.methyl.cc`.
 - **GraphQL API**: `zkool_graphql` exposes wallet functionality (accounts,

@@ -2,7 +2,7 @@
 title: Overview
 ---
 
-Zkool can vote in **coin weighted polls**: your vote counts for the ZEC your
+ZKool can vote in **coin weighted polls**: your vote counts for the ZEC your
 account held at the poll's *snapshot height*. Nothing is spent. The vote
 proves that you own the notes without revealing them, and the poll's
 organizer never learns your address.
@@ -10,17 +10,17 @@ organizer never learns your address.
 ## How it works
 
 - The organizer publishes a signed **voting config** that lists the rounds,
-  the voting servers and the keys that sign them. Zkool verifies it before
+  the voting servers and the keys that sign them. ZKool verifies it before
   it shows you a round.
 - A **round** has a snapshot height and one or more proposals, each with its
   options. Only the ZEC held in the **Ironwood pool** at the snapshot height
   counts. Funds received later, or held in the other pools, do not.
 - Your notes at the snapshot are grouped into **bundles**. For each bundle,
-  Zkool proves that it owns the notes and casts your ballot on the voting
+  ZKool proves that it owns the notes and casts your ballot on the voting
   chain. Proving takes a few minutes per note.
 - A part of each vote, a **helper share**, goes to helper servers, which
   reveal the shares when the round ends so that the votes can be tallied.
-  Zkool keeps confirming the shares with the helpers until every one of them
+  ZKool keeps confirming the shares with the helpers until every one of them
   is in. A vote whose shares were not confirmed may not be counted.
 - A note can vote only once in a round, and votes are final once the
   submission starts.
@@ -28,7 +28,7 @@ organizer never learns your address.
 ## What you need
 
 - An account with its ZEC in the Ironwood pool before the snapshot height,
-  synchronized past that height. If you are new to Zkool, see how to
+  synchronized past that height. If you are new to ZKool, see how to
   [install it](../guide/start.md), [restore an account](../recipe/restore.md)
   and [synchronize](../guide/sync.md).
 - The voting config URL the organizer sends you.

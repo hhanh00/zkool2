@@ -23,7 +23,7 @@ on the row to open the account page.
 
 ## Account Heights
 
-Zkool keeps the synchronization state
+ZKool keeps the synchronization state
 of each account independent.
 
 This is like your gmail accounts. If you have more
@@ -39,9 +39,9 @@ therefore it is still at 200.
 
 ## Auto/Manual Sync
 
-If auto sync is on[^2], Zkool will occasionally check
+If auto sync is on[^2], ZKool will occasionally check
 the current block height and compare it with the account heights.
-When an account falls behind by some threshold[^3], Zkool
+When an account falls behind by some threshold[^3], ZKool
 starts synchronizing it.
 
 If you want to start synchronization immediately, tap the sync

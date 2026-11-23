@@ -10,13 +10,13 @@ currency, each transaction must have the price of 1 ZEC.
 
 The currency is USD by default. Change it with the "Currency" option of the
 Settings page. Since the prices of your past transactions are in the old
-currency, Zkool asks for the exchange rate between the two currencies
+currency, ZKool asks for the exchange rate between the two currencies
 (prefilled from CoinGecko when it is reachable) and converts them.
 
 ## New Payments
 
 When you make a payment, the "Fx" field of the Send form holds the last
-market price Zkool fetched: tap the "Height" button of the account manager,
+market price ZKool fetched: tap the "Height" button of the account manager,
 which fetches the market price too, or turn on "Auto Fetch Market Price" in
 the Settings page. You can
 also type the price or fetch it again from CoinGecko with the refresh button
@@ -26,7 +26,7 @@ next to the field. It gets recorded with the transaction in your account[^1].
 
 ## Past Transactions
 
-Zkool can also automatically import historical prices from CoinGecko, with
+ZKool can also automatically import historical prices from CoinGecko, with
 the "Fetch Tx Prices" option of the account page menu.
 
 ![Fetch =450x](./images/05.fetch.png)
@@ -49,7 +49,7 @@ the prices first.
 
 ![Price =450x](./images/11.price.png)
 
-Zkool uses the public CoinGecko API. If you have a CoinGecko API key, enter
+ZKool uses the public CoinGecko API. If you have a CoinGecko API key, enter
 it in the "CoinGecko API Key" field of the Settings page.
 
 [^1]: ZEC prices and categories are not recorded on chain, therefore if you

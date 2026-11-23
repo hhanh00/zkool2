@@ -1,6 +1,6 @@
 ---
 home: true
-heroText: Zkool
+heroText: ZKool
 tagline: The swiss-army wallet for Zcash
 actions:
     - text: Get Started
@@ -34,7 +34,7 @@ features:
 ---
 
 ::: info
-Zkool is the successor to Ywallet. It has been rearchitectured and rewritten
+ZKool is the successor to Ywallet. It has been rearchitectured and rewritten
 from scratch with a more modern technology stack. It is faster and more powerful
 than before.
 :::
@@ -42,7 +42,7 @@ than before.
 Some of the features of Ywallet were removed and replaced by something equivalent
 or better.
 
-> If you have a feature of Ywallet that you think should be in Zkool, please
+> If you have a feature of Ywallet that you think should be in ZKool, please
 > contact the author by opening an [issue](https://github.com/hhanh00/zkool2/issues)
 > on the project github.
 
@@ -68,14 +68,14 @@ It can probably handle any account from any other wallets as long as you have
 the secret key (unless it is Sprout)
 
 ::: warning
-Zkool gives you full control over your funds. It is the only wallet
+ZKool gives you full control over your funds. It is the only wallet
 app that works in any situation, but it is also harder to use. Other wallets are
 much more conservative and will make sure you stay on the established path.
 :::
 
 ## Special Abilities
 
-Zkool is currently the only wallet[^8]
+ZKool is currently the only wallet[^8]
 
 - that can recover multiple keys concurrently. This is a great time saver when
   you have several wallets you want to import.
@@ -83,7 +83,7 @@ Zkool is currently the only wallet[^8]
   internally by other wallet apps[^9].
 - pre-sapling activation. Other wallets won't accept a birth height before
   ~2018.
-- optimized scanning. If your key does not have a certain pool, Zkool won't
+- optimized scanning. If your key does not have a certain pool, ZKool won't
   spend time trying to synchronize it. Consequently, recovering a private key is
   nearly *instantaneous* because blocks aren't scanned.
 - FROST multi signature accounts with Distributed Key Generation and no

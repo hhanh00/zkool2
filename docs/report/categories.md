@@ -23,7 +23,7 @@ When you make a payment, you can assign a category too. It is on the
 
 # Managing Categories
 
-Zkool comes with a list of predefined categories, but you can make your own list.
+ZKool comes with a list of predefined categories, but you can make your own list.
 
 Open the category editor from the account manager menu.
 

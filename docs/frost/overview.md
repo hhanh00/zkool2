@@ -2,7 +2,7 @@
 title: Overview
 ---
 
-Zkool supports multisignature accounts that leverage the **FROST** technology.
+ZKool supports multisignature accounts that leverage the **FROST** technology.
 
 Multisignature accounts differ from standard accounts in several ways.
 
@@ -52,7 +52,7 @@ participant, so you can also get it from any other member.
 To restore, create a new account, turn on "Restore Account?" and paste the
 backup string in the key field (1). The form then asks for the group viewing
 key (2) and which account to restore (3): "ZIP 2005" for a group created with
-the current version of Zkool.
+the current version of ZKool.
 
 ![Restore =450x](./images/17.restore.png)
 
@@ -73,7 +73,7 @@ the group is up to the participants.
 
 ::: important
 A participant with the setting off does not see change that another participant
-sent to an internal address, and Zkool cannot detect this. The funds are safe,
+sent to an internal address, and ZKool cannot detect this. The funds are safe,
 but that participant's balance is too low until the setting is on.
 :::
 
@@ -90,7 +90,7 @@ upgrade creates the group's ZIP 2005 account, with a new address, and sweeps
 the funds into it. The sweep is a group transaction: it has to be
 [signed](./mpc.md) by the threshold of participants, like any payment.
 
-All the participants of a group must run the same version of Zkool. The DKG
+All the participants of a group must run the same version of ZKool. The DKG
 stops with an error when they do not.
 
 ## DKG and Signing Multi Party Ceremonies
@@ -99,7 +99,7 @@ The Distributed Key Generation and the Multi Party Signing are multi step
 workflows that involve the transmission of secure messages between the
 participants.
 
-Zkool uses the Zcash blockchain and leverages encrypted memos to send and
+ZKool uses the Zcash blockchain and leverages encrypted memos to send and
 receives the commitments, signature packages, signature shares, etc.
 
 ### Funding

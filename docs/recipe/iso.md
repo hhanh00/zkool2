@@ -1,8 +1,8 @@
 ---
-title: Kiosk Zkool
+title: Kiosk ZKool
 ---
 
-Kiosk Zkool is a version of Zkool that runs from a CDROM
+Kiosk ZKool is a version of ZKool that runs from a CDROM
 or USB stick and bundles the Linux operating system as well
 as a minimal Window Manager.
 
@@ -26,7 +26,7 @@ Make sure you have the right device or you will erase the wrong disk.
 If everything is correct, as root, run
 `dd if=zkool.iso of=/dev/sdX bs=4M status=progress oflag=sync`
 
-You have now a bootable USB drive with Zkool.
+You have now a bootable USB drive with ZKool.
 
 ## Boot
 
@@ -62,7 +62,7 @@ The system is read-only. Data changes are *NOT PERSISTED*.
 If you want to keep your data, you need to mount a writeable partition.
 
 You can create a partition on the remainer of the USB drive but
-remember that if you install a new version of Zkool with `dd`,
+remember that if you install a new version of ZKool with `dd`,
 **the entire drive is erased, including your wallet data**.
 
 Let's say the data partition is `/dev/sda3`.
@@ -72,12 +72,12 @@ Let's say the data partition is `/dev/sda3`.
 1. mount the data file as an overlay:
 `mount -t overlay overlay -o lowerdir=/root,upperdir=/mnt/data,workdir=/mnt/tmp /root`
 
-Changes to Zkool will be saved in the data folder.
+Changes to ZKool will be saved in the data folder.
 
-## Launching Zkool
+## Launching ZKool
 
 Start the graphical environment XFCE 4: `startxfce4`
 
-Then run Zkool from your home directory using the file explorer.
+Then run ZKool from your home directory using the file explorer.
 
-![Zkool Kiosk](./images/34.iso.png)
+![ZKool Kiosk](./images/34.iso.png)

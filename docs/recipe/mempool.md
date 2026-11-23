@@ -2,7 +2,7 @@
 title: Mempool
 ---
 
-Zkool integrates a simple Mempool transaction viewer. Open it with
+ZKool integrates a simple Mempool transaction viewer. Open it with
 the "Mempool" option of the account manager menu.
 
 ![Mempool =450x](./images/24.mempool1.png)

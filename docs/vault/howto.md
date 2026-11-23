@@ -20,7 +20,7 @@ between restarts.
 
 ## Enable the vault
 
-Turn on the "Cloud Vault" switch. Zkool asks you to unlock the app, then
+Turn on the "Cloud Vault" switch. ZKool asks you to unlock the app, then
 shows what the vault does before you confirm. Then:
 
 1. Pick the Google account that will hold the vault. The picker is shown
@@ -43,10 +43,10 @@ open each one with Edit Account and save it once.
 On a new device, turn on expert mode, turn on the "Cloud Vault" switch and
 sign in to the same Google account, then tap **Recover Accounts from Vault**.
 
-1. With passkeys, Zkool shows the passkey picker first. Cancel it to use the
+1. With passkeys, ZKool shows the passkey picker first. Cancel it to use the
    master password instead.
 1. Without a passkey, enter the **vault password**.
-1. Zkool downloads and decrypts the vault and lists the accounts it holds,
+1. ZKool downloads and decrypts the vault and lists the accounts it holds,
    with a search field and Select All. Pick the ones to restore.
 
 An account that already exists in the wallet, with the same seed and account
