@@ -35,7 +35,8 @@ the new account.
 
 ![seed =450x](./images/03.seed.png)
 
-ZKool will show you the new account seed phrase.
+ZKool will show you the new account seed phrase. The words
+are masked at first: tick "Show seed phrase" to reveal them.
 
 ::: important
 You **should** save your seed phrase (the 24 words)
@@ -45,7 +46,8 @@ your funds.
 :::
 
 Either manually copy the 24 words, or tap on the phrase
-to copy to the clipboard.
+to copy to the clipboard. It can only be copied while
+it is shown.
 
 ::: important
 Keep the seed phrase **exactly** as shown. Do not introduce
