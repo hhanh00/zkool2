@@ -19,6 +19,6 @@ docker run --rm \
   -e NEAR_INTENTS_API_KEY \
   -e APPIMAGE_EXTRACT_AND_RUN=1 \
   "$IMAGE" bash -euo pipefail -c '
-    ./misc/mkcargokit_options.sh ledger,bundled-sapling-params > rust/cargokit.yaml
+    ./misc/mkcargokit_options.sh ledger,bundled-sapling-params,zakura-udon > rust/cargokit.yaml
     fastforge package --platform=linux --targets=deb,appimage
   '
