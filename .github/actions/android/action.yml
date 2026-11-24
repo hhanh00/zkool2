@@ -25,6 +25,7 @@ runs:
       shell: bash
       run: |
         echo "Building zkool version: ${RELEASE_VERSION}"
+        ./misc/mkcargokit_options.sh "zakura-udon" > rust/cargokit.yaml
         flutter build apk --split-per-abi --target-platform android-arm64,android-x64
         flutter build aab --target-platform android-arm64,android-x64
       env:
